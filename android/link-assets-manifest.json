@@ -1,0 +1,13 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "src/assets/fonts/IMFellEnglish-Regular.ttf",
+      "sha1": "619c3f48992063281487d62d97d85f7f62e4c394"
+    },
+    {
+      "path": "src/assets/fonts/P22 Arts And Crafts Regular.ttf",
+      "sha1": "e4f5178c42539b9ee0151223e78f4da62b5cf27c"
+    }
+  ]
+}

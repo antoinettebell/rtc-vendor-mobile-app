@@ -1,0 +1,32 @@
+import { Platform } from "react-native";
+
+export const AppColor = {
+  primary: "#FC7B03",
+  text: "#111520",
+  subText: "#9A9FAC",
+  textHighlighter: "#606268",
+  textPlaceholder: "#8A8A8A",
+  border: "#D9D9D9",
+  likePlaceholder: "#C7C7CC",
+  ratingStar: "#FFE101",
+
+  rippleForLight:
+    Platform.OS === "android" ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.1)",
+  rippleForDark: "rgba(255, 255, 255, 0.5)",
+
+  white: "#FFFFFF",
+  black: "#000000",
+  gray: "#8E8E93",
+};
+
+// export const Mulish200 = "Mulish-ExtraLight";
+// export const Mulish300 = "Mulish-Light";
+// export const Mulish400 = "Mulish-Regular";
+// export const Mulish500 = "Mulish-Medium";
+// export const Mulish600 = "Mulish-SemiBold";
+// export const Mulish700 = "Mulish-Bold";
+// export const Mulish800 = "Mulish-ExtraBold";
+// export const Mulish900 = "Mulish-Black";
+
+export const Primary400 = "P22 ArtsAndCrafts";
+export const Secondary400 = "IM Fell English";
