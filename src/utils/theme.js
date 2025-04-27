@@ -28,5 +28,7 @@ export const AppColor = {
 // export const Mulish800 = "Mulish-ExtraBold";
 // export const Mulish900 = "Mulish-Black";
 
-export const Primary400 = "P22 ArtsAndCrafts";
-export const Secondary400 = "IM Fell English";
+export const Primary400 =
+  Platform.OS === "ios" ? "P22 ArtsAndCrafts" : "P22 Arts And Crafts Regular";
+export const Secondary400 =
+  Platform.OS === "ios" ? "IM Fell English" : "IMFellEnglish-Regular";
