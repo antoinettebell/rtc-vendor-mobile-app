@@ -9,6 +9,7 @@ export const AppColor = {
   border: "#D9D9D9",
   likePlaceholder: "#C7C7CC",
   ratingStar: "#FFE101",
+  placeholderTextColor: "#D1D1D6",
 
   rippleForLight:
     Platform.OS === "android" ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.1)",

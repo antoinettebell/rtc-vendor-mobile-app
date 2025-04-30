@@ -294,13 +294,13 @@ const SignUpScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
 
-  const [fname, setFname] = useState("");
-  const [lname, setLname] = useState("");
+  const [name, setName] = useState("");
+  const [foodTruckName, setFoodTruckName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [countryPickerVisible, setCountryPickerVisible] = useState(false);
-  const [countryCode, setCountryCode] = useState("+91");
+  const [countryCode, setCountryCode] = useState("+1");
   const [mobileNumebr, setMobileNumber] = useState("");
   const [agreed, setAgreed] = useState(false);
 
@@ -351,97 +351,52 @@ const SignUpScreen = () => {
               />
             </View>
 
-            {/* Sign In Form */}
-            <Text style={styles.title}>{"Sign Up"}</Text>
-            <Text style={styles.subtitle}>
-              {"Create new customer account!"}
-            </Text>
+            {/* Sign Up Form */}
+            <Text style={styles.title}>{"Welcome to Food Truck!"}</Text>
+            <Text style={styles.subtitle}>{"Create new vendor account!"}</Text>
 
             <View style={styles.formContainer}>
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>{"First Name*"}</Text>
-                  <TextInput
-                    dense
-                    value={fname}
-                    onChangeText={setFname}
-                    style={styles.input}
-                    contentStyle={styles.inputText}
-                    placeholder=""
-                    mode="outlined"
-                    outlineColor={AppColor.border}
-                    activeOutlineColor={AppColor.primary}
-                    outlineStyle={{ borderRadius: 8 }}
-                    autoCapitalize="none"
-                    theme={{ colors: { onSurfaceVariant: "#777" } }}
-                  />
-                </View>
-
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>{"Last Name*"}</Text>
-                  <TextInput
-                    dense
-                    value={lname}
-                    onChangeText={setLname}
-                    style={styles.input}
-                    contentStyle={styles.inputText}
-                    placeholder=""
-                    mode="outlined"
-                    outlineColor={AppColor.border}
-                    activeOutlineColor={AppColor.primary}
-                    outlineStyle={{ borderRadius: 8 }}
-                    autoCapitalize="none"
-                    theme={{ colors: { onSurfaceVariant: "#777" } }}
-                  />
-                </View>
-              </View>
-
+              {/* Name */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                {"Email"}
+                {"Your Name"}
               </Text>
               <TextInput
                 dense
-                value={email}
-                onChangeText={setEmail}
+                value={name}
+                onChangeText={setName}
                 style={styles.input}
                 contentStyle={styles.inputText}
-                placeholder=""
+                placeholder="Enter Your Name"
+                placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
                 outlineStyle={{ borderRadius: 8 }}
                 autoCapitalize="none"
-                keyboardType="email-address"
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
               />
 
+              {/* Food Truck Name */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                {"Password"}
+                {"Food Truck Name"}
               </Text>
               <TextInput
                 dense
-                value={password}
-                onChangeText={setPassword}
+                value={foodTruckName}
+                onChangeText={setFoodTruckName}
                 style={styles.input}
                 contentStyle={styles.inputText}
-                placeholder=""
+                placeholder="Enter Food Truck Name"
+                placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
-                secureTextEntry={!passwordVisible}
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
                 outlineStyle={{ borderRadius: 8 }}
-                right={
-                  <TextInput.Icon
-                    icon={passwordVisible ? "eye-off" : "eye"}
-                    onPress={togglePasswordVisibility}
-                    color={AppColor.textHighlighter}
-                  />
-                }
+                autoCapitalize="none"
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
               />
 
+              {/* Mobile No */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
                 {"Enter mobile no.*"}
               </Text>
@@ -467,7 +422,8 @@ const SignUpScreen = () => {
                   onChangeText={setMobileNumber}
                   style={[styles.input, { flex: 1 }]}
                   contentStyle={styles.inputText}
-                  placeholder=""
+                  placeholder="Enter Mobile No."
+                  placeholderTextColor={AppColor.placeholderTextColor}
                   mode="outlined"
                   maxLength={10}
                   outlineColor={AppColor.border}
@@ -477,6 +433,54 @@ const SignUpScreen = () => {
                   theme={{ colors: { onSurfaceVariant: "#777" } }}
                 />
               </View>
+
+              {/* Email */}
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+                {"Email ID"}
+              </Text>
+              <TextInput
+                dense
+                value={email}
+                onChangeText={setEmail}
+                style={styles.input}
+                contentStyle={styles.inputText}
+                placeholder="Enter Email ID"
+                placeholderTextColor={AppColor.placeholderTextColor}
+                mode="outlined"
+                outlineColor={AppColor.border}
+                activeOutlineColor={AppColor.primary}
+                outlineStyle={{ borderRadius: 8 }}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                theme={{ colors: { onSurfaceVariant: "#777" } }}
+              />
+
+              {/* Password */}
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+                {"Password"}
+              </Text>
+              <TextInput
+                dense
+                value={password}
+                onChangeText={setPassword}
+                style={styles.input}
+                contentStyle={styles.inputText}
+                placeholder="Enter Password"
+                placeholderTextColor={AppColor.placeholderTextColor}
+                mode="outlined"
+                secureTextEntry={!passwordVisible}
+                outlineColor={AppColor.border}
+                activeOutlineColor={AppColor.primary}
+                outlineStyle={{ borderRadius: 8 }}
+                right={
+                  <TextInput.Icon
+                    icon={passwordVisible ? "eye-off" : "eye"}
+                    onPress={togglePasswordVisibility}
+                    color={AppColor.textHighlighter}
+                  />
+                }
+                theme={{ colors: { onSurfaceVariant: "#777" } }}
+              />
 
               {/* Country picker modal */}
               <CountryPicker
@@ -520,6 +524,7 @@ const SignUpScreen = () => {
                 onBackdropPress={() => setCountryPickerVisible(false)}
               />
 
+              {/* T&C */}
               <View style={styles.termsContainer}>
                 <TouchableOpacity
                   onPress={() => setAgreed(!agreed)}
@@ -543,6 +548,14 @@ const SignUpScreen = () => {
                 </Text>
               </View>
 
+              <TouchableOpacity
+                onPress={() => navigation.navigate("otpVerification")}
+                activeOpacity={0.7}
+                style={styles.signInButton}
+              >
+                <Text style={styles.buttonLabel}>{"Signup"}</Text>
+              </TouchableOpacity>
+
               <View style={styles.signUpContainer}>
                 <Text style={styles.signUpText}>
                   {"Already have an account? "}{" "}
@@ -554,13 +567,6 @@ const SignUpScreen = () => {
                   <Text style={styles.signUpLink}>{"Sign In"}</Text>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                onPress={() => navigation.navigate("otpVerification")}
-                activeOpacity={0.7}
-                style={styles.signInButton}
-              >
-                <Text style={styles.buttonLabel}>{"Signup"}</Text>
-              </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
@@ -607,7 +613,7 @@ const styles = StyleSheet.create({
     fontFamily: Secondary400,
     fontSize: 14,
     color: AppColor.textHighlighter,
-    marginBottom: 50,
+    marginBottom: 10,
   },
   formContainer: {
     flex: 1,
@@ -623,6 +629,7 @@ const styles = StyleSheet.create({
   },
   inputText: {
     fontFamily: Secondary400,
+    fontSize: 15,
   },
   countryPickerButton: {
     height: "100%",
@@ -648,7 +655,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: AppColor.primary,
-    marginBottom: 20,
+    marginVertical: 20,
     ...Platform.select({
       ios: {
         shadowColor: AppColor.black,
@@ -667,7 +674,6 @@ const styles = StyleSheet.create({
   signUpContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: 10,
     marginBottom: 20,
   },
   signUpText: {

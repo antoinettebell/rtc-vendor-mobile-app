@@ -78,6 +78,7 @@ const OtpVerificationScreen = () => {
         message: "OTP Verified",
         type: "success",
       });
+      navigation.navigate("authFoodTruckProfileScreen");
     }, 1500);
   };
 

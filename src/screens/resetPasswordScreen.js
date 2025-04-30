@@ -668,6 +668,7 @@ const ResetPasswordScreen = () => {
                 value={newPassword}
                 onChangeText={setNewPassword}
                 placeholder="Must be at least 8 characters"
+                placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
                 secureTextEntry={!passwordVisible}
                 dense
@@ -694,6 +695,7 @@ const ResetPasswordScreen = () => {
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 placeholder="Repeat new password"
+                placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
                 secureTextEntry={!passwordVisible}
                 dense
@@ -795,6 +797,7 @@ const styles = StyleSheet.create({
   },
   inputText: {
     fontFamily: Secondary400,
+    fontSize: 15,
   },
   resetButton: {
     height: 48,

@@ -31,21 +31,21 @@ const slides = [
     description:
       "Discover the best food trucks around you and order your favorite bites in just a few taps.",
   },
-  {
-    Svg: Screen2Svg,
-    title: "Hungry?",
-    subTitle: " Let’s Find a Truck!",
-    description:
-      "We’re scouting the streets to show you the most loved food trucks nearby fast, fresh, and full of flavor.",
-  },
-  {
-    Svg: Screen3Svg,
-    title: "Skip the Line, ",
-    subTitle1: "Savor",
-    subTitle2: " the Taste!",
-    description:
-      "No more waiting in line! Browse, order, and enjoy delicious street food anytime, anywhere.",
-  },
+  // {
+  //   Svg: Screen2Svg,
+  //   title: "Hungry?",
+  //   subTitle: " Let’s Find a Truck!",
+  //   description:
+  //     "We’re scouting the streets to show you the most loved food trucks nearby fast, fresh, and full of flavor.",
+  // },
+  // {
+  //   Svg: Screen3Svg,
+  //   title: "Skip the Line, ",
+  //   subTitle1: "Savor",
+  //   subTitle2: " the Taste!",
+  //   description:
+  //     "No more waiting in line! Browse, order, and enjoy delicious street food anytime, anywhere.",
+  // },
 ];
 
 const DOT_SIZE = 7.02;
@@ -96,7 +96,7 @@ const AuthIntroScreen = ({ navigation }) => {
         ))}
       </PagerView>
 
-      <View style={styles.dotsContainer}>
+      {/* <View style={styles.dotsContainer}>
         {slides.map((_, i) => {
           const animatedDotStyle = useAnimatedStyle(() => {
             return {
@@ -116,7 +116,7 @@ const AuthIntroScreen = ({ navigation }) => {
             <Animated.View key={i} style={[styles.dot, animatedDotStyle]} />
           );
         })}
-      </View>
+      </View> */}
 
       <View style={styles.buttonRow}>
         <TouchableOpacity
@@ -140,7 +140,9 @@ const AuthIntroScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
+      <View style={styles.skipButton} />
+
+      {/* <TouchableOpacity
         onPress={() => console.log("Pressed")}
         activeOpacity={0.7}
         style={styles.skipButton}
@@ -148,7 +150,7 @@ const AuthIntroScreen = ({ navigation }) => {
         <Text style={[styles.buttonLabel, { color: AppColor.black }]}>
           {"SIGN IN LATER"}
         </Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
     </SafeAreaView>
   );
 };

@@ -276,6 +276,7 @@ const SignInScreen = () => {
                 style={styles.input}
                 contentStyle={styles.inputText}
                 placeholder=""
+                placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
@@ -295,6 +296,7 @@ const SignInScreen = () => {
                 style={styles.input}
                 contentStyle={styles.inputText}
                 placeholder=""
+                placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
                 secureTextEntry={!passwordVisible}
                 outlineColor={AppColor.border}
@@ -338,9 +340,9 @@ const SignInScreen = () => {
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.orText}>{"Or"}</Text>
+              {/* <Text style={styles.orText}>{"Or"}</Text> */}
 
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 onPress={() => console.log("Pressed")}
                 activeOpacity={0.7}
                 style={styles.skipButton}
@@ -348,7 +350,7 @@ const SignInScreen = () => {
                 <Text style={[styles.buttonLabel, { color: AppColor.black }]}>
                   {"SIGN IN LATER"}
                 </Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
           </View>
         </ScrollView>
@@ -411,6 +413,7 @@ const styles = StyleSheet.create({
   },
   inputText: {
     fontFamily: Secondary400,
+    fontSize: 15,
   },
   forgotPassword: {
     alignSelf: "flex-end",
