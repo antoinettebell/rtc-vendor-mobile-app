@@ -9,6 +9,9 @@ import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 import { PaperProvider } from "react-native-paper";
 import { persistor, store } from "./src/redux/store";
+import Config from "react-native-config";
+
+console.log(Config);
 
 const RnApp = () => (
   <Provider store={store}>

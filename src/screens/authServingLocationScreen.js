@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -16,40 +16,32 @@ import { AppColor, Primary400, Secondary400 } from "../utils/theme";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import SimpleLineIcons from "react-native-vector-icons/SimpleLineIcons";
 import AntDesign from "react-native-vector-icons/AntDesign";
-
-const locationsData = [
-  { id: 1, label: "New York" },
-  { id: 2, label: "Los Angeles" },
-  { id: 3, label: "Chicago" },
-  { id: 4, label: "Houston" },
-  { id: 5, label: "Phoenix" },
-  { id: 6, label: "Philadelphia" },
-  { id: 7, label: "San Antonio" },
-  { id: 8, label: "San Diego" },
-  { id: 9, label: "Dallas" },
-  { id: 10, label: "San Jose" },
-];
+import { useDispatch, useSelector } from "react-redux";
+import { setSelectedLocations } from "../redux/slices/foodTruckProfileSlice";
 
 const AuthServingLocationScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const [selectedLocations, setSelectedLocations] = useState([]);
+  const dispatch = useDispatch();
 
-  const handleAddLocation = (item) => {
-    if (!selectedLocations.some((location) => location.id === item.id)) {
-      setSelectedLocations([...selectedLocations, item]);
-    }
+  const { selectedLocations } = useSelector(
+    (state) => state.foodTruckProfileReducer
+  );
+
+  const [locationsData, setlocationsData] = useState([]);
+
+  const onRemoveLocationPress = (index) => {
+    const tempFilter = locationsData.filter((_, i) => i !== index);
+    dispatch(setSelectedLocations(tempFilter));
   };
 
-  const handleRemoveLocation = (item) => {
-    setSelectedLocations(
-      selectedLocations.filter((location) => location.id !== item.id)
-    );
-  };
+  useEffect(() => {
+    setlocationsData(selectedLocations);
+  }, [selectedLocations]);
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <StatusBar backgroundColor={AppColor.primary} barStyle="light-content" />
+      <StatusBar backgroundColor={AppColor.white} barStyle="dark-content" />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
@@ -86,40 +78,38 @@ const AuthServingLocationScreen = () => {
         <View style={styles.contentContainer}>
           <FlatList
             data={locationsData}
-            keyExtractor={(item) => item.id.toString()}
+            extraData={locationsData}
+            keyExtractor={(item) => item.lat.toString()}
             contentContainerStyle={[
               styles.flatListContent,
               {
                 borderWidth: locationsData.length > 0 ? 0.5 : 0,
               },
+              !locationsData ||
+                (locationsData?.length === 0 && { flexGrow: 1 }),
             ]}
-            renderItem={({ item }) => {
-              const isSelected = selectedLocations.some(
-                (location) => location.id === item.id
-              );
+            renderItem={({ item, index }) => (
+              <View style={styles.locationItem}>
+                <SimpleLineIcons
+                  name="location-pin"
+                  size={27}
+                  color={AppColor.primary}
+                />
 
-              return (
-                <TouchableOpacity
-                  onPress={() => handleAddLocation(item)}
-                  disabled={isSelected}
-                  style={styles.locationItem}
-                >
-                  <SimpleLineIcons
-                    name="location-pin"
-                    size={27}
-                    color={AppColor.primary}
-                  />
+                <View style={{ flex: 1, paddingHorizontal: 12 }}>
+                  <Text style={styles.locationTitle}>{item.title}</Text>
+                  <Text style={styles.locationAddress}>{item.address}</Text>
+                </View>
 
-                  <Text style={styles.locationText}>{item.label}</Text>
-
+                <TouchableOpacity onPress={() => onRemoveLocationPress(index)}>
                   <Ionicons
                     name="trash-outline"
                     size={24}
                     color={AppColor.black}
                   />
                 </TouchableOpacity>
-              );
-            }}
+              </View>
+            )}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             ListEmptyComponent={() => (
               <View style={styles.emptyListContainer}>
@@ -195,7 +185,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   flatListContent: {
-    flex: 1,
     borderRadius: 8,
     borderColor: "#F0F1F2",
   },
@@ -206,12 +195,15 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 12,
   },
-  locationText: {
-    flex: 1,
+  locationTitle: {
     fontSize: 16,
     color: AppColor.black,
     fontFamily: Secondary400,
-    paddingHorizontal: 12,
+  },
+  locationAddress: {
+    fontSize: 14,
+    color: AppColor.gray,
+    fontFamily: Secondary400,
   },
   separator: {
     height: 1,

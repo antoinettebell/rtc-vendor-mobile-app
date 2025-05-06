@@ -1,0 +1,130 @@
+import React, { useState } from "react";
+import {
+  View,
+  StyleSheet,
+  StatusBar,
+  TouchableOpacity,
+  Platform,
+} from "react-native";
+import { Text, IconButton } from "react-native-paper";
+import Octicons from "react-native-vector-icons/Octicons";
+import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useDispatch } from "react-redux";
+import { onSignin } from "../redux/slices/authSlice";
+
+export default function AuthUnderReviewNoteScreen() {
+  const insets = useSafeAreaInsets();
+  const dispatch = useDispatch();
+
+  const handleContinueBtnPress = () => {
+    dispatch(onSignin(true));
+  };
+
+  return (
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+      <StatusBar backgroundColor={AppColor.white} barStyle="dark-content" />
+      <View style={styles.subContainer}>
+        <Octicons
+          name="check-circle-fill"
+          size={77.5}
+          color={AppColor.primary}
+        />
+
+        <Text style={styles.title}>
+          Great! You’ve successfully created your profile.
+        </Text>
+
+        <View style={{ width: "85%" }}>
+          <View style={{ flexDirection: "row", marginTop: 8 }}>
+            <Text style={styles.subTitle}>{".  "}</Text>
+            <Text style={styles.subTitle}>
+              {"The Food Truck Team is reviewing your account."}
+            </Text>
+          </View>
+          <View style={{ flexDirection: "row", marginTop: 8 }}>
+            <Text style={styles.subTitle}>{".  "}</Text>
+            <Text style={styles.subTitle}>
+              {
+                "You'll receive a confirmation email once approved, usually within 24-48 hours."
+              }
+            </Text>
+          </View>
+          <View style={{ flexDirection: "row", marginTop: 8 }}>
+            <Text style={styles.subTitle}>{".  "}</Text>
+            <Text style={styles.subTitle}>
+              {
+                "In the meantime, enhance your profile! Add your menu, food photos, schedule, and a unique description of your truck."
+              }
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={styles.continueButton}
+        activeOpacity={0.7}
+        onPress={handleContinueBtnPress}
+      >
+        <Text style={styles.continueButtonText}>{"Continue"}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#F9FAFB",
+  },
+
+  subContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  title: {
+    width: "90%",
+    fontFamily: Primary400,
+    fontSize: 18,
+    color: AppColor.text,
+    marginVertical: 20,
+    textAlign: "center",
+  },
+  subTitle: {
+    flexWrap: "wrap",
+    fontSize: 14,
+    fontFamily: Secondary400,
+    textAlign: "left",
+    color: AppColor.textHighlighter,
+  },
+
+  continueButton: {
+    height: 48,
+    borderRadius: 5,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: AppColor.primary,
+    marginBottom: 20,
+    marginHorizontal: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: AppColor.black,
+        shadowOffset: {
+          width: 0,
+          height: 2,
+        },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  continueButtonText: {
+    fontFamily: Secondary400,
+    fontSize: 16,
+    color: AppColor.white,
+  },
+});

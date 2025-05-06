@@ -18,6 +18,13 @@ export const AppColor = {
   white: "#FFFFFF",
   black: "#000000",
   gray: "#8E8E93",
+  red: "#FF0000",
+
+  snackbarInfo: "#2196F3",
+  snackbarSuccess: "#4CAF50",
+  snackbarError: "#F44336",
+  snackbarWarning: "#FF9800",
+  snackbarDefault: "#323232",
 };
 
 // export const Mulish200 = "Mulish-ExtraLight";

@@ -18,8 +18,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
 
 import Screen1Svg from "../assets/images/intro1.svg";
-import Screen2Svg from "../assets/images/intro2.svg";
-import Screen3Svg from "../assets/images/intro3.svg";
 
 const { width, height } = Dimensions.get("window");
 
@@ -31,21 +29,6 @@ const slides = [
     description:
       "Discover the best food trucks around you and order your favorite bites in just a few taps.",
   },
-  // {
-  //   Svg: Screen2Svg,
-  //   title: "Hungry?",
-  //   subTitle: " Let’s Find a Truck!",
-  //   description:
-  //     "We’re scouting the streets to show you the most loved food trucks nearby fast, fresh, and full of flavor.",
-  // },
-  // {
-  //   Svg: Screen3Svg,
-  //   title: "Skip the Line, ",
-  //   subTitle1: "Savor",
-  //   subTitle2: " the Taste!",
-  //   description:
-  //     "No more waiting in line! Browse, order, and enjoy delicious street food anytime, anywhere.",
-  // },
 ];
 
 const DOT_SIZE = 7.02;
@@ -95,28 +78,6 @@ const AuthIntroScreen = ({ navigation }) => {
           </View>
         ))}
       </PagerView>
-
-      {/* <View style={styles.dotsContainer}>
-        {slides.map((_, i) => {
-          const animatedDotStyle = useAnimatedStyle(() => {
-            return {
-              width: withTiming(
-                activeIndex.value === i ? ACTIVE_DOT_SIZE : DOT_SIZE,
-                {
-                  duration: 200,
-                }
-              ),
-              opacity: withTiming(activeIndex.value === i ? 1 : 0.5),
-              backgroundColor:
-                activeIndex.value === i ? AppColor.primary : AppColor.border,
-            };
-          });
-
-          return (
-            <Animated.View key={i} style={[styles.dot, animatedDotStyle]} />
-          );
-        })}
-      </View> */}
 
       <View style={styles.buttonRow}>
         <TouchableOpacity

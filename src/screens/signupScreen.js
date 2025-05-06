@@ -282,13 +282,24 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { TextInput, IconButton, Button } from "react-native-paper";
+import {
+  TextInput,
+  IconButton,
+  Button,
+  HelperText,
+  ActivityIndicator,
+  Portal,
+  Snackbar,
+} from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CountryPicker } from "react-native-country-codes-picker";
 import AntDesign from "react-native-vector-icons/AntDesign";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
+import { emailRegex, passwordRegex } from "../utils/constants";
+import { registerVendor_API } from "../api/authAPI";
 
 const SignUpScreen = () => {
   const insets = useSafeAreaInsets();
@@ -301,11 +312,121 @@ const SignUpScreen = () => {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [countryPickerVisible, setCountryPickerVisible] = useState(false);
   const [countryCode, setCountryCode] = useState("+1");
-  const [mobileNumebr, setMobileNumber] = useState("");
+  const [mobileNumber, setMobileNumber] = useState("");
   const [agreed, setAgreed] = useState(false);
+  const [instagramLink, setInstagramLink] = useState("");
+  const [facebookLink, setFacebookLink] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    visible: false,
+    message: "",
+    type: "info",
+  });
+
+  const [errors, setErrors] = useState({
+    name: "",
+    foodTruckName: "",
+    mobileNumber: "",
+    email: "",
+    password: "",
+  });
 
   const togglePasswordVisibility = () => {
     setPasswordVisible(!passwordVisible);
+  };
+
+  const validateName = (value) => {
+    if (!value.trim()) return "Name is required";
+    return "";
+  };
+
+  const validateFoodTruckName = (value) => {
+    if (!value.trim()) return "Food truck name is required";
+    return "";
+  };
+
+  const validateMobileNumber = (value) => {
+    if (!value.trim()) return "Mobile number is required";
+    if (value.length < 10) return "Enter a valid 10-digit number";
+    return "";
+  };
+
+  const validateEmail = (value) => {
+    if (!value.trim()) return "Email is required";
+    if (!emailRegex.test(value)) return "Enter a valid email!";
+    return "";
+  };
+
+  const validatePassword = (value) => {
+    if (!value.trim()) return "Password is required";
+    if (!passwordRegex.test(value)) {
+      return "Password must be 8–15 chars with 1 uppercase, 1 lowercase, 1 number, and 1 special char.";
+    }
+    return "";
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    const nameError = validateName(name);
+    if (nameError) newErrors.name = nameError;
+
+    const foodTruckNameError = validateFoodTruckName(foodTruckName);
+    if (foodTruckNameError) newErrors.foodTruckName = foodTruckNameError;
+
+    const mobileError = validateMobileNumber(mobileNumber);
+    if (mobileError) newErrors.mobileNumber = mobileError;
+
+    const emailError = validateEmail(email);
+    if (emailError) newErrors.email = emailError;
+
+    const passwordError = validatePassword(password);
+    if (passwordError) newErrors.password = passwordError;
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSignUp = async () => {
+    const isValid = validateForm();
+    if (!isValid) return;
+
+    const payload = {
+      firstName: name,
+      foodTruck: {
+        name: foodTruckName,
+        infoType: "truck",
+        ...(facebookLink.trim() && { facebookLink }),
+        ...(instagramLink.trim() && { instagramLink }),
+      },
+      email,
+      password,
+      countryCode,
+      mobileNumber,
+    };
+
+    console.log("Payload:", payload);
+    setLoading(true);
+    try {
+      const response = await registerVendor_API(payload);
+      console.log("Response => ", response);
+      if (response.success && response.data) {
+        navigation.navigate("otpVerification", {
+          verificationFor: "sign-up",
+          data: response.data,
+          nextScreen: "",
+        });
+      }
+    } catch (error) {
+      console.log("Error => ", error);
+      setSnackbar({
+        visible: true,
+        message: error.message,
+        type: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -341,6 +462,7 @@ const SignUpScreen = () => {
           bounces={false}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          pointerEvents={loading ? "none" : "auto"}
         >
           <View style={styles.content}>
             {/* Logo */}
@@ -358,7 +480,7 @@ const SignUpScreen = () => {
             <View style={styles.formContainer}>
               {/* Name */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                {"Your Name"}
+                {"Your Name *"}
               </Text>
               <TextInput
                 dense
@@ -369,16 +491,29 @@ const SignUpScreen = () => {
                 placeholder="Enter Your Name"
                 placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
+                error={!!errors.name}
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
                 outlineStyle={{ borderRadius: 8 }}
                 autoCapitalize="none"
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
+                onBlur={() =>
+                  setErrors((prev) => ({ ...prev, name: validateName(name) }))
+                }
               />
+              {!!errors.name && (
+                <HelperText
+                  type="error"
+                  visible={!!errors.name}
+                  style={styles.helper}
+                >
+                  {errors.name}
+                </HelperText>
+              )}
 
               {/* Food Truck Name */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                {"Food Truck Name"}
+                {"Food Truck Name *"}
               </Text>
               <TextInput
                 dense
@@ -389,16 +524,83 @@ const SignUpScreen = () => {
                 placeholder="Enter Food Truck Name"
                 placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
+                error={!!errors.foodTruckName}
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
                 outlineStyle={{ borderRadius: 8 }}
                 autoCapitalize="none"
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
+                onBlur={() =>
+                  setErrors((prev) => ({
+                    ...prev,
+                    foodTruckName: validateFoodTruckName(foodTruckName),
+                  }))
+                }
+              />
+              {!!errors.foodTruckName && (
+                <HelperText
+                  type="error"
+                  visible={!!errors.foodTruckName}
+                  style={styles.helper}
+                >
+                  {errors.foodTruckName}
+                </HelperText>
+              )}
+
+              {/* Social Media Link */}
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+                {"Social Media Link"}
+              </Text>
+
+              {/* Instagram Input */}
+              <TextInput
+                dense
+                value={instagramLink}
+                onChangeText={setInstagramLink}
+                style={[styles.input, { marginBottom: 16 }]}
+                contentStyle={styles.inputTextWithLine}
+                placeholder="Enter Instagram Link"
+                placeholderTextColor={AppColor.placeholderTextColor}
+                mode="outlined"
+                outlineColor={AppColor.border}
+                activeOutlineColor={AppColor.primary}
+                outlineStyle={{ borderRadius: 8 }}
+                left={
+                  <TextInput.Icon
+                    icon={() => (
+                      <FontAwesome6 name="instagram" size={20} color="#777" />
+                    )}
+                  />
+                }
+                theme={{ colors: { onSurfaceVariant: "#777" } }}
+              />
+
+              {/* Facebook Input */}
+              <TextInput
+                dense
+                value={facebookLink}
+                onChangeText={setFacebookLink}
+                style={styles.input}
+                contentStyle={styles.inputTextWithLine}
+                placeholder="Enter Facebook Link"
+                placeholderTextColor={AppColor.placeholderTextColor}
+                mode="outlined"
+                outlineColor={AppColor.border}
+                activeOutlineColor={AppColor.primary}
+                outlineStyle={{ borderRadius: 8 }}
+                left={
+                  <TextInput.Icon
+                    icon={() => (
+                      <FontAwesome6 name="facebook" size={20} color="#777" />
+                    )}
+                  />
+                }
+                theme={{ colors: { onSurfaceVariant: "#777" } }}
               />
 
               {/* Mobile No */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                {"Enter mobile no.*"}
+                {"Enter mobile no. *"}
               </Text>
               <View
                 style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
@@ -418,25 +620,41 @@ const SignUpScreen = () => {
 
                 <TextInput
                   dense
-                  value={mobileNumebr}
+                  value={mobileNumber}
                   onChangeText={setMobileNumber}
                   style={[styles.input, { flex: 1 }]}
                   contentStyle={styles.inputText}
                   placeholder="Enter Mobile No."
                   placeholderTextColor={AppColor.placeholderTextColor}
                   mode="outlined"
+                  error={!!errors.mobileNumber}
                   maxLength={10}
                   outlineColor={AppColor.border}
                   activeOutlineColor={AppColor.primary}
                   outlineStyle={{ borderRadius: 8 }}
                   keyboardType="phone-pad"
                   theme={{ colors: { onSurfaceVariant: "#777" } }}
+                  onBlur={() =>
+                    setErrors((prev) => ({
+                      ...prev,
+                      mobileNumber: validateMobileNumber(mobileNumber),
+                    }))
+                  }
                 />
               </View>
+              {!!errors.mobileNumber && (
+                <HelperText
+                  type="error"
+                  visible={!!errors.mobileNumber}
+                  style={styles.helper}
+                >
+                  {errors.mobileNumber}
+                </HelperText>
+              )}
 
               {/* Email */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                {"Email ID"}
+                {"Email ID *"}
               </Text>
               <TextInput
                 dense
@@ -447,17 +665,33 @@ const SignUpScreen = () => {
                 placeholder="Enter Email ID"
                 placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
+                error={!!errors.email}
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
                 outlineStyle={{ borderRadius: 8 }}
                 autoCapitalize="none"
                 keyboardType="email-address"
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
+                onBlur={() =>
+                  setErrors((prev) => ({
+                    ...prev,
+                    email: validateEmail(email),
+                  }))
+                }
               />
+              {!!errors.email && (
+                <HelperText
+                  type="error"
+                  visible={!!errors.email}
+                  style={styles.helper}
+                >
+                  {errors.email}
+                </HelperText>
+              )}
 
               {/* Password */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                {"Password"}
+                {"Password *"}
               </Text>
               <TextInput
                 dense
@@ -468,6 +702,7 @@ const SignUpScreen = () => {
                 placeholder="Enter Password"
                 placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
+                error={!!errors.password}
                 secureTextEntry={!passwordVisible}
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
@@ -480,7 +715,22 @@ const SignUpScreen = () => {
                   />
                 }
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
+                onBlur={() =>
+                  setErrors((prev) => ({
+                    ...prev,
+                    password: validatePassword(password),
+                  }))
+                }
               />
+              {!!errors.password && (
+                <HelperText
+                  type="error"
+                  visible={!!errors.password}
+                  style={styles.helper}
+                >
+                  {errors.password}
+                </HelperText>
+              )}
 
               {/* Country picker modal */}
               <CountryPicker
@@ -549,11 +799,16 @@ const SignUpScreen = () => {
               </View>
 
               <TouchableOpacity
-                onPress={() => navigation.navigate("otpVerification")}
+                onPress={handleSignUp}
                 activeOpacity={0.7}
-                style={styles.signInButton}
+                disabled={!agreed || loading}
+                style={[styles.signInButton, { opacity: agreed ? 1 : 0.8 }]}
               >
-                <Text style={styles.buttonLabel}>{"Signup"}</Text>
+                {loading ? (
+                  <ActivityIndicator color={AppColor.white} />
+                ) : (
+                  <Text style={styles.buttonLabel}>{"Signup"}</Text>
+                )}
               </TouchableOpacity>
 
               <View style={styles.signUpContainer}>
@@ -569,6 +824,23 @@ const SignUpScreen = () => {
               </View>
             </View>
           </View>
+          <Portal>
+            <Snackbar
+              visible={snackbar.visible}
+              onDismiss={() => setSnackbar({ ...snackbar, visible: false })}
+              duration={4000}
+              style={{
+                backgroundColor:
+                  snackbar.type === "success"
+                    ? AppColor.snackbarSuccess
+                    : snackbar.type === "error"
+                    ? AppColor.snackbarError
+                    : AppColor.snackbarDefault,
+              }}
+            >
+              {snackbar.message}
+            </Snackbar>
+          </Portal>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -631,6 +903,19 @@ const styles = StyleSheet.create({
     fontFamily: Secondary400,
     fontSize: 15,
   },
+  inputTextWithLine: {
+    fontFamily: Secondary400,
+    fontSize: 15,
+    paddingLeft: 16,
+    borderLeftWidth: 1,
+    borderLeftColor: AppColor.border,
+  },
+  helper: {
+    marginBottom: 8,
+    paddingLeft: 0,
+    paddingTop: 0,
+  },
+
   countryPickerButton: {
     height: "100%",
     width: "25%",

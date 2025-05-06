@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
   ScrollView,
@@ -8,16 +8,293 @@ import {
   View,
   Image,
   TouchableOpacity,
+  Platform,
+  FlatList,
+  Alert,
 } from "react-native";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
-import { IconButton } from "react-native-paper";
+import { ActivityIndicator, IconButton } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
+import Octicons from "react-native-vector-icons/Octicons";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { RESULTS } from "react-native-permissions";
+import ImagePicker from "react-native-image-crop-picker";
+import usePermission from "../hooks/usePermission";
+import { permission } from "../utils/permissions";
+import MediaPickerDialog from "../components/MediaPickerDialog";
+import { useDispatch, useSelector } from "react-redux";
+import { updateFoodTruckProfile_API, uploadImage_API } from "../api/appAPI";
+import { clearUserSlice, setUser } from "../redux/slices/userSlice";
+import {
+  clearFoodTruckProfileSlice,
+  setSelectedLocations,
+} from "../redux/slices/foodTruckProfileSlice";
+import { onSignOut } from "../redux/slices/authSlice";
 
 const AuthFoodTruckProfileScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const dispatch = useDispatch();
+
+  const { selectedCuisine, selectedLocations } = useSelector(
+    (state) => state.foodTruckProfileReducer
+  );
+  const { user } = useSelector((state) => state.userReducer);
+
+  const { checkAndRequestPermission: photosPermissionStatus } = usePermission(
+    permission.photos
+  );
+  const { checkAndRequestPermission: cameraPermissionStatus } = usePermission(
+    permission.camera
+  );
+
+  const [loading, setLoading] = useState(false);
+  const [infoType, setInfoType] = useState("Food Truck");
+  const [selectedMediaType, setSelectedMediaType] = useState(null);
+  const [selectedLogo, setSelectedLogo] = useState(null);
+  const [selectedPhotos, setSelectedPhotos] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const onPressUploadLogo = () => {
+    setSelectedMediaType("logo");
+    setModalVisible(true);
+  };
+
+  const onPressUploadPhotos = () => {
+    setSelectedMediaType("photos");
+    setModalVisible(true);
+  };
+
+  const onMediaModalClose = () => {
+    setModalVisible(false);
+    setSelectedMediaType(null);
+  };
+
+  const handleCameraPress = async (mediaType) => {
+    setModalVisible(false);
+    try {
+      const cameraStatus = await cameraPermissionStatus();
+      if (cameraStatus !== RESULTS.GRANTED) return;
+
+      setTimeout(
+        async () => {
+          // Permission granted, open the camera
+          await ImagePicker.openCamera({
+            cropping: true,
+            mediaType: "photo",
+          })
+            .then(async (image) => {
+              try {
+                const imagedata = {
+                  mode: "camera",
+                  uri: image?.path,
+                  name: `${image?.path?.split("/").pop()}`, // did this because not able to get filename in ios
+                  type: image.mime,
+                };
+                if (mediaType === "logo") {
+                  setSelectedLogo(imagedata);
+                } else {
+                  setSelectedPhotos((prev) => [...prev, imagedata]);
+                }
+              } catch (error) {
+                console.log("error => ", error);
+              } finally {
+                setSelectedMediaType(null);
+              }
+            })
+            .catch((error) => {
+              console.log("error => ", error);
+            });
+        },
+        Platform.OS === "ios" ? 600 : 0
+      );
+    } catch (error) {
+      console.error("error => ", error);
+    } finally {
+    }
+  };
+
+  const handleGalleryPress = async (mediaType) => {
+    setModalVisible(false);
+    try {
+      const photosStatus = await photosPermissionStatus();
+      if (photosStatus !== RESULTS.GRANTED && photosStatus !== RESULTS.LIMITED)
+        return;
+
+      setTimeout(
+        async () => {
+          await ImagePicker.openPicker({
+            multiple: mediaType === "logo" ? false : true,
+            mediaType: "photo",
+          })
+            .then((images) => {
+              try {
+                if (mediaType === "logo") {
+                  const payload =
+                    Platform.OS == "ios"
+                      ? {
+                          mode: "media",
+                          uri: images?.sourceURL,
+                          name: images?.filename,
+                          type: images.mime,
+                        }
+                      : {
+                          mode: "media",
+                          uri: images?.path,
+                          name: images?.filename,
+                          type: images.mime,
+                        };
+                  setSelectedLogo(payload);
+                } else {
+                  const tempImages = images.map((i) =>
+                    Platform.OS == "ios"
+                      ? {
+                          mode: "media",
+                          uri: i?.sourceURL,
+                          name: i?.filename,
+                          type: i.mime,
+                        }
+                      : {
+                          mode: "media",
+                          uri: i?.path,
+                          name: i?.filename,
+                          type: i.mime,
+                        }
+                  );
+                  setSelectedPhotos((prev) => [...prev, ...tempImages]);
+                }
+              } catch (error) {
+                console.log("error => ", error);
+              } finally {
+                setSelectedMediaType(null);
+              }
+            })
+            .catch((error) => {
+              console.log("error => ", error);
+            });
+        },
+        Platform.OS === "ios" ? 600 : 0
+      );
+    } catch (error) {
+      console.error("error => ", error);
+    } finally {
+    }
+  };
+
+  const onPhotosRemovePress = (index) => {
+    const tempPhotos = selectedPhotos.filter((_, i) => i !== index);
+    setSelectedPhotos(tempPhotos);
+  };
+
+  const handleContinueBtnPress = async () => {
+    setLoading(true);
+    try {
+      // upload logo
+      let logoResult = null;
+      if (selectedLogo) {
+        const formData = new FormData();
+        formData.append("file", {
+          uri: selectedLogo.uri,
+          name: selectedLogo.name,
+          type: selectedLogo.type,
+        });
+        console.log("logo => ", formData);
+        try {
+          const response = await uploadImage_API(formData);
+          if (response.success && response.data)
+            logoResult = {
+              ...selectedLogo,
+              serverResponse: response.data.file,
+            };
+        } catch (error) {
+          console.log("error => ", error);
+        }
+      }
+
+      // upload selected photos
+      const imageResult = [];
+      for (const image of selectedPhotos) {
+        console.log("image => ", image);
+        const formData = new FormData();
+        formData.append("file", {
+          uri: image.uri,
+          name: image.name,
+          type: image.type,
+        });
+        console.log("photo => ", formData);
+        try {
+          const response = await uploadImage_API(formData);
+          if (response.success && response.data)
+            imageResult.push({
+              ...image,
+              serverResponse: response.data.file,
+            });
+        } catch (error) {
+          console.log("error => ", error);
+        }
+      }
+
+      let payload = {
+        infoType: infoType === "Food Truck" ? "truck" : "caterer",
+      };
+      if (logoResult) {
+        payload.logo = logoResult.serverResponse;
+      }
+      if (imageResult?.length > 0) {
+        const tempURL = imageResult.map((item) => item.serverResponse);
+        payload.photos = tempURL;
+      }
+      if (selectedLocations?.length > 0) {
+        payload.locations = selectedLocations;
+      }
+      if (selectedCuisine?.length > 0) {
+        const tempIDs = selectedCuisine.map((item) => item._id);
+        payload.cuisine = tempIDs;
+      }
+
+      console.log("payload ===> ", payload);
+      console.log("foodTruckId ===> ", user?.foodTruck?._id);
+
+      const response = await updateFoodTruckProfile_API({
+        payload,
+        foodTruckId: user?.foodTruck?._id,
+      });
+      if (response.success && response.data) {
+        console.log("response => ", response);
+        dispatch(setSelectedLocations(response.data.foodtruck.locations));
+        console.log("USER => ", {
+          ...user,
+          foodTruck: response.data.foodtruck,
+        });
+        dispatch(setUser({ ...user, foodTruck: response.data.foodtruck }));
+        navigation.navigate("authAvailabilityScreen");
+      }
+    } catch (error) {
+      console.error("error => ", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignout = async () => {
+    Alert.alert(
+      "Exit Registration?",
+      "Any unsaved data will be lost. Do you want to sign-out anyway?",
+      [
+        { text: "Cancel", onPress: () => {} },
+        {
+          text: "Signout",
+          onPress: () => {
+            dispatch(clearUserSlice());
+            dispatch(clearFoodTruckProfileSlice());
+            dispatch(onSignOut());
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
@@ -26,12 +303,16 @@ const AuthFoodTruckProfileScreen = () => {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <IconButton
-          icon="arrow-left"
-          iconColor={AppColor.white}
-          size={24}
-          onPress={() => navigation.goBack()}
+          icon={(props) => (
+            <Octicons
+              name="sign-out"
+              size={props.size}
+              color={AppColor.white}
+            />
+          )}
+          onPress={handleSignout}
         />
-        <Text style={styles.headerTitle}>{"Food Truck Profile"}</Text>
+        <Text style={styles.headerTitle}>Food Truck Profile</Text>
         <View style={{ width: 48 }} />
       </View>
 
@@ -39,72 +320,77 @@ const AuthFoodTruckProfileScreen = () => {
       <KeyboardAvoidingView
         enabled={Platform.OS === "ios"}
         behavior="padding"
-        style={{
-          flex: 1,
-          marginBottom: -insets.bottom,
-        }}
+        style={{ flex: 1, marginBottom: -insets.bottom }}
       >
         <ScrollView
           contentContainerStyle={{ flexGrow: 1 }}
           bounces={false}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          pointerEvents={loading ? "none" : "auto"}
         >
           <View style={{ flex: 1 }}>
-            {/* Step Container */}
+            {/* Step Indicator */}
             <View style={styles.stepContainer}>
-              {/* Step 1 - filled circle with checkmark */}
               <View style={styles.stepSubContainer}>
                 <View style={styles.filledCircle}>
                   <FontAwesome6 name="check" color={AppColor.white} size={18} />
                 </View>
               </View>
-
-              {/* Line connecting steps */}
               <View style={styles.line} />
-
-              {/* Step 2 - empty circle */}
               <View style={styles.stepContainer}>
                 <View style={styles.emptyCircle} />
               </View>
             </View>
 
-            {/* Content */}
+            {/* Main Form */}
             <View
               style={[styles.content, { paddingBottom: insets.bottom + 20 }]}
             >
-              {/* [Part 1] */}
+              {/* Food Truck Info */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>{"Food truck info"}</Text>
+                <Text style={styles.sectionTitle}>Food truck info</Text>
                 <Text style={styles.sectionSubtitle}>
-                  {"Tell your customer about your food truck!!"}
+                  Tell your customer about your food truck!!
                 </Text>
               </View>
 
-              {/* HR */}
-              <View
-                style={{
-                  height: 1,
-                  backgroundColor: "#E5E5EA",
-                  width: "100%",
-                }}
-              />
+              <View style={styles.hr} />
 
-              {/* [Part 2] */}
+              {/* Logo Upload */}
               <View style={styles.section}>
-                <Text style={styles.label}>{"Select Logo"}</Text>
+                <Text style={styles.label}>Select Logo</Text>
                 <View style={styles.logoContainer}>
-                  {/* Logo Image */}
-                  <View style={styles.logoImageWrapper}>
-                    {/* Example uploaded logo */}
-                    <Image
-                      source={{ uri: "https://picsum.photos/id/1/200/300" }}
-                      style={styles.logoImage}
-                    />
-                  </View>
-
-                  {/* Upload Button */}
-                  <TouchableOpacity style={styles.uploadButton}>
+                  {selectedLogo?.uri ? (
+                    <View style={styles.logoImageWrapper}>
+                      <Image
+                        source={{ uri: selectedLogo?.uri }}
+                        style={styles.logoImage}
+                      />
+                    </View>
+                  ) : (
+                    <View
+                      style={{
+                        width: 140,
+                        height: 140,
+                        borderRadius: 70,
+                        marginTop: 10,
+                        backgroundColor: AppColor.primary,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <FontAwesome6
+                        name="truck-fast"
+                        color={AppColor.white}
+                        size={50}
+                      />
+                    </View>
+                  )}
+                  <TouchableOpacity
+                    style={styles.uploadButton}
+                    onPress={onPressUploadLogo}
+                  >
                     <FontAwesome6
                       name="upload"
                       color={AppColor.black}
@@ -115,11 +401,13 @@ const AuthFoodTruckProfileScreen = () => {
                 </View>
               </View>
 
-              {/* [Part 3] */}
+              {/* Photos Upload */}
               <View style={styles.section}>
-                <Text style={styles.label}>{"Select Food Truck Photos"}</Text>
-
-                <TouchableOpacity style={styles.photoUploadContainer}>
+                <Text style={styles.label}>Select Food Truck Photos</Text>
+                <TouchableOpacity
+                  style={styles.photoUploadContainer}
+                  onPress={onPressUploadPhotos}
+                >
                   <FontAwesome6
                     name="upload"
                     color={AppColor.black}
@@ -128,46 +416,81 @@ const AuthFoodTruckProfileScreen = () => {
                   <Text style={styles.uploadButtonText}>Upload Photos</Text>
                 </TouchableOpacity>
 
-                {/* Already Uploaded Thumbnails */}
-                <View style={styles.thumbnailContainer}>
-                  {/* Thumbnail 1 */}
-                  <Image
-                    source={{ uri: "https://picsum.photos/id/1/200/300" }}
-                    style={styles.thumbnail}
-                  />
-                  {/* Thumbnail 2 */}
-                  <Image
-                    source={{ uri: "https://picsum.photos/id/1/200/300" }}
-                    style={styles.thumbnail}
-                  />
-                </View>
+                {selectedPhotos?.length > 0 && (
+                  <View>
+                    <FlatList
+                      data={selectedPhotos}
+                      extraData={selectedPhotos}
+                      horizontal
+                      keyExtractor={(item) => item.uri}
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={{ marginTop: 10 }}
+                      renderItem={({ item, index }) => (
+                        <View style={{ marginRight: 15 }}>
+                          <Image
+                            source={{ uri: item.uri }}
+                            style={styles.thumbnail}
+                          />
+                          <TouchableOpacity
+                            hitSlop={5}
+                            style={{
+                              position: "absolute",
+                              right: -8,
+                              top: -8,
+                              backgroundColor: AppColor.primary,
+                              borderRadius: 10,
+                              height: 20,
+                              width: 20,
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                            onPress={() => onPhotosRemovePress(index)}
+                            activeOpacity={0.7}
+                          >
+                            <FontAwesome6
+                              name="minus"
+                              size={14}
+                              color={AppColor.white}
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    />
+                  </View>
+                )}
               </View>
 
-              {/* [Part 4] */}
+              {/* Radio Buttons */}
               <View style={styles.radioContainer}>
-                <TouchableOpacity style={styles.radioButton}>
-                  <View style={styles.radioOuterCircle}>
-                    <View style={styles.radioInnerCircle} />
-                  </View>
-                  <Text style={styles.radioLabel}>{"Food Truck"}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.radioButton}>
-                  <View style={styles.radioOuterCircle}>
-                    {/* Empty for unselected */}
-                  </View>
-                  <Text style={styles.radioLabel}>{"Food Caterer"}</Text>
-                </TouchableOpacity>
+                {["Food Truck", "Food Caterer"].map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={styles.radioButton}
+                    onPress={() => setInfoType(type)}
+                  >
+                    <View style={styles.radioOuterCircle}>
+                      {infoType === type && (
+                        <View style={styles.radioInnerCircle} />
+                      )}
+                    </View>
+                    <Text style={styles.radioLabel}>{type}</Text>
+                  </TouchableOpacity>
+                ))}
               </View>
 
-              {/* [Part 5] */}
+              {/* Cuisine and Location */}
               <View style={styles.section}>
-                <Text style={styles.label}>{"Serving Cuisine"}</Text>
                 <TouchableOpacity
-                  style={styles.dropdown}
+                  activeOpacity={0.7}
                   onPress={() => navigation.navigate("authSelectCuisineScreen")}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingVertical: 10,
+                  }}
                 >
-                  <Text style={styles.dropdownText}>{"Select Cuisine"}</Text>
+                  <Text style={styles.label}>Serving Cuisine</Text>
                   <FontAwesome6
                     name="angle-right"
                     color={AppColor.black}
@@ -175,36 +498,75 @@ const AuthFoodTruckProfileScreen = () => {
                   />
                 </TouchableOpacity>
 
-                <Text style={[styles.label, { marginTop: 20 }]}>
-                  {"Serving Location"}
-                </Text>
+                {selectedCuisine?.map((item) => (
+                  <View key={item._id} style={styles.dropdown}>
+                    <Ionicons
+                      name="fast-food-outline"
+                      size={18}
+                      color={AppColor.primary}
+                    />
+
+                    <Text style={styles.dropdownText}>{item.name}</Text>
+                  </View>
+                ))}
+
                 <TouchableOpacity
-                  style={styles.dropdown}
+                  activeOpacity={0.7}
                   onPress={() =>
                     navigation.navigate("authServingLocationScreen")
                   }
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingVertical: 10,
+                  }}
                 >
-                  <Text style={styles.dropdownText}>{"Select Locations"}</Text>
+                  <Text style={[styles.label]}>Serving Location</Text>
                   <FontAwesome6
                     name="angle-right"
                     color={AppColor.black}
                     size={18}
                   />
                 </TouchableOpacity>
+                {selectedLocations?.map((item) => (
+                  <View key={item._id} style={styles.dropdown}>
+                    <Ionicons
+                      name="location-outline"
+                      size={18}
+                      color={AppColor.primary}
+                    />
+
+                    <Text style={styles.dropdownText}>{item.title}</Text>
+                  </View>
+                ))}
               </View>
 
-              {/* [Part 6] */}
+              {/* Continue Button */}
               <TouchableOpacity
-                onPress={() => navigation.navigate("authAvailabilityScreen")}
+                onPress={handleContinueBtnPress}
                 activeOpacity={0.7}
                 style={styles.continueButton}
+                disabled={loading}
               >
-                <Text style={styles.continueButtonText}>{"Continue"}</Text>
+                {loading ? (
+                  <ActivityIndicator color={AppColor.white} />
+                ) : (
+                  <Text style={styles.continueButtonText}>Continue</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Media Picker Modal */}
+      <MediaPickerDialog
+        isVisible={modalVisible}
+        onCameraPress={() => handleCameraPress(selectedMediaType)}
+        onGalleryPress={() => handleGalleryPress(selectedMediaType)}
+        onClosePress={onMediaModalClose}
+      />
     </View>
   );
 };
@@ -212,10 +574,7 @@ const AuthFoodTruckProfileScreen = () => {
 export default AuthFoodTruckProfileScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F9FAFB",
-  },
+  container: { flex: 1, backgroundColor: "#F9FAFB" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -230,7 +589,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: Primary400,
   },
-
   stepContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -255,32 +613,21 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 2,
     borderColor: AppColor.primary,
-    backgroundColor: "transparent",
   },
-  line: {
-    width: "25%",
-    height: 2,
-    backgroundColor: AppColor.primary,
-  },
-
-  content: {
-    flex: 1,
-    backgroundColor: AppColor.white,
-  },
-  section: {
-    marginVertical: 16,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontFamily: Primary400,
-    color: AppColor.text,
-  },
+  line: { width: "25%", height: 2, backgroundColor: AppColor.primary },
+  content: { flex: 1, backgroundColor: AppColor.white },
+  section: { marginVertical: 16, paddingHorizontal: 24 },
+  sectionTitle: { fontSize: 24, fontFamily: Primary400, color: AppColor.text },
   sectionSubtitle: {
     fontSize: 14,
     fontFamily: Secondary400,
     color: AppColor.textHighlighter,
     marginTop: 4,
+  },
+  hr: {
+    height: 1,
+    backgroundColor: "#E5E5EA",
+    width: "100%",
   },
   label: {
     fontSize: 18,
@@ -300,10 +647,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     overflow: "hidden",
   },
-  logoImage: {
-    width: "100%",
-    height: "100%",
-  },
+  logoImage: { width: "100%", height: "100%" },
   uploadButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -330,15 +674,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 12,
   },
-  thumbnailContainer: {
-    flexDirection: "row",
-    // marginTop: 8,
-  },
+  thumbnailContainer: { flexDirection: "row" },
   thumbnail: {
     width: 50,
     height: 50,
     borderRadius: 5,
-    marginRight: 8,
   },
   radioContainer: {
     flexDirection: "row",
@@ -382,9 +722,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    marginBottom: 5,
   },
   dropdownText: {
-    color: AppColor.placeholderTextColor,
+    color: AppColor.text,
+    flex: 1,
+    marginLeft: 16,
+    fontSize: 16,
+    fontFamily: Secondary400,
   },
   continueButton: {
     height: 48,
@@ -397,16 +742,11 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: AppColor.black,
-        shadowOffset: {
-          width: 0,
-          height: 2,
-        },
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 4,
       },
-      android: {
-        elevation: 4,
-      },
+      android: { elevation: 4 },
     }),
   },
   continueButtonText: {

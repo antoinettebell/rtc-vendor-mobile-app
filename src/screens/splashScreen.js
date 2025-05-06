@@ -9,14 +9,22 @@ import SplashTop2Svg from "../assets/images/splashTop2.svg";
 import SplashTop3Svg from "../assets/images/splashTop3.svg";
 
 import SplashBottom1Svg from "../assets/images/splashBottom1.svg";
+import { useSelector } from "react-redux";
 
 const SplashScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const { isSignedIn, isOnboarded } = useSelector((state) => state.authReducer);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      navigation.replace("authIntro"); // navigate to AuthIntroScreen after splash
+      navigation.replace(
+        isSignedIn
+          ? "bottomRoot"
+          : isOnboarded
+          ? "authFoodTruckProfileScreen"
+          : "authIntro"
+      ); // navigate to AuthIntroScreen after splash
     }, 1500); // 3000ms = 3 seconds
 
     return () => clearTimeout(timeout);
@@ -24,7 +32,12 @@ const SplashScreen = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top / 2 }]}>
-      <StatusBar animated hidden showHideTransition="slide" />
+      {/* <StatusBar
+        animated
+        backgroundColor={AppColor.white}
+        barStyle="dark-content"
+      /> */}
+      <StatusBar backgroundColor={AppColor.white} barStyle={"dark-content"} />
 
       {/* Top 3 SVGs */}
       <View style={styles.topSvgsContainer}>

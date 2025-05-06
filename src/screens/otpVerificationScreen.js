@@ -19,14 +19,23 @@ import {
 } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import Modal from "react-native-modal";
+import Octicons from "react-native-vector-icons/Octicons";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { resendOTP_API, verifyOTP_API } from "../api/authAPI";
+import { useDispatch } from "react-redux";
+import { onOnBoard } from "../redux/slices/authSlice";
+import { setAuthToken, setUser } from "../redux/slices/userSlice";
 
-const OtpVerificationScreen = () => {
+const OtpVerificationScreen = ({ route }) => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const dispatch = useDispatch();
+  const timerRef = useRef(null);
 
+  const [resendTimer, setResendTimer] = useState(60);
+  const [params, setParams] = useState(route.params);
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
-  const [timer, setTimer] = useState(60);
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({
@@ -34,6 +43,7 @@ const OtpVerificationScreen = () => {
     message: "",
     type: "info",
   });
+  const [isModalVisible, setModalVisible] = useState(false);
 
   const inputRefs = useRef([]);
 
@@ -60,7 +70,7 @@ const OtpVerificationScreen = () => {
     }
   };
 
-  const handleVerifyOtp = () => {
+  const handleVerifyOtp = async () => {
     if (!validateOtp()) {
       setSnackbar({
         visible: true,
@@ -70,42 +80,103 @@ const OtpVerificationScreen = () => {
       return;
     }
 
+    const payload = {
+      otpVerificationToken: params?.data?.otpVerificationToken,
+      otp: otp,
+    };
+    console.log("payload => ", payload);
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const response = await verifyOTP_API(payload);
+      if (response.success && response.data) {
+        if (params?.verificationFor === "sign-up") {
+          setModalVisible(true); // Success -> show modal
+
+          dispatch(setUser(response.data.user));
+          dispatch(setAuthToken(response.data.authToken));
+        } else if (params?.verificationFor === "forget-password") {
+          console.log("response.data => ", response.data);
+          navigation.navigate("resetPassword", {
+            data: { ...response.data },
+          });
+        }
+      }
+    } catch (error) {
+      console.log("Error => ", error);
       setSnackbar({
         visible: true,
-        message: "OTP Verified",
-        type: "success",
+        message: error.message,
+        type: "error",
       });
-      navigation.navigate("authFoodTruckProfileScreen");
-    }, 1500);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleResendOtp = () => {
+  const handleResendOtp = async () => {
+    const payload = {
+      otpVerificationToken: params?.data?.otpVerificationToken,
+      email: params?.data?.user?.email,
+    };
     setResendLoading(true);
-    setOtpDigits(["", "", "", "", "", ""]);
-    setTimer(60);
-    inputRefs.current[0]?.focus();
+    try {
+      const resendResponse = await resendOTP_API(payload);
+      if (resendResponse.success && resendResponse.data) {
+        setOtpDigits(["", "", "", "", "", ""]);
+        setResendTimer(60);
+        inputRefs.current[0]?.focus();
 
-    setTimeout(() => {
+        setParams({
+          ...params,
+          otpVerificationToken: resendResponse?.data?.otpVerificationToken,
+        });
+
+        setSnackbar({
+          visible: true,
+          message: resendResponse.message,
+          type: "info",
+        });
+      }
+    } catch (error) {
+      console.log("Error => ", error);
+      setSnackbar({
+        visible: true,
+        message: error.message,
+        type: "error",
+      });
+    } finally {
       setResendLoading(false);
-      setSnackbar({ visible: true, message: "OTP Resent 📩", type: "info" });
-    }, 1000);
+    }
   };
+
+  // Countdown logic for resend button with cleanup
+  useEffect(() => {
+    if (resendTimer > 0) {
+      timerRef.current = setTimeout(
+        () => setResendTimer(resendTimer - 1),
+        1000
+      );
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [resendTimer]);
 
   useEffect(() => {
-    let timerRef;
-    if (timer > 0) {
-      timerRef = setTimeout(() => setTimer((prev) => prev - 1), 1000);
-    }
-    return () => clearTimeout(timerRef);
-  }, [timer]);
+    // Cleanup timer on unmount
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBar backgroundColor={AppColor.primary} barStyle="light-content" />
-
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <IconButton
@@ -150,7 +221,7 @@ const OtpVerificationScreen = () => {
             <Text style={styles.subtitle}>
               {"Enter the code from the mail we sent to"}
               <Text style={{ color: AppColor.text, fontFamily: Secondary400 }}>
-                {"\njohndoe@gmail.com"}
+                {`\n${params?.data?.user?.email}`}
               </Text>
             </Text>
 
@@ -191,10 +262,10 @@ const OtpVerificationScreen = () => {
             </TouchableOpacity>
 
             <View style={styles.resendContainer}>
-              {timer > 0 ? (
+              {resendTimer > 0 ? (
                 <Text
                   style={styles.timerText}
-                >{`Resend OTP in ${timer}s`}</Text>
+                >{`Resend OTP in ${resendTimer}s`}</Text>
               ) : (
                 <TouchableOpacity
                   onPress={handleResendOtp}
@@ -212,6 +283,41 @@ const OtpVerificationScreen = () => {
         </ScrollView>
       </KeyboardAvoidingView>
 
+      {/* Success Modal */}
+      <Modal
+        isVisible={isModalVisible}
+        backdropOpacity={0.5}
+        animationIn="zoomIn"
+        animationOut="zoomOut"
+      >
+        <View style={styles.modalContainer}>
+          <Octicons
+            name="check-circle-fill"
+            size={77.5}
+            color={AppColor.primary}
+          />
+
+          <Text
+            style={styles.modalTitle}
+          >{`Hello, ${params?.data?.user?.firstName}`}</Text>
+          <Text style={styles.modalSubtitle}>
+            {"Your account has been created successfully!"}
+          </Text>
+
+          <TouchableOpacity
+            style={styles.backToLoginButton}
+            activeOpacity={0.7}
+            onPress={() => {
+              setModalVisible(false);
+              dispatch(onOnBoard(true));
+            }}
+          >
+            <Text style={styles.backToLoginText}>{"Next"}</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      {/* Snacbar */}
       <Portal>
         <Snackbar
           visible={snackbar.visible}
@@ -220,10 +326,10 @@ const OtpVerificationScreen = () => {
           style={{
             backgroundColor:
               snackbar.type === "success"
-                ? "#4CAF50"
+                ? AppColor.snackbarSuccess
                 : snackbar.type === "error"
-                ? "#F44336"
-                : "#2196F3",
+                ? AppColor.snackbarError
+                : AppColor.snackbarDefault,
           }}
         >
           {snackbar.message}
@@ -347,5 +453,54 @@ const styles = StyleSheet.create({
     fontFamily: Secondary400,
     fontSize: 16,
     color: AppColor.white,
+  },
+
+  //   Modal
+  modalContainer: {
+    backgroundColor: AppColor.white,
+    marginHorizontal: "10%",
+    paddingVertical: 36,
+    paddingHorizontal: 33,
+    borderRadius: 24,
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontFamily: Primary400,
+    fontSize: 22,
+    color: AppColor.text,
+    marginVertical: 10,
+    textAlign: "center",
+  },
+  modalSubtitle: {
+    fontFamily: Secondary400,
+    fontSize: 16,
+    color: AppColor.textHighlighter,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  backToLoginButton: {
+    width: "100%",
+    height: 48,
+    borderRadius: 5,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: AppColor.primary,
+    marginTop: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: AppColor.black,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  backToLoginText: {
+    color: AppColor.white,
+    fontFamily: Secondary400,
+    fontSize: 16,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   StatusBar,
   StyleSheet,
@@ -9,45 +9,64 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
-import { IconButton } from "react-native-paper";
+import {
+  ActivityIndicator,
+  IconButton,
+  Portal,
+  Snackbar,
+} from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { promptForEnableLocationIfNeeded } from "react-native-android-location-enabler";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
+import Geolocation from "@react-native-community/geolocation";
 import Config from "react-native-config";
 import usePermission from "../hooks/usePermission";
 import { permission } from "../utils/permissions";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import { getLocationName } from "../api/appAPI";
+import { RESULTS } from "react-native-permissions";
+import { useDispatch, useSelector } from "react-redux";
+import { setSelectedLocations } from "../redux/slices/foodTruckProfileSlice";
 
 const GOOGLE_MAP_API_KEY = Config.GOOGLE_MAP_API_KEY;
 
 navigator.geolocation = require("@react-native-community/geolocation");
 
 const initialRegion = {
-  latitude: 23.0225,
-  longitude: 72.5714,
-  latitudeDelta: 0.1,
-  longitudeDelta: 0.1,
+  latitude: 37.78825,
+  longitude: -122.4324,
+  latitudeDelta: 0.0922,
+  longitudeDelta: 0.0421,
 };
 
 const AuthMapScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const dispatch = useDispatch();
   const searchTxtRef = useRef(null);
   const mapRef = useRef(null); // Ref for the MapView
 
+  const { selectedLocations } = useSelector(
+    (state) => state.foodTruckProfileReducer
+  );
+
+  const [loading, setLoading] = useState(false);
   const [searchTxt, setSearchTxt] = useState(null);
+  const [title, setTitle] = useState("");
   const [locationName, setLocationName] = useState("");
-  const [currentRegion, setCurrentRegion] = useState(null);
+  const [currentRegion, setCurrentRegion] = useState(initialRegion);
+  const [snackbar, setSnackbar] = useState({
+    visible: false,
+    message: "",
+    type: "info",
+  });
 
   const { checkAndRequestPermission: locationPermissionStatus } = usePermission(
     permission.location
   );
-
-  const onSearchBackPress = () => {
-    navigation.goBack();
-  };
 
   const onSearchPress = () => {
     if (searchTxtRef?.current) {
@@ -55,74 +74,179 @@ const AuthMapScreen = () => {
     }
   };
 
+  const getCurrentLocation = () => {
+    return new Promise((resolve, reject) => {
+      Geolocation.getCurrentPosition(
+        (position) => resolve(position),
+        (error) => reject(error),
+        {
+          enableHighAccuracy: false,
+          timeout: 20000,
+          maximumAge: 20000,
+        }
+      );
+    });
+  };
+
   const getPlaceName = async (lat, long) => {
     try {
       const payload = { lat, long };
-      // let response = await getLocationName(payload);
-      // if (response.status === "OK") {
-      //   setLocationName(response.results[0].formatted_address);
-      //   return;
-      // } else {
-      //   switch (response.status) {
-      //     case "ZERO_RESULTS":
-      //       showToast({
-      //         type: "error",
-      //         title: "Error!",
-      //         message: "This is a remote location.",
-      //       });
-      //       break;
+      let response = await getLocationName(payload);
+      if (response.status === "OK") {
+        const adrs = response.results[0].formatted_address;
+        setTitle(adrs.split(",").slice(0, 1).join(",").trim());
+        setLocationName(adrs);
+        return;
+      } else {
+        switch (response.status) {
+          case "ZERO_RESULTS":
+            setSnackbar({
+              visible: true,
+              message: "This is a remote location.",
+              type: "error",
+            });
+            break;
 
-      //     case "OVER_QUERY_LIMIT":
-      //       showToast({
-      //         type: "error",
-      //         title: "Please retry in some time!",
-      //         message: "You are over your quota.",
-      //       });
-      //       break;
+          case "OVER_QUERY_LIMIT":
+            setSnackbar({
+              visible: true,
+              message: "Please retry in some time!",
+              type: "error",
+            });
+            break;
 
-      //     case "REQUEST_DENIED":
-      //       showToast({
-      //         type: "error",
-      //         title: "Error!",
-      //         message: "Something went wrong.",
-      //       });
-      //       break;
+          case "REQUEST_DENIED":
+            setSnackbar({
+              visible: true,
+              message: "Something went wrong.",
+              type: "error",
+            });
+            break;
 
-      //     case "INVALID_REQUEST":
-      //       showToast({
-      //         type: "error",
-      //         title: "Error!",
-      //         message: "Something is missing in your search parameters.",
-      //       });
-      //       break;
+          case "INVALID_REQUEST":
+            setSnackbar({
+              visible: true,
+              message: "Something is missing in your search parameters.",
+              type: "error",
+            });
+            break;
 
-      //     case "UNKNOWN_ERROR":
-      //       showToast({
-      //         type: "error",
-      //         title: "Error!",
-      //         message: "Try again in some time.",
-      //       });
-      //       break;
-      //   }
-      //   console.log("Geocoding Error:", response.status);
-      //   return null;
-      // }
+          case "UNKNOWN_ERROR":
+            setSnackbar({
+              visible: true,
+              message: "Try again in some time.",
+              type: "error",
+            });
+            break;
+        }
+        console.log("Geocoding Error:", response.status);
+        return null;
+      }
     } catch (error) {
       console.error("Geocoding Request Failed:", error);
       return null;
     }
   };
 
+  const onMapReadyCall = async (type = undefined) => {
+    if (type !== "manually") return;
+    setLoading(true);
+    try {
+      const locationStatus = await locationPermissionStatus();
+      if (locationStatus !== RESULTS.GRANTED) {
+        setSnackbar({
+          visible: true,
+          type: "info",
+          message: "Allow permission to locate you.",
+        });
+        return;
+      }
+
+      // Await the wrapped Promise to get location
+      const position = await getCurrentLocation();
+      const { latitude, longitude } = position.coords;
+      const region = {
+        latitude,
+        longitude,
+        latitudeDelta: 0.015,
+        longitudeDelta: 0.0121,
+      };
+      getPlaceName(region?.latitude, region?.longitude);
+      setCurrentRegion(region);
+      setSearchTxt(null);
+      // when user press locate me then if there is anything in search box then it will be emptied.
+      if (searchTxtRef?.current) {
+        searchTxtRef?.current.clear(); // Clears the visible text
+        searchTxtRef?.current.setAddressText(""); // Clears internal state
+      }
+
+      // Wait a tick before animating to ensure state is applied
+      setTimeout(() => {
+        if (mapRef?.current) {
+          mapRef.current.animateToRegion(region, 1500); // 1.5s smooth animation
+        }
+      }, 500);
+    } catch (error) {
+      if (error?.code === 2) {
+        if (Platform.OS === "android") {
+          try {
+            const enableResult = await promptForEnableLocationIfNeeded();
+            if (enableResult === "already-enabled") {
+              onMapReadyCall("manually");
+            } else if (enableResult === "enabled") {
+              setTimeout(() => {
+                onMapReadyCall("manually");
+              }, 1000);
+            }
+          } catch (error) {
+            if (error) {
+              console.error(error.message);
+              setSnackbar({
+                visible: true,
+                type: "info",
+                message: "Please turn on device location.",
+              });
+            }
+          }
+        } else {
+          setSnackbar({
+            visible: true,
+            type: "info",
+            message: "Please turn on device location.",
+          });
+        }
+      } else if (error?.code === 3) {
+        showToast({
+          visible: true,
+          type: "info",
+          message: "Please select location manually.",
+        });
+      }
+      console.log("Error getting location:", error);
+    } finally {
+      setLoading(false); // Stop loading after geolocation and animation
+    }
+  };
+
+  const handleSaveBtn = () => {
+    if (!locationName) return;
+    const payload = {
+      title: title,
+      address: locationName,
+      lat: String(currentRegion.latitude),
+      long: String(currentRegion.longitude),
+    };
+    dispatch(setSelectedLocations([...(selectedLocations || []), payload]));
+    navigation.goBack();
+  };
+
+  useEffect(() => {
+    onMapReadyCall("manually");
+  }, []);
+
   return (
-    <View
-      style={[
-        styles.container,
-        // {
-        //   paddingBottom: insets.bottom,
-        // },
-      ]}
-    >
-      <StatusBar backgroundColor={AppColor.white} barStyle="light-content" />
+    <View style={styles.container}>
+      <StatusBar backgroundColor={AppColor.white} barStyle="dark-content" />
 
       {/* Header */}
       <View
@@ -168,8 +292,22 @@ const AuthMapScreen = () => {
             }
           }}
         >
-          <Marker coordinate={currentRegion} />
+          {/* <Marker coordinate={currentRegion} /> */}
         </MapView>
+
+        {/* Center Location Pin */}
+        <View style={styles.locationPin}>
+          {loading ? (
+            <ActivityIndicator size="large" color={AppColor.primary} />
+          ) : currentRegion ? (
+            <MaterialIcons
+              name="location-on"
+              size={44}
+              color={AppColor.primary}
+              style={{ top: -insets.bottom }}
+            />
+          ) : null}
+        </View>
 
         {/* Search Container */}
         <View style={styles.searchContainer}>
@@ -187,6 +325,7 @@ const AuthMapScreen = () => {
               numberOfLines: 1,
             }}
             onPress={(data, details = null) => {
+              const adrs = data?.description || "";
               const region = {
                 latitude: details?.geometry?.location?.lat,
                 longitude: details?.geometry?.location?.lng,
@@ -194,8 +333,9 @@ const AuthMapScreen = () => {
                 longitudeDelta: 0.0121,
               };
               setCurrentRegion(region);
-              setSearchTxt(data?.description || "");
-              setLocationName(data?.description);
+              setTitle(adrs.split(",").slice(0, 1).join(",").trim());
+              setSearchTxt(adrs);
+              setLocationName(adrs);
               // Animate the map to the new coordinates
               mapRef.current?.animateToRegion(region);
             }}
@@ -229,14 +369,69 @@ const AuthMapScreen = () => {
         </View>
 
         {/* Button */}
-        <TouchableOpacity
-          style={[styles.saveButton, { bottom: insets.bottom }]}
-          activeOpacity={0.7}
-          onPress={() => navigation.goBack()}
+        <View
+          style={[
+            styles.bottomBrnContainer,
+            { bottom: Platform.OS === "android" ? 20 : insets.bottom },
+          ]}
         >
-          <Text style={styles.saveButtonText}>{"Save"}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => onMapReadyCall("manually")}
+            style={{
+              flexDirection: "row",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <MaterialIcons
+              name="gps-fixed"
+              size={26}
+              color={AppColor.black}
+              style={{ marginRight: 10 }}
+            />
+            <Text
+              style={{
+                fontSize: 16,
+                fontFamily: Secondary400,
+                color: AppColor.text,
+              }}
+            >
+              {"Locate Me"}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.saveButton]}
+            activeOpacity={0.7}
+            onPress={handleSaveBtn}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={AppColor.white} />
+            ) : (
+              <Text style={styles.saveButtonText}>{"Save"}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
+
+      <Portal>
+        <Snackbar
+          visible={snackbar.visible}
+          onDismiss={() => setSnackbar({ ...snackbar, visible: false })}
+          duration={4000}
+          style={{
+            backgroundColor:
+              snackbar.type === "success"
+                ? AppColor.snackbarSuccess
+                : snackbar.type === "error"
+                ? AppColor.snackbarError
+                : AppColor.snackbarDefault,
+          }}
+        >
+          {snackbar.message}
+        </Snackbar>
+      </Portal>
     </View>
   );
 };
@@ -264,6 +459,15 @@ const styles = StyleSheet.create({
 
   contentContainer: {
     flex: 1,
+  },
+  locationPin: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   // GPAC CONTAINER
@@ -334,17 +538,15 @@ const styles = StyleSheet.create({
     fontFamily: Secondary400,
   },
 
+  bottomBrnContainer: { position: "absolute", right: 0, left: 0 },
   saveButton: {
     height: 48,
     borderRadius: 5,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: AppColor.primary,
-    marginTop: 24,
+    marginTop: 20,
     marginHorizontal: 24,
-    position: "absolute",
-    right: 0,
-    left: 0,
     ...Platform.select({
       ios: {
         shadowColor: AppColor.black,

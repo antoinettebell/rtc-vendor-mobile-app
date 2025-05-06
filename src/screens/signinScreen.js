@@ -203,21 +203,99 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { TextInput, IconButton, Button } from "react-native-paper";
+import {
+  TextInput,
+  IconButton,
+  Button,
+  HelperText,
+  ActivityIndicator,
+  Portal,
+  Snackbar,
+} from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { emailRegex, passwordRegex } from "../utils/constants";
+import { login_API } from "../api/authAPI";
+import { useDispatch } from "react-redux";
+import { setAuthToken, setUser } from "../redux/slices/userSlice";
+import { onSignin } from "../redux/slices/authSlice";
 
 const SignInScreen = () => {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
+  const dispatch = useDispatch();
 
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const navigation = useNavigation();
+  const [loading, setLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    visible: false,
+    message: "",
+    type: "info",
+  });
 
   const togglePasswordVisibility = () => {
     setPasswordVisible(!passwordVisible);
+  };
+
+  const validateEmail = (email) => {
+    return emailRegex?.test(email);
+  };
+
+  const validatePassword = (password) => {
+    return passwordRegex?.test(password);
+  };
+
+  const handleSignIn = async () => {
+    let isValid = true;
+
+    if (!validateEmail(email)) {
+      setEmailError("Enter a valid email!");
+      isValid = false;
+    } else {
+      setEmailError("");
+    }
+
+    if (!validatePassword(password)) {
+      setPasswordError(
+        "Password must be 8–15 chars with 1 uppercase, 1 lowercase, 1 number, and 1 special char."
+      );
+      isValid = false;
+    } else {
+      setPasswordError("");
+    }
+
+    if (isValid) {
+      console.log("✨ Logging in with:", email);
+      // Trigger login logic here
+      setLoading(true);
+      try {
+        const response = await login_API({ email, password });
+        console.log("login API response ====> ", response);
+        if (response.success && response.data) {
+          dispatch(setUser(response.data.user));
+          dispatch(setAuthToken(response.data.authToken));
+          dispatch(onSignin(true));
+        }
+      } catch (error) {
+        console.log("Error => ", error);
+        setSnackbar({
+          visible: true,
+          message: error.message,
+          type: "error",
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleForgetPWD = () => {
+    navigation.navigate("forgetPassword");
   };
 
   return (
@@ -268,16 +346,23 @@ const SignInScreen = () => {
             <Text style={styles.subtitle}>{"Sign in your account"}</Text>
 
             <View style={styles.formContainer}>
+              {/* Email Container */}
               <Text style={styles.inputLabel}>{"Email"}</Text>
               <TextInput
                 dense
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  setEmailError(
+                    validateEmail(text) ? "" : "Enter a valid email!"
+                  );
+                }}
                 style={styles.input}
                 contentStyle={styles.inputText}
                 placeholder=""
                 placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
+                error={!!emailError}
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
                 outlineStyle={{ borderRadius: 8 }}
@@ -285,19 +370,37 @@ const SignInScreen = () => {
                 keyboardType="email-address"
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
               />
+              {!!emailError && (
+                <HelperText
+                  type="error"
+                  visible={!!emailError}
+                  style={styles.helper}
+                >
+                  {emailError}
+                </HelperText>
+              )}
 
+              {/* Password Container */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
                 {"Password"}
               </Text>
               <TextInput
                 dense
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  setPasswordError(
+                    validatePassword(text)
+                      ? ""
+                      : "Password must be 8–15 chars with 1 uppercase, 1 lowercase, 1 number, and 1 special char."
+                  );
+                }}
                 style={styles.input}
                 contentStyle={styles.inputText}
                 placeholder=""
                 placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
+                error={!!passwordError}
                 secureTextEntry={!passwordVisible}
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
@@ -311,10 +414,20 @@ const SignInScreen = () => {
                 }
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
               />
+              {!!passwordError && (
+                <HelperText
+                  type="error"
+                  visible={!!passwordError}
+                  style={styles.helper}
+                >
+                  {passwordError}
+                </HelperText>
+              )}
 
+              {/* Forget PWD Btn */}
               <TouchableOpacity
                 style={styles.forgotPassword}
-                onPress={() => navigation.navigate("resetPassword")}
+                onPress={handleForgetPWD}
                 activeOpacity={0.7}
               >
                 <Text style={styles.forgotPasswordText}>
@@ -322,14 +435,21 @@ const SignInScreen = () => {
                 </Text>
               </TouchableOpacity>
 
+              {/* Signin Btn */}
               <TouchableOpacity
-                onPress={() => console.log("Pressed")}
+                onPress={handleSignIn}
                 activeOpacity={0.7}
                 style={styles.signInButton}
+                disabled={loading}
               >
-                <Text style={styles.buttonLabel}>{"Sign In"}</Text>
+                {loading ? (
+                  <ActivityIndicator color={AppColor.white} />
+                ) : (
+                  <Text style={styles.buttonLabel}>{"Sign In"}</Text>
+                )}
               </TouchableOpacity>
 
+              {/* SignUp Btn */}
               <View style={styles.signUpContainer}>
                 <Text style={styles.signUpText}>{"Don't have account?"} </Text>
                 <TouchableOpacity
@@ -339,20 +459,25 @@ const SignInScreen = () => {
                   <Text style={styles.signUpLink}>{"Sign Up"}</Text>
                 </TouchableOpacity>
               </View>
-
-              {/* <Text style={styles.orText}>{"Or"}</Text> */}
-
-              {/* <TouchableOpacity
-                onPress={() => console.log("Pressed")}
-                activeOpacity={0.7}
-                style={styles.skipButton}
-              >
-                <Text style={[styles.buttonLabel, { color: AppColor.black }]}>
-                  {"SIGN IN LATER"}
-                </Text>
-              </TouchableOpacity> */}
             </View>
           </View>
+          <Portal>
+            <Snackbar
+              visible={snackbar.visible}
+              onDismiss={() => setSnackbar({ ...snackbar, visible: false })}
+              duration={4000}
+              style={{
+                backgroundColor:
+                  snackbar.type === "success"
+                    ? AppColor.snackbarSuccess
+                    : snackbar.type === "error"
+                    ? AppColor.snackbarError
+                    : AppColor.snackbarDefault,
+              }}
+            >
+              {snackbar.message}
+            </Snackbar>
+          </Portal>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -414,6 +539,11 @@ const styles = StyleSheet.create({
   inputText: {
     fontFamily: Secondary400,
     fontSize: 15,
+  },
+  helper: {
+    marginBottom: 8,
+    paddingLeft: 0,
+    paddingTop: 0,
   },
   forgotPassword: {
     alignSelf: "flex-end",

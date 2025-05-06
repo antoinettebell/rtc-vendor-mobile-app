@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -8,52 +8,99 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { IconButton, TextInput } from "react-native-paper";
+import { IconButton, Portal, Snackbar, TextInput } from "react-native-paper";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import AntDesign from "react-native-vector-icons/AntDesign";
-
-const cuisinesData = [
-  { id: 1, label: "Cuisine 1" },
-  { id: 2, label: "Cuisine 2" },
-  { id: 3, label: "Cuisine 3" },
-  { id: 4, label: "Cuisine 4" },
-  { id: 5, label: "Cuisine 5" },
-  { id: 6, label: "Cuisine 6" },
-  { id: 7, label: "Cuisine 7" },
-  { id: 8, label: "Cuisine 8" },
-  { id: 9, label: "Cuisine 9" },
-  { id: 10, label: "Cuisine 10" },
-];
+import { cuisineList_API } from "../api/appAPI";
+import { useDispatch, useSelector } from "react-redux";
+import { setSelectedCuisine } from "../redux/slices/foodTruckProfileSlice";
 
 const AuthSelectCuisineScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const dispatch = useDispatch();
+  const { selectedCuisine } = useSelector(
+    (state) => state.foodTruckProfileReducer
+  );
+
+  const [cuisineData, setCuisineData] = useState([]);
   const [searchText, setSearchText] = useState("");
-  const [selectedCuisines, setSelectedCuisines] = useState([]);
+  const [selectedCuisines, setSelectedCuisines] = useState(
+    selectedCuisine || []
+  );
+  const [refreshing, setRefreshing] = useState(true);
+  const [totalPage, setTotalPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [snackbar, setSnackbar] = useState({
+    visible: false,
+    message: "",
+    type: "info",
+  });
 
   const handleAddCuisine = (item) => {
-    if (!selectedCuisines.some((cuisine) => cuisine.id === item.id)) {
+    if (!selectedCuisines.some((cuisine) => cuisine._id === item._id)) {
       setSelectedCuisines([...selectedCuisines, item]);
     }
   };
 
   const handleRemoveCuisine = (item) => {
     setSelectedCuisines(
-      selectedCuisines.filter((cuisine) => cuisine.id !== item.id)
+      selectedCuisines.filter((cuisine) => cuisine._id !== item._id)
     );
   };
 
-  const filteredCuisines = cuisinesData.filter((cuisine) =>
-    cuisine.label.toLowerCase().includes(searchText.toLowerCase())
+  const filteredCuisines = cuisineData.filter((cuisine) =>
+    cuisine.name.toLowerCase().includes(searchText.toLowerCase())
   );
+
+  const getCuisineList = async (page = 0) => {
+    try {
+      if (totalPage > page) {
+        const response = await cuisineList_API({ page: page + 1 });
+        console.log("response => ", response);
+        if (response.success && response.data) {
+          if (Number(response.data.page) === 1) {
+            setCuisineData(response.data.cuisineList || []);
+          } else {
+            setCuisineData((prev) => [
+              ...prev,
+              ...(response.data.cuisineList || []),
+            ]);
+          }
+
+          setCurrentPage(Number(response.data.page));
+          setTotalPage(Number(response.data.totalPages));
+        }
+      }
+    } catch (error) {
+      console.log("error =>", error);
+      setSnackbar({
+        visible: true,
+        message: error.message,
+        type: "error",
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleContinuePress = () => {
+    dispatch(setSelectedCuisine(selectedCuisines));
+    navigation.goBack();
+  };
+
+  useEffect(() => {
+    getCuisineList();
+  }, []);
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <StatusBar backgroundColor={AppColor.white} barStyle="light-content" />
+      <StatusBar backgroundColor={AppColor.white} barStyle="dark-content" />
 
       {/* Header */}
       <View
@@ -110,13 +157,14 @@ const AuthSelectCuisineScreen = () => {
             <View>
               <FlatList
                 data={selectedCuisines}
+                extraData={selectedCuisines}
                 horizontal
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item) => item._id}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={{ marginTop: 10 }}
                 renderItem={({ item }) => (
                   <View style={styles.selectedItem}>
-                    <Text style={styles.selectedText}>{item.label}</Text>
+                    <Text style={styles.selectedText}>{item.name}</Text>
                     <TouchableOpacity
                       onPress={() => handleRemoveCuisine(item)}
                       hitSlop={5}
@@ -136,7 +184,15 @@ const AuthSelectCuisineScreen = () => {
           {/* Available Cuisines (Vertical List) */}
           <FlatList
             data={filteredCuisines}
-            keyExtractor={(item) => item.id.toString()}
+            extraData={filteredCuisines}
+            keyExtractor={(item) => item._id}
+            refreshing={refreshing && !searchText}
+            onEndReached={() =>
+              filteredCuisines?.length > 0 ? getCuisineList(currentPage) : null
+            }
+            onEndReachedThreshold={0.1}
+            onRefresh={!searchText ? getCuisineList : null}
+            showsVerticalScrollIndicator={false}
             contentContainerStyle={{
               backgroundColor: AppColor.white,
               borderRadius: 8,
@@ -145,13 +201,16 @@ const AuthSelectCuisineScreen = () => {
             }}
             renderItem={({ item }) => {
               const isSelected = selectedCuisines.some(
-                (cuisine) => cuisine.id === item.id
+                (cuisine) => cuisine._id === item._id
               );
 
               return (
                 <TouchableOpacity
-                  onPress={() => handleAddCuisine(item)}
-                  disabled={isSelected}
+                  onPress={() =>
+                    isSelected
+                      ? handleRemoveCuisine(item)
+                      : handleAddCuisine(item)
+                  }
                   style={[
                     styles.cuisineItem,
                     isSelected && { backgroundColor: AppColor.primary + "10" },
@@ -160,20 +219,43 @@ const AuthSelectCuisineScreen = () => {
                   <Text
                     style={[
                       styles.cuisineText,
-                      isSelected && { color: AppColor.primary },
+                      { color: isSelected ? AppColor.primary : AppColor.black },
                     ]}
                   >
-                    {item.label}
+                    {item.name}
                   </Text>
 
                   <AntDesign
-                    name="pluscircleo"
+                    name={isSelected ? "minuscircleo" : "pluscircleo"}
                     size={18}
                     color={AppColor.primary}
                   />
                 </TouchableOpacity>
               );
             }}
+            ListEmptyComponent={() => (
+              <View
+                style={{
+                  paddingVertical: 50,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                {refreshing ? (
+                  <ActivityIndicator color={AppColor.primary} />
+                ) : (
+                  <Text
+                    style={{
+                      fontSize: 16,
+                      fontFamily: Secondary400,
+                      color: AppColor.black,
+                    }}
+                  >
+                    {"No Cuisine Found"}
+                  </Text>
+                )}
+              </View>
+            )}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
           />
         </View>
@@ -183,11 +265,29 @@ const AuthSelectCuisineScreen = () => {
           <TouchableOpacity
             style={styles.continueButton}
             activeOpacity={0.7}
-            onPress={() => navigation.goBack()}
+            onPress={handleContinuePress}
           >
             <Text style={styles.continueButtonText}>{"Continue"}</Text>
           </TouchableOpacity>
         </View>
+
+        <Portal>
+          <Snackbar
+            visible={snackbar.visible}
+            onDismiss={() => setSnackbar({ ...snackbar, visible: false })}
+            duration={4000}
+            style={{
+              backgroundColor:
+                snackbar.type === "success"
+                  ? AppColor.snackbarSuccess
+                  : snackbar.type === "error"
+                  ? AppColor.snackbarError
+                  : AppColor.snackbarDefault,
+            }}
+          >
+            {snackbar.message}
+          </Snackbar>
+        </Portal>
       </KeyboardAvoidingView>
     </View>
   );

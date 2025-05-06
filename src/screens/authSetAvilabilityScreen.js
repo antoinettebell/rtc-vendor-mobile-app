@@ -658,40 +658,51 @@ import {
   Platform,
   Alert,
 } from "react-native";
-import { Text, Button, Switch, IconButton } from "react-native-paper";
+import {
+  Text,
+  Button,
+  Switch,
+  IconButton,
+  ActivityIndicator,
+} from "react-native-paper";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { Dropdown } from "react-native-element-dropdown";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
+import moment from "moment";
+import { useDispatch, useSelector } from "react-redux";
+import { updateFoodTruckProfile_API } from "../api/appAPI";
+import { setUser } from "../redux/slices/userSlice";
 
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const dummyLocations = [
-  { label: "13th Street", value: "13th_street" },
-  { label: "Charlotte", value: "charlotte" },
-  { label: "Downtown", value: "downtown" },
-  { label: "Uptown", value: "uptown" },
-];
 
 export default function AvailabilityScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const dispatch = useDispatch();
+
+  const { selectedLocations } = useSelector(
+    (state) => state.foodTruckProfileReducer
+  );
+  const { user } = useSelector((state) => state.userReducer);
 
   const [availability, setAvailability] = useState(
     days.map((day) => ({
       day,
       locations: [
         {
-          value: "13th_street",
-          openTime: new Date(),
-          closeTime: new Date(),
-          enabled: true,
+          value: null,
+          openTime: moment().startOf("day").toDate(), // 00:00
+          closeTime: moment().startOf("day").toDate(), // 00:00
+          enabled: false,
         },
       ],
     }))
   );
 
+  const [loading, setLoading] = useState(false);
   const [activeDayIndex, setActiveDayIndex] = useState(null);
   const [activeLocIndex, setActiveLocIndex] = useState(null);
   const [pickerField, setPickerField] = useState(null);
@@ -730,12 +741,74 @@ export default function AvailabilityScreen() {
   const addLocation = (dayIndex) => {
     const updated = [...availability];
     updated[dayIndex].locations.push({
-      value: "",
-      openTime: new Date(),
-      closeTime: new Date(),
-      enabled: true,
+      value: null,
+      openTime: moment().startOf("day").toDate(), // 00:00
+      closeTime: moment().startOf("day").toDate(), // 00:00
+      enabled: false,
     });
     setAvailability(updated);
+  };
+
+  const transformLocations = (data) => {
+    return data.flatMap((dayItem) =>
+      dayItem.locations
+        .filter((location) => location.enabled && location.value)
+        .map((location) => {
+          return {
+            locationId: location.value,
+            day: dayItem.day.toLowerCase(),
+            startTime: moment(location.openTime).format("HH:mm"),
+            endTime: moment(location.closeTime).format("HH:mm"),
+            available: true,
+          };
+        })
+    );
+  };
+
+  const handleContinuePress = async () => {
+    console.log("availability => ", availability);
+
+    for (let day of availability) {
+      for (let loc of day.locations) {
+        if (loc.enabled && !loc.value) {
+          Alert.alert(
+            "Missing Location",
+            `Please select a location for ${day.day} before continuing.`
+          );
+          return;
+        }
+      }
+    }
+
+    const finalResult = transformLocations(availability);
+    console.log("finalResult => ", finalResult);
+
+    setLoading(true);
+    try {
+      const payload = {
+        availability: finalResult,
+      };
+      const response = await updateFoodTruckProfile_API({
+        payload,
+        foodTruckId: user?.foodTruck?._id,
+      });
+      if (response.success && response.data) {
+        console.log("response => ", response);
+        const tempUser = {
+          ...user,
+          foodTruck: response.data.foodtruck,
+        };
+        dispatch(setUser(tempUser));
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "authUnderReviewNoteScreen" }],
+        });
+      }
+    } catch (error) {
+      console.error("error =>", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -756,6 +829,7 @@ export default function AvailabilityScreen() {
         contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom }}
         bounces={false}
         showsVerticalScrollIndicator={false}
+        pointerEvents={loading ? "none" : "auto"}
       >
         <View style={{ flex: 1 }}>
           <View style={styles.stepContainer}>
@@ -810,17 +884,15 @@ export default function AvailabilityScreen() {
                   >
                     <View style={styles.timeRow}>
                       <View style={styles.dayCircle}>
-                        {locIndex === 0 ? (
-                          <Text style={{ color: "#fff", fontSize: 16 }}>
-                            {item.day}
-                          </Text>
-                        ) : (
-                          <FontAwesome6
-                            name="truck-fast"
-                            color="#fff"
-                            size={18}
-                          />
-                        )}
+                        <Text
+                          style={{
+                            color: "#fff",
+                            fontSize: 16,
+                            fontFamily: Secondary400,
+                          }}
+                        >
+                          {item.day}
+                        </Text>
                       </View>
 
                       <TouchableOpacity
@@ -859,18 +931,21 @@ export default function AvailabilityScreen() {
                     </View>
 
                     <Dropdown
-                      data={dummyLocations}
-                      labelField="label"
-                      valueField="value"
-                      value={loc.value}
+                      data={selectedLocations}
+                      labelField="title"
+                      valueField="_id"
+                      value={loc._id}
                       onChange={(selected) =>
-                        updateLocation(index, locIndex, selected.value)
+                        updateLocation(index, locIndex, selected._id)
                       }
-                      style={styles.dropdown}
                       placeholder="Select Location"
+                      style={styles.dropdown}
+                      placeholderStyle={{ fontFamily: Secondary400 }}
+                      itemTextStyle={{ fontFamily: Secondary400 }}
+                      selectedTextStyle={{ fontFamily: Secondary400 }}
                     />
 
-                    {locIndex !== item.locations.length - 1 && (
+                    {locIndex !== item?.locations?.length - 1 && (
                       <View
                         style={{
                           borderBottomColor: "#E5E5EA",
@@ -887,6 +962,7 @@ export default function AvailabilityScreen() {
                   mode="outlined"
                   onPress={() => addLocation(index)}
                   style={styles.addButton}
+                  labelStyle={{ fontFamily: Secondary400 }}
                 >
                   Add Location
                 </Button>
@@ -897,13 +973,14 @@ export default function AvailabilityScreen() {
           <TouchableOpacity
             style={styles.continueButton}
             activeOpacity={0.7}
-            onPress={() =>
-              Alert.alert("Hi", "", [
-                { text: "Ok", onPress: () => console.log("Hyy") },
-              ])
-            }
+            onPress={handleContinuePress}
+            disabled={loading}
           >
-            <Text style={styles.continueButtonText}>{"Continue"}</Text>
+            {loading ? (
+              <ActivityIndicator color={AppColor.white} />
+            ) : (
+              <Text style={styles.continueButtonText}>{"Continue"}</Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -990,6 +1067,7 @@ const styles = StyleSheet.create({
   },
   timeLabel: {
     fontSize: 16,
+    fontFamily: Secondary400,
     color: AppColor.black,
     textAlign: "center",
   },
@@ -997,8 +1075,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#888",
     textAlign: "center",
+    fontFamily: Secondary400,
   },
   dropdown: {
+    height: 40,
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 6,
