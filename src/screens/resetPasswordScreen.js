@@ -25,6 +25,7 @@ import Modal from "react-native-modal";
 import Octicons from "react-native-vector-icons/Octicons";
 import { passwordRegex } from "../utils/constants";
 import { changePassword_API } from "../api/authAPI";
+import StatusBarManager from "../components/StatusBarManager";
 
 const ResetPasswordScreen = ({ route }) => {
   const insets = useSafeAreaInsets();
@@ -116,7 +117,7 @@ const ResetPasswordScreen = ({ route }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={AppColor.primary} barStyle="light-content" />
+      <StatusBarManager barStyle="light-content" />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
@@ -274,8 +275,8 @@ const ResetPasswordScreen = ({ route }) => {
                   snackbar.type === "success"
                     ? AppColor.snackbarSuccess
                     : snackbar.type === "error"
-                    ? AppColor.snackbarError
-                    : AppColor.snackbarDefault,
+                      ? AppColor.snackbarError
+                      : AppColor.snackbarDefault,
               }}
             >
               {snackbar.message}

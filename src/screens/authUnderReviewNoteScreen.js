@@ -12,6 +12,7 @@ import { AppColor, Primary400, Secondary400 } from "../utils/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch } from "react-redux";
 import { onSignin } from "../redux/slices/authSlice";
+import StatusBarManager from "../components/StatusBarManager";
 
 export default function AuthUnderReviewNoteScreen() {
   const insets = useSafeAreaInsets();
@@ -23,7 +24,8 @@ export default function AuthUnderReviewNoteScreen() {
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <StatusBar backgroundColor={AppColor.white} barStyle="dark-content" />
+      <StatusBarManager />
+
       <View style={styles.subContainer}>
         <Octicons
           name="check-circle-fill"

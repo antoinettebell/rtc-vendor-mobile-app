@@ -32,6 +32,7 @@ import {
   setSelectedLocations,
 } from "../redux/slices/foodTruckProfileSlice";
 import { onSignOut } from "../redux/slices/authSlice";
+import StatusBarManager from "../components/StatusBarManager";
 
 const AuthFoodTruckProfileScreen = () => {
   const insets = useSafeAreaInsets();
@@ -298,7 +299,7 @@ const AuthFoodTruckProfileScreen = () => {
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <StatusBar backgroundColor={AppColor.primary} barStyle="light-content" />
+      <StatusBarManager barStyle="light-content" />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>

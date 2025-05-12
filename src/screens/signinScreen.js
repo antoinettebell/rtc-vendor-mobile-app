@@ -220,6 +220,7 @@ import { login_API } from "../api/authAPI";
 import { useDispatch } from "react-redux";
 import { setAuthToken, setUser } from "../redux/slices/userSlice";
 import { onSignin } from "../redux/slices/authSlice";
+import StatusBarManager from "../components/StatusBarManager";
 
 const SignInScreen = () => {
   const insets = useSafeAreaInsets();
@@ -300,7 +301,7 @@ const SignInScreen = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={AppColor.primary} barStyle="light-content" />
+      <StatusBarManager barStyle="light-content" />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
@@ -471,8 +472,8 @@ const SignInScreen = () => {
                   snackbar.type === "success"
                     ? AppColor.snackbarSuccess
                     : snackbar.type === "error"
-                    ? AppColor.snackbarError
-                    : AppColor.snackbarDefault,
+                      ? AppColor.snackbarError
+                      : AppColor.snackbarDefault,
               }}
             >
               {snackbar.message}

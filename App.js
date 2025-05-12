@@ -7,7 +7,7 @@ import {
   View,
   Image,
 } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
+import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useSelector } from "react-redux";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -95,6 +95,7 @@ const FinalSignupStepsNavigator = () => (
 const BottomTabNavigator = ({ insets }) => (
   <BottomTab.Navigator
     screenOptions={{
+      tabBarHideOnKeyboard: true,
       headerShown: false,
       tabBarStyle: {
         height: Platform.OS === "ios" ? insets.bottom + 60 : 60,
@@ -194,7 +195,7 @@ const App = () => {
   const insets = useSafeAreaInsets();
   const { isSignedIn, isOnboarded } = useSelector((state) => state.authReducer);
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={DefaultTheme}>
       {isSignedIn ? (
         <MainAppNavigator insets={insets} />
       ) : isOnboarded ? (

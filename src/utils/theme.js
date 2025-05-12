@@ -11,14 +11,11 @@ export const AppColor = {
   ratingStar: "#FFE101",
   placeholderTextColor: "#D1D1D6",
 
-  rippleForLight:
-    Platform.OS === "android" ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.1)",
-  rippleForDark: "rgba(255, 255, 255, 0.5)",
-
   white: "#FFFFFF",
   black: "#000000",
   gray: "#8E8E93",
   red: "#FF0000",
+  yellow: "#FFCC00",
 
   snackbarInfo: "#2196F3",
   snackbarSuccess: "#4CAF50",

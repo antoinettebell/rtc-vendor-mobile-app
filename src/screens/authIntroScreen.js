@@ -16,6 +16,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import StatusBarManager from "../components/StatusBarManager";
 
 import Screen1Svg from "../assets/images/intro1.svg";
 
@@ -44,11 +45,7 @@ const AuthIntroScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar
-        animated
-        backgroundColor={AppColor.white}
-        barStyle="dark-content"
-      />
+      <StatusBarManager />
 
       <PagerView
         style={styles.pagerView}

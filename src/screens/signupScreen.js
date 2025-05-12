@@ -300,6 +300,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import { emailRegex, passwordRegex } from "../utils/constants";
 import { registerVendor_API } from "../api/authAPI";
+import StatusBarManager from "../components/StatusBarManager";
 
 const SignUpScreen = () => {
   const insets = useSafeAreaInsets();
@@ -431,7 +432,7 @@ const SignUpScreen = () => {
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <StatusBar backgroundColor={AppColor.primary} barStyle="light-content" />
+      <StatusBarManager barStyle="light-content" />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
@@ -736,35 +737,20 @@ const SignUpScreen = () => {
               <CountryPicker
                 show={countryPickerVisible}
                 style={{
-                  // Styles for whole modal [View]
                   modal: {
                     height: "70%",
-                    // paddingBottom: insets.bottom,
                   },
-                  // Styles for modal backdrop [View]
-                  backdrop: {},
-                  // Styles for bottom input line [View]
+                  backdrop: {
+                    backgroundColor: "rgba(0,0,0,0.1)",
+                  },
                   line: {},
-                  // Styles for list of countries [FlatList]
                   itemsList: {},
-                  // Styles for input [TextInput]
-                  textInput: {
-                    // height: 80,
-                    // borderRadius: 0,
-                  },
-                  // Styles for country button [TouchableOpacity]
-                  countryButtonStyles: {
-                    // height: 80,
-                  },
-                  // Styles for search message [Text]
+                  textInput: {},
+                  countryButtonStyles: { paddingVertical: 0 },
                   searchMessageText: {},
-                  // Styles for search message container [View]
                   countryMessageContainer: {},
-                  // Flag styles [Text]
                   flag: {},
-                  // Dial code styles [Text]
                   dialCode: {},
-                  // Country name styles [Text]
                   countryName: {},
                 }}
                 pickerButtonOnPress={(item) => {
@@ -824,6 +810,7 @@ const SignUpScreen = () => {
               </View>
             </View>
           </View>
+
           <Portal>
             <Snackbar
               visible={snackbar.visible}
@@ -834,8 +821,8 @@ const SignUpScreen = () => {
                   snackbar.type === "success"
                     ? AppColor.snackbarSuccess
                     : snackbar.type === "error"
-                    ? AppColor.snackbarError
-                    : AppColor.snackbarDefault,
+                      ? AppColor.snackbarError
+                      : AppColor.snackbarDefault,
               }}
             >
               {snackbar.message}

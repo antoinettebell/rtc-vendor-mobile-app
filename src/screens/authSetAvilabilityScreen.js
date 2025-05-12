@@ -675,6 +675,7 @@ import moment from "moment";
 import { useDispatch, useSelector } from "react-redux";
 import { updateFoodTruckProfile_API } from "../api/appAPI";
 import { setUser } from "../redux/slices/userSlice";
+import StatusBarManager from "../components/StatusBarManager";
 
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -813,7 +814,8 @@ export default function AvailabilityScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={AppColor.white} barStyle="dark-content" />
+      <StatusBarManager />
+
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <IconButton
           icon="arrow-left"

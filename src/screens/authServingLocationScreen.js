@@ -18,6 +18,7 @@ import SimpleLineIcons from "react-native-vector-icons/SimpleLineIcons";
 import AntDesign from "react-native-vector-icons/AntDesign";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedLocations } from "../redux/slices/foodTruckProfileSlice";
+import StatusBarManager from "../components/StatusBarManager";
 
 const AuthServingLocationScreen = () => {
   const insets = useSafeAreaInsets();
@@ -41,7 +42,7 @@ const AuthServingLocationScreen = () => {
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <StatusBar backgroundColor={AppColor.white} barStyle="dark-content" />
+      <StatusBarManager />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
@@ -89,7 +90,7 @@ const AuthServingLocationScreen = () => {
                 (locationsData?.length === 0 && { flexGrow: 1 }),
             ]}
             renderItem={({ item, index }) => (
-              <View style={styles.locationItem}>
+              <View style={styles.locationItem} key={index}>
                 <SimpleLineIcons
                   name="location-pin"
                   size={27}

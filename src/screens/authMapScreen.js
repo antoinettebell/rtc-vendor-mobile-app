@@ -30,6 +30,7 @@ import { getLocationName } from "../api/appAPI";
 import { RESULTS } from "react-native-permissions";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedLocations } from "../redux/slices/foodTruckProfileSlice";
+import StatusBarManager from "../components/StatusBarManager";
 
 const GOOGLE_MAP_API_KEY = Config.GOOGLE_MAP_API_KEY;
 
@@ -246,7 +247,7 @@ const AuthMapScreen = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={AppColor.white} barStyle="dark-content" />
+      <StatusBarManager />
 
       {/* Header */}
       <View
@@ -425,8 +426,8 @@ const AuthMapScreen = () => {
               snackbar.type === "success"
                 ? AppColor.snackbarSuccess
                 : snackbar.type === "error"
-                ? AppColor.snackbarError
-                : AppColor.snackbarDefault,
+                  ? AppColor.snackbarError
+                  : AppColor.snackbarDefault,
           }}
         >
           {snackbar.message}

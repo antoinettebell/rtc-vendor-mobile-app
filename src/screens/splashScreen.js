@@ -1,15 +1,17 @@
 import React, { useEffect } from "react";
-import { Image, StatusBar, StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppColor } from "../utils/theme";
 import { useNavigation } from "@react-navigation/native";
+import BootSplash from "react-native-bootsplash";
+import { useSelector } from "react-redux";
+import StatusBarManager from "../components/StatusBarManager";
 
 import SplashTop1Svg from "../assets/images/splashTop1.svg";
 import SplashTop2Svg from "../assets/images/splashTop2.svg";
 import SplashTop3Svg from "../assets/images/splashTop3.svg";
 
 import SplashBottom1Svg from "../assets/images/splashBottom1.svg";
-import { useSelector } from "react-redux";
 
 const SplashScreen = () => {
   const insets = useSafeAreaInsets();
@@ -22,22 +24,25 @@ const SplashScreen = () => {
         isSignedIn
           ? "bottomRoot"
           : isOnboarded
-          ? "authFoodTruckProfileScreen"
-          : "authIntro"
+            ? "authFoodTruckProfileScreen"
+            : "authIntro"
       ); // navigate to AuthIntroScreen after splash
     }, 1500); // 3000ms = 3 seconds
 
     return () => clearTimeout(timeout);
   }, [navigation]);
 
+  useEffect(() => {
+    const hideSplash = async () => {
+      BootSplash.hide({ fade: true }); // fade is optional
+    };
+
+    hideSplash();
+  }, []);
+
   return (
     <View style={[styles.container, { paddingTop: insets.top / 2 }]}>
-      {/* <StatusBar
-        animated
-        backgroundColor={AppColor.white}
-        barStyle="dark-content"
-      /> */}
-      <StatusBar backgroundColor={AppColor.white} barStyle={"dark-content"} />
+      <StatusBarManager />
 
       {/* Top 3 SVGs */}
       <View style={styles.topSvgsContainer}>

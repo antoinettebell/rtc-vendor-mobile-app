@@ -26,6 +26,7 @@ import { resendOTP_API, verifyOTP_API } from "../api/authAPI";
 import { useDispatch } from "react-redux";
 import { onOnBoard } from "../redux/slices/authSlice";
 import { setAuthToken, setUser } from "../redux/slices/userSlice";
+import StatusBarManager from "../components/StatusBarManager";
 
 const OtpVerificationScreen = ({ route }) => {
   const insets = useSafeAreaInsets();
@@ -176,7 +177,8 @@ const OtpVerificationScreen = ({ route }) => {
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <StatusBar backgroundColor={AppColor.primary} barStyle="light-content" />
+      <StatusBarManager barStyle="light-content" />
+
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <IconButton
@@ -328,8 +330,8 @@ const OtpVerificationScreen = ({ route }) => {
               snackbar.type === "success"
                 ? AppColor.snackbarSuccess
                 : snackbar.type === "error"
-                ? AppColor.snackbarError
-                : AppColor.snackbarDefault,
+                  ? AppColor.snackbarError
+                  : AppColor.snackbarDefault,
           }}
         >
           {snackbar.message}

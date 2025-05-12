@@ -21,6 +21,7 @@
     "react": "19.0.0",
     "react-native": "0.78.2",
     "react-native-android-location-enabler": "^2.0.1",
+    "react-native-bootsplash": "^6.3.7",
     "react-native-config": "^1.5.5",
     "react-native-country-codes-picker": "^2.3.5",
     "react-native-dotenv": "^3.4.11",

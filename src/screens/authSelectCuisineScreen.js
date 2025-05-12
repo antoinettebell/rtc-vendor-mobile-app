@@ -19,6 +19,7 @@ import AntDesign from "react-native-vector-icons/AntDesign";
 import { cuisineList_API } from "../api/appAPI";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedCuisine } from "../redux/slices/foodTruckProfileSlice";
+import StatusBarManager from "../components/StatusBarManager";
 
 const AuthSelectCuisineScreen = () => {
   const insets = useSafeAreaInsets();
@@ -100,7 +101,7 @@ const AuthSelectCuisineScreen = () => {
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <StatusBar backgroundColor={AppColor.white} barStyle="dark-content" />
+      <StatusBarManager />
 
       {/* Header */}
       <View
@@ -281,8 +282,8 @@ const AuthSelectCuisineScreen = () => {
                 snackbar.type === "success"
                   ? AppColor.snackbarSuccess
                   : snackbar.type === "error"
-                  ? AppColor.snackbarError
-                  : AppColor.snackbarDefault,
+                    ? AppColor.snackbarError
+                    : AppColor.snackbarDefault,
             }}
           >
             {snackbar.message}
