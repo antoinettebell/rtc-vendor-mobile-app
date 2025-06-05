@@ -676,12 +676,12 @@ import { useDispatch, useSelector } from "react-redux";
 import { updateFoodTruckProfile_API } from "../api/appAPI";
 import { setUser } from "../redux/slices/userSlice";
 import StatusBarManager from "../components/StatusBarManager";
+import { onUnderReview } from "../redux/slices/authSlice";
 
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-export default function AvailabilityScreen() {
+const AuthSetAvilabilityScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
   const dispatch = useDispatch();
 
   const { selectedLocations } = useSelector(
@@ -800,6 +800,7 @@ export default function AvailabilityScreen() {
           foodTruck: response.data.foodtruck,
         };
         dispatch(setUser(tempUser));
+        dispatch(onUnderReview(true));
         navigation.reset({
           index: 0,
           routes: [{ name: "authUnderReviewNoteScreen" }],
@@ -1001,7 +1002,9 @@ export default function AvailabilityScreen() {
       />
     </View>
   );
-}
+};
+
+export default AuthSetAvilabilityScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -1042,7 +1045,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   line: {
-    width: "25%",
+    width: "18%",
     height: 2,
     backgroundColor: AppColor.primary,
   },

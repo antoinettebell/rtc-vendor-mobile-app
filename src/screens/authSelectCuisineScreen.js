@@ -162,7 +162,7 @@ const AuthSelectCuisineScreen = () => {
                 horizontal
                 keyExtractor={(item) => item._id}
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ marginTop: 10 }}
+                contentContainerStyle={{ marginBottom: 10 }}
                 renderItem={({ item }) => (
                   <View style={styles.selectedItem}>
                     <Text style={styles.selectedText}>{item.name}</Text>
@@ -197,7 +197,7 @@ const AuthSelectCuisineScreen = () => {
             contentContainerStyle={{
               backgroundColor: AppColor.white,
               borderRadius: 8,
-              marginVertical: 10,
+              marginBottom: 10,
               paddingVertical: 10,
             }}
             renderItem={({ item }) => {
@@ -317,6 +317,7 @@ const styles = StyleSheet.create({
   searchInput: {
     marginTop: 8,
     backgroundColor: AppColor.white,
+    marginBottom: 10,
   },
   selectedItem: {
     height: 37,
@@ -360,7 +361,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
   buttonContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     paddingVertical: 12,
   },
   continueButton: {

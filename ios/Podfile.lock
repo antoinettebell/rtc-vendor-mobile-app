@@ -15,6 +15,23 @@ PODS:
   - hermes-engine (0.78.2):
     - hermes-engine/Pre-built (= 0.78.2)
   - hermes-engine/Pre-built (0.78.2)
+  - libavif/core (0.11.1)
+  - libavif/libdav1d (0.11.1):
+    - libavif/core
+    - libdav1d (>= 0.6.0)
+  - libdav1d (1.2.0)
+  - libwebp (1.5.0):
+    - libwebp/demux (= 1.5.0)
+    - libwebp/mux (= 1.5.0)
+    - libwebp/sharpyuv (= 1.5.0)
+    - libwebp/webp (= 1.5.0)
+  - libwebp/demux (1.5.0):
+    - libwebp/webp
+  - libwebp/mux (1.5.0):
+    - libwebp/demux
+  - libwebp/sharpyuv (1.5.0)
+  - libwebp/webp (1.5.0):
+    - libwebp/sharpyuv
   - RCT-Folly (2024.11.18.00):
     - boost
     - DoubleConversion
@@ -1363,6 +1380,27 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - react-native-webview (13.13.5):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.11.18.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - React-NativeModulesApple (0.78.2):
     - glog
     - hermes-engine
@@ -1713,6 +1751,53 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - RNFastImage (8.9.2):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - libavif/core (~> 0.11.1)
+    - libavif/libdav1d (~> 0.11.1)
+    - RCT-Folly (= 2024.11.18.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SDWebImage (>= 5.19.1)
+    - SDWebImageAVIFCoder (~> 0.11.0)
+    - SDWebImageWebPCoder (~> 0.14)
+    - Yoga
+  - RNGestureHandler (2.25.0):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.11.18.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - RNImageCropPicker (0.41.5):
     - React-Core
     - React-RCTImage
@@ -1971,6 +2056,15 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - SDWebImage (5.21.0):
+    - SDWebImage/Core (= 5.21.0)
+  - SDWebImage/Core (5.21.0)
+  - SDWebImageAVIFCoder (0.11.0):
+    - libavif/core (>= 0.11.0)
+    - SDWebImage (~> 5.10)
+  - SDWebImageWebPCoder (0.14.6):
+    - libwebp (~> 1.0)
+    - SDWebImage/Core (~> 5.17)
   - SocketRocket (0.7.1)
   - TOCropViewController (2.7.4)
   - Yoga (0.0.0)
@@ -2021,6 +2115,7 @@ DEPENDENCIES:
   - react-native-maps (from `../node_modules/react-native-maps`)
   - react-native-pager-view (from `../node_modules/react-native-pager-view`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
+  - react-native-webview (from `../node_modules/react-native-webview`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-perflogger (from `../node_modules/react-native/ReactCommon/reactperflogger`)
   - React-performancetimeline (from `../node_modules/react-native/ReactCommon/react/performance/timeline`)
@@ -2052,6 +2147,8 @@ DEPENDENCIES:
   - RNBootSplash (from `../node_modules/react-native-bootsplash`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - "RNDateTimePicker (from `../node_modules/@react-native-community/datetimepicker`)"
+  - "RNFastImage (from `../node_modules/@d11/react-native-fast-image`)"
+  - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - RNImageCropPicker (from `../node_modules/react-native-image-crop-picker`)
   - RNPermissions (from `../node_modules/react-native-permissions`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
@@ -2064,6 +2161,12 @@ SPEC REPOS:
   trunk:
     - Google-Maps-iOS-Utils
     - GoogleMaps
+    - libavif
+    - libdav1d
+    - libwebp
+    - SDWebImage
+    - SDWebImageAVIFCoder
+    - SDWebImageWebPCoder
     - SocketRocket
     - TOCropViewController
 
@@ -2155,6 +2258,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-pager-view"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
+  react-native-webview:
+    :path: "../node_modules/react-native-webview"
   React-NativeModulesApple:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios"
   React-perflogger:
@@ -2217,6 +2322,10 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-async-storage/async-storage"
   RNDateTimePicker:
     :path: "../node_modules/@react-native-community/datetimepicker"
+  RNFastImage:
+    :path: "../node_modules/@d11/react-native-fast-image"
+  RNGestureHandler:
+    :path: "../node_modules/react-native-gesture-handler"
   RNImageCropPicker:
     :path: "../node_modules/react-native-image-crop-picker"
   RNPermissions:
@@ -2242,6 +2351,9 @@ SPEC CHECKSUMS:
   Google-Maps-iOS-Utils: 66d6de12be1ce6d3742a54661e7a79cb317a9321
   GoogleMaps: 8939898920281c649150e0af74aa291c60f2e77d
   hermes-engine: 2771b98fb813fdc6f92edd7c9c0035ecabf9fee7
+  libavif: 84bbb62fb232c3018d6f1bab79beea87e35de7b7
+  libdav1d: 23581a4d8ec811ff171ed5e2e05cd27bad64c39f
+  libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
   RCT-Folly: 36fe2295e44b10d831836cc0d1daec5f8abcf809
   RCTDeprecation: be794de7dc6ed8f9f7fbf525f86e7651b8b68746
   RCTRequired: a83787b092ec554c2eb6019ff3f5b8d125472b3b
@@ -2278,6 +2390,7 @@ SPEC CHECKSUMS:
   react-native-maps: ee1e65647460c3d41e778071be5eda10e3da6225
   react-native-pager-view: 65a2144f06f4c8d859ec309ab96e9ee2bf2062fd
   react-native-safe-area-context: 9b169299f9dc95f1d7fe1dd266fde53bd899cd0c
+  react-native-webview: ca20dfd45204cc81f0b21e70d1e5a349daecfb81
   React-NativeModulesApple: 79a4404ac301b40bec3b367879c5e9a9ce81683c
   React-perflogger: 0ea25c109dba33d47dec36b2634bf7ea67c1a555
   React-performancetimeline: f74480de6efbcd8541c34317c0baedb433f27296
@@ -2309,12 +2422,17 @@ SPEC CHECKSUMS:
   RNBootSplash: 0d07207396c84b2c3da0f883788ffa6f33623f39
   RNCAsyncStorage: 4f4de141719fef3490c87a0dd779575c64c0472c
   RNDateTimePicker: 5567e082958470867c4a27dd90cdaf2ea54bde0c
+  RNFastImage: a28d24ed0a1e9807da556efef0630b71c1a9a78a
+  RNGestureHandler: 66e593addd8952725107cfaa4f5e3378e946b541
   RNImageCropPicker: a536bb88eade8336e1d18fdeafa77dc893fbc42e
   RNPermissions: 52266185cee13f755565d95b41ee2203e4d2130c
   RNReanimated: 1470b3f8eea2917c0c8cabe31ea4e5efa1c284be
   RNScreens: 0f01bbed9bd8045a8d58e4b46993c28c7f498f3c
   RNSVG: 8588ee1ca9b2e6fd2c99466e35b3db0e9f81bb40
   RNVectorIcons: 14a0c42f16a26bcc3e79a19bc1c5718284b1d469
+  SDWebImage: f84b0feeb08d2d11e6a9b843cb06d75ebf5b8868
+  SDWebImageAVIFCoder: 00310d246aab3232ce77f1d8f0076f8c4b021d90
+  SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   TOCropViewController: 80b8985ad794298fb69d3341de183f33d1853654
   Yoga: e14bad835e12b6c7e2260fc320bd00e0f4b45add

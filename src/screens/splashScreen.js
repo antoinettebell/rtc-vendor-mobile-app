@@ -1,10 +1,11 @@
 import React, { useEffect } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppColor } from "../utils/theme";
 import { useNavigation } from "@react-navigation/native";
 import BootSplash from "react-native-bootsplash";
 import { useSelector } from "react-redux";
+import FastImage from "@d11/react-native-fast-image";
 import StatusBarManager from "../components/StatusBarManager";
 
 import SplashTop1Svg from "../assets/images/splashTop1.svg";
@@ -16,18 +17,22 @@ import SplashBottom1Svg from "../assets/images/splashBottom1.svg";
 const SplashScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const { isSignedIn, isOnboarded } = useSelector((state) => state.authReducer);
+  const { isSignedIn, isOnboarded, isUnderReview } = useSelector(
+    (state) => state.authReducer
+  );
 
   useEffect(() => {
     const timeout = setTimeout(() => {
       navigation.replace(
         isSignedIn
           ? "bottomRoot"
-          : isOnboarded
-            ? "authFoodTruckProfileScreen"
-            : "authIntro"
-      ); // navigate to AuthIntroScreen after splash
-    }, 1500); // 3000ms = 3 seconds
+          : !isOnboarded // fresh app flow
+            ? "authIntro"
+            : isUnderReview // food truck profile submitted but skipped last screen then show only last screen
+              ? "authUnderReviewNoteScreen"
+              : "authFoodTruckPlansScreen"
+      );
+    }, 1500);
 
     return () => clearTimeout(timeout);
   }, [navigation]);
@@ -53,7 +58,7 @@ const SplashScreen = () => {
 
       {/* Middle Image and Text */}
       <View style={styles.middleContainer}>
-        <Image
+        <FastImage
           source={require("../assets/images/AppLogo.png")}
           style={styles.middleImage}
           resizeMode="contain"

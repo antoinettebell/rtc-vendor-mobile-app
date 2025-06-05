@@ -15,7 +15,6 @@ import {
   Portal,
   Snackbar,
 } from "react-native-paper";
-import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { promptForEnableLocationIfNeeded } from "react-native-android-location-enabler";
@@ -43,12 +42,13 @@ const initialRegion = {
   longitudeDelta: 0.0421,
 };
 
-const AuthMapScreen = () => {
+const AuthMapScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
   const dispatch = useDispatch();
   const searchTxtRef = useRef(null);
   const mapRef = useRef(null); // Ref for the MapView
+
+  const Params = route.params;
 
   const { selectedLocations } = useSelector(
     (state) => state.foodTruckProfileReducer
@@ -231,13 +231,14 @@ const AuthMapScreen = () => {
 
   const handleSaveBtn = () => {
     if (!locationName) return;
-    const payload = {
+    const newLocation = {
       title: title,
       address: locationName,
       lat: String(currentRegion.latitude),
       long: String(currentRegion.longitude),
     };
-    dispatch(setSelectedLocations([...(selectedLocations || []), payload]));
+    Params?.onGoBack(newLocation);
+    // dispatch(setSelectedLocations([...(selectedLocations || []), payload]));
     navigation.goBack();
   };
 
@@ -339,6 +340,11 @@ const AuthMapScreen = () => {
               setLocationName(adrs);
               // Animate the map to the new coordinates
               mapRef.current?.animateToRegion(region);
+              // when user press on the search result then if there is anything in search box then it will be emptied.
+              if (searchTxtRef?.current) {
+                searchTxtRef?.current.clear(); // Clears the visible text
+                searchTxtRef?.current.setAddressText(""); // Clears internal state
+              }
             }}
             onFail={(error) => console.log(error)}
             renderRightButton={() => (

@@ -3,26 +3,227 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { IconButton, TextInput } from "react-native-paper";
+import {
+  ActivityIndicator,
+  HelperText,
+  IconButton,
+  Menu,
+  TextInput,
+} from "react-native-paper";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import SimpleLineIcons from "react-native-vector-icons/SimpleLineIcons";
 import AntDesign from "react-native-vector-icons/AntDesign";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedLocations } from "../redux/slices/foodTruckProfileSlice";
 import StatusBarManager from "../components/StatusBarManager";
+import Modal from "react-native-modal";
 
-const AuthServingLocationScreen = () => {
+const RenameLocationModal = ({
+  data,
+  isModalVisible,
+  onUpdatePress,
+  onCancelPress,
+}) => {
+  const [title, setTitle] = useState(data?.title || "");
+  const [titleError, setTitleError] = useState("");
+  const [address, setAddress] = useState(data?.address || "");
+  const [addressError, setAddressError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (data) {
+      setTitle(data.title || "");
+      setAddress(data.address || "");
+    }
+  }, [data]);
+
+  const resetStates = () => {
+    setTitle("");
+    setTitleError("");
+    setAddress("");
+    setAddressError("");
+  };
+
+  const validateText = (text) => {
+    return text?.trim()?.length > 0;
+  };
+
+  const onValidateBtnPress = async () => {
+    const titleErr = validateText(title) ? "" : "Title is required";
+    const addressErr = validateText(address) ? "" : "Address is required";
+
+    setTitleError(titleErr);
+    setAddressError(addressErr);
+
+    if (!!titleErr || !!addressErr) return;
+
+    onUpdatePress({
+      payload: {
+        initialData: data,
+        title,
+        address,
+      },
+      setLoading,
+    });
+  };
+
+  useEffect(() => {
+    if (!isModalVisible) {
+      setTimeout(() => {
+        resetStates();
+      }, 500);
+    }
+  }, [isModalVisible]);
+
+  return (
+    <Modal
+      isVisible={isModalVisible}
+      backdropOpacity={0.5}
+      animationIn="slideInUp"
+      animationOut="slideOutDown"
+      backdropTransitionOutTiming={0.5}
+    >
+      <View style={styles.modalContainer}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <ScrollView
+            contentContainerStyle={{
+              flexGrow: 1,
+              paddingVertical: 36,
+              paddingHorizontal: 33,
+            }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Modal Title */}
+            <Text style={styles.modalTitle}>{"Rename Location"}</Text>
+
+            {/* Title Input */}
+            <View>
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+                {"Title *"}
+              </Text>
+              <TextInput
+                dense
+                value={title}
+                onChangeText={(text) => {
+                  setTitle(text);
+                  if (validateText(text)) {
+                    setTitleError("");
+                  }
+                }}
+                style={styles.input}
+                contentStyle={styles.inputText}
+                placeholder="Enter Title"
+                placeholderTextColor={AppColor.placeholderTextColor}
+                mode="outlined"
+                error={!!titleError}
+                outlineColor={AppColor.border}
+                activeOutlineColor={AppColor.primary}
+                outlineStyle={{ borderRadius: 8 }}
+                theme={{ colors: { onSurfaceVariant: "#777" } }}
+              />
+              {!!titleError ? (
+                <HelperText
+                  type="error"
+                  visible={!!titleError}
+                  style={styles.helper}
+                >
+                  {titleError}
+                </HelperText>
+              ) : null}
+            </View>
+
+            {/* Address Input */}
+            <View>
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+                {"Address *"}
+              </Text>
+              <TextInput
+                dense
+                value={address}
+                onChangeText={(text) => {
+                  setAddress(text);
+                  if (validateText(text)) {
+                    setAddressError("");
+                  }
+                }}
+                style={styles.input}
+                contentStyle={[
+                  styles.inputText,
+                  { minHeight: 120, maxHeight: 200 },
+                ]}
+                placeholder="Enter Address"
+                placeholderTextColor={AppColor.placeholderTextColor}
+                mode="outlined"
+                multiline={true}
+                error={!!addressError}
+                outlineColor={AppColor.border}
+                activeOutlineColor={AppColor.primary}
+                outlineStyle={{ borderRadius: 8 }}
+                theme={{ colors: { onSurfaceVariant: "#777" } }}
+              />
+              {!!addressError ? (
+                <HelperText
+                  type="error"
+                  visible={!!addressError}
+                  style={styles.helper}
+                >
+                  {addressError}
+                </HelperText>
+              ) : null}
+            </View>
+
+            {/* Button Update */}
+            <TouchableOpacity
+              style={[styles.locationModalBtnUpdate, { marginTop: 30 }]}
+              activeOpacity={0.7}
+              onPress={onValidateBtnPress}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color={AppColor.white} />
+              ) : (
+                <Text style={styles.locationModalBtnText}>{"Update"}</Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Button Cancel */}
+            <TouchableOpacity
+              style={styles.locationModalBtnCancel}
+              activeOpacity={0.7}
+              onPress={onCancelPress}
+              disabled={loading}
+            >
+              <Text
+                style={[
+                  styles.locationModalBtnText,
+                  { color: AppColor.primary },
+                ]}
+              >
+                {"Cancel"}
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+  );
+};
+
+const AuthServingLocationScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
   const dispatch = useDispatch();
 
   const { selectedLocations } = useSelector(
@@ -30,10 +231,43 @@ const AuthServingLocationScreen = () => {
   );
 
   const [locationsData, setlocationsData] = useState([]);
+  const [menuVisible, setMenuVisible] = useState(null);
+  const [renameLocationData, setRenameLocationData] = useState(null);
 
   const onRemoveLocationPress = (index) => {
     const tempFilter = locationsData.filter((_, i) => i !== index);
     dispatch(setSelectedLocations(tempFilter));
+  };
+
+  const handleLocationUpdatePress = async ({ payload, setLoading }) => {
+    console.log("payload => ", payload);
+    try {
+      setLoading(true);
+
+      const locationIndex = payload?.initialData?.locationIndex;
+      const updatedLocations = locationsData.map((item, index) =>
+        index === locationIndex
+          ? { ...item, title: payload?.title, address: payload?.address }
+          : item
+      );
+      dispatch(setSelectedLocations(updatedLocations));
+
+      setRenameLocationData(null);
+    } catch (error) {
+      console.log("error => ", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCallBackOfLocation = (newLocation) => {
+    // show rename location modal
+    setRenameLocationData({
+      ...newLocation,
+      locationIndex: locationsData.length,
+      modalVisible: true,
+    });
+    dispatch(setSelectedLocations([...(selectedLocations || []), newLocation]));
   };
 
   useEffect(() => {
@@ -57,7 +291,11 @@ const AuthServingLocationScreen = () => {
           {locationsData.length > 0 && (
             <TouchableOpacity
               hitSlop={10}
-              onPress={() => navigation.navigate("authMapScreen")}
+              onPress={() =>
+                navigation.navigate("authMapScreen", {
+                  onGoBack: handleCallBackOfLocation,
+                })
+              }
               activeOpacity={0.7}
             >
               <AntDesign
@@ -71,11 +309,7 @@ const AuthServingLocationScreen = () => {
       </View>
 
       {/* Content */}
-      <KeyboardAvoidingView
-        enabled={Platform.OS === "ios"}
-        behavior="padding"
-        style={styles.keyboardAvoidingView}
-      >
+      <View style={{ flex: 1, marginBottom: 0 }}>
         <View style={styles.contentContainer}>
           <FlatList
             data={locationsData}
@@ -102,20 +336,81 @@ const AuthServingLocationScreen = () => {
                   <Text style={styles.locationAddress}>{item.address}</Text>
                 </View>
 
-                <TouchableOpacity onPress={() => onRemoveLocationPress(index)}>
+                <Menu
+                  mode="flat"
+                  visible={menuVisible === index}
+                  onDismiss={() => setMenuVisible(null)}
+                  anchor={
+                    <TouchableOpacity
+                      onPress={() => setMenuVisible(index)}
+                      style={{
+                        height: 24,
+                        width: 24,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <MaterialIcons
+                        name="more-vert"
+                        size={24}
+                        color={AppColor.black}
+                      />
+                    </TouchableOpacity>
+                  }
+                  contentStyle={{
+                    backgroundColor: AppColor.white,
+                    borderWidth: 1,
+                    borderColor: AppColor.border,
+                    elevation: 1,
+                    shadowColor: AppColor.black,
+                    shadowOffset: {
+                      width: 0,
+                      height: 1,
+                    },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 2,
+                  }}
+                >
+                  <Menu.Item
+                    onPress={() => {
+                      setMenuVisible(null);
+                      setRenameLocationData({
+                        ...item,
+                        locationIndex: index,
+                        modalVisible: true,
+                      });
+                    }}
+                    title="Rename"
+                    leadingIcon={"pencil"}
+                  />
+                  <Menu.Item
+                    onPress={() => {
+                      setMenuVisible(null);
+                      onRemoveLocationPress(index);
+                    }}
+                    title="Remove"
+                    leadingIcon={"trash-can"}
+                  />
+                </Menu>
+
+                {/* <TouchableOpacity onPress={() => onRemoveLocationPress(index)}>
                   <Ionicons
                     name="trash-outline"
                     size={24}
                     color={AppColor.black}
                   />
-                </TouchableOpacity>
+                </TouchableOpacity> */}
               </View>
             )}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             ListEmptyComponent={() => (
               <View style={styles.emptyListContainer}>
                 <TouchableOpacity
-                  onPress={() => navigation.navigate("authMapScreen")}
+                  onPress={() =>
+                    navigation.navigate("authMapScreen", {
+                      onGoBack: handleCallBackOfLocation,
+                    })
+                  }
                   activeOpacity={0.8}
                   style={styles.emptyListButton}
                 >
@@ -145,7 +440,15 @@ const AuthServingLocationScreen = () => {
             </TouchableOpacity>
           </View>
         )}
-      </KeyboardAvoidingView>
+      </View>
+
+      {/* Rename Location Modal */}
+      <RenameLocationModal
+        data={renameLocationData}
+        isModalVisible={renameLocationData?.modalVisible || false}
+        onUpdatePress={handleLocationUpdatePress}
+        onCancelPress={() => setRenameLocationData(null)}
+      />
     </View>
   );
 };
@@ -157,6 +460,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: AppColor.white,
   },
+
+  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -176,19 +481,21 @@ const styles = StyleSheet.create({
     width: 48,
     alignItems: "center",
   },
-  keyboardAvoidingView: {
-    flex: 1,
-    marginBottom: 0,
-  },
+
+  // Content
   contentContainer: {
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 8,
   },
+
+  // FlatList
   flatListContent: {
     borderRadius: 8,
     borderColor: "#F0F1F2",
   },
+
+  // Location Item
   locationItem: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -229,6 +536,8 @@ const styles = StyleSheet.create({
     color: AppColor.text,
     marginTop: 10,
   },
+
+  // Button Container
   buttonContainer: {
     paddingHorizontal: 16,
     paddingTop: 12,
@@ -259,5 +568,78 @@ const styles = StyleSheet.create({
     fontFamily: Secondary400,
     fontSize: 16,
     color: AppColor.white,
+  },
+
+  // Modal
+  modalContainer: {
+    backgroundColor: AppColor.white,
+    borderRadius: 24,
+  },
+  modalTitle: {
+    marginBottom: 20,
+    fontSize: 22,
+    fontFamily: Primary400,
+    color: AppColor.text,
+    textAlign: "center",
+  },
+  modalSubtitle: {
+    marginBottom: 20,
+    fontSize: 16,
+    fontFamily: Secondary400,
+    color: AppColor.textHighlighter,
+    textAlign: "center",
+  },
+  locationModalBtnUpdate: {
+    width: "100%",
+    height: 48,
+    borderRadius: 5,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: AppColor.primary,
+    marginTop: 15,
+    ...Platform.select({
+      ios: {
+        shadowColor: AppColor.black,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  locationModalBtnCancel: {
+    width: "100%",
+    height: 48,
+    borderWidth: 1,
+    borderRadius: 5,
+    borderColor: AppColor.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 15,
+  },
+  locationModalBtnText: {
+    color: AppColor.white,
+    fontFamily: Secondary400,
+    fontSize: 16,
+  },
+  inputLabel: {
+    fontSize: 15,
+    fontFamily: Secondary400,
+    color: AppColor.text,
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: AppColor.white,
+  },
+  inputText: {
+    fontSize: 15,
+    fontFamily: Secondary400,
+  },
+  helper: {
+    // marginBottom: 8,
+    paddingLeft: 0,
+    // paddingTop: 0,
   },
 });

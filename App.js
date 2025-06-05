@@ -13,6 +13,7 @@ import { useSelector } from "react-redux";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppColor, Secondary400 } from "./src/utils/theme";
+import GlobalSnackbar from "./src/components/GlobalSnackbar";
 
 import SigninScreen from "./src/screens/signinScreen";
 import SignupScreen from "./src/screens/signupScreen";
@@ -32,6 +33,20 @@ import OrderScreen from "./src/screens/orderScreen";
 import MenuScreen from "./src/screens/menuScreen";
 import EarningsScreen from "./src/screens/earningsScreen";
 import ProfileMenuScreen from "./src/screens/profileMenuScreen";
+import EditProfileScreen from "./src/screens/editProfileScreen";
+import ProfileSelectCuisineScreen from "./src/screens/profileSelectCuisineScreen";
+import ProfileServingLocationScreen from "./src/screens/profileServingLocationScreen";
+import ProfileMapScreen from "./src/screens/profileMapScreen";
+import ProfileAvailabilityScreen from "./src/screens/profileSetAvilabilityScreen";
+import MenuDishListScreen from "./src/screens/menuDishListScreen";
+import MenuAddDishItemScreen from "./src/screens/menuAddDishItemScreen";
+import MenuEditDishItemScreen from "./src/screens/menuEditDishItemScreen";
+import TermsOfServiceScreen from "./src/screens/termsOfServiceScreen";
+import PrivacyPolicyScreen from "./src/screens/privacyPolicyScreen";
+import AgreementScreen from "./src/screens/agreementScreen";
+import AuthFoodTruckPlansScreen from "./src/screens/authFoodTruckPlansScreen";
+import AppTermsOfServiceScreen from "./src/screens/appTermsOfServiceScreen";
+import UserProfileScreen from "./src/screens/userProfileScreen";
 
 const Stack = createNativeStackNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -59,6 +74,8 @@ const AuthNavigator = () => (
     <Stack.Screen name="otpVerification" component={OtpVerificationScreen} />
     <Stack.Screen name="resetPassword" component={ResetPasswordScreen} />
     <Stack.Screen name="forgetPassword" component={ForgetPasswordScreen} />
+    <Stack.Screen name="termsOfService" component={TermsOfServiceScreen} />
+    <Stack.Screen name="privacyPolicy" component={PrivacyPolicyScreen} />
   </Stack.Navigator>
 );
 
@@ -69,8 +86,10 @@ const FinalSignupStepsNavigator = () => (
   >
     <Stack.Screen name="splash" component={SplashScreen} />
     <Stack.Screen
-      name="authFoodTruckProfileScreen"
-      component={AuthFoodTruckProfileScreen}
+      name="authFoodTruckPlansScreen"
+      component={AuthFoodTruckPlansScreen}
+    />
+    name="authFoodTruckProfileScreen" component={AuthFoodTruckProfileScreen}
     />
     <Stack.Screen
       name="authSelectCuisineScreen"
@@ -89,6 +108,7 @@ const FinalSignupStepsNavigator = () => (
       name="authUnderReviewNoteScreen"
       component={AuthUnderReviewNoteScreen}
     />
+    <Stack.Screen name="agreementScreen" component={AgreementScreen} />
   </Stack.Navigator>
 );
 
@@ -184,10 +204,37 @@ const MainAppNavigator = ({ insets }) => (
     initialRouteName="splash"
   >
     <Stack.Screen name="splash" component={SplashScreen} />
+    <Stack.Screen name="bottomRoot">
+      {() => <BottomTabNavigator insets={insets} />}
+    </Stack.Screen>
+    <Stack.Screen name="editProfileScreen" component={EditProfileScreen} />
     <Stack.Screen
-      name="bottomRoot"
-      component={() => <BottomTabNavigator insets={insets} />}
+      name="profileServingLocationScreen"
+      component={ProfileServingLocationScreen}
     />
+    <Stack.Screen name="profileMapScreen" component={ProfileMapScreen} />
+    <Stack.Screen
+      name="profileSelectCuisineScreen"
+      component={ProfileSelectCuisineScreen}
+    />
+    <Stack.Screen
+      name="profileAvailabilityScreen"
+      component={ProfileAvailabilityScreen}
+    />
+    <Stack.Screen name="menuDishListScreen" component={MenuDishListScreen} />
+    <Stack.Screen
+      name="menuAddDishItemScreen"
+      component={MenuAddDishItemScreen}
+    />
+    <Stack.Screen
+      name="menuEditDishItemScreen"
+      component={MenuEditDishItemScreen}
+    />
+    <Stack.Screen
+      name="appTermsOfServiceScreen"
+      component={AppTermsOfServiceScreen}
+    />
+    <Stack.Screen name="userProfileScreen" component={UserProfileScreen} />
   </Stack.Navigator>
 );
 
@@ -196,6 +243,7 @@ const App = () => {
   const { isSignedIn, isOnboarded } = useSelector((state) => state.authReducer);
   return (
     <NavigationContainer theme={DefaultTheme}>
+      <GlobalSnackbar />
       {isSignedIn ? (
         <MainAppNavigator insets={insets} />
       ) : isOnboarded ? (

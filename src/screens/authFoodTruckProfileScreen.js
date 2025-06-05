@@ -11,10 +11,12 @@ import {
   Platform,
   FlatList,
   Alert,
+  TextInput,
+  Dimensions,
+  Pressable,
 } from "react-native";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
-import { ActivityIndicator, IconButton } from "react-native-paper";
-import { useNavigation } from "@react-navigation/native";
+import { ActivityIndicator, Divider, IconButton } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import Octicons from "react-native-vector-icons/Octicons";
@@ -33,16 +35,146 @@ import {
 } from "../redux/slices/foodTruckProfileSlice";
 import { onSignOut } from "../redux/slices/authSlice";
 import StatusBarManager from "../components/StatusBarManager";
+import { Dropdown } from "react-native-element-dropdown";
+import FastImage from "@d11/react-native-fast-image";
 
-const AuthFoodTruckProfileScreen = () => {
+const dropdownData = [
+  {
+    label: "Facebook",
+    value: "facebook",
+    icon: require("../assets/images/facebook.png"),
+    type: "social",
+    txt: "",
+    disable: false,
+  },
+  {
+    label: "Twitter",
+    value: "twitter",
+    icon: require("../assets/images/twitter.png"),
+    type: "social",
+    txt: "",
+    disable: false,
+  },
+  {
+    label: "Instagram",
+    value: "instagram",
+    icon: require("../assets/images/instagram.png"),
+    type: "social",
+    txt: "",
+    disable: false,
+  },
+  {
+    label: "Website",
+    value: "website",
+    icon: require("../assets/images/global.png"),
+    type: "web",
+    txt: "",
+    disable: false,
+  },
+];
+
+const { width } = Dimensions.get("window");
+
+const MediaLinksComponent = ({
+  dropdownData,
+  selectedSocialMedia,
+  setSelectedSocialMedia,
+  socialMediaLink,
+  setSocialMediaLink,
+}) => {
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: AppColor.border,
+        borderRadius: 8,
+      }}
+    >
+      <View style={{ width: 80 }}>
+        <View
+          style={{
+            justifyContent: "center",
+            paddingLeft: 16,
+            height: 46,
+          }}
+        >
+          <FastImage
+            source={
+              selectedSocialMedia
+                ? selectedSocialMedia.icon
+                : dropdownData[0].icon
+            }
+            style={{ width: 24, height: 24 }}
+          />
+        </View>
+        <Dropdown
+          data={dropdownData}
+          labelField="txt"
+          valueField="value"
+          value={selectedSocialMedia}
+          onChange={(item) => {
+            setSelectedSocialMedia(item);
+          }}
+          placeholder=""
+          style={styles.dropdownForMedia}
+          containerStyle={{ width: width - 50 }}
+          placeholderStyle={{
+            fontFamily: Secondary400,
+            color: AppColor.textHighlighter,
+          }}
+          itemTextStyle={{ fontFamily: Secondary400 }}
+          selectedTextStyle={{ fontFamily: Secondary400 }}
+          renderItem={(item) => (
+            <Pressable
+              disabled={!item.disable} // for dropdown condition works opposite
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
+                paddingVertical: 8,
+                paddingHorizontal: 16,
+                opacity: !item.disable ? 1 : 0.5,
+              }}
+            >
+              <FastImage source={item.icon} style={{ width: 24, height: 24 }} />
+              <Text style={styles.dropdownText}>{item.label}</Text>
+            </Pressable>
+          )}
+        />
+      </View>
+
+      <View
+        style={{
+          width: 1,
+          height: "100%",
+          backgroundColor: AppColor.border,
+        }}
+      />
+
+      <TextInput
+        value={socialMediaLink}
+        onChangeText={(txt) => {
+          setSocialMediaLink(txt);
+        }}
+        style={styles.input}
+        placeholder={`Enter ${selectedSocialMedia?.label} Link`}
+        placeholderTextColor={AppColor.placeholderTextColor}
+        autoCapitalize="none"
+      />
+    </View>
+  );
+};
+
+const AuthFoodTruckProfileScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
   const dispatch = useDispatch();
 
   const { selectedCuisine, selectedLocations } = useSelector(
     (state) => state.foodTruckProfileReducer
   );
-  const { user } = useSelector((state) => state.userReducer);
+  const { user, selectedPlan } = useSelector((state) => state.userReducer);
 
   const { checkAndRequestPermission: photosPermissionStatus } = usePermission(
     permission.photos
@@ -51,12 +183,37 @@ const AuthFoodTruckProfileScreen = () => {
     permission.camera
   );
 
+  const getPlanLimits = () => {
+    switch (selectedPlan?.slug) {
+      case "SUB_BASIC":
+        return "isBasicPlan";
+      case "SUB_PLATINUM":
+        return "isPlatinumPlan";
+      case "SUB_ELITE":
+        return "isElitePlan";
+      default:
+        return false;
+    }
+  };
+
+  const isBasicPlan = getPlanLimits() === "isBasicPlan";
+  const isPlatinumPlan = getPlanLimits() === "isPlatinumPlan";
+  const isElitePlan = getPlanLimits() === "isElitePlan";
+
   const [loading, setLoading] = useState(false);
   const [infoType, setInfoType] = useState("Food Truck");
   const [selectedMediaType, setSelectedMediaType] = useState(null);
   const [selectedLogo, setSelectedLogo] = useState(null);
   const [selectedPhotos, setSelectedPhotos] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [selectedType1, setSelectedType1] = useState(dropdownData[0]);
+  const [selectedType2, setSelectedType2] = useState(dropdownData[0]);
+  const [selectedType3, setSelectedType3] = useState(dropdownData[3]);
+  const [selectedType4, setSelectedType4] = useState(dropdownData[3]);
+  const [mediaLink1, setMediaLink1] = useState("");
+  const [mediaLink2, setMediaLink2] = useState("");
+  const [mediaLink3, setMediaLink3] = useState("");
+  const [mediaLink4, setMediaLink4] = useState("");
 
   const onPressUploadLogo = () => {
     setSelectedMediaType("logo");
@@ -83,7 +240,7 @@ const AuthFoodTruckProfileScreen = () => {
         async () => {
           // Permission granted, open the camera
           await ImagePicker.openCamera({
-            cropping: true,
+            cropping: false,
             mediaType: "photo",
           })
             .then(async (image) => {
@@ -189,6 +346,69 @@ const AuthFoodTruckProfileScreen = () => {
     setSelectedPhotos(tempPhotos);
   };
 
+  const createSocialMediaPayload = () => {
+    const socialMedia = [];
+
+    // Helper function to convert your format to the API's expected format
+    const convertMediaType = (value) => {
+      switch (value.toLowerCase()) {
+        case "facebook":
+          return "FACEBOOK";
+        case "instagram":
+          return "INSTAGRAM";
+        case "twitter":
+          return "TWITTER";
+        case "linkedin":
+          return "LINKEDIN";
+        case "tiktok":
+          return "TIKTOK";
+        case "youtube":
+          return "YOUTUBE";
+        case "snapchat":
+          return "SNAPCHAT";
+        case "pinterest":
+          return "PINTEREST";
+        case "reddit":
+          return "REDDIT";
+        case "website":
+          return "WEB";
+        default:
+          return value.toUpperCase(); // fallback
+      }
+    };
+
+    // Check each media link and add to payload if not empty
+    if (mediaLink1) {
+      socialMedia.push({
+        mediaType: convertMediaType(selectedType1.value),
+        mediaUrl: mediaLink1,
+      });
+    }
+
+    if (mediaLink2 && !isBasicPlan) {
+      socialMedia.push({
+        mediaType: convertMediaType(selectedType2.value),
+        mediaUrl: mediaLink2,
+      });
+    }
+
+    if (mediaLink3) {
+      socialMedia.push({
+        mediaType: convertMediaType(selectedType3.value),
+        mediaUrl: mediaLink3,
+      });
+    }
+
+    if (mediaLink4 && !isBasicPlan) {
+      socialMedia.push({
+        mediaType: convertMediaType(selectedType4.value),
+        mediaUrl: mediaLink4,
+      });
+    }
+
+    return socialMedia.length > 0 ? { socialMedia } : {};
+  };
+
   const handleContinueBtnPress = async () => {
     setLoading(true);
     try {
@@ -238,7 +458,11 @@ const AuthFoodTruckProfileScreen = () => {
       }
 
       let payload = {
+        ...(createSocialMediaPayload().socialMedia.length > 0 && {
+          socialMedia: createSocialMediaPayload().socialMedia,
+        }),
         infoType: infoType === "Food Truck" ? "truck" : "caterer",
+        planId: selectedPlan?._id,
       };
       if (logoResult) {
         payload.logo = logoResult.serverResponse;
@@ -279,24 +503,6 @@ const AuthFoodTruckProfileScreen = () => {
     }
   };
 
-  const handleSignout = async () => {
-    Alert.alert(
-      "Exit Registration?",
-      "Any unsaved data will be lost. Do you want to sign-out anyway?",
-      [
-        { text: "Cancel", onPress: () => {} },
-        {
-          text: "Signout",
-          onPress: () => {
-            dispatch(clearUserSlice());
-            dispatch(clearFoodTruckProfileSlice());
-            dispatch(onSignOut());
-          },
-        },
-      ]
-    );
-  };
-
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBarManager barStyle="light-content" />
@@ -304,14 +510,10 @@ const AuthFoodTruckProfileScreen = () => {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <IconButton
-          icon={(props) => (
-            <Octicons
-              name="sign-out"
-              size={props.size}
-              color={AppColor.white}
-            />
-          )}
-          onPress={handleSignout}
+          icon="arrow-left"
+          iconColor={AppColor.white}
+          size={24}
+          onPress={() => navigation.goBack()}
         />
         <Text style={styles.headerTitle}>Food Truck Profile</Text>
         <View style={{ width: 48 }} />
@@ -339,6 +541,12 @@ const AuthFoodTruckProfileScreen = () => {
                 </View>
               </View>
               <View style={styles.line} />
+              <View style={styles.stepSubContainer}>
+                <View style={styles.filledCircle}>
+                  <FontAwesome6 name="check" color={AppColor.white} size={18} />
+                </View>
+              </View>
+              <View style={styles.line} />
               <View style={styles.stepContainer}>
                 <View style={styles.emptyCircle} />
               </View>
@@ -356,7 +564,7 @@ const AuthFoodTruckProfileScreen = () => {
                 </Text>
               </View>
 
-              <View style={styles.hr} />
+              <Divider />
 
               {/* Logo Upload */}
               <View style={styles.section}>
@@ -459,6 +667,81 @@ const AuthFoodTruckProfileScreen = () => {
                     />
                   </View>
                 )}
+              </View>
+
+              {/* Social Media */}
+              <View style={[styles.section, { gap: 10 }]}>
+                {/* media link 1 */}
+                <MediaLinksComponent
+                  dropdownData={
+                    isElitePlan
+                      ? dropdownData
+                      : dropdownData.map((item) =>
+                          item.type === "web"
+                            ? { ...item, disable: true }
+                            : item
+                        )
+                  }
+                  selectedSocialMedia={selectedType1}
+                  setSelectedSocialMedia={setSelectedType1}
+                  socialMediaLink={mediaLink1}
+                  setSocialMediaLink={setMediaLink1}
+                />
+
+                {/* media link 2 */}
+                {!isBasicPlan ? (
+                  <MediaLinksComponent
+                    dropdownData={
+                      isElitePlan
+                        ? dropdownData
+                        : dropdownData.map((item) =>
+                            item.type === "web"
+                              ? { ...item, disable: true }
+                              : item
+                          )
+                    }
+                    selectedSocialMedia={selectedType2}
+                    setSelectedSocialMedia={setSelectedType2}
+                    socialMediaLink={mediaLink2}
+                    setSocialMediaLink={setMediaLink2}
+                  />
+                ) : null}
+
+                {/* media link 3 */}
+                <MediaLinksComponent
+                  dropdownData={
+                    isElitePlan
+                      ? dropdownData
+                      : dropdownData.map((item) =>
+                          item.type === "social"
+                            ? { ...item, disable: true }
+                            : item
+                        )
+                  }
+                  selectedSocialMedia={selectedType3}
+                  setSelectedSocialMedia={setSelectedType3}
+                  socialMediaLink={mediaLink3}
+                  setSocialMediaLink={setMediaLink3}
+                />
+
+                {/* media link 4 */}
+                {!isBasicPlan ? (
+                  <MediaLinksComponent
+                    dropdownData={
+                      isElitePlan
+                        ? dropdownData
+                        : dropdownData.map((item) =>
+                            item.type === "social"
+                              ? { ...item, disable: true }
+                              : item
+                          )
+                    }
+                    selectedSocialMedia={selectedType4}
+                    setSelectedSocialMedia={setSelectedType4}
+                    socialMediaLink={mediaLink4}
+                    setSocialMediaLink={setMediaLink4}
+                  />
+                ) : null}
               </View>
 
               {/* Radio Buttons */}
@@ -576,6 +859,8 @@ export default AuthFoodTruckProfileScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F9FAFB" },
+
+  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -590,6 +875,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: Primary400,
   },
+
+  // Step Indicator
   stepContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -615,7 +902,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: AppColor.primary,
   },
-  line: { width: "25%", height: 2, backgroundColor: AppColor.primary },
+  line: { width: "18%", height: 2, backgroundColor: AppColor.primary },
+
+  // Content
   content: { flex: 1, backgroundColor: AppColor.white },
   section: { marginVertical: 16, paddingHorizontal: 24 },
   sectionTitle: { fontSize: 24, fontFamily: Primary400, color: AppColor.text },
@@ -625,17 +914,14 @@ const styles = StyleSheet.create({
     color: AppColor.textHighlighter,
     marginTop: 4,
   },
-  hr: {
-    height: 1,
-    backgroundColor: "#E5E5EA",
-    width: "100%",
-  },
   label: {
     fontSize: 18,
     fontFamily: Secondary400,
     color: AppColor.black,
     marginBottom: 8,
   },
+
+  // Image [Logo, Photos]
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -681,6 +967,8 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 5,
   },
+
+  // Radio Buttons
   radioContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -713,6 +1001,18 @@ const styles = StyleSheet.create({
     fontFamily: Secondary400,
     color: AppColor.black,
   },
+
+  // Dropdown
+  dropdownForMedia: {
+    position: "absolute",
+    height: 46,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 5,
+  },
   dropdown: {
     width: "100%",
     borderWidth: 1,
@@ -732,6 +1032,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: Secondary400,
   },
+
+  // Input
+  input: {
+    flex: 1,
+    height: 46,
+    fontSize: 15,
+    fontFamily: Secondary400,
+    backgroundColor: AppColor.white,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    // borderWidth: 1,
+    // borderColor: AppColor.border,
+  },
+  helper: {
+    marginBottom: 8,
+    paddingLeft: 0,
+    paddingTop: 0,
+  },
+
+  // Continue Button
   continueButton: {
     height: 48,
     borderRadius: 5,

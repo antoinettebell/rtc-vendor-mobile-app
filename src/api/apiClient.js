@@ -2,6 +2,9 @@ import axios, { AxiosRequestConfig, AxiosError } from "axios";
 import Config from "react-native-config";
 
 import { store } from "../redux/store";
+import { clearUserSlice } from "../redux/slices/userSlice";
+import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlice";
+import { onSignOut } from "../redux/slices/authSlice";
 
 const API_URL = Config.API_URL;
 const API_PREFIX = Config.API_PREFIX;
@@ -45,18 +48,20 @@ apiClient.interceptors.response.use(
     return response;
   },
   function (error) {
-    // Handle 403 Forbidden (session expired)
-    // if (error?.response?.status === 403) {
-    //   // Perform action for 403 code [accestoken expire, not found]
-    //     store.dispatch(logout());
+    // Handle 401 Forbidden (session expired)
+    if (error?.response?.status === 401) {
+      // Perform action for 401 code [accestoken expire, not found]
+      store.dispatch(clearUserSlice());
+      store.dispatch(clearFoodTruckProfileSlice());
+      store.dispatch(onSignOut());
 
-    //     showToast({
-    //       type: "error",
-    //       title: "Logged Out",
-    //       message: "Your session has expired. Please login again.",
-    //     });
-    //   return Promise.reject(error);
-    // }
+      // showToast({
+      //   type: "error",
+      //   title: "Logged Out",
+      //   message: "Your session has expired. Please login again.",
+      // });
+      return Promise.reject(error);
+    }
 
     return Promise.reject(error);
   }

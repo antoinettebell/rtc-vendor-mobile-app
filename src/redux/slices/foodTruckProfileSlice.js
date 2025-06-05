@@ -3,6 +3,8 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
   selectedCuisine: [],
   selectedLocations: [],
+  selectedFoodCategory: [],
+  selectedFoodItems: [],
 };
 
 const foodTruckProfileSlice = createSlice({
@@ -15,6 +17,12 @@ const foodTruckProfileSlice = createSlice({
     setSelectedLocations: (state, { payload }) => {
       state.selectedLocations = payload;
     },
+    setSelectedFoodCategory: (state, { payload }) => {
+      state.selectedFoodCategory = payload;
+    },
+    setSelectedFoodItems: (state, { payload }) => {
+      state.selectedFoodItems = payload;
+    },
     clearFoodTruckProfileSlice: () => initialState,
   },
 });
@@ -22,6 +30,8 @@ const foodTruckProfileSlice = createSlice({
 export const {
   setSelectedCuisine,
   setSelectedLocations,
+  setSelectedFoodCategory,
+  setSelectedFoodItems,
   clearFoodTruckProfileSlice,
 } = foodTruckProfileSlice.actions;
 export default foodTruckProfileSlice.reducer;

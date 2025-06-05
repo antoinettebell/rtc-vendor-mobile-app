@@ -302,9 +302,8 @@ import { emailRegex, passwordRegex } from "../utils/constants";
 import { registerVendor_API } from "../api/authAPI";
 import StatusBarManager from "../components/StatusBarManager";
 
-const SignUpScreen = () => {
+const SignUpScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
 
   const [name, setName] = useState("");
   const [foodTruckName, setFoodTruckName] = useState("");
@@ -315,13 +314,13 @@ const SignUpScreen = () => {
   const [countryCode, setCountryCode] = useState("+1");
   const [mobileNumber, setMobileNumber] = useState("");
   const [agreed, setAgreed] = useState(false);
-  const [instagramLink, setInstagramLink] = useState("");
-  const [facebookLink, setFacebookLink] = useState("");
+  // const [instagramLink, setInstagramLink] = useState("");
+  // const [facebookLink, setFacebookLink] = useState("");
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({
     visible: false,
     message: "",
-    type: "info",
+    type: "default",
   });
 
   const [errors, setErrors] = useState({
@@ -397,8 +396,8 @@ const SignUpScreen = () => {
       foodTruck: {
         name: foodTruckName,
         infoType: "truck",
-        ...(facebookLink.trim() && { facebookLink }),
-        ...(instagramLink.trim() && { instagramLink }),
+        // ...(facebookLink.trim() && { facebookLink }),
+        // ...(instagramLink.trim() && { instagramLink }),
       },
       email,
       password,
@@ -549,12 +548,12 @@ const SignUpScreen = () => {
               )}
 
               {/* Social Media Link */}
-              <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+              {/* <Text style={[styles.inputLabel, { marginTop: 16 }]}>
                 {"Social Media Link"}
-              </Text>
+              </Text> */}
 
               {/* Instagram Input */}
-              <TextInput
+              {/* <TextInput
                 dense
                 value={instagramLink}
                 onChangeText={setInstagramLink}
@@ -574,10 +573,10 @@ const SignUpScreen = () => {
                   />
                 }
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
-              />
+              /> */}
 
               {/* Facebook Input */}
-              <TextInput
+              {/* <TextInput
                 dense
                 value={facebookLink}
                 onChangeText={setFacebookLink}
@@ -597,7 +596,7 @@ const SignUpScreen = () => {
                   />
                 }
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
-              />
+              /> */}
 
               {/* Mobile No */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
@@ -773,14 +772,21 @@ const SignUpScreen = () => {
                   />
                 </TouchableOpacity>
 
-                <Text
-                  style={styles.termsText}
-                  onPress={() => setAgreed(!agreed)}
-                >
+                <Text style={styles.termsText}>
                   {"I agree to the"}
-                  <Text style={styles.linkText}>{" Terms of Service"}</Text>
+                  <Text
+                    style={styles.linkText}
+                    onPress={() => navigation.navigate("termsOfService")}
+                  >
+                    {" Terms of Service"}
+                  </Text>
                   {" and "}
-                  <Text style={styles.linkText}>{"Privacy Policy."}</Text>
+                  <Text
+                    style={styles.linkText}
+                    onPress={() => navigation.navigate("privacyPolicy")}
+                  >
+                    {"Privacy Policy."}
+                  </Text>
                 </Text>
               </View>
 

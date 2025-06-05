@@ -3,6 +3,7 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
   isSignedIn: false,
   isOnboarded: false,
+  isUnderReview: false,
 };
 
 const authSlice = createSlice({
@@ -15,9 +16,13 @@ const authSlice = createSlice({
     onOnBoard: (state, { payload }) => {
       state.isOnboarded = payload;
     },
+    onUnderReview: (state, { payload }) => {
+      state.isUnderReview = payload;
+    },
     onSignOut: () => initialState,
   },
 });
 
-export const { onSignin, onOnBoard, onSignOut } = authSlice.actions;
+export const { onSignin, onOnBoard, onUnderReview, onSignOut } =
+  authSlice.actions;
 export default authSlice.reducer;

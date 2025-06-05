@@ -221,6 +221,10 @@ import { useDispatch } from "react-redux";
 import { setAuthToken, setUser } from "../redux/slices/userSlice";
 import { onSignin } from "../redux/slices/authSlice";
 import StatusBarManager from "../components/StatusBarManager";
+import {
+  setSelectedCuisine,
+  setSelectedLocations,
+} from "../redux/slices/foodTruckProfileSlice";
 
 const SignInScreen = () => {
   const insets = useSafeAreaInsets();
@@ -279,6 +283,12 @@ const SignInScreen = () => {
         console.log("login API response ====> ", response);
         if (response.success && response.data) {
           dispatch(setUser(response.data.user));
+          dispatch(
+            setSelectedCuisine(response.data.user.foodTruck.cuisine || [])
+          );
+          dispatch(
+            setSelectedLocations(response.data.user.foodTruck.locations || [])
+          );
           dispatch(setAuthToken(response.data.authToken));
           dispatch(onSignin(true));
         }
@@ -354,9 +364,9 @@ const SignInScreen = () => {
                 value={email}
                 onChangeText={(text) => {
                   setEmail(text);
-                  setEmailError(
-                    validateEmail(text) ? "" : "Enter a valid email!"
-                  );
+                  if (validateEmail(text)) {
+                    setEmailError("");
+                  }
                 }}
                 style={styles.input}
                 contentStyle={styles.inputText}
@@ -390,11 +400,9 @@ const SignInScreen = () => {
                 value={password}
                 onChangeText={(text) => {
                   setPassword(text);
-                  setPasswordError(
-                    validatePassword(text)
-                      ? ""
-                      : "Password must be 8–15 chars with 1 uppercase, 1 lowercase, 1 number, and 1 special char."
-                  );
+                  if (validatePassword(text)) {
+                    setPasswordError("");
+                  }
                 }}
                 style={styles.input}
                 contentStyle={styles.inputText}

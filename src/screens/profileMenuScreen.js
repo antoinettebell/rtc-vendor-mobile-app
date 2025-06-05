@@ -1,51 +1,680 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
-  StatusBar,
+  FlatList,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
 import { useDispatch, useSelector } from "react-redux";
+import FastImage from "@d11/react-native-fast-image";
+import Entypo from "react-native-vector-icons/Entypo";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import FontAwesome from "react-native-vector-icons/FontAwesome";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Modal from "react-native-modal";
+import { AppColor, Primary400, Secondary400 } from "../utils/theme";
 import { onSignOut } from "../redux/slices/authSlice";
 import { clearUserSlice } from "../redux/slices/userSlice";
 import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlice";
+import StatusBarManager from "../components/StatusBarManager";
+import { PROFILE_MENU_IMAGES, passwordRegex } from "../utils/constants";
+import {
+  ActivityIndicator,
+  HelperText,
+  Snackbar,
+  TextInput,
+} from "react-native-paper";
+import { updatePassword_API } from "../api/authAPI";
+import { showSnackbar } from "../redux/slices/snackbarSlice";
 
-const ProfileMenuScreen = () => {
+const ItemComponent = ({ imageUri, label, rightIcon, isRed, onPress }) => (
+  <TouchableOpacity
+    activeOpacity={0.7}
+    onPress={onPress}
+    style={styles.componentContainer}
+  >
+    <FastImage
+      source={imageUri}
+      resizeMode="cover"
+      style={styles.componentImage}
+    />
+    <Text
+      style={[
+        styles.componentLabel,
+        { color: isRed ? AppColor.red : AppColor.black },
+      ]}
+    >
+      {label}
+    </Text>
+    {rightIcon ? (
+      <Entypo name="chevron-small-right" size={24} color={AppColor.black} />
+    ) : null}
+  </TouchableOpacity>
+);
+
+const HR = () => <View style={styles.HR} />;
+
+const SignoutModal = ({
+  isModalVisible,
+  onYesSignoutPress,
+  onNoSignoutPress,
+}) => (
+  <Modal
+    isVisible={isModalVisible}
+    backdropOpacity={0.5}
+    animationIn="zoomIn"
+    animationOut="zoomOut"
+  >
+    <View style={styles.modalContainer}>
+      <TouchableOpacity
+        activeOpacity={0.7}
+        style={{ position: "absolute", top: 10, right: 10 }}
+        onPress={onNoSignoutPress}
+      >
+        <Ionicons
+          name="close-circle-sharp"
+          size={32}
+          color={AppColor.primary}
+        />
+      </TouchableOpacity>
+      <Text style={styles.modalTitle}>{"Sign out"}</Text>
+      <Text style={styles.modalSubtitle}>
+        {"Are you sure you want to sign out?"}
+      </Text>
+      <TouchableOpacity
+        style={styles.signoutModalBtnYes}
+        activeOpacity={0.7}
+        onPress={onYesSignoutPress}
+      >
+        <Text style={styles.signoutModalBtnText}>{"Yes"}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.signoutModalBtnNo}
+        activeOpacity={0.7}
+        onPress={onNoSignoutPress}
+      >
+        <Text style={[styles.signoutModalBtnText, { color: AppColor.primary }]}>
+          {"No"}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  </Modal>
+);
+
+const ChangePWDModal = ({
+  isModalVisible,
+  onUpdatePress,
+  onCancelPress,
+  snackbarPWD,
+  setSnackbarPWD,
+}) => {
+  const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordError, setNewPasswordError] = useState("");
+  const [newPasswordVisible, setNewPasswordVisible] = useState(false);
+  const [cnfrmPassword, setCnfrmPassword] = useState("");
+  const [cnfrmPasswordError, setCnfrmPasswordError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const resetStates = () => {
+    setPassword("");
+    setPasswordError("");
+    setPasswordVisible(false);
+    setNewPassword("");
+    setNewPasswordError("");
+    setNewPasswordVisible(false);
+    setCnfrmPassword("");
+    setCnfrmPasswordError("");
+  };
+
+  const togglePasswordVisibility = (type) => {
+    switch (type) {
+      case "current":
+        setPasswordVisible(!passwordVisible);
+        break;
+      case "new":
+        setNewPasswordVisible(!newPasswordVisible);
+        break;
+      default:
+        break;
+    }
+  };
+
+  const validatePassword = (password) => {
+    return passwordRegex?.test(password);
+  };
+
+  const onValidateBtnPress = async () => {
+    const validatePasswordOnSubmit = (value, cnfrm = false) => {
+      if (!passwordRegex.test(value)) {
+        return "Password must be 8–15 chars with 1 uppercase, 1 lowercase, 1 number, and 1 special char.";
+      }
+      if (cnfrm) {
+        if (newPassword !== cnfrmPassword) {
+          return "Passwords do not match.";
+        }
+      }
+      return "";
+    };
+
+    const pwdErr = validatePasswordOnSubmit(password);
+    const newPwdErr = validatePasswordOnSubmit(newPassword);
+    const cnfrmPwdErr = validatePasswordOnSubmit(cnfrmPassword, true);
+
+    setPasswordError(pwdErr);
+    setNewPasswordError(newPwdErr);
+    setCnfrmPasswordError(cnfrmPwdErr);
+
+    if (!!pwdErr || !!newPwdErr || !!cnfrmPwdErr) return;
+
+    onUpdatePress({
+      payload: {
+        currentPassword: password,
+        newPassword: cnfrmPassword,
+      },
+      setLoading,
+    });
+  };
+
+  useEffect(() => {
+    setTimeout(() => {
+      resetStates();
+    }, 500);
+  }, [isModalVisible]);
+
+  return (
+    <Modal
+      isVisible={isModalVisible}
+      backdropOpacity={0.5}
+      animationIn="zoomIn"
+      animationOut="zoomOut"
+      backdropTransitionOutTiming={0.5}
+    >
+      <View style={styles.modalContainer}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={{ position: "absolute", top: 10, right: 10 }}
+          onPress={onCancelPress}
+          disabled={loading}
+        >
+          <Ionicons
+            name="close-circle-sharp"
+            size={32}
+            color={AppColor.primary}
+          />
+        </TouchableOpacity>
+
+        <Text style={styles.modalTitle}>{"Change Password"}</Text>
+
+        <View>
+          {/* Current Password */}
+          <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+            {"Current Password"}
+          </Text>
+          <TextInput
+            dense
+            value={password}
+            onChangeText={(text) => {
+              setPassword(text);
+              if (validatePassword(text)) {
+                setPasswordError("");
+              }
+            }}
+            style={styles.input}
+            contentStyle={styles.inputText}
+            placeholder=""
+            placeholderTextColor={AppColor.placeholderTextColor}
+            mode="outlined"
+            error={!!passwordError}
+            secureTextEntry={!passwordVisible}
+            outlineColor={AppColor.border}
+            activeOutlineColor={AppColor.primary}
+            outlineStyle={{ borderRadius: 8 }}
+            right={
+              <TextInput.Icon
+                icon={passwordVisible ? "eye-off" : "eye"}
+                onPress={() => togglePasswordVisibility("current")}
+                color={AppColor.textHighlighter}
+              />
+            }
+            theme={{ colors: { onSurfaceVariant: "#777" } }}
+          />
+
+          {/* New Password */}
+          <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+            {"New Password"}
+          </Text>
+          <TextInput
+            dense
+            value={newPassword}
+            onChangeText={(text) => {
+              setNewPassword(text);
+              if (validatePassword(text)) {
+                setNewPasswordError("");
+              }
+            }}
+            style={styles.input}
+            contentStyle={styles.inputText}
+            placeholder=""
+            placeholderTextColor={AppColor.placeholderTextColor}
+            mode="outlined"
+            error={!!newPasswordError}
+            secureTextEntry={!newPasswordVisible}
+            outlineColor={AppColor.border}
+            activeOutlineColor={AppColor.primary}
+            outlineStyle={{ borderRadius: 8 }}
+            right={
+              <TextInput.Icon
+                icon={newPasswordVisible ? "eye-off" : "eye"}
+                onPress={() => togglePasswordVisibility("new")}
+                color={AppColor.textHighlighter}
+              />
+            }
+            theme={{ colors: { onSurfaceVariant: "#777" } }}
+          />
+
+          {/* Confirm Password */}
+          <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+            {"Confirm Password"}
+          </Text>
+          <TextInput
+            dense
+            value={cnfrmPassword}
+            onChangeText={(text) => {
+              setCnfrmPassword(text);
+              if (validatePassword(text) && newPassword === text) {
+                setCnfrmPasswordError("");
+              }
+            }}
+            style={styles.input}
+            contentStyle={styles.inputText}
+            placeholder=""
+            placeholderTextColor={AppColor.placeholderTextColor}
+            mode="outlined"
+            error={!!cnfrmPasswordError}
+            secureTextEntry={!newPasswordVisible}
+            outlineColor={AppColor.border}
+            activeOutlineColor={AppColor.primary}
+            outlineStyle={{ borderRadius: 8 }}
+            right={
+              <TextInput.Icon
+                icon={newPasswordVisible ? "eye-off" : "eye"}
+                onPress={() => togglePasswordVisibility("new")}
+                color={AppColor.textHighlighter}
+              />
+            }
+            theme={{ colors: { onSurfaceVariant: "#777" } }}
+          />
+
+          {!!passwordError || !!newPasswordError || !!cnfrmPasswordError ? (
+            <HelperText
+              type="error"
+              visible={
+                !!passwordError || !!newPasswordError || !!cnfrmPasswordError
+              }
+              style={styles.helper}
+            >
+              {passwordError || newPasswordError || cnfrmPasswordError}
+            </HelperText>
+          ) : null}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.signoutModalBtnYes, { marginTop: 30 }]}
+          activeOpacity={0.7}
+          onPress={onValidateBtnPress}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color={AppColor.white} />
+          ) : (
+            <Text style={styles.signoutModalBtnText}>{"Update"}</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.signoutModalBtnNo}
+          activeOpacity={0.7}
+          onPress={onCancelPress}
+          disabled={loading}
+        >
+          <Text
+            style={[styles.signoutModalBtnText, { color: AppColor.primary }]}
+          >
+            {"Cancel"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* SnackBar */}
+      <Snackbar
+        visible={snackbarPWD.visible}
+        onDismiss={() => setSnackbarPWD({ ...snackbarPWD, visible: false })}
+        duration={4000}
+        style={{
+          backgroundColor:
+            snackbarPWD.type === "success"
+              ? AppColor.snackbarSuccess
+              : snackbarPWD.type === "error"
+                ? AppColor.snackbarError
+                : AppColor.snackbarDefault,
+        }}
+      >
+        {snackbarPWD.message}
+      </Snackbar>
+    </Modal>
+  );
+};
+
+const ProfileMenuScreen = ({ navigation }) => {
   const dispatch = useDispatch();
-  const { isSignedIn } = useSelector((state) => state.authReducer);
+  const insets = useSafeAreaInsets();
   const { user } = useSelector((state) => state.userReducer);
 
+  const [signoutModalVisible, setSignoutModalVisible] = useState(false);
+  const [changePWDModalVisible, setChangePWDModalVisible] = useState(false);
+  const [snackbarPWD, setSnackbarPWD] = useState({
+    visible: false,
+    message: "",
+    type: "info",
+  });
+
   const handleSignOut = () => {
+    setSignoutModalVisible(false);
     dispatch(clearUserSlice());
     dispatch(clearFoodTruckProfileSlice());
     dispatch(onSignOut());
   };
 
+  const handleChangePassword = async ({ payload, setLoading }) => {
+    try {
+      setLoading(true);
+      const user_id = user._id;
+      const response = await updatePassword_API(payload, user_id);
+      if (response?.success) {
+        setChangePWDModalVisible(false);
+        dispatch(showSnackbar({ message: response.message, type: "success" }));
+      }
+    } catch (error) {
+      console.log("Error => ", error);
+      setSnackbarPWD({
+        visible: true,
+        message: error.message,
+        type: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={AppColor.white} barStyle="dark-content" />
+      <StatusBarManager />
 
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        {isSignedIn ? (
-          <Text
-            style={{
-              fontSize: 20,
-              fontFamily: Primary400,
-              color: AppColor.text,
-            }}
-          >{`Hello, ${user?.firstName}`}</Text>
-        ) : null}
+      {/* Header */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingTop: insets.top,
+          paddingBottom: 15,
+          backgroundColor: AppColor.white,
+          paddingHorizontal: 16,
+        }}
+      >
+        <View style={{ width: "10%" }} />
+        <Text
+          style={{
+            fontSize: 19.78,
+            fontFamily: Primary400,
+            color: AppColor.black,
+          }}
+        >
+          {"Profile"}
+        </Text>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={{
+            width: "10%",
+            alignItems: "flex-end",
+          }}
+        >
+          <MaterialIcons name="more-vert" size={24} color={AppColor.black} />
+        </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        onPress={handleSignOut}
-        activeOpacity={0.7}
-        style={styles.signInButton}
+      {/* Main Container */}
+      <ScrollView
+        nestedScrollEnabled={true}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1 }}
       >
-        <Text style={styles.buttonLabel}>{"Sign Out"}</Text>
-      </TouchableOpacity>
+        {/* Profile Info */}
+        <View
+          style={{
+            backgroundColor: AppColor.white,
+            paddingBottom: 16,
+          }}
+        >
+          {/* Cover Image */}
+          <FastImage
+            // source={{ uri: user?.foodTruck?.logo, priority: "normal" }}
+            source={{ uri: user?.foodTruck?.photos[0], priority: "normal" }}
+            style={{ height: 143, width: "100%" }}
+            resizeMode="cover"
+          />
+          {/* Circle Logo */}
+          <View
+            style={{
+              justifyContent: "center",
+              alignItems: "center",
+              marginTop: -52,
+            }}
+          >
+            <FastImage
+              source={{ uri: user?.foodTruck?.logo, priority: "normal" }}
+              // source={{ uri: user?.foodTruck?.photos[0], priority: "normal" }}
+              style={{ height: 104, width: 104, borderRadius: 52 }}
+              resizeMode="cover"
+            />
+          </View>
+          {/* Food Truck Name */}
+          <Text
+            style={{
+              fontSize: 18,
+              fontFamily: Primary400,
+              color: AppColor.black,
+              textAlign: "center",
+              marginVertical: 2,
+            }}
+          >
+            {user?.foodTruck?.name}
+          </Text>
+          {/* Cuisines List */}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              marginTop: 10,
+            }}
+          >
+            <View style={styles.reatingContainer}>
+              <View style={styles.iconContainer}>
+                <FontAwesome name="star" size={14} color={AppColor.yellow} />
+              </View>
+              <Text style={styles.ratingText}>{"4.8 (200+ reviews)"}</Text>
+            </View>
+            <View
+              style={{
+                width: 1,
+                height: 18,
+                marginHorizontal: 10,
+                backgroundColor: "#9A9FAC",
+              }}
+            />
+            <View>
+              <FlatList
+                horizontal
+                bounces={false}
+                showsHorizontalScrollIndicator={false}
+                data={user?.foodTruck?.cuisine?.slice(0, 2)}
+                keyExtractor={(item) => item._id}
+                contentContainerStyle={{
+                  flexGrow: 1,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+                ItemSeparatorComponent={() => (
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontFamily: Secondary400,
+                      color: AppColor.black,
+                    }}
+                  >
+                    {", "}
+                  </Text>
+                )}
+                renderItem={({ item, index }) => (
+                  <Text
+                    key={index}
+                    style={{
+                      fontSize: 12,
+                      fontFamily: Secondary400,
+                      color: AppColor.black,
+                    }}
+                  >
+                    {item.name}
+                  </Text>
+                )}
+                ListFooterComponent={() =>
+                  user?.foodTruck?.cuisine?.length > 1 ? (
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontFamily: Secondary400,
+                        color: AppColor.black,
+                      }}
+                    >
+                      {" & more"}
+                    </Text>
+                  ) : null
+                }
+              />
+            </View>
+          </View>
+          {/* Category */}
+          <Text
+            style={{
+              fontFamily: Secondary400,
+              fontSize: 14,
+              color: AppColor.black,
+              textAlign: "center",
+              marginTop: 10,
+            }}
+          >
+            {user?.foodTruck?.infoType === "caterer"
+              ? "Food Caterer"
+              : "Food Truck"}
+          </Text>
+        </View>
+
+        {/* Menu List */}
+        <View
+          style={{
+            backgroundColor: AppColor.white,
+            borderWidth: 1,
+            borderRadius: 10,
+            borderColor: "#E5E5EA",
+            paddingHorizontal: 19,
+            paddingVertical: 5,
+            margin: 16,
+          }}
+        >
+          <ItemComponent
+            rightIcon
+            label="Your Profile"
+            imageUri={PROFILE_MENU_IMAGES.yourProfile}
+            onPress={() => navigation.navigate("userProfileScreen")}
+            // onPress={() => navigation.navigate("editProfileScreen")}
+          />
+          <HR />
+          <ItemComponent
+            rightIcon
+            label="Serving Locations"
+            imageUri={PROFILE_MENU_IMAGES.servingLocations}
+            onPress={() => navigation.navigate("profileServingLocationScreen")}
+          />
+          <HR />
+          <ItemComponent
+            rightIcon
+            label="Cuisines"
+            imageUri={PROFILE_MENU_IMAGES.cuisine}
+            onPress={() => navigation.navigate("profileSelectCuisineScreen")}
+          />
+          <HR />
+          <ItemComponent
+            rightIcon
+            label="Manage Availability"
+            imageUri={PROFILE_MENU_IMAGES.manageAvailability}
+            onPress={() => navigation.navigate("profileAvailabilityScreen")}
+          />
+          <HR />
+          <ItemComponent
+            rightIcon
+            label="Change Password"
+            imageUri={PROFILE_MENU_IMAGES.changePassword}
+            onPress={() => setChangePWDModalVisible(true)}
+          />
+          <HR />
+          <ItemComponent
+            rightIcon
+            label="Help & Support"
+            imageUri={PROFILE_MENU_IMAGES.helpSupportTC}
+          />
+          <HR />
+          <ItemComponent
+            rightIcon
+            label="Terms of Service"
+            imageUri={PROFILE_MENU_IMAGES.helpSupportTC}
+            onPress={() => navigation.navigate("appTermsOfServiceScreen")}
+          />
+          <HR />
+          <ItemComponent
+            label="Sign out"
+            imageUri={PROFILE_MENU_IMAGES.logout}
+            onPress={() => setSignoutModalVisible(true)}
+          />
+          <HR />
+          <ItemComponent
+            isRed
+            label="Delete Account"
+            imageUri={PROFILE_MENU_IMAGES.deleteAccount}
+          />
+        </View>
+      </ScrollView>
+
+      {/* Modals */}
+      <SignoutModal
+        isModalVisible={signoutModalVisible}
+        onYesSignoutPress={handleSignOut}
+        onNoSignoutPress={() => setSignoutModalVisible(false)}
+      />
+
+      <ChangePWDModal
+        isModalVisible={changePWDModalVisible}
+        snackbarPWD={snackbarPWD}
+        setSnackbarPWD={setSnackbarPWD}
+        onUpdatePress={handleChangePassword}
+        onCancelPress={() => setChangePWDModalVisible(false)}
+      />
     </View>
   );
 };
@@ -55,7 +684,7 @@ export default ProfileMenuScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    margin: 16,
+    backgroundColor: "#F9FAFB",
   },
   signInButton: {
     height: 48,
@@ -82,5 +711,121 @@ const styles = StyleSheet.create({
     fontFamily: Secondary400,
     fontSize: 16,
     color: AppColor.white,
+  },
+
+  // Component style
+  componentContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    gap: 10,
+  },
+  componentImage: { height: 24, width: 24 },
+  componentLabel: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: Secondary400,
+  },
+
+  // HR
+  HR: {
+    height: 1,
+    backgroundColor: "#E5E5EA",
+  },
+
+  // Logout Modal
+  modalContainer: {
+    backgroundColor: AppColor.white,
+    marginHorizontal: "5%",
+    paddingVertical: 36,
+    paddingHorizontal: 33,
+    borderRadius: 24,
+  },
+  modalTitle: {
+    marginBottom: 30,
+    fontSize: 22,
+    fontFamily: Primary400,
+    color: AppColor.text,
+    textAlign: "center",
+  },
+  modalSubtitle: {
+    marginBottom: 20,
+    fontSize: 16,
+    fontFamily: Secondary400,
+    color: AppColor.textHighlighter,
+    textAlign: "center",
+  },
+  signoutModalBtnYes: {
+    width: "100%",
+    height: 48,
+    borderRadius: 5,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: AppColor.primary,
+    marginTop: 15,
+    ...Platform.select({
+      ios: {
+        shadowColor: AppColor.black,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  signoutModalBtnNo: {
+    width: "100%",
+    height: 48,
+    borderWidth: 1,
+    borderRadius: 5,
+    borderColor: AppColor.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 15,
+  },
+  signoutModalBtnText: {
+    color: AppColor.white,
+    fontFamily: Secondary400,
+    fontSize: 16,
+  },
+
+  // PWD Modal
+  inputLabel: {
+    fontSize: 15,
+    fontFamily: Secondary400,
+    color: AppColor.text,
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: AppColor.white,
+  },
+  inputText: {
+    fontSize: 15,
+    fontFamily: Secondary400,
+  },
+  helper: {
+    // marginBottom: 8,
+    paddingLeft: 0,
+    // paddingTop: 0,
+  },
+
+  // Rating Container
+  reatingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  iconContainer: {
+    height: 16,
+    width: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ratingText: {
+    fontFamily: Secondary400,
+    fontSize: 12,
+    color: AppColor.black,
   },
 });
