@@ -406,7 +406,7 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
       });
     }
 
-    return socialMedia.length > 0 ? { socialMedia } : {};
+    return socialMedia?.length > 0 ? { socialMedia } : {};
   };
 
   const handleContinueBtnPress = async () => {
@@ -458,7 +458,7 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
       }
 
       let payload = {
-        ...(createSocialMediaPayload().socialMedia.length > 0 && {
+        ...(createSocialMediaPayload()?.socialMedia?.length > 0 && {
           socialMedia: createSocialMediaPayload().socialMedia,
         }),
         infoType: infoType === "Food Truck" ? "truck" : "caterer",

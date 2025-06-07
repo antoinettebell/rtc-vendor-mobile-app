@@ -249,7 +249,7 @@ const EditProfileScreen = ({ navigation }) => {
 
   const validateMobileNumber = (value) => {
     if (!value.trim()) return "Mobile number is required";
-    if (value.length < 10) return "Enter a valid 10-digit number";
+    if (value?.length < 10) return "Enter a valid 10-digit number";
     return "";
   };
 
@@ -342,7 +342,7 @@ const EditProfileScreen = ({ navigation }) => {
                       : {
                           mode: "media",
                           uri: images?.path,
-                          name: images?.filename,
+                          name: `${images?.path?.split("/").pop()}`,
                           type: images.mime,
                         };
                   setSelectedLogo(payload);
@@ -362,7 +362,7 @@ const EditProfileScreen = ({ navigation }) => {
                       : {
                           mode: "media",
                           uri: i?.path,
-                          name: i?.filename,
+                          name: `${i?.path?.split("/").pop()}`,
                           type: i.mime,
                         }
                   );
@@ -587,7 +587,7 @@ const EditProfileScreen = ({ navigation }) => {
       });
     }
 
-    return socialMedia.length > 0 ? { socialMedia } : {};
+    return socialMedia?.length > 0 ? { socialMedia } : {};
   };
 
   const handleUpdatePress = async () => {
@@ -605,7 +605,7 @@ const EditProfileScreen = ({ navigation }) => {
       logoError = "Logo is required";
     }
 
-    if (selectedPhotos.length === 0) {
+    if (selectedPhotos?.length === 0) {
       photosError = "At least one photo is required";
     }
 
@@ -664,7 +664,7 @@ const EditProfileScreen = ({ navigation }) => {
       let foodTruckPayload = {
         name: foodTruckName,
         infoType: infoType === "Food Truck" ? "truck" : "caterer",
-        ...(createSocialMediaPayload().socialMedia.length > 0 && {
+        ...(createSocialMediaPayload()?.socialMedia?.length > 0 && {
           socialMedia: createSocialMediaPayload().socialMedia,
         }),
       };

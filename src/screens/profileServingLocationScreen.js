@@ -402,8 +402,8 @@ const ProfileServingLocationScreen = ({ navigation }) => {
     console.log("Location item => ", item);
     navigation.navigate("profileMapScreen", {
       location: {
-        latitude: item.lat,
-        longitude: item.long,
+        latitude: parseFloat(item.lat),
+        longitude: parseFloat(item.long),
         latitudeDelta: 0.0922,
         longitudeDelta: 0.0421,
       },

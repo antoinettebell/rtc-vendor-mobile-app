@@ -201,8 +201,8 @@ const MenuScreen = ({ navigation }) => {
       {/* Header */}
       <View
         style={{
-          paddingTop: insets.top,
-          paddingBottom: 15,
+          paddingTop: insets.top + 10,
+          paddingBottom: 10,
           backgroundColor: AppColor.white,
           paddingHorizontal: 16,
           borderBottomWidth: 1,

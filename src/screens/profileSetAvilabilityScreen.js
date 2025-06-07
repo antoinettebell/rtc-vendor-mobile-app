@@ -341,7 +341,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
                         </TouchableOpacity>
 
                         <Switch
-                          trackColor={AppColor.primary}
+                          color={AppColor.primary}
                           value={loc.enabled}
                           onValueChange={() => toggleSwitch(index, locIndex)}
                         />

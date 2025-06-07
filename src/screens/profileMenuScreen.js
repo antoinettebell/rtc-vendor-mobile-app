@@ -422,8 +422,8 @@ const ProfileMenuScreen = ({ navigation }) => {
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
-          paddingTop: insets.top,
-          paddingBottom: 15,
+          paddingTop: insets.top + 10,
+          paddingBottom: 10,
           backgroundColor: AppColor.white,
           paddingHorizontal: 16,
         }}
@@ -555,7 +555,7 @@ const ProfileMenuScreen = ({ navigation }) => {
                   </Text>
                 )}
                 ListFooterComponent={() =>
-                  user?.foodTruck?.cuisine?.length > 1 ? (
+                  user?.foodTruck?.cuisine?.length > 2 ? (
                     <Text
                       style={{
                         fontSize: 12,

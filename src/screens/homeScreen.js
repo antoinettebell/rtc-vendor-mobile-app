@@ -134,10 +134,10 @@ const HomeScreen = () => {
         style={{
           height: totalHeaderHeight,
           flexDirection: "row",
-          alignItems: "center",
+          alignItems: "flex-end",
           justifyContent: "space-between",
           paddingTop: insets.top,
-          paddingBottom: 15,
+          paddingBottom: 10,
           backgroundColor: AppColor.white,
           paddingHorizontal: 16,
           borderBottomWidth: 1,

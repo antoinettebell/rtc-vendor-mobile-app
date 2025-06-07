@@ -217,8 +217,8 @@ const MenuDishListScreen = ({ navigation, route }) => {
                 </View>
                 <View>
                   <Switch
-                    value={item.available}
                     color={AppColor.primary}
+                    value={item.available}
                     onValueChange={(value) => handleSwitch(value, item._id)}
                   />
                 </View>
