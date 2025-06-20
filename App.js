@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Platform,
   SafeAreaView,
@@ -47,6 +47,7 @@ import AgreementScreen from "./src/screens/agreementScreen";
 import AuthFoodTruckPlansScreen from "./src/screens/authFoodTruckPlansScreen";
 import AppTermsOfServiceScreen from "./src/screens/appTermsOfServiceScreen";
 import UserProfileScreen from "./src/screens/userProfileScreen";
+import OrderDetailsScreen from "./src/screens/orderDetailsScreen";
 
 const Stack = createNativeStackNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -89,7 +90,9 @@ const FinalSignupStepsNavigator = () => (
       name="authFoodTruckPlansScreen"
       component={AuthFoodTruckPlansScreen}
     />
-    name="authFoodTruckProfileScreen" component={AuthFoodTruckProfileScreen}
+    <Stack.Screen
+      name="authFoodTruckProfileScreen"
+      component={AuthFoodTruckProfileScreen}
     />
     <Stack.Screen
       name="authSelectCuisineScreen"
@@ -235,12 +238,15 @@ const MainAppNavigator = ({ insets }) => (
       component={AppTermsOfServiceScreen}
     />
     <Stack.Screen name="userProfileScreen" component={UserProfileScreen} />
+    <Stack.Screen name="orderDetailsScreen" component={OrderDetailsScreen} />
+    {/* <Stack.Screen name="deleteOtpVerification" component={OtpVerificationScreen} /> */}
   </Stack.Navigator>
 );
 
 const App = () => {
   const insets = useSafeAreaInsets();
   const { isSignedIn, isOnboarded } = useSelector((state) => state.authReducer);
+
   return (
     <NavigationContainer theme={DefaultTheme}>
       <GlobalSnackbar />

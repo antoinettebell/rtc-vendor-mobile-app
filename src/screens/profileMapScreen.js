@@ -53,6 +53,10 @@ const ProfileMapScreen = ({ navigation, route }) => {
   const [searchTxt, setSearchTxt] = useState(null);
   const [title, setTitle] = useState(Params?.locationTitle || "");
   const [locationName, setLocationName] = useState(Params?.loactionName || "");
+  const [locationZipcode, setLocationZipcode] = useState(
+    Params?.locationZipcode || ""
+  );
+
   const [currentRegion, setCurrentRegion] = useState(
     Params?.location || initialRegion
   );
@@ -89,6 +93,7 @@ const ProfileMapScreen = ({ navigation, route }) => {
         const adrs = response.results[0].formatted_address;
         setTitle(adrs.split(",").slice(0, 1).join(",").trim());
         setLocationName(adrs);
+        setLocationZipcode("");
         return;
       } else {
         switch (response.status) {
@@ -222,6 +227,7 @@ const ProfileMapScreen = ({ navigation, route }) => {
       address: locationName,
       lat: String(currentRegion.latitude),
       long: String(currentRegion.longitude),
+      zipcode: locationZipcode,
     };
 
     if (Params?.location) {
@@ -238,6 +244,7 @@ const ProfileMapScreen = ({ navigation, route }) => {
   useEffect(() => {
     if (Params?.location && Params?.loactionTitle && Params?.loactionName) {
       setTitle(Params?.loactionTitle); // set title from params
+      setLocationZipcode(Params?.locationZipcode || ""); // set zipcode from params
       setTimeout(() => {
         if (mapRef?.current) {
           mapRef.current.animateToRegion(Params.location, 1500); // 1.5s smooth animation
@@ -340,6 +347,7 @@ const ProfileMapScreen = ({ navigation, route }) => {
               setTitle(adrs.split(",").slice(0, 1).join(",").trim());
               setSearchTxt(adrs);
               setLocationName(adrs);
+              setLocationZipcode("");
               // Animate the map to the new coordinates
               mapRef.current?.animateToRegion(region);
               // Clear the search text

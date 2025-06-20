@@ -105,6 +105,21 @@ const validateMaxQt = (value, minQtValue) => {
   return "";
 };
 
+const validatePrepTime = (value) => {
+  if (!value.trim()) {
+    // return "Preparation time is required";
+    value = 0; // Default value for logic only
+  }
+  if (!/^\d+$/.test(value)) {
+    return "Only whole numbers allowed";
+  }
+  const num = parseInt(value, 10);
+  if (num > 120) {
+    return "Maximum value is 120";
+  }
+  return "";
+};
+
 const MenuEditDishItemScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -129,6 +144,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
   const [itemDiscount, setItemDiscount] = useState("0");
   const [minQt, setMinQt] = useState("1");
   const [maxQt, setMaxQt] = useState("1");
+  const [prepTime, setPrepTime] = useState("0");
   const [selectedPhotos, setSelectedPhotos] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [dietList, setDietList] = useState([]);
@@ -141,6 +157,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
     itemPrice: "",
     qtMin: "",
     qtMax: "",
+    prepTime: "",
   });
 
   const onPressUploadPhotos = () => {
@@ -308,6 +325,17 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
     }));
   };
 
+  const handlePrepTimeChange = (text) => {
+    // Only allow numbers
+    const cleanedText = text.replace(/[^0-9]/g, "");
+    setPrepTime(cleanedText);
+    setErrors((prev) => ({
+      ...prev,
+      prepTime: validatePrepTime(cleanedText),
+    }));
+  };
+
+  // Edit Food Item API Call
   const handleSaveBtnPress = async () => {
     // Validate all fields
     const newErrors = {
@@ -318,6 +346,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
       qtMax: validateMaxQt(maxQt, minQt),
       itemPhotos:
         selectedPhotos.length === 0 ? "At least one image is required" : "",
+      prepTime: validatePrepTime(prepTime),
     };
 
     setErrors(newErrors);
@@ -338,7 +367,14 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
         price: parseFloat(parseFloat(itemPrice).toFixed(2)),
         minQty: parseInt(minQt, 10),
         maxQty: parseInt(maxQt, 10),
+        preparationTime: parseInt(prepTime || 0, 10),
+        allowCustomize: customization,
+        discount: parseFloat(parseFloat(itemDiscount || 0).toFixed(2)),
       };
+
+      if (selectedDiet.length > 0) {
+        payload.diet = selectedDiet;
+      }
 
       // manage photos image upload
       const imageResult = [];
@@ -409,6 +445,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
     const discountString = item.discount.toString();
     const minQtString = item.minQty.toString();
     const maxQtString = item.maxQty.toString();
+    const prepTimeString = item.preparationTime?.toString() || "0";
 
     // Set all the states
     setItemName(item.name);
@@ -417,6 +454,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
     setItemDiscount(discountString);
     setMinQt(minQtString);
     setMaxQt(maxQtString);
+    setPrepTime(prepTimeString);
     setSelectedPhotos(transformedPhotos);
     setCustomization(item.allowCustomize);
     setSelectedDiet(item.diet.map((diet) => diet._id));
@@ -852,6 +890,39 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                     </HelperText>
                   )}
                 </View>
+              </View>
+
+              {/* Preparation Time */}
+              <View style={styles.section}>
+                <Text style={[styles.inputLabel, { marginTop: 10 }]}>
+                  {"Preparation Time in Minutes *"}
+                </Text>
+                <TextInput
+                  dense
+                  value={prepTime}
+                  onChangeText={handlePrepTimeChange}
+                  style={styles.input}
+                  contentStyle={styles.inputText}
+                  placeholder=""
+                  placeholderTextColor={AppColor.placeholderTextColor}
+                  mode="outlined"
+                  error={!!errors.prepTime}
+                  outlineColor={AppColor.border}
+                  activeOutlineColor={AppColor.primary}
+                  outlineStyle={{ borderRadius: 8 }}
+                  autoCapitalize="none"
+                  keyboardType="numeric"
+                  theme={{ colors: { onSurfaceVariant: "#777" } }}
+                />
+                {!!errors.prepTime && (
+                  <HelperText
+                    type="error"
+                    visible={!!errors.prepTime}
+                    style={styles.helper}
+                  >
+                    {errors.prepTime}
+                  </HelperText>
+                )}
               </View>
 
               {/* save btn */}

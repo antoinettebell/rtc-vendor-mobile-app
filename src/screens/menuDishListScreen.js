@@ -85,7 +85,9 @@ const MenuDishListScreen = ({ navigation, route }) => {
     } catch (error) {
       console.log("error => ", error);
     } finally {
-      setDataLoading(false);
+      setTimeout(() => {
+        setDataLoading(false);
+      }, 1000);
     }
   };
 

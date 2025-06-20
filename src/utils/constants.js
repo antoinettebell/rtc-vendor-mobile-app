@@ -12,4 +12,16 @@ export const PROFILE_MENU_IMAGES = {
   helpSupportTC: require("../assets/images/helpSupportTCIcon.png"),
   logout: require("../assets/images/logoutIcon.png"),
   deleteAccount: require("../assets/images/dltAccountIcon.png"),
-}
+};
+
+export const PROFILE_AVATAR = "https://avatar.iran.liara.run/public/12";
+
+export const orderStatusSrings = {
+  placed: "PLACED",
+  cancel: "CANCEL",
+  accepted: "ACCEPTED",
+  rejected: "REJECTED",
+  preparing: "PREPARING",
+  ready_for_pickup: "READY_FOR_PICKUP",
+  completed: "COMPLETED",
+};

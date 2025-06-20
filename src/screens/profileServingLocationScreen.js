@@ -54,12 +54,15 @@ const RenameLocationModal = ({
   const [titleError, setTitleError] = useState("");
   const [address, setAddress] = useState(data?.address || "");
   const [addressError, setAddressError] = useState("");
+  const [zipCode, setZipCode] = useState(data?.zipcode || "");
+  const [zipCodeError, setZipCodeError] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (data) {
       setTitle(data.title || "");
       setAddress(data.address || "");
+      setZipCode(data.zipcode || "");
     }
   }, [data]);
 
@@ -68,6 +71,8 @@ const RenameLocationModal = ({
     setTitleError("");
     setAddress("");
     setAddressError("");
+    setZipCode("");
+    setZipCodeError("");
   };
 
   const validateText = (text) => {
@@ -77,17 +82,20 @@ const RenameLocationModal = ({
   const onValidateBtnPress = async () => {
     const titleErr = validateText(title) ? "" : "Title is required";
     const addressErr = validateText(address) ? "" : "Address is required";
+    const zipCodeErr = validateText(zipCode) ? "" : "Zip Code is required";
 
     setTitleError(titleErr);
     setAddressError(addressErr);
+    setZipCodeError(zipCodeErr);
 
-    if (!!titleErr || !!addressErr) return;
+    if (!!titleErr || !!addressErr || !!zipCodeErr) return;
 
     onUpdatePress({
       payload: {
         initialData: data,
         title,
         address,
+        zipcode: zipCode,
       },
       setLoading,
     });
@@ -197,6 +205,43 @@ const RenameLocationModal = ({
                   style={styles.helper}
                 >
                   {addressError}
+                </HelperText>
+              ) : null}
+            </View>
+
+            {/* Zip Code Input */}
+            <View>
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+                {"Zip Code *"}
+              </Text>
+              <TextInput
+                dense
+                value={zipCode}
+                onChangeText={(text) => {
+                  setZipCode(text);
+                  if (validateText(text)) {
+                    setZipCodeError("");
+                  }
+                }}
+                style={styles.input}
+                contentStyle={styles.inputText}
+                placeholder="Enter Zip Code"
+                placeholderTextColor={AppColor.placeholderTextColor}
+                mode="outlined"
+                maxLength={6}
+                error={!!zipCodeError}
+                outlineColor={AppColor.border}
+                activeOutlineColor={AppColor.primary}
+                outlineStyle={{ borderRadius: 8 }}
+                theme={{ colors: { onSurfaceVariant: "#777" } }}
+              />
+              {!!zipCodeError ? (
+                <HelperText
+                  type="error"
+                  visible={!!zipCodeError}
+                  style={styles.helper}
+                >
+                  {zipCodeError}
                 </HelperText>
               ) : null}
             </View>
@@ -409,6 +454,7 @@ const ProfileServingLocationScreen = ({ navigation }) => {
       },
       loactionTitle: item.title,
       loactionName: item.address,
+      locationZipcode: item.zipcode,
       locationIndex: index,
       onGoBack: handleCallBackOfLocation,
     });
@@ -451,7 +497,12 @@ const ProfileServingLocationScreen = ({ navigation }) => {
         const locationIndex = payload?.initialData?.locationIndex;
         const updatedLocations = locationsData.map((item, index) =>
           index === locationIndex
-            ? { ...item, title: payload?.title, address: payload?.address }
+            ? {
+                ...item,
+                title: payload?.title,
+                address: payload?.address,
+                zipcode: payload?.zipcode,
+              }
             : item
         );
         setlocationsData(updatedLocations);
@@ -466,8 +517,17 @@ const ProfileServingLocationScreen = ({ navigation }) => {
         const locationId = payload?.initialData?._id;
         const temp_location = selectedLocations.map((item) =>
           item._id === locationId
-            ? { ...item, title: payload?.title, address: payload?.address }
-            : item
+            ? {
+                ...item,
+                title: payload?.title,
+                address: payload?.address,
+                zipcode: payload?.zipcode,
+              }
+            : (() => {
+                const newItem = { ...item };
+                if (newItem.zipcode == null) delete newItem.zipcode; // Remove key if null/undefined
+                return newItem;
+              })()
         );
         const foodTruckPayload = {
           locations: temp_location,
@@ -496,6 +556,36 @@ const ProfileServingLocationScreen = ({ navigation }) => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleBackPress = () => {
+    // Check if any object doesn't have "_id" key
+    const hasMissingId = locationsData.some(
+      (item) => !item.hasOwnProperty("_id")
+    );
+
+    if (hasMissingId) {
+      Alert.alert(
+        "Unsaved Changes",
+        "You have unsaved changes. Do you want to discard them?",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Discard",
+            style: "destructive",
+            onPress: () => {
+              navigation.goBack();
+            },
+          },
+        ],
+        { cancelable: false }
+      );
+    } else {
+      navigation.goBack();
     }
   };
 
@@ -538,7 +628,7 @@ const ProfileServingLocationScreen = ({ navigation }) => {
           icon="arrow-left"
           iconColor={AppColor.black}
           size={24}
-          onPress={() => navigation.goBack()}
+          onPress={handleBackPress}
         />
         <Text style={styles.headerTitle}>{"Serving Locations"}</Text>
         <View style={styles.headerIconContainer}>
@@ -709,9 +799,21 @@ const ProfileServingLocationScreen = ({ navigation }) => {
                       color={AppColor.primary}
                     />
 
-                    <View style={{ flex: 1, paddingHorizontal: 12 }}>
+                    <View style={{ flex: 1, paddingHorizontal: 12, gap: 2 }}>
                       <Text style={styles.locationTitle}>{item.title}</Text>
                       <Text style={styles.locationAddress}>{item.address}</Text>
+                      <Text
+                        style={styles.locationZipCode}
+                      >{`ZipCode: ${item.zipcode || "N/A"}`}</Text>
+                      {!item.zipcode ? (
+                        <HelperText
+                          type="error"
+                          visible={!item.zipcode}
+                          style={styles.helper}
+                        >
+                          {"Note: Zip Code is required"}
+                        </HelperText>
+                      ) : null}
                     </View>
                   </View>
                 </View>
@@ -852,6 +954,11 @@ const styles = StyleSheet.create({
   locationAddress: {
     fontSize: 14,
     color: AppColor.gray,
+    fontFamily: Secondary400,
+  },
+  locationZipCode: {
+    fontSize: 14,
+    color: AppColor.text,
     fontFamily: Secondary400,
   },
   separator: {

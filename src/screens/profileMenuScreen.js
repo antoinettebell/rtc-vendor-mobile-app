@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  Alert,
   FlatList,
   ScrollView,
   StyleSheet,
@@ -412,6 +413,24 @@ const ProfileMenuScreen = ({ navigation }) => {
     }
   };
 
+  const handleDeleteAccountPress = () => {
+    Alert.alert(
+      "Delete Account",
+      "Are you sure you want to delete your account? This action is permanent and cannot be reversed.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          // onPress: () => navigation.navigate('deleteOtpVerification'),
+        },
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
       <StatusBarManager />
@@ -657,6 +676,7 @@ const ProfileMenuScreen = ({ navigation }) => {
             isRed
             label="Delete Account"
             imageUri={PROFILE_MENU_IMAGES.deleteAccount}
+            onPress={handleDeleteAccountPress}
           />
         </View>
       </ScrollView>

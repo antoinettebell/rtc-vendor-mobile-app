@@ -7,6 +7,8 @@ import {
   GET_FOODTRUCK_DETAILS,
   GET_FOOD_CATEGORY,
   GET_FOOD_ITEM,
+  GET_ORDER_BY_ID,
+  GET_ORDER_LIST,
   GET_PLANS_DATA,
   GET_USER_DETAILS,
   MEDIA_UPLOAD,
@@ -17,6 +19,7 @@ import {
   UPDATE_FOODTRUCK,
   UPDATE_FOOD_CATEGORY,
   UPDATE_FOOD_ITEM,
+  UPDATE_ORDER_STATUS,
   UPDATE_USER_DETAILS,
 } from "./apiEndPoint";
 import apiClient from "./apiClient";
@@ -245,6 +248,47 @@ export const getDietList_API = async () => {
   try {
     const URL = `${GET_DIET_LIST}?limit=1000`;
     const response = await apiClient.get(URL, { skipToken: true });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+// Get Order List
+export const getOrderList_API = async ({
+  page = 1,
+  limit = 20,
+  status = null,
+} = {}) => {
+  try {
+    let URL = `${GET_ORDER_LIST}?page=${page}&limit=${limit}`;
+    if (status) {
+      URL = `${URL}&orderStatus=${status}`;
+    }
+    const response = await apiClient.get(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+// Get Order by order id
+export const getOrderByID_API = async (order_id) => {
+  try {
+    const URL = `${GET_ORDER_BY_ID}/${order_id}`;
+    console.log("URL => ", URL);
+    const response = await apiClient.get(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+// Update order status by order-id
+export const updateOrderStatusByID_API = async ({ order_id, payload }) => {
+  try {
+    const URL = `${UPDATE_ORDER_STATUS}/${order_id}`;
+    const response = await apiClient.put(URL, payload, { skipToken: false });
     return response?.data;
   } catch (error) {
     throw error?.response?.data;
