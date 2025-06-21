@@ -33,7 +33,7 @@ setup_permissions([
   # 'MediaLibrary',
   # 'Microphone',
   # 'Motion',
-  # 'Notifications',
+  'Notifications',
   'PhotoLibrary',
   # 'PhotoLibraryAddOnly',
   # 'Reminders',
@@ -54,13 +54,16 @@ end
 target 'FoodtruckVendor' do
   config = use_native_modules!
 
+  pod 'react-native-google-maps', :path => '../node_modules/react-native-maps'
+
+  use_frameworks! :linkage => :static
+  $RNFirebaseAsStaticFramework = true
+
   use_react_native!(
     :path => config[:reactNativePath],
     # An absolute path to your application root.
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
-
-  pod 'react-native-google-maps', :path => '../node_modules/react-native-maps'
 
   post_install do |installer|
     # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202

@@ -7,18 +7,29 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator as NativeIndicator,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Divider, IconButton } from "react-native-paper";
+import { ActivityIndicator, Divider, IconButton } from "react-native-paper";
 import moment from "moment";
 import FastImage from "@d11/react-native-fast-image";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import StatusBarManager from "../components/StatusBarManager";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
-import { getOrderByID_API } from "../api/appAPI";
+import { getOrderByID_API, updateOrderStatusByID_API } from "../api/appAPI";
 import { useDispatch } from "react-redux";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
-import { PROFILE_AVATAR } from "../utils/constants";
+import {
+  orderNextStatusNames,
+  orderCurrentStatusNames,
+  PROFILE_AVATAR,
+  orderStatusStrings,
+} from "../utils/constants";
+import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
+import {
+  calculateTotalPreparationTime,
+  getNextOrderStatus,
+} from "../helpers/order.helper";
 
 const OrderDetailsScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -27,15 +38,196 @@ const OrderDetailsScreen = ({ navigation, route }) => {
 
   const [dataLoading, setDataLoading] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [rejectBtnLoading, setRejectBtnLoading] = useState(false);
+  const [multiActionBtnLoading, setMultiActionBtnLoading] = useState(false);
   const [orderData, setOrderData] = useState(null);
+  const [timeModal, setTimeModal] = useState(null);
+  const [prepTimeError, setPrepTimeError] = useState("");
+  const [nextOrderStatus, setNextOrderStatus] = useState(null);
+
+  // Modal cancel press
+  const onModalCancelPress = () => {
+    setTimeModal(null);
+  };
+
+  // Handle "accept & print" press
+  const handleAcceptAndPrintPress = (order) => {
+    const estimatedPrepTime = calculateTotalPreparationTime(order);
+    setTimeModal({
+      orderData: order,
+      isVisible: true,
+      loading: false,
+      prepTime: `${estimatedPrepTime}`,
+    });
+  };
+
+  // Handle multi btn press
+  const handleMultiActionPress = async (nextStatus, order) => {
+    if (nextStatus === orderStatusStrings.preparing) {
+      handleAcceptAndPrintPress(order);
+      return;
+    }
+    setMultiActionBtnLoading(false);
+    try {
+      const response = await updateOrderStatusByID_API({
+        order_id: order?._id,
+        payload: {
+          orderStatus: nextStatus,
+        },
+      });
+      console.log("response => ", response);
+      if (response.success && response.data) {
+        setOrderData((prev) => ({
+          ...prev,
+          orderStatus: response.data.order.orderStatus,
+          statusTime: response.data.order.statusTime,
+          pickupTime: response.data.order.pickupTime,
+        }));
+        dispatch(
+          showSnackbar({
+            type: "success",
+            message: "Order status updated successfully",
+          })
+        );
+      }
+    } catch (error) {
+      console.log("error => ", error);
+      dispatch(
+        showSnackbar({
+          type: "error",
+          message: "Something went wrong!",
+        })
+      );
+    } finally {
+      setMultiActionBtnLoading(false);
+    }
+  };
+
+  // Handle "reject" order press
+  const handleRejectPress = (order) => {
+    Alert.alert(
+      "Reject Order!",
+      "Are you sure you want to reject this order?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Reject",
+          style: "destructive",
+          onPress: async () => {
+            setRejectBtnLoading(true);
+            try {
+              const response = await updateOrderStatusByID_API({
+                order_id: order?._id,
+                payload: {
+                  orderStatus: "REJECTED",
+                },
+              });
+              console.log("response => ", response);
+              if (response.success && response.data) {
+                setOrderData((prev) => ({
+                  ...prev,
+                  orderStatus: response.data.order.orderStatus,
+                  statusTime: response.data.order.statusTime,
+                  pickupTime: response.data.order.pickupTime,
+                }));
+                dispatch(
+                  showSnackbar({
+                    type: "success",
+                    message: "Order status updated successfully",
+                  })
+                );
+              }
+            } catch (error) {
+              console.log("error => ", error);
+              dispatch(
+                showSnackbar({
+                  type: "error",
+                  message: "Something went wrong!",
+                })
+              );
+            } finally {
+              setRejectBtnLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // handle prep time submit
+  const handleSubmitPrepTime = async () => {
+    const prepTime = timeModal?.prepTime;
+
+    // Check if prepTime exists
+    if (!prepTime) {
+      setPrepTimeError("Preparation time is required");
+      return;
+    }
+
+    // Check if prepTime contains only digits
+    if (!/^\d+$/.test(prepTime)) {
+      setPrepTimeError("Preparation time must contain only numbers");
+      return;
+    }
+
+    // Convert to number for range validation
+    const prepTimeNum = Number(prepTime);
+
+    // Check if prepTime is within 0-120 range
+    if (prepTimeNum < 0 || prepTimeNum > 120) {
+      setPrepTimeError("Preparation time must be between 0 and 120 minutes");
+      return;
+    }
+
+    // Clear error if all validations pass
+    setPrepTimeError("");
+
+    setTimeModal((prev) => ({
+      ...prev,
+      loading: true,
+    }));
+    try {
+      const response = await updateOrderStatusByID_API({
+        order_id: timeModal?.orderData?._id,
+        payload: {
+          orderStatus: "PREPARING",
+          pickupTime: `${prepTimeNum}`,
+        },
+      });
+      console.log("response => ", response);
+      if (response.success && response.data) {
+        setOrderData((prev) => ({
+          ...prev,
+          orderStatus: response.data.order.orderStatus,
+          statusTime: response.data.order.statusTime,
+          pickupTime: response.data.order.pickupTime,
+        }));
+        dispatch(
+          showSnackbar({
+            type: "success",
+            message: "Order status updated successfully",
+          })
+        );
+        setTimeModal(null);
+      }
+    } catch (error) {
+      console.log("error => ", error);
+      setTimeModal((prev) => ({
+        ...prev,
+        loading: false,
+      }));
+    }
+  };
 
   const getOrderDetailsFromAPI = async () => {
     setDataLoading(true);
     try {
       const order_id = params.orderId;
-      console.log("order_id => ", order_id);
       const response = await getOrderByID_API(order_id);
-      console.log(`response ${order_id} => `, response);
+      console.log("response => ", response);
       if (response.success && response.data) {
         setOrderData(response.data.order);
       } else {
@@ -58,6 +250,14 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     console.log("params => ", params);
     getOrderDetailsFromAPI();
   }, [params]);
+
+  useEffect(() => {
+    if (orderData?.orderStatus) {
+      setNextOrderStatus(getNextOrderStatus(orderData?.orderStatus));
+    } else {
+      setNextOrderStatus(null);
+    }
+  }, [orderData?.orderStatus]);
 
   return (
     <View style={styles.container}>
@@ -107,7 +307,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   { color: AppColor.primary, textTransform: "capitalize" },
                 ]}
               >
-                {orderData?.orderStatus}
+                {orderCurrentStatusNames[orderData?.orderStatus]}
               </Text>
             </View>
             {/* Order ID and Location */}
@@ -174,7 +374,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     color="#6F6F6F"
                   />
                   <Text style={styles.orderTime}>
-                    {moment(orderData.createdAt).format("HH:mm A")}
+                    {moment(orderData.createdAt).format("hh:mm A")}
                   </Text>
                 </View>
               </View>
@@ -211,7 +411,9 @@ const OrderDetailsScreen = ({ navigation, route }) => {
             <Divider style={styles.orderDivider} />
             {/* Total */}
             <View style={styles.orderTotalContainer}>
-              <Text style={styles.orderTotalText}>{`$${orderData.subTotal.toFixed(2)}`}</Text>
+              <Text
+                style={styles.orderTotalText}
+              >{`$${orderData.subTotal.toFixed(2)}`}</Text>
             </View>
           </View>
 
@@ -401,32 +603,57 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                 {`$${orderData.total.toFixed(2)}`}
               </Text>
             </View>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                marginVertical: 16,
-                gap: 12,
-              }}
-            >
-              <TouchableOpacity
-                style={styles.rejectOrderBtn}
-                activeOpacity={0.7}
+            {nextOrderStatus ? (
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginVertical: 16,
+                  gap: 12,
+                }}
               >
-                <Text
-                  style={[styles.orderBtnText, { color: AppColor.primary }]}
+                <TouchableOpacity
+                  style={styles.rejectOrderBtn}
+                  activeOpacity={0.7}
+                  disabled={rejectBtnLoading}
+                  onPress={() => handleRejectPress(orderData)}
                 >
-                  {"Reject"}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.acceptOrderBtn}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.orderBtnText}>{"Accept & Print"}</Text>
-              </TouchableOpacity>
-            </View>
+                  {rejectBtnLoading ? (
+                    <ActivityIndicator color={AppColor.primary} />
+                  ) : (
+                    <Text
+                      style={[styles.orderBtnText, { color: AppColor.primary }]}
+                    >
+                      {"Reject"}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.acceptOrderBtn}
+                  activeOpacity={0.7}
+                  disabled={multiActionBtnLoading}
+                  onPress={() =>
+                    handleMultiActionPress(nextOrderStatus, orderData)
+                  }
+                >
+                  {multiActionBtnLoading ? (
+                    <ActivityIndicator color={AppColor.primary} />
+                  ) : (
+                    <Text style={styles.orderBtnText}>
+                      {orderNextStatusNames[nextOrderStatus]}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{ marginVertical: 16 }}>
+                <View style={styles.orderStatusInfoView}>
+                  <Text style={styles.orderStatusInfoText}>
+                    {orderCurrentStatusNames[orderData?.orderStatus]}
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
         </ScrollView>
       ) : (
@@ -444,6 +671,16 @@ const OrderDetailsScreen = ({ navigation, route }) => {
           </Text>
         </View>
       )}
+
+      {/* Preparation Time Modal */}
+      <CustomPrepTimeModal
+        timeModal={timeModal}
+        setTimeModal={setTimeModal}
+        prepTimeError={prepTimeError}
+        setPrepTimeError={setPrepTimeError}
+        handleSubmitPrepTime={handleSubmitPrepTime}
+        onModalCancelPress={onModalCancelPress}
+      />
     </View>
   );
 };
@@ -647,5 +884,20 @@ const styles = StyleSheet.create({
     color: AppColor.white,
     fontFamily: Secondary400,
     fontSize: 16,
+  },
+  orderStatusInfoView: {
+    height: 46,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: AppColor.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(252, 123, 3, 0.08)",
+    paddingHorizontal: 16,
+  },
+  orderStatusInfoText: {
+    color: AppColor.black,
+    fontFamily: Secondary400,
+    fontSize: 20,
   },
 });

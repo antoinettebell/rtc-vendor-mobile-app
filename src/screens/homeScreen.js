@@ -434,7 +434,7 @@
 //                         color: "#6F6F6F",
 //                       }}
 //                     >
-//                       {moment().format("HH:mm A")}
+//                       {moment().format("hh:mm A")}
 //                     </Text>
 //                   </View>
 //                 </View>
@@ -856,6 +856,7 @@ import {
   getOrderList_API,
   getUserDetail_API,
   updateFoodTruckProfile_API,
+  updateOrderStatusByID_API,
 } from "../api/appAPI";
 import { setUser, updateFoodTruck } from "../redux/slices/userSlice";
 import LabeledSwitch from "../components/LabeledSwitch";
@@ -865,7 +866,11 @@ import { showSnackbar } from "../redux/slices/snackbarSlice";
 import { Divider } from "react-native-paper";
 import moment from "moment";
 import { useFocusEffect } from "@react-navigation/native";
-import { orderStatusSrings, PROFILE_AVATAR } from "../utils/constants";
+import { orderStatusStrings, PROFILE_AVATAR } from "../utils/constants";
+import { checkInstallationId } from "../helpers/notification.helper";
+import { getMessaging } from "@react-native-firebase/messaging";
+import { calculateTotalPreparationTime } from "../helpers/order.helper";
+import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
 
 const QuickStatsComponent = ({ title, subTitle, icon }) => (
   <View style={styles.quickStatsContainer}>
@@ -896,6 +901,8 @@ const HomeScreen = ({ navigation }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [newOrderLoading, setNewOrderLoading] = useState(false);
   const [newOrderData, setNewOrderData] = useState(null);
+  const [timeModal, setTimeModal] = useState(null);
+  const [prepTimeError, setPrepTimeError] = useState("");
 
   const isOn = useSharedValue(false);
 
@@ -966,17 +973,149 @@ const HomeScreen = ({ navigation }) => {
     setSelectedLocation(selected?._id);
   };
 
+  // Modal cancel press
+  const onModalCancelPress = () => {
+    setTimeModal(null);
+  };
+
+  // Handle "accept & print" press
+  const handleAcceptAndPrintPress = (order) => {
+    const estimatedPrepTime = calculateTotalPreparationTime(order);
+    setTimeModal({
+      orderData: order,
+      isVisible: true,
+      loading: false,
+      prepTime: `${estimatedPrepTime}`,
+    });
+  };
+
+  // handle prep time submit
+  const handleSubmitPrepTime = async () => {
+    const prepTime = timeModal?.prepTime;
+
+    // Check if prepTime exists
+    if (!prepTime) {
+      setPrepTimeError("Preparation time is required");
+      return;
+    }
+
+    // Check if prepTime contains only digits
+    if (!/^\d+$/.test(prepTime)) {
+      setPrepTimeError("Preparation time must contain only numbers");
+      return;
+    }
+
+    // Convert to number for range validation
+    const prepTimeNum = Number(prepTime);
+
+    // Check if prepTime is within 0-120 range
+    if (prepTimeNum < 0 || prepTimeNum > 120) {
+      setPrepTimeError("Preparation time must be between 0 and 120 minutes");
+      return;
+    }
+
+    // Clear error if all validations pass
+    setPrepTimeError("");
+
+    setTimeModal((prev) => ({
+      ...prev,
+      loading: true,
+    }));
+    try {
+      const response = await updateOrderStatusByID_API({
+        order_id: timeModal?.orderData?._id,
+        payload: {
+          orderStatus: "PREPARING",
+          pickupTime: `${prepTimeNum}`,
+        },
+      });
+      console.log("response => ", response);
+      if (response.success && response.data) {
+        dispatch(
+          showSnackbar({
+            type: "success",
+            message: "Order status updated successfully",
+          })
+        );
+        getOrderDataFromAPI(); // to checking for new order.
+        setTimeModal(null);
+      }
+    } catch (error) {
+      console.log("error => ", error);
+      dispatch(
+        showSnackbar({
+          type: "error",
+          message: "Something went wrong!",
+        })
+      );
+      setTimeModal((prev) => ({
+        ...prev,
+        loading: false,
+      }));
+    }
+  };
+
+  // Handle "reject" press
+  const handleRejectOrderPress = (order) => {
+    Alert.alert(
+      "Reject Order!",
+      "Are you sure you want to reject this order?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Reject",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const response = await updateOrderStatusByID_API({
+                order_id: order?._id,
+                payload: {
+                  orderStatus: "REJECTED",
+                },
+              });
+              console.log("response => ", response);
+              if (response.success && response.data) {
+                dispatch(
+                  showSnackbar({
+                    type: "success",
+                    message: "Order status updated successfully",
+                  })
+                );
+                getOrderDataFromAPI(); // to checking for new order.
+              }
+            } catch (error) {
+              console.log("error => ", error);
+              dispatch(
+                showSnackbar({
+                  type: "error",
+                  message: "Something went wrong!",
+                })
+              );
+            } finally {
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // new order data API
   const getOrderDataFromAPI = async () => {
     setNewOrderLoading(true);
     try {
-      const response = await getOrderList_API({ limit: 1 });
+      const response = await getOrderList_API({
+        limit: 1,
+        status: orderStatusStrings.placed,
+      });
       console.log("reponse => ", response);
       if (
         response.success &&
         response.data &&
         response.data.orderList?.length &&
-        response.data.orderList[0].orderStatus === orderStatusSrings.placed
+        response.data.orderList[0].orderStatus === orderStatusStrings.placed
       ) {
         setNewOrderData(response.data.orderList[0]);
       } else {
@@ -1001,6 +1140,25 @@ const HomeScreen = ({ navigation }) => {
       getOrderDataFromAPI();
     }, [])
   );
+
+  useEffect(() => {
+    const unsubscribe = getMessaging().onTokenRefresh(async (newToken) => {
+      console.log("FCM-Token Refreshed =>", newToken);
+
+      const deviceId = await checkInstallationId();
+      if (!deviceId) return;
+
+      try {
+        const payload = { token: newToken };
+        const response = await updateDeviceToken_API({ deviceId, payload });
+        console.log("response => ", response);
+      } catch (error) {
+        console.log("error => ", error);
+      }
+    });
+
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     setBannerVisible(user?.requestStatus === "PENDING" ? true : false);
@@ -1160,7 +1318,7 @@ const HomeScreen = ({ navigation }) => {
                         color="#6F6F6F"
                       />
                       <Text style={styles.orderTime}>
-                        {moment(newOrderData.createdAt).format("HH:mm A")}
+                        {moment(newOrderData.createdAt).format("hh:mm A")}
                       </Text>
                     </View>
                   </View>
@@ -1204,6 +1362,7 @@ const HomeScreen = ({ navigation }) => {
                     <TouchableOpacity
                       style={styles.rejectOrderBtn}
                       activeOpacity={0.7}
+                      onPress={() => handleRejectOrderPress(newOrderData)}
                     >
                       <Text
                         style={[
@@ -1218,6 +1377,7 @@ const HomeScreen = ({ navigation }) => {
                     <TouchableOpacity
                       style={styles.acceptOrderBtn}
                       activeOpacity={0.7}
+                      onPress={() => handleAcceptAndPrintPress(newOrderData)}
                     >
                       <Text style={styles.orderBtnText}>
                         {"Accept & Print"}
@@ -1226,7 +1386,26 @@ const HomeScreen = ({ navigation }) => {
                   </View>
                 </View>
               </TouchableOpacity>
-            ) : null}
+            ) : (
+              <Pressable
+                style={{
+                  height: 80,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+                onPress={() => navigation.navigate("orderScreen")}
+              >
+                <Text
+                  style={{
+                    fontFamily: Secondary400,
+                    fontSize: 16,
+                    color: AppColor.black,
+                  }}
+                >
+                  {"Check current order?"}
+                </Text>
+              </Pressable>
+            )}
           </View>
 
           {/* Sales Overview */}
@@ -1290,6 +1469,16 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
+
+      {/* Preparation Time Modal */}
+      <CustomPrepTimeModal
+        timeModal={timeModal}
+        setTimeModal={setTimeModal}
+        prepTimeError={prepTimeError}
+        setPrepTimeError={setPrepTimeError}
+        handleSubmitPrepTime={handleSubmitPrepTime}
+        onModalCancelPress={onModalCancelPress}
+      />
     </View>
   );
 };

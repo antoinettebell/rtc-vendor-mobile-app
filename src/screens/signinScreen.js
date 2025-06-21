@@ -225,6 +225,11 @@ import {
   setSelectedCuisine,
   setSelectedLocations,
 } from "../redux/slices/foodTruckProfileSlice";
+import {
+  checkFcmToken,
+  checkInstallationId,
+} from "../helpers/notification.helper";
+import { setFcmToken_API } from "../api/appAPI";
 
 const SignInScreen = () => {
   const insets = useSafeAreaInsets();
@@ -280,7 +285,7 @@ const SignInScreen = () => {
       setLoading(true);
       try {
         const response = await login_API({ email, password });
-        console.log("login API response ====> ", response);
+        console.log("response ====> ", response);
         if (response.success && response.data) {
           dispatch(setUser(response.data.user));
           dispatch(
@@ -291,6 +296,23 @@ const SignInScreen = () => {
           );
           dispatch(setAuthToken(response.data.authToken));
           dispatch(onSignin(true));
+
+          // set FCM Token & DeviceId after 1.5 sec
+          setTimeout(async () => {
+            try {
+              const deviceId = await checkInstallationId();
+              const fcmToken = await checkFcmToken();
+              if (deviceId && fcmToken) {
+                const response1 = await setFcmToken_API({
+                  token: fcmToken,
+                  deviceId: deviceId,
+                });
+                console.log("response => ", response1);
+              }
+            } catch (error) {
+              console.log("error => ", error);
+            }
+          }, 1500);
         }
       } catch (error) {
         console.log("Error => ", error);

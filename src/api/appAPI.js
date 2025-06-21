@@ -12,10 +12,13 @@ import {
   GET_PLANS_DATA,
   GET_USER_DETAILS,
   MEDIA_UPLOAD,
+  REMOVE_FCM_TOKEN,
   REMOVE_FOOD_CATEGORY,
   REMOVE_FOOD_ITEM,
   REMOVE_LOCATION,
   REVERSE_LOCATION,
+  SET_FCM_TOKEN,
+  UPDATE_FCM_TOKEN,
   UPDATE_FOODTRUCK,
   UPDATE_FOOD_CATEGORY,
   UPDATE_FOOD_ITEM,
@@ -259,11 +262,15 @@ export const getOrderList_API = async ({
   page = 1,
   limit = 20,
   status = null,
+  advance = false,
 } = {}) => {
   try {
     let URL = `${GET_ORDER_LIST}?page=${page}&limit=${limit}`;
     if (status) {
       URL = `${URL}&orderStatus=${status}`;
+    }
+    if (advance) {
+      URL = `${URL}&advance=${advance}`;
     }
     const response = await apiClient.get(URL, { skipToken: false });
     return response?.data;
@@ -276,7 +283,6 @@ export const getOrderList_API = async ({
 export const getOrderByID_API = async (order_id) => {
   try {
     const URL = `${GET_ORDER_BY_ID}/${order_id}`;
-    console.log("URL => ", URL);
     const response = await apiClient.get(URL, { skipToken: false });
     return response?.data;
   } catch (error) {
@@ -289,6 +295,39 @@ export const updateOrderStatusByID_API = async ({ order_id, payload }) => {
   try {
     const URL = `${UPDATE_ORDER_STATUS}/${order_id}`;
     const response = await apiClient.put(URL, payload, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+// Set FCM Token
+export const setFcmToken_API = async (payload) => {
+  try {
+    const URL = `${SET_FCM_TOKEN}`;
+    const response = await apiClient.post(URL, payload, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+// Update FCM Token
+export const updateFcmToken_API = async ({ deviceId, payload }) => {
+  try {
+    const URL = UPDATE_FCM_TOKEN(deviceId);
+    const response = await apiClient.put(URL, payload, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+// Remove FCM Token
+export const removeFcmToken_API = async (device_id) => {
+  try {
+    const URL = REMOVE_FCM_TOKEN(device_id);
+    const response = await apiClient.delete(URL, { skipToken: false });
     return response?.data;
   } catch (error) {
     throw error?.response?.data;

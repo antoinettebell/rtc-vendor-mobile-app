@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useState } from "react";
+import React, { memo, useEffect, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -7,28 +7,25 @@ import {
   ActivityIndicator as NativeIndicator,
   FlatList,
   Platform,
+  Alert,
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import Feather from "react-native-vector-icons/Feather";
-import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import FastImage from "@d11/react-native-fast-image";
 import moment from "moment";
 import StatusBarManager from "../components/StatusBarManager";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
-import {
-  ActivityIndicator,
-  Divider,
-  HelperText,
-  Menu,
-  TextInput,
-} from "react-native-paper";
+import { Divider, Menu } from "react-native-paper";
 import { getOrderList_API, updateOrderStatusByID_API } from "../api/appAPI";
 import { useDispatch } from "react-redux";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
-import { orderStatusSrings, PROFILE_AVATAR } from "../utils/constants";
-import Modal from "react-native-modal";
-import { getDisabledStatuses } from "../utils/helper";
+import { orderStatusStrings, PROFILE_AVATAR } from "../utils/constants";
+import {
+  calculateTotalPreparationTime,
+  getDisabledStatuses,
+} from "../helpers/order.helper";
+import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
 
 const OrderScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -49,8 +46,12 @@ const OrderScreen = ({ navigation }) => {
 
   // render order component
   const renderOrderComponent = ({ item, index }) => {
-    console.log("renderOrderComponent => ", index);
     const disabledStatuses = getDisabledStatuses(item.orderStatus);
+    const hideActionBtns =
+      item.orderStatus === orderStatusStrings.rejected ||
+      item.orderStatus === orderStatusStrings.completed ||
+      item.orderStatus === orderStatusStrings.cancel ||
+      false;
 
     return (
       <TouchableOpacity
@@ -92,57 +93,81 @@ const OrderScreen = ({ navigation }) => {
           >
             <Menu.Item
               title="Cancel"
-              disabled={disabledStatuses.includes(orderStatusSrings.cancel)}
+              disabled={disabledStatuses.includes(orderStatusStrings.cancel)}
               onPress={() =>
-                handleMenuItemPress({ item, index, status: item.orderStatus })
+                handleMenuItemPress({
+                  item,
+                  index,
+                  status: orderStatusStrings.cancel,
+                })
               }
             />
             <Menu.Item
               title="Placed"
-              disabled={disabledStatuses.includes(orderStatusSrings.placed)}
+              disabled={disabledStatuses.includes(orderStatusStrings.placed)}
               onPress={() =>
-                handleMenuItemPress({ item, index, status: item.orderStatus })
+                handleMenuItemPress({
+                  item,
+                  index,
+                  status: orderStatusStrings.placed,
+                })
               }
             />
             <Menu.Item
               title="Accepted"
-              disabled={disabledStatuses.includes(orderStatusSrings.accepted)}
+              disabled={disabledStatuses.includes(orderStatusStrings.accepted)}
               onPress={() =>
-                handleMenuItemPress({ item, index, status: item.orderStatus })
+                handleMenuItemPress({
+                  item,
+                  index,
+                  status: orderStatusStrings.accepted,
+                })
               }
             />
             <Menu.Item
               title="Rejected"
-              disabled={disabledStatuses.includes(orderStatusSrings.rejected)}
+              disabled={disabledStatuses.includes(orderStatusStrings.rejected)}
               onPress={() =>
-                handleMenuItemPress({ item, index, status: item.orderStatus })
+                handleMenuItemPress({
+                  item,
+                  index,
+                  status: orderStatusStrings.rejected,
+                })
               }
             />
             <Menu.Item
               title="Preparing"
-              disabled={disabledStatuses.includes(orderStatusSrings.preparing)}
+              disabled={disabledStatuses.includes(orderStatusStrings.preparing)}
               onPress={() =>
-                handleMenuItemPress({ item, index, status: item.orderStatus })
+                handleMenuItemPress({
+                  item,
+                  index,
+                  status: orderStatusStrings.preparing,
+                })
               }
             />
             <Menu.Item
               title="Ready to Pickup"
               disabled={disabledStatuses.includes(
-                orderStatusSrings.ready_for_pickup
+                orderStatusStrings.ready_for_pickup
               )}
               onPress={() =>
                 handleMenuItemPress({
                   item,
                   index,
-                  status: item.orderStatus,
+                  status: orderStatusStrings.ready_for_pickup,
                 })
               }
             />
             <Menu.Item
               title="Completed"
-              disabled={disabledStatuses.includes(orderStatusSrings.completed)}
+              disabled={disabledStatuses.includes(orderStatusStrings.completed)}
               onPress={() =>
-                handleMenuItemPress({ item, index, status: item.orderStatus })
+                handleMenuItemPress({
+                  item,
+                  index,
+                  status: orderStatusStrings.completed,
+                })
               }
             />
           </Menu>
@@ -189,7 +214,7 @@ const OrderScreen = ({ navigation }) => {
                 color="#6F6F6F"
               />
               <Text style={styles.orderTime}>
-                {moment(item.createdAt).format("HH:mm A")}
+                {moment(item.createdAt).format("hh:mm A")}
               </Text>
             </View>
           </View>
@@ -201,53 +226,57 @@ const OrderScreen = ({ navigation }) => {
           <Text
             style={styles.orderTotalText}
           >{`$${item.total.toFixed(2)}`}</Text>
-          <View style={styles.orderActionButtons}>
-            <TouchableOpacity
-              style={[
-                styles.rejectOrderBtn,
-                {
-                  opacity: disabledStatuses.includes(orderStatusSrings.rejected)
-                    ? 0.7
-                    : 1,
-                },
-              ]}
-              activeOpacity={0.7}
-              onPress={() => {
-                if (disabledStatuses.includes(orderStatusSrings.rejected))
-                  return;
-              }}
-              // disabled={disabledStatuses.includes(orderStatusSrings.rejected)}
-            >
-              <Text style={[styles.orderBtnText, { color: AppColor.primary }]}>
-                {"Reject"}
-              </Text>
-            </TouchableOpacity>
+          {!hideActionBtns ? (
+            <View style={styles.orderActionButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.rejectOrderBtn,
+                  {
+                    opacity: disabledStatuses.includes(
+                      orderStatusStrings.rejected
+                    )
+                      ? 0.7
+                      : 1,
+                  },
+                ]}
+                activeOpacity={0.7}
+                onPress={() => {
+                  if (disabledStatuses.includes(orderStatusStrings.rejected))
+                    return;
+                  handleRejectOrderPress(item);
+                }}
+                // disabled={disabledStatuses.includes(orderStatusStrings.rejected)}
+              >
+                <Text
+                  style={[styles.orderBtnText, { color: AppColor.primary }]}
+                >
+                  {"Reject"}
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.acceptOrderBtn,
-                {
-                  opacity: disabledStatuses.includes(orderStatusSrings.accepted)
-                    ? 0.7
-                    : 1,
-                },
-              ]}
-              activeOpacity={0.7}
-              onPress={() => {
-                if (disabledStatuses.includes(orderStatusSrings.accepted))
-                  return;
-                setTimeModal({
-                  orderData: item,
-                  isVisible: true,
-                  loading: false,
-                  prepTime: "10",
-                });
-              }}
-              // disabled={disabledStatuses.includes(orderStatusSrings.accepted)}
-            >
-              <Text style={styles.orderBtnText}>{"Accept & Print"}</Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                style={[
+                  styles.acceptOrderBtn,
+                  {
+                    opacity: disabledStatuses.includes(
+                      orderStatusStrings.accepted
+                    )
+                      ? 0.7
+                      : 1,
+                  },
+                ]}
+                activeOpacity={0.7}
+                onPress={() => {
+                  if (disabledStatuses.includes(orderStatusStrings.accepted))
+                    return;
+                  handleAcceptAndPrintPress(item);
+                }}
+                // disabled={disabledStatuses.includes(orderStatusStrings.accepted)}
+              >
+                <Text style={styles.orderBtnText}>{"Accept & Print"}</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
         </View>
       </TouchableOpacity>
     );
@@ -255,7 +284,7 @@ const OrderScreen = ({ navigation }) => {
 
   // render footer for loading indicator
   const renderFooter = () => {
-    if (!isLoadingMore) return null;
+    if (!isLoadingMore || dataLoading) return null;
 
     return (
       <View style={styles.footerContainer}>
@@ -268,7 +297,11 @@ const OrderScreen = ({ navigation }) => {
   const renderEmptyComponent = () => {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>{"No orders found"}</Text>
+        {dataLoading ? (
+          <NativeIndicator size="large" color={AppColor.primary} />
+        ) : (
+          <Text style={styles.emptyText}>{"No orders found"}</Text>
+        )}
       </View>
     );
   };
@@ -287,10 +320,16 @@ const OrderScreen = ({ navigation }) => {
   const handleMenuItemPress = ({ item, index, status = null }) => {
     setMenuVisible(null);
     if (!status) return;
-    updateOrderStatusAPI({
-      order_id: item._id,
-      status: status,
-    });
+    if (status === orderStatusStrings.preparing) {
+      handleAcceptAndPrintPress(item);
+    } else if (status === orderStatusStrings.rejected) {
+      handleRejectOrderPress(item);
+    } else {
+      updateOrderStatusAPI({
+        order_id: item._id,
+        status: status,
+      });
+    }
   };
 
   // Modal cancel press
@@ -298,10 +337,71 @@ const OrderScreen = ({ navigation }) => {
     setTimeModal(null);
   };
 
-  // validate prep time
-  const validatePrepTime = (value) => {
-    if (!value.trim()) return "Preparation time is required";
-    return "";
+  // Handle "accept & print" press
+  const handleAcceptAndPrintPress = (order) => {
+    const estimatedPrepTime = calculateTotalPreparationTime(order);
+    setTimeModal({
+      orderData: order,
+      isVisible: true,
+      loading: false,
+      prepTime: `${estimatedPrepTime}`,
+    });
+  };
+
+  // Handle "reject" order press
+  const handleRejectOrderPress = (order) => {
+    Alert.alert(
+      "Reject Order!",
+      "Are you sure you want to reject this order?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Reject",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const response = await updateOrderStatusByID_API({
+                order_id: order?._id,
+                payload: {
+                  orderStatus: "REJECTED",
+                },
+              });
+              console.log("response => ", response);
+              if (response.success && response.data) {
+                const tempOrderData = orderData.map((item) => {
+                  if (item._id === order?._id) {
+                    return {
+                      ...item,
+                      orderStatus: response.data.order.orderStatus,
+                    };
+                  }
+                  return item;
+                });
+                setOrderData(tempOrderData);
+                dispatch(
+                  showSnackbar({
+                    type: "success",
+                    message: "Order status updated successfully",
+                  })
+                );
+              }
+            } catch (error) {
+              console.log("error => ", error);
+              dispatch(
+                showSnackbar({
+                  type: "error",
+                  message: "Something went wrong!",
+                })
+              );
+            } finally {
+            }
+          },
+        },
+      ]
+    );
   };
 
   // handle prep time submit
@@ -367,6 +467,12 @@ const OrderScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.log("error => ", error);
+      dispatch(
+        showSnackbar({
+          type: "error",
+          message: "Something went wrong!",
+        })
+      );
       setTimeModal((prev) => ({
         ...prev,
         loading: false,
@@ -377,13 +483,13 @@ const OrderScreen = ({ navigation }) => {
   // Handle load more
   const handleLoadMore = () => {
     if (!isLoadingMore && hasMoreData) {
-      getOrderDataFromAPI(currentPage + 1, true);
+      getOrderDataFromAPI(currentPage + 1, true, activeStage === "advance");
     }
   };
 
   // Handle refresh
   const handleRefresh = () => {
-    getOrderDataFromAPI(1);
+    getOrderDataFromAPI(1, false, activeStage === "advance");
   };
 
   // update order status API
@@ -419,7 +525,11 @@ const OrderScreen = ({ navigation }) => {
   };
 
   // fetch order data from API
-  const getOrderDataFromAPI = async (page = 1, isLoadMore = false) => {
+  const getOrderDataFromAPI = async (
+    page = 1,
+    isLoadMore = false,
+    advance = false
+  ) => {
     if (isLoadMore) {
       setIsLoadingMore(true);
     } else {
@@ -427,7 +537,7 @@ const OrderScreen = ({ navigation }) => {
     }
 
     try {
-      const response = await getOrderList_API({ page, limit: 20 });
+      const response = await getOrderList_API({ page, limit: 20, advance });
       console.log("reponse => ", response);
       if (response.success && response.data) {
         setTotalPages(response.data.totalPages);
@@ -459,8 +569,11 @@ const OrderScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
-    getOrderDataFromAPI(1);
-  }, []);
+    setCurrentPage(1);
+    setHasMoreData(true);
+    setOrderData([]);
+    getOrderDataFromAPI(1, false, activeStage === "advance");
+  }, [activeStage]);
 
   return (
     <View style={styles.container}>
@@ -533,103 +646,15 @@ const OrderScreen = ({ navigation }) => {
         />
       </View>
 
-      {/* Preparation time modal */}
-      <Modal
-        isVisible={timeModal?.isVisible || false}
-        backdropOpacity={0.5}
-        animationIn="zoomIn"
-        animationOut="zoomOut"
-        backdropTransitionOutTiming={0.5}
-      >
-        <View style={styles.modalContainer}>
-          {/* Title & Subtitle */}
-          <Text style={styles.modalTitle}>{"Preparation Time"}</Text>
-          <Text style={styles.modalSubtitle}>
-            {"Add preparation time for this order"}
-          </Text>
-
-          <Divider
-            style={{
-              marginHorizontal: -24,
-              marginVertical: 16,
-            }}
-          />
-
-          {/* Prep Time Input */}
-          <View>
-            <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-              {"Enter Time in Mins"}
-            </Text>
-            <TextInput
-              dense
-              value={timeModal?.prepTime}
-              onChangeText={(text) => {
-                setTimeModal((prev) => ({
-                  ...prev,
-                  prepTime: text,
-                }));
-                if (!validatePrepTime(text)) {
-                  setPrepTimeError("");
-                }
-              }}
-              style={styles.input}
-              contentStyle={styles.inputText}
-              placeholder=""
-              placeholderTextColor={AppColor.placeholderTextColor}
-              mode="outlined"
-              keyboardType="numeric"
-              returnKeyLabel="done"
-              returnKeyType="done"
-              error={!!prepTimeError}
-              outlineColor={AppColor.border}
-              activeOutlineColor={AppColor.primary}
-              outlineStyle={{ borderRadius: 8 }}
-              theme={{ colors: { onSurfaceVariant: "#777" } }}
-              right={
-                <TextInput.Icon icon="clock-outline" color={AppColor.gray} />
-              }
-            />
-            {!!prepTimeError ? (
-              <HelperText
-                type="error"
-                visible={!!prepTimeError}
-                style={styles.helper}
-              >
-                {prepTimeError}
-              </HelperText>
-            ) : null}
-          </View>
-
-          {/* Save Btn */}
-          <TouchableOpacity
-            style={[styles.modalBtnAdd, { marginTop: 30 }]}
-            activeOpacity={0.7}
-            onPress={handleSubmitPrepTime}
-            disabled={timeModal?.loading || false}
-          >
-            {timeModal?.loading ? (
-              <ActivityIndicator color={AppColor.white} />
-            ) : (
-              <Text style={styles.modalBtnText}>{"Submit"}</Text>
-            )}
-          </TouchableOpacity>
-
-          {/* Close Btn */}
-          <TouchableOpacity
-            activeOpacity={0.7}
-            style={{ position: "absolute", top: 10, right: 10 }}
-            hitSlop={10}
-            onPress={onModalCancelPress}
-            disabled={timeModal?.loading || false}
-          >
-            <Ionicons
-              name="close-circle-sharp"
-              size={32}
-              color={AppColor.primary}
-            />
-          </TouchableOpacity>
-        </View>
-      </Modal>
+      {/* Preparation Time Modal */}
+      <CustomPrepTimeModal
+        timeModal={timeModal}
+        setTimeModal={setTimeModal}
+        prepTimeError={prepTimeError}
+        setPrepTimeError={setPrepTimeError}
+        handleSubmitPrepTime={handleSubmitPrepTime}
+        onModalCancelPress={onModalCancelPress}
+      />
     </View>
   );
 };
@@ -884,67 +909,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: Secondary400,
     color: AppColor.black,
-  },
-
-  // Preparation modal
-  modalContainer: {
-    padding: 24,
-    borderRadius: 9,
-    marginHorizontal: "5%",
-    backgroundColor: AppColor.white,
-  },
-  modalTitle: {
-    marginBottom: 4,
-    fontSize: 20,
-    fontFamily: Primary400,
-    color: AppColor.text,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    fontFamily: Secondary400,
-    color: AppColor.textHighlighter,
-  },
-  inputLabel: {
-    fontSize: 15,
-    fontFamily: Secondary400,
-    color: AppColor.text,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: AppColor.white,
-  },
-  inputText: {
-    fontSize: 15,
-    fontFamily: Secondary400,
-  },
-  modalBtnAdd: {
-    height: 48,
-    borderRadius: 5,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: AppColor.primary,
-    marginTop: 15,
-    ...Platform.select({
-      ios: {
-        shadowColor: AppColor.black,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  modalBtnText: {
-    color: AppColor.white,
-    fontFamily: Secondary400,
-    fontSize: 16,
-  },
-
-  helper: {
-    marginBottom: 8,
-    paddingLeft: 0,
-    paddingTop: 0,
   },
 });

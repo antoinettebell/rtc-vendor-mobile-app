@@ -30,6 +30,8 @@ import {
 } from "react-native-paper";
 import { updatePassword_API } from "../api/authAPI";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
+import { checkInstallationId } from "../helpers/notification.helper";
+import { removeFcmToken_API } from "../api/appAPI";
 
 const ItemComponent = ({ imageUri, label, rightIcon, isRed, onPress }) => (
   <TouchableOpacity
@@ -60,6 +62,7 @@ const HR = () => <View style={styles.HR} />;
 
 const SignoutModal = ({
   isModalVisible,
+  signoutModalLoading,
   onYesSignoutPress,
   onNoSignoutPress,
 }) => (
@@ -89,8 +92,13 @@ const SignoutModal = ({
         style={styles.signoutModalBtnYes}
         activeOpacity={0.7}
         onPress={onYesSignoutPress}
+        disabled={signoutModalLoading}
       >
-        <Text style={styles.signoutModalBtnText}>{"Yes"}</Text>
+        {signoutModalLoading ? (
+          <ActivityIndicator color={AppColor.white} />
+        ) : (
+          <Text style={styles.signoutModalBtnText}>{"Yes"}</Text>
+        )}
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.signoutModalBtnNo}
@@ -378,6 +386,7 @@ const ProfileMenuScreen = ({ navigation }) => {
   const { user } = useSelector((state) => state.userReducer);
 
   const [signoutModalVisible, setSignoutModalVisible] = useState(false);
+  const [signoutModalLoading, setSignoutModalLoading] = useState(false);
   const [changePWDModalVisible, setChangePWDModalVisible] = useState(false);
   const [snackbarPWD, setSnackbarPWD] = useState({
     visible: false,
@@ -385,11 +394,25 @@ const ProfileMenuScreen = ({ navigation }) => {
     type: "info",
   });
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    setSignoutModalLoading(true);
+    try {
+      const deviceId = await checkInstallationId();
+      if (!deviceId) return;
+      const response = await removeFcmToken_API(deviceId);
+      console.log("response => ", response);
+    } catch (error) {
+      console.log("error => ", error);
+    }
+
     setSignoutModalVisible(false);
-    dispatch(clearUserSlice());
-    dispatch(clearFoodTruckProfileSlice());
-    dispatch(onSignOut());
+    setSignoutModalLoading(false);
+
+    setTimeout(() => {
+      dispatch(clearUserSlice());
+      dispatch(clearFoodTruckProfileSlice());
+      dispatch(onSignOut());
+    }, 350);
   };
 
   const handleChangePassword = async ({ payload, setLoading }) => {
@@ -684,6 +707,7 @@ const ProfileMenuScreen = ({ navigation }) => {
       {/* Modals */}
       <SignoutModal
         isModalVisible={signoutModalVisible}
+        signoutModalLoading={signoutModalLoading}
         onYesSignoutPress={handleSignOut}
         onNoSignoutPress={() => setSignoutModalVisible(false)}
       />

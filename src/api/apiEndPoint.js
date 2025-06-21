@@ -47,6 +47,13 @@ export const GET_ORDER_LIST = "/order";
 export const GET_ORDER_BY_ID = "/order";
 export const UPDATE_ORDER_STATUS = "/order";
 
+// Notification
+export const SET_FCM_TOKEN = "/user/set-fcm-token";
+export const UPDATE_FCM_TOKEN = (device_id) =>
+  `/user/update-fcm-token/${device_id}`;
+export const REMOVE_FCM_TOKEN = (device_id) =>
+  `/user/remove-fcm-token/${device_id}`;
+
 // Get Location Name from Lat Long
 export const REVERSE_LOCATION =
   "https://maps.googleapis.com/maps/api/geocode/json?latlng=";

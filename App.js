@@ -14,6 +14,10 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppColor, Secondary400 } from "./src/utils/theme";
 import GlobalSnackbar from "./src/components/GlobalSnackbar";
+import {
+  createAndroidChannel,
+  requestNotificationPermission,
+} from "./src/helpers/notification.helper";
 
 import SigninScreen from "./src/screens/signinScreen";
 import SignupScreen from "./src/screens/signupScreen";
@@ -243,9 +247,20 @@ const MainAppNavigator = ({ insets }) => (
   </Stack.Navigator>
 );
 
+const configureNotification = async () => {
+  await requestNotificationPermission();
+  if (Platform.OS === "android") {
+    await createAndroidChannel();
+  }
+};
+
 const App = () => {
   const insets = useSafeAreaInsets();
   const { isSignedIn, isOnboarded } = useSelector((state) => state.authReducer);
+
+  useEffect(() => {
+    configureNotification();
+  }, []);
 
   return (
     <NavigationContainer theme={DefaultTheme}>

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "712703549995",
+    "project_id": "rtc-app-59500",
+    "storage_bucket": "rtc-app-59500.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:712703549995:android:f8d82df6f7cccc9150006e",
+        "android_client_info": {
+          "package_name": "com.foodtruckvendor"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_APmQpjv1pssSUd8iPTeYjn8HKhrDt6w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

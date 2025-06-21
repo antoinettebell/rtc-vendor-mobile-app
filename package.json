@@ -11,9 +11,13 @@
   "dependencies": {
     "@d11/react-native-fast-image": "^8.9.2",
     "@gorhom/bottom-sheet": "^5.1.5",
+    "@notifee/react-native": "^9.1.8",
     "@react-native-async-storage/async-storage": "^2.1.2",
     "@react-native-community/datetimepicker": "^8.3.0",
     "@react-native-community/geolocation": "3.4.0",
+    "@react-native-firebase/app": "22.2.1",
+    "@react-native-firebase/installations": "22.2.1",
+    "@react-native-firebase/messaging": "22.2.1",
     "@react-navigation/bottom-tabs": "^6.6.1",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.11.0",
