@@ -342,7 +342,7 @@ const EditProfileScreen = ({ navigation }) => {
                       : {
                           mode: "media",
                           uri: images?.path,
-                          name: `${images?.path?.split("/").pop()}`,
+                          name: `${images?.path?.split("/").pop()}`, // did this because in android > choose from gallary; not have filename
                           type: images.mime,
                         };
                   setSelectedLogo(payload);
@@ -362,7 +362,7 @@ const EditProfileScreen = ({ navigation }) => {
                       : {
                           mode: "media",
                           uri: i?.path,
-                          name: `${i?.path?.split("/").pop()}`,
+                          name: `${i?.path?.split("/").pop()}`, // did this because in android > choose from gallary; not have filename
                           type: i.mime,
                         }
                   );
@@ -681,7 +681,7 @@ const EditProfileScreen = ({ navigation }) => {
         console.log("logo => ", formData);
         try {
           const response = await uploadImage_API(formData);
-          if (response.success && response.data)
+          if (response?.success && response?.data)
             foodTruckPayload.logo = response.data.file;
         } catch (error) {
           console.log("logo upload error => ", error);
@@ -705,7 +705,7 @@ const EditProfileScreen = ({ navigation }) => {
           console.log("photo => ", formData);
           try {
             const response = await uploadImage_API(formData);
-            if (response.success && response.data)
+            if (response?.success && response?.data)
               imageResult.push(response.data.file);
           } catch (error) {
             console.log("photo upload error => ", error);
@@ -968,7 +968,7 @@ const EditProfileScreen = ({ navigation }) => {
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
                 outlineStyle={{ borderRadius: 8 }}
-                autoCapitalize="none"
+                autoCapitalize="sentences"
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
               />
               {!!errors.name && (
@@ -1006,7 +1006,7 @@ const EditProfileScreen = ({ navigation }) => {
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
                 outlineStyle={{ borderRadius: 8 }}
-                autoCapitalize="none"
+                autoCapitalize="sentences"
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
               />
               {!!errors.foodTruckName && (
@@ -1135,6 +1135,7 @@ const EditProfileScreen = ({ navigation }) => {
                   activeOutlineColor={AppColor.primary}
                   outlineStyle={{ borderRadius: 8 }}
                   keyboardType="phone-pad"
+                  autoCapitalize="none"
                   theme={{ colors: { onSurfaceVariant: "#777" } }}
                 />
               </View>
@@ -1173,6 +1174,7 @@ const EditProfileScreen = ({ navigation }) => {
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
                 outlineStyle={{ borderRadius: 8 }}
+                autoCapitalize="none"
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
               />
             </View>

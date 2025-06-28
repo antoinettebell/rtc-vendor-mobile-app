@@ -152,6 +152,7 @@ const RenameLocationModal = ({
                 placeholder="Enter Title"
                 placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
+                autoCapitalize="sentences"
                 error={!!titleError}
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
@@ -191,6 +192,7 @@ const RenameLocationModal = ({
                 placeholder="Enter Address"
                 placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
+                autoCapitalize="sentences"
                 multiline={true}
                 error={!!addressError}
                 outlineColor={AppColor.border}
@@ -228,6 +230,7 @@ const RenameLocationModal = ({
                 placeholder="Enter Zip Code"
                 placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
+                autoCapitalize="sentences"
                 maxLength={6}
                 error={!!zipCodeError}
                 outlineColor={AppColor.border}
@@ -401,7 +404,7 @@ const ProfileServingLocationScreen = ({ navigation }) => {
                   foodtruck_id,
                   location_id: locationToRemove._id,
                 });
-                if (response.success && response.data) {
+                if (response?.success && response?.data) {
                   setAvailability(response.data.foodtruck.availability || []);
 
                   // update local state
@@ -471,7 +474,7 @@ const ProfileServingLocationScreen = ({ navigation }) => {
         payload: foodTruckPayload,
         foodTruckId,
       });
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         dispatch(updateFoodTruck(response.data.foodtruck));
         dispatch(setSelectedCuisine(response.data.foodtruck.cuisine));
         dispatch(setSelectedLocations(response.data.foodtruck.locations));
@@ -537,7 +540,7 @@ const ProfileServingLocationScreen = ({ navigation }) => {
           payload: foodTruckPayload,
           foodTruckId,
         });
-        if (response.success && response.data) {
+        if (response?.success && response?.data) {
           localStateUpdate();
           dispatch(
             showSnackbar({ message: "Location Updated!", type: "success" })
@@ -594,7 +597,7 @@ const ProfileServingLocationScreen = ({ navigation }) => {
     try {
       const foodtruck_id = user?.foodTruck?._id;
       const response = await getFoodtruckDetail_API(foodtruck_id);
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         console.log("response => ", response);
         // dispatch(updateFoodTruck(response.data.foodtruck));
         // dispatch(setSelectedCuisine(response.data.foodtruck.cuisine));

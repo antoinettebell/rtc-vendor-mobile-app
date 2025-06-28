@@ -410,7 +410,7 @@ const SignUpScreen = ({ navigation }) => {
     try {
       const response = await registerVendor_API(payload);
       console.log("Response => ", response);
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         navigation.navigate("otpVerification", {
           verificationFor: "sign-up",
           data: response.data,
@@ -495,7 +495,7 @@ const SignUpScreen = ({ navigation }) => {
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
                 outlineStyle={{ borderRadius: 8 }}
-                autoCapitalize="none"
+                autoCapitalize="sentences"
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
                 onBlur={() =>
                   setErrors((prev) => ({ ...prev, name: validateName(name) }))
@@ -528,7 +528,7 @@ const SignUpScreen = ({ navigation }) => {
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
                 outlineStyle={{ borderRadius: 8 }}
-                autoCapitalize="none"
+                autoCapitalize="sentences"
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
                 onBlur={() =>
                   setErrors((prev) => ({
@@ -633,6 +633,7 @@ const SignUpScreen = ({ navigation }) => {
                   activeOutlineColor={AppColor.primary}
                   outlineStyle={{ borderRadius: 8 }}
                   keyboardType="phone-pad"
+                  autoCapitalize="none"
                   theme={{ colors: { onSurfaceVariant: "#777" } }}
                   onBlur={() =>
                     setErrors((prev) => ({
@@ -707,11 +708,13 @@ const SignUpScreen = ({ navigation }) => {
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
                 outlineStyle={{ borderRadius: 8 }}
+                autoCapitalize="none"
                 right={
                   <TextInput.Icon
                     icon={passwordVisible ? "eye-off" : "eye"}
                     onPress={togglePasswordVisibility}
                     color={AppColor.textHighlighter}
+                    forceTextInputFocus={false}
                   />
                 }
                 theme={{ colors: { onSurfaceVariant: "#777" } }}

@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppColor, Secondary400 } from "./src/utils/theme";
@@ -18,6 +18,9 @@ import {
   createAndroidChannel,
   requestNotificationPermission,
 } from "./src/helpers/notification.helper";
+import { clearCurrentNotificationOrder } from "./src/redux/slices/pushNotificationSlice";
+import { navigationRef } from "./src/helpers/navigation.helper";
+import NewOrderPopup from "./src/components/NewOrderPopup";
 
 import SigninScreen from "./src/screens/signinScreen";
 import SignupScreen from "./src/screens/signupScreen";
@@ -256,14 +259,22 @@ const configureNotification = async () => {
 
 const App = () => {
   const insets = useSafeAreaInsets();
+  const dispatch = useDispatch();
   const { isSignedIn, isOnboarded } = useSelector((state) => state.authReducer);
+  const { showPopup, currentOrderId } = useSelector(
+    (state) => state.pushNotificationReducer
+  );
+
+  const handleCloseForCurrentOrder = () => {
+    dispatch(clearCurrentNotificationOrder());
+  };
 
   useEffect(() => {
     configureNotification();
   }, []);
 
   return (
-    <NavigationContainer theme={DefaultTheme}>
+    <NavigationContainer theme={DefaultTheme} ref={navigationRef}>
       <GlobalSnackbar />
       {isSignedIn ? (
         <MainAppNavigator insets={insets} />
@@ -272,6 +283,12 @@ const App = () => {
       ) : (
         <AuthNavigator />
       )}
+      {showPopup && currentOrderId ? (
+        <NewOrderPopup
+          orderId={currentOrderId}
+          onCloseCurrentOrder={handleCloseForCurrentOrder}
+        />
+      ) : null}
     </NavigationContainer>
   );
 };

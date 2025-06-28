@@ -64,7 +64,7 @@ const AuthSelectCuisineScreen = () => {
       if (totalPage > page) {
         const response = await cuisineList_API({ page: page + 1 });
         console.log("response => ", response);
-        if (response.success && response.data) {
+        if (response?.success && response?.data) {
           if (Number(response.data.page) === 1) {
             setCuisineData(response.data.cuisineList || []);
           } else {
@@ -142,6 +142,7 @@ const AuthSelectCuisineScreen = () => {
             style={styles.searchInput}
             contentStyle={{ fontFamily: Secondary400 }}
             outlineColor="transparent"
+            autoCapitalize="sentences"
             activeOutlineColor={AppColor.primary}
             left={<TextInput.Icon icon="magnify" color="#C5C5C7" />}
             theme={{

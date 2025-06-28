@@ -33,6 +33,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedFoodCategory } from "../redux/slices/foodTruckProfileSlice";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
+import { vendorProfileStatus } from "../utils/constants";
 
 const MenuScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -41,6 +42,7 @@ const MenuScreen = ({ navigation }) => {
   const { selectedFoodCategory } = useSelector(
     (state) => state.foodTruckProfileReducer
   );
+  const { profileStatus } = useSelector((state) => state.userReducer);
 
   const [category, setCategory] = useState([]);
   const [dataLoading, setDataLoading] = useState(false);
@@ -84,7 +86,7 @@ const MenuScreen = ({ navigation }) => {
         name: newCatName,
       };
       const response = await addCategory_API(payload);
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         console.log("response => ", response);
         const tempCatList = [
           ...selectedFoodCategory,
@@ -121,7 +123,7 @@ const MenuScreen = ({ navigation }) => {
       };
       const category_id = updateModalVisible?.data?._id;
       const response = await updateCategory_API({ payload, category_id });
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         console.log("response => ", response);
         const updatedCategory = response.data.category;
         const tempCatList = selectedFoodCategory.map((item) =>
@@ -149,7 +151,7 @@ const MenuScreen = ({ navigation }) => {
     try {
       const category_id = item?._id;
       const response = await removeCategory_API(category_id);
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         const tempCatList = selectedFoodCategory.filter(
           (cat) => cat?._id !== category_id
         );
@@ -174,7 +176,7 @@ const MenuScreen = ({ navigation }) => {
     setDataLoading(true);
     try {
       const response = await getAllCategory_API();
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         console.log("response => ", response);
         dispatch(setSelectedFoodCategory(response.data.categoryList || []));
       }
@@ -202,222 +204,247 @@ const MenuScreen = ({ navigation }) => {
       <View
         style={{
           paddingTop: insets.top + 10,
+          alignItems: "center",
+          justifyContent: "center",
           paddingBottom: 10,
-          backgroundColor: AppColor.white,
           paddingHorizontal: 16,
           borderBottomWidth: 1,
-          borderColor: "#E5E5EA",
+          borderColor: AppColor.border,
+          backgroundColor: AppColor.white,
         }}
       >
         <Text
           numberOfLines={1}
           style={{
-            fontSize: 18,
+            fontSize: 19.78,
             fontFamily: Primary400,
             color: AppColor.black,
-            textAlign: "center",
           }}
         >
           {"Menu"}
         </Text>
       </View>
 
-      {dataLoading ? (
-        <View
-          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-        >
-          <NativeIndicator color={AppColor.primary} size="large" />
-        </View>
-      ) : (
-        <KeyboardAvoidingView
-          enabled={Platform.OS === "ios"}
-          behavior="padding"
-          style={styles.keyboardAvoidingView}
-        >
-          <View style={styles.contentContainer}>
-            <FlatList
-              data={category}
-              extraData={category}
-              keyExtractor={(_, index) => index.toString()}
-              contentContainerStyle={[
-                styles.flatListContent,
-                !category?.length && {
-                  flexGrow: 1,
-                  padding: 16,
-                  margin: 0,
-                  borderRadius: 0,
-                },
-              ]}
-              renderItem={({ item, index }) => (
-                <TouchableOpacity
-                  onPress={() =>
-                    navigation.navigate("menuDishListScreen", {
-                      category: item,
-                    })
-                  }
-                  activeOpacity={0.7}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    marginHorizontal: 16,
-                    paddingVertical: 8,
-                    gap: 8,
-                  }}
-                >
-                  <View
-                    style={{
-                      height: 53,
-                      width: 53,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <MaterialIcons
-                      name="dining"
-                      size={40}
-                      color={AppColor.primary}
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={{
-                        fontFamily: Primary400,
-                        fontSize: 14,
-                        color: AppColor.text,
-                      }}
-                    >
-                      {item.name}
-                    </Text>
-                    <Text
-                      style={{
-                        fontFamily: Secondary400,
-                        fontSize: 12,
-                        color: AppColor.textHighlighter,
-                        marginTop: 5,
-                      }}
-                    >{`${item.menuCount} Items`}</Text>
-                  </View>
-                  {removeLoading && removeIndex === index ? (
-                    <ActivityIndicator color={AppColor.primary} />
-                  ) : (
-                    <Menu
-                      mode="flat"
-                      visible={menuVisible === index}
-                      onDismiss={() => setMenuVisible(null)}
-                      anchor={
-                        <TouchableOpacity
-                          onPress={() => setMenuVisible(index)}
-                          style={{
-                            height: 24,
-                            width: 24,
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          <MaterialIcons
-                            name="more-vert"
-                            size={24}
-                            color={AppColor.black}
-                          />
-                        </TouchableOpacity>
-                      }
-                      contentStyle={{
-                        backgroundColor: AppColor.white,
-                        borderWidth: 1,
-                        borderColor: AppColor.border,
-                        elevation: 1,
-                        shadowColor: AppColor.black,
-                        shadowOffset: {
-                          width: 0,
-                          height: 1,
-                        },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 2,
-                      }}
-                    >
-                      <Menu.Item
-                        onPress={() => {
-                          setMenuVisible(null);
-                          setUpdateModalVisible({
-                            isVisible: true,
-                            data: item,
-                          });
-                          setNewCatName(item.name);
-                        }}
-                        title="Rename"
-                        leadingIcon={"pencil"}
-                      />
-                      <Menu.Item
-                        onPress={() => {
-                          setMenuVisible(null);
-                          handleRemoveCategory(item, index);
-                        }}
-                        title="Remove"
-                        leadingIcon={"trash-can"}
-                      />
-                    </Menu>
-                  )}
-                </TouchableOpacity>
-              )}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-              ListEmptyComponent={() => (
-                <View
-                  style={[
-                    styles.emptyListContainer,
-                    { paddingBottom: insets.bottom },
-                  ]}
-                >
+      {profileStatus === vendorProfileStatus.approved ? (
+        dataLoading ? (
+          <View
+            style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+          >
+            <NativeIndicator color={AppColor.primary} size="large" />
+          </View>
+        ) : (
+          <KeyboardAvoidingView
+            enabled={Platform.OS === "ios"}
+            behavior="padding"
+            style={styles.keyboardAvoidingView}
+          >
+            <View style={styles.contentContainer}>
+              <FlatList
+                data={category}
+                extraData={category}
+                keyExtractor={(_, index) => index.toString()}
+                contentContainerStyle={[
+                  styles.flatListContent,
+                  !category?.length && {
+                    flexGrow: 1,
+                    padding: 16,
+                    margin: 0,
+                    borderRadius: 0,
+                  },
+                ]}
+                renderItem={({ item, index }) => (
                   <TouchableOpacity
-                    onPress={() => setModalVisible(true)}
-                    activeOpacity={0.8}
-                    style={styles.emptyListButton}
-                  >
-                    <AntDesign
-                      name="pluscircle"
-                      size={38}
-                      color={AppColor.primary}
-                    />
-                    <Text style={styles.emptyListText}>
-                      {"Add your first menu\ncategory"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              ListFooterComponent={() =>
-                category?.length ? (
-                  <TouchableOpacity
-                    onPress={() => setModalVisible(true)}
+                    onPress={() =>
+                      navigation.navigate("menuDishListScreen", {
+                        category: item,
+                      })
+                    }
                     activeOpacity={0.7}
                     style={{
                       flexDirection: "row",
                       alignItems: "center",
-                      paddingVertical: 16,
-                      paddingHorizontal: 24,
-                      borderTopWidth: 1,
-                      borderColor: "#E5E5EA",
-                      gap: 10,
+                      marginHorizontal: 16,
+                      paddingVertical: 8,
+                      gap: 8,
                     }}
                   >
-                    <AntDesign
-                      name="pluscircle"
-                      size={20}
-                      color={AppColor.primary}
-                    />
-                    <Text
+                    <View
                       style={{
-                        fontSize: 14,
-                        fontFamily: Secondary400,
-                        color: AppColor.text,
+                        height: 53,
+                        width: 53,
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
-                      {"New Category"}
-                    </Text>
+                      <MaterialIcons
+                        name="dining"
+                        size={40}
+                        color={AppColor.primary}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          fontFamily: Primary400,
+                          fontSize: 14,
+                          color: AppColor.text,
+                        }}
+                      >
+                        {item.name}
+                      </Text>
+                      <Text
+                        style={{
+                          fontFamily: Secondary400,
+                          fontSize: 12,
+                          color: AppColor.textHighlighter,
+                          marginTop: 5,
+                        }}
+                      >{`${item.menuCount} Items`}</Text>
+                    </View>
+                    {removeLoading && removeIndex === index ? (
+                      <ActivityIndicator color={AppColor.primary} />
+                    ) : (
+                      <Menu
+                        mode="flat"
+                        visible={menuVisible === index}
+                        onDismiss={() => setMenuVisible(null)}
+                        anchor={
+                          <TouchableOpacity
+                            onPress={() => setMenuVisible(index)}
+                            style={{
+                              height: 24,
+                              width: 24,
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <MaterialIcons
+                              name="more-vert"
+                              size={24}
+                              color={AppColor.black}
+                            />
+                          </TouchableOpacity>
+                        }
+                        contentStyle={{
+                          backgroundColor: AppColor.white,
+                          borderWidth: 1,
+                          borderColor: AppColor.border,
+                          elevation: 1,
+                          shadowColor: AppColor.black,
+                          shadowOffset: {
+                            width: 0,
+                            height: 1,
+                          },
+                          shadowOpacity: 0.1,
+                          shadowRadius: 2,
+                        }}
+                      >
+                        <Menu.Item
+                          onPress={() => {
+                            setMenuVisible(null);
+                            setUpdateModalVisible({
+                              isVisible: true,
+                              data: item,
+                            });
+                            setNewCatName(item.name);
+                          }}
+                          title="Rename"
+                          leadingIcon={"pencil"}
+                        />
+                        <Menu.Item
+                          onPress={() => {
+                            setMenuVisible(null);
+                            handleRemoveCategory(item, index);
+                          }}
+                          title="Remove"
+                          leadingIcon={"trash-can"}
+                        />
+                      </Menu>
+                    )}
                   </TouchableOpacity>
-                ) : null
-              }
-            />
-          </View>
-        </KeyboardAvoidingView>
+                )}
+                ItemSeparatorComponent={() => <View style={styles.separator} />}
+                ListEmptyComponent={() => (
+                  <View
+                    style={[
+                      styles.emptyListContainer,
+                      { paddingBottom: insets.bottom },
+                    ]}
+                  >
+                    <TouchableOpacity
+                      onPress={() => setModalVisible(true)}
+                      activeOpacity={0.8}
+                      style={styles.emptyListButton}
+                    >
+                      <AntDesign
+                        name="pluscircle"
+                        size={38}
+                        color={AppColor.primary}
+                      />
+                      <Text style={styles.emptyListText}>
+                        {"Add your first menu\ncategory"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                ListFooterComponent={() =>
+                  category?.length ? (
+                    <TouchableOpacity
+                      onPress={() => setModalVisible(true)}
+                      activeOpacity={0.7}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        paddingVertical: 16,
+                        paddingHorizontal: 24,
+                        borderTopWidth: 1,
+                        borderColor: "#E5E5EA",
+                        gap: 10,
+                      }}
+                    >
+                      <AntDesign
+                        name="pluscircle"
+                        size={20}
+                        color={AppColor.primary}
+                      />
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          fontFamily: Secondary400,
+                          color: AppColor.text,
+                        }}
+                      >
+                        {"New Category"}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null
+                }
+              />
+            </View>
+          </KeyboardAvoidingView>
+        )
+      ) : (
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            paddingHorizontal: 16,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 16,
+              fontFamily: Secondary400,
+              color: AppColor.black,
+              textAlign: "center",
+            }}
+          >
+            {
+              "This feature will become available once your\nprofile is approved."
+            }
+          </Text>
+        </View>
       )}
 
       {/* New Category Modal */}
@@ -466,6 +493,7 @@ const MenuScreen = ({ navigation }) => {
               placeholder=""
               placeholderTextColor={AppColor.placeholderTextColor}
               mode="outlined"
+              autoCapitalize="sentences"
               error={!!catError}
               outlineColor={AppColor.border}
               activeOutlineColor={AppColor.primary}
@@ -572,6 +600,7 @@ const MenuScreen = ({ navigation }) => {
               placeholder=""
               placeholderTextColor={AppColor.placeholderTextColor}
               mode="outlined"
+              autoCapitalize="sentences"
               error={!!catError}
               outlineColor={AppColor.border}
               activeOutlineColor={AppColor.primary}

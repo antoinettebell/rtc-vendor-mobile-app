@@ -14,6 +14,7 @@ import Entypo from "react-native-vector-icons/Entypo";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
+import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Modal from "react-native-modal";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
@@ -32,6 +33,7 @@ import { updatePassword_API } from "../api/authAPI";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
 import { checkInstallationId } from "../helpers/notification.helper";
 import { removeFcmToken_API } from "../api/appAPI";
+import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlice";
 
 const ItemComponent = ({ imageUri, label, rightIcon, isRed, onPress }) => (
   <TouchableOpacity
@@ -239,6 +241,7 @@ const ChangePWDModal = ({
             placeholder=""
             placeholderTextColor={AppColor.placeholderTextColor}
             mode="outlined"
+            autoCapitalize="none"
             error={!!passwordError}
             secureTextEntry={!passwordVisible}
             outlineColor={AppColor.border}
@@ -249,6 +252,7 @@ const ChangePWDModal = ({
                 icon={passwordVisible ? "eye-off" : "eye"}
                 onPress={() => togglePasswordVisibility("current")}
                 color={AppColor.textHighlighter}
+                forceTextInputFocus={false}
               />
             }
             theme={{ colors: { onSurfaceVariant: "#777" } }}
@@ -272,6 +276,7 @@ const ChangePWDModal = ({
             placeholder=""
             placeholderTextColor={AppColor.placeholderTextColor}
             mode="outlined"
+            autoCapitalize="sentences"
             error={!!newPasswordError}
             secureTextEntry={!newPasswordVisible}
             outlineColor={AppColor.border}
@@ -282,6 +287,7 @@ const ChangePWDModal = ({
                 icon={newPasswordVisible ? "eye-off" : "eye"}
                 onPress={() => togglePasswordVisibility("new")}
                 color={AppColor.textHighlighter}
+                forceTextInputFocus={false}
               />
             }
             theme={{ colors: { onSurfaceVariant: "#777" } }}
@@ -305,6 +311,7 @@ const ChangePWDModal = ({
             placeholder=""
             placeholderTextColor={AppColor.placeholderTextColor}
             mode="outlined"
+            autoCapitalize="sentences"
             error={!!cnfrmPasswordError}
             secureTextEntry={!newPasswordVisible}
             outlineColor={AppColor.border}
@@ -315,6 +322,7 @@ const ChangePWDModal = ({
                 icon={newPasswordVisible ? "eye-off" : "eye"}
                 onPress={() => togglePasswordVisibility("new")}
                 color={AppColor.textHighlighter}
+                forceTextInputFocus={false}
               />
             }
             theme={{ colors: { onSurfaceVariant: "#777" } }}
@@ -412,6 +420,7 @@ const ProfileMenuScreen = ({ navigation }) => {
       dispatch(clearUserSlice());
       dispatch(clearFoodTruckProfileSlice());
       dispatch(onSignOut());
+      dispatch(clearPushNotificationRedux());
     }, 350);
   };
 
@@ -505,12 +514,21 @@ const ProfileMenuScreen = ({ navigation }) => {
           }}
         >
           {/* Cover Image */}
-          <FastImage
-            // source={{ uri: user?.foodTruck?.logo, priority: "normal" }}
-            source={{ uri: user?.foodTruck?.photos[0], priority: "normal" }}
-            style={{ height: 143, width: "100%" }}
-            resizeMode="cover"
-          />
+          {user?.foodTruck?.photos[0] ? (
+            <FastImage
+              source={{ uri: user?.foodTruck?.photos[0], priority: "normal" }}
+              style={{ height: 143, width: "100%" }}
+              resizeMode="cover"
+            />
+          ) : (
+            <View
+              style={{
+                height: 143,
+                width: "100%",
+                backgroundColor: "#F9FAFB",
+              }}
+            />
+          )}
           {/* Circle Logo */}
           <View
             style={{
@@ -519,12 +537,31 @@ const ProfileMenuScreen = ({ navigation }) => {
               marginTop: -52,
             }}
           >
-            <FastImage
-              source={{ uri: user?.foodTruck?.logo, priority: "normal" }}
-              // source={{ uri: user?.foodTruck?.photos[0], priority: "normal" }}
-              style={{ height: 104, width: 104, borderRadius: 52 }}
-              resizeMode="cover"
-            />
+            {user?.foodTruck?.logo ? (
+              <FastImage
+                source={{ uri: user?.foodTruck?.logo, priority: "normal" }}
+                style={{ height: 104, width: 104, borderRadius: 52 }}
+                resizeMode="cover"
+              />
+            ) : (
+              <View
+                style={{
+                  height: 104,
+                  width: 104,
+                  borderRadius: 52,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: AppColor.primary,
+                  overflow: "hidden",
+                }}
+              >
+                <FontAwesome6
+                  name="truck-fast"
+                  color={AppColor.white}
+                  size={50}
+                />
+              </View>
+            )}
           </View>
           {/* Food Truck Name */}
           <Text

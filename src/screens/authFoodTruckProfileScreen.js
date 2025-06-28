@@ -301,7 +301,7 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
                       : {
                           mode: "media",
                           uri: images?.path,
-                          name: images?.filename,
+                          name: `${images?.path?.split("/").pop()}`, // did this because in android > choose from gallary; not have filename
                           type: images.mime,
                         };
                   setSelectedLogo(payload);
@@ -317,7 +317,7 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
                       : {
                           mode: "media",
                           uri: i?.path,
-                          name: i?.filename,
+                          name: `${i?.path?.split("/").pop()}`, // did this because in android > choose from gallary; not have filename
                           type: i.mime,
                         }
                   );
@@ -424,7 +424,7 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
         console.log("logo => ", formData);
         try {
           const response = await uploadImage_API(formData);
-          if (response.success && response.data)
+          if (response?.success && response?.data)
             logoResult = {
               ...selectedLogo,
               serverResponse: response.data.file,
@@ -447,7 +447,7 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
         console.log("photo => ", formData);
         try {
           const response = await uploadImage_API(formData);
-          if (response.success && response.data)
+          if (response?.success && response?.data)
             imageResult.push({
               ...image,
               serverResponse: response.data.file,
@@ -486,7 +486,7 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
         payload,
         foodTruckId: user?.foodTruck?._id,
       });
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         console.log("response => ", response);
         dispatch(setSelectedLocations(response.data.foodtruck.locations));
         console.log("USER => ", {

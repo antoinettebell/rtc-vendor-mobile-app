@@ -793,7 +793,7 @@ const AuthSetAvilabilityScreen = ({ navigation }) => {
         payload,
         foodTruckId: user?.foodTruck?._id,
       });
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         console.log("response => ", response);
         const tempUser = {
           ...user,

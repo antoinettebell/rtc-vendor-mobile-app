@@ -28,13 +28,15 @@ import { onOnBoard } from "../redux/slices/authSlice";
 import { setAuthToken, setUser } from "../redux/slices/userSlice";
 import StatusBarManager from "../components/StatusBarManager";
 
+const RESEND_CODE_TIME = 45;
+
 const OtpVerificationScreen = ({ route }) => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const timerRef = useRef(null);
 
-  const [resendTimer, setResendTimer] = useState(60);
+  const [resendTimer, setResendTimer] = useState(RESEND_CODE_TIME);
   const [params, setParams] = useState(route.params);
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
@@ -89,7 +91,7 @@ const OtpVerificationScreen = ({ route }) => {
     setLoading(true);
     try {
       const response = await verifyOTP_API(payload);
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         if (params?.verificationFor === "sign-up") {
           setModalVisible(true); // Success -> show modal
 
@@ -124,7 +126,7 @@ const OtpVerificationScreen = ({ route }) => {
       const resendResponse = await resendOTP_API(payload);
       if (resendResponse.success && resendResponse.data) {
         setOtpDigits(["", "", "", "", "", ""]);
-        setResendTimer(60);
+        setResendTimer(RESEND_CODE_TIME);
         inputRefs.current[0]?.focus();
 
         setParams({
@@ -166,15 +168,6 @@ const OtpVerificationScreen = ({ route }) => {
     };
   }, [resendTimer]);
 
-  useEffect(() => {
-    // Cleanup timer on unmount
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, []);
-
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBarManager barStyle="light-content" />
@@ -187,7 +180,7 @@ const OtpVerificationScreen = ({ route }) => {
           size={24}
           onPress={() => navigation.goBack()}
         />
-        <Text style={styles.headerTitle}>{"OTP"}</Text>
+        <Text style={styles.headerTitle}>{"Verification"}</Text>
         <View style={{ width: 48 }} />
       </View>
 
@@ -267,7 +260,7 @@ const OtpVerificationScreen = ({ route }) => {
               {resendTimer > 0 ? (
                 <Text
                   style={styles.timerText}
-                >{`Resend OTP in ${resendTimer}s`}</Text>
+                >{`Resend Code in ${resendTimer}s`}</Text>
               ) : (
                 <TouchableOpacity
                   onPress={handleResendOtp}

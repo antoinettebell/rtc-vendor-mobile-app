@@ -844,10 +844,12 @@ import {
   Pressable,
   Platform,
   ScrollView,
+  ActivityIndicator as NativeIndicator,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
 import FastImage from "@d11/react-native-fast-image";
@@ -855,21 +857,33 @@ import CustomBanner from "../components/CustomBanner";
 import {
   getOrderList_API,
   getUserDetail_API,
+  updateFcmToken_API,
   updateFoodTruckProfile_API,
   updateOrderStatusByID_API,
 } from "../api/appAPI";
-import { setUser, updateFoodTruck } from "../redux/slices/userSlice";
+import {
+  setProfileStatus,
+  setUser,
+  updateFoodTruck,
+} from "../redux/slices/userSlice";
 import LabeledSwitch from "../components/LabeledSwitch";
 import { useSharedValue } from "react-native-reanimated";
 import { Dropdown } from "react-native-element-dropdown";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
-import { Divider } from "react-native-paper";
+import { ActivityIndicator, Divider } from "react-native-paper";
 import moment from "moment";
 import { useFocusEffect } from "@react-navigation/native";
-import { orderStatusStrings, PROFILE_AVATAR } from "../utils/constants";
+import {
+  orderStatusStrings,
+  PROFILE_AVATAR,
+  vendorProfileStatus,
+} from "../utils/constants";
 import { checkInstallationId } from "../helpers/notification.helper";
 import { getMessaging } from "@react-native-firebase/messaging";
-import { calculateTotalPreparationTime } from "../helpers/order.helper";
+import {
+  calculateTotalPreparationTime,
+  extractAdvanceOrderLocationAndTime,
+} from "../helpers/order.helper";
 import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
 
 const QuickStatsComponent = ({ title, subTitle, icon }) => (
@@ -889,18 +903,20 @@ const QuickStatsComponent = ({ title, subTitle, icon }) => (
 const HomeScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
-  const { user } = useSelector((state) => state.userReducer);
+  const { user, profileStatus } = useSelector((state) => state.userReducer);
 
   const HEADER_HEIGHT = 60;
   const totalHeaderHeight = insets.top + HEADER_HEIGHT;
 
-  const [bannerVisible, setBannerVisible] = useState(false);
   const [bannerLoading, setBannerLoading] = useState(false);
   const [locations, setLocations] = useState([]);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [newOrderLoading, setNewOrderLoading] = useState(false);
   const [newOrderData, setNewOrderData] = useState(null);
+  const [orderRejectBtnLoading, setOrderRejectBtnLoading] = useState(false);
+  const [orderAcceptBtnLoading, setOrderAcceptBtnLoading] = useState(false);
+  const [locationTimeAdvanceData, setLocationTimeAdvanceData] = useState(null);
   const [timeModal, setTimeModal] = useState(null);
   const [prepTimeError, setPrepTimeError] = useState("");
 
@@ -1030,7 +1046,7 @@ const HomeScreen = ({ navigation }) => {
         },
       });
       console.log("response => ", response);
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         dispatch(
           showSnackbar({
             type: "success",
@@ -1069,6 +1085,7 @@ const HomeScreen = ({ navigation }) => {
           text: "Reject",
           style: "destructive",
           onPress: async () => {
+            setOrderRejectBtnLoading(true);
             try {
               const response = await updateOrderStatusByID_API({
                 order_id: order?._id,
@@ -1077,7 +1094,7 @@ const HomeScreen = ({ navigation }) => {
                 },
               });
               console.log("response => ", response);
-              if (response.success && response.data) {
+              if (response?.success && response?.data) {
                 dispatch(
                   showSnackbar({
                     type: "success",
@@ -1095,6 +1112,7 @@ const HomeScreen = ({ navigation }) => {
                 })
               );
             } finally {
+              setOrderRejectBtnLoading(false);
             }
           },
         },
@@ -1112,14 +1130,18 @@ const HomeScreen = ({ navigation }) => {
       });
       console.log("reponse => ", response);
       if (
-        response.success &&
-        response.data &&
-        response.data.orderList?.length &&
-        response.data.orderList[0].orderStatus === orderStatusStrings.placed
+        response?.success &&
+        response?.data &&
+        response?.data?.orderList?.length &&
+        response?.data?.orderList[0]?.orderStatus === orderStatusStrings.placed
       ) {
         setNewOrderData(response.data.orderList[0]);
+        setLocationTimeAdvanceData(
+          extractAdvanceOrderLocationAndTime(response.data.orderList[0])
+        );
       } else {
         setNewOrderData(null);
+        setLocationTimeAdvanceData(null);
       }
     } catch (error) {
       console.log("error => ", error);
@@ -1150,7 +1172,7 @@ const HomeScreen = ({ navigation }) => {
 
       try {
         const payload = { token: newToken };
-        const response = await updateDeviceToken_API({ deviceId, payload });
+        const response = await updateFcmToken_API({ deviceId, payload });
         console.log("response => ", response);
       } catch (error) {
         console.log("error => ", error);
@@ -1161,7 +1183,7 @@ const HomeScreen = ({ navigation }) => {
   }, []);
 
   useEffect(() => {
-    setBannerVisible(user?.requestStatus === "PENDING" ? true : false);
+    dispatch(setProfileStatus(user?.requestStatus));
   }, [user?.requestStatus]);
 
   useEffect(() => {
@@ -1188,10 +1210,30 @@ const HomeScreen = ({ navigation }) => {
         ]}
       >
         <View style={styles.headerLeftContainer}>
-          <FastImage
-            source={{ uri: user?.foodTruck?.logo }}
-            style={styles.headerLogo}
-          />
+          {user?.foodTruck?.logo ? (
+            <FastImage
+              source={{ uri: user?.foodTruck?.logo }}
+              style={styles.headerLogo}
+            />
+          ) : (
+            <View
+              style={{
+                height: 44,
+                width: 44,
+                borderRadius: 22,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: AppColor.primary,
+                overflow: "hidden",
+              }}
+            >
+              <FontAwesome6
+                name="truck-fast"
+                color={AppColor.white}
+                size={24}
+              />
+            </View>
+          )}
           <Text numberOfLines={1} style={styles.headerTitle}>
             {user?.foodTruck?.name || ""}
           </Text>
@@ -1210,7 +1252,7 @@ const HomeScreen = ({ navigation }) => {
 
       {/* Banner for pending status */}
       <CustomBanner
-        visible={bannerVisible}
+        visible={profileStatus === vendorProfileStatus.pending}
         initialOffsetY={totalHeaderHeight}
         actions={[
           {
@@ -1227,123 +1269,262 @@ const HomeScreen = ({ navigation }) => {
         contentContainerStyle={styles.scrollViewContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Location and Switch */}
-        {!bannerVisible ? (
-          <View style={styles.locationSwitchContainer}>
-            <View style={styles.dropdownContainer}>
-              <Dropdown
-                data={locations}
-                labelField="title"
-                valueField="_id"
-                value={selectedLocation}
-                onChange={(selected) => handleLocationChange(selected)}
-                placeholder="Select Location"
-                style={styles.dropdown}
-                placeholderStyle={styles.dropdownPlaceholder}
-                itemTextStyle={styles.dropdownItemText}
-                selectedTextStyle={styles.dropdownSelectedText}
-                disable={isOpen}
-              />
-              <Pressable
-                onPress={() => {
-                  if (isOpen) {
-                    Alert.alert(
-                      "Cannot Change Location",
-                      "Please close the food truck first to change location"
-                    );
-                  }
-                }}
-                style={[
-                  styles.dropdownOverlay,
-                  { display: isOpen ? "flex" : "none" },
-                ]}
-              />
-            </View>
-            <View style={styles.switchContainer}>
-              <LabeledSwitch value={isOn} onPress={handlePress} />
-              <Text style={styles.switchText}>
-                {isOpen ? "Open" : "Closed"}
-              </Text>
-            </View>
-          </View>
-        ) : null}
-
-        <View style={styles.content}>
-          {/* New Order */}
-          <View style={styles.newOrderContainer}>
-            {/* title */}
-            <View style={styles.sectionTitleContainer}>
-              <Text style={styles.sectionTitle}>{"new Order"}</Text>
-            </View>
-            <Divider />
-            {newOrderData ? (
-              <TouchableOpacity
-                activeOpacity={0.7}
-                style={styles.orderDetailsContainer}
-                onPress={() =>
-                  navigation.navigate("orderDetailsScreen", {
-                    orderId: newOrderData._id,
-                  })
-                }
-              >
-                {/* Order ID Text */}
-                <Text style={styles.orderIdText}>
-                  {"Order #" + newOrderData?._id}
+        {profileStatus === vendorProfileStatus.approved ? (
+          <>
+            {/* Location and Switch */}
+            <View style={styles.locationSwitchContainer}>
+              <View style={styles.dropdownContainer}>
+                <Dropdown
+                  data={locations}
+                  labelField="title"
+                  valueField="_id"
+                  value={selectedLocation}
+                  onChange={(selected) => handleLocationChange(selected)}
+                  placeholder="Select Location"
+                  style={styles.dropdown}
+                  placeholderStyle={styles.dropdownPlaceholder}
+                  itemTextStyle={styles.dropdownItemText}
+                  selectedTextStyle={styles.dropdownSelectedText}
+                  disable={isOpen}
+                />
+                <Pressable
+                  onPress={() => {
+                    if (isOpen) {
+                      Alert.alert(
+                        "Cannot Change Location",
+                        "Please close the food truck first to change location"
+                      );
+                    }
+                  }}
+                  style={[
+                    styles.dropdownOverlay,
+                    { display: isOpen ? "flex" : "none" },
+                  ]}
+                />
+              </View>
+              <View style={styles.switchContainer}>
+                <LabeledSwitch value={isOn} onPress={handlePress} />
+                <Text style={styles.switchText}>
+                  {isOpen ? "Open" : "Closed"}
                 </Text>
-                <View style={styles.orderHeader}>
-                  <View style={styles.orderUserImageContainer}>
-                    <FastImage
-                      source={{
-                        uri: newOrderData.user.profilePic || PROFILE_AVATAR,
-                      }}
-                      style={styles.orderUserImage}
-                    />
-                  </View>
-                  <View style={styles.orderUserInfo}>
-                    <Text
-                      style={styles.orderUserName}
-                    >{`${newOrderData.user.firstName} ${newOrderData.user.lastName}`}</Text>
-                    <Text
-                      style={styles.orderItemCount}
-                    >{`${newOrderData.items.length} Items`}</Text>
-                  </View>
-                  <View>
-                    <Text style={styles.orderDate}>
-                      {moment(newOrderData.createdAt).format("DD MMM, YYYY")}
-                    </Text>
-                    <View style={styles.orderTimeContainer}>
-                      <MaterialCommunityIcons
-                        name="clock-outline"
-                        size={16}
-                        color="#6F6F6F"
-                      />
-                      <Text style={styles.orderTime}>
-                        {moment(newOrderData.createdAt).format("hh:mm A")}
-                      </Text>
-                    </View>
-                  </View>
+              </View>
+            </View>
+            {/* Order & Stats */}
+            <View style={styles.content}>
+              {/* New Order */}
+              <View style={styles.newOrderContainer}>
+                {/* title */}
+                <View style={styles.sectionTitleContainer}>
+                  <Text style={styles.sectionTitle}>{"new Order"}</Text>
                 </View>
-                <Divider style={styles.orderDivider} />
-                {/* Item Details */}
-                {newOrderData.items.map((item, index) => (
-                  <View style={styles.orderItemContainer} key={index}>
-                    <View style={styles.orderItemDetails}>
-                      <Text
-                        style={styles.orderItemName}
-                      >{`${item.qty} x ${item.menuItem.name}`}</Text>
-                      <Text style={styles.orderItemDescription}>
-                        {item.menuItem.description}
-                      </Text>
-                    </View>
-                    <View>
-                      <Text
-                        style={styles.orderItemPrice}
-                      >{`$${item.menuItem.price}`}</Text>
-                    </View>
+                <Divider />
+                {newOrderLoading ? (
+                  <View
+                    style={{
+                      paddingVertical: 50,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <NativeIndicator size="small" color={AppColor.primary} />
                   </View>
-                ))}
-                {/* for dessert */}
-                {/* <View style={styles.orderItemContainer}>
+                ) : newOrderData ? (
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    style={styles.orderDetailsContainer}
+                    onPress={() =>
+                      navigation.navigate("orderDetailsScreen", {
+                        orderId: newOrderData._id,
+                      })
+                    }
+                  >
+                    {locationTimeAdvanceData?.advanceOrder ? (
+                      <View
+                        style={[
+                          styles.orderDetailsContainer,
+                          {
+                            backgroundColor: "rgba(252, 123, 3, 0.1)",
+                            marginHorizontal: 0,
+                            marginTop: 0,
+                          },
+                        ]}
+                      >
+                        <Text
+                          numberOfLines={1}
+                          style={{
+                            fontFamily: Primary400,
+                            fontSize: 18,
+                            color: AppColor.primary,
+                            alignSelf: "center",
+                          }}
+                        >
+                          {"Advance Order"}
+                        </Text>
+                        <Divider
+                          style={{
+                            marginVertical: 16,
+                            backgroundColor: AppColor.primary,
+                          }}
+                        />
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            marginHorizontal: 8,
+                            marginTop: 8,
+                            gap: 8,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 14,
+                              fontFamily: Secondary400,
+                              color: AppColor.black,
+                            }}
+                          >
+                            {"Location"}
+                          </Text>
+                          <Text
+                            numberOfLines={1}
+                            style={{
+                              fontSize: 14,
+                              fontFamily: Secondary400,
+                              color: AppColor.black,
+                            }}
+                          >
+                            {locationTimeAdvanceData?.advanceLocationTitle}
+                          </Text>
+                        </View>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            marginHorizontal: 8,
+                            marginTop: 8,
+                            gap: 8,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 14,
+                              fontFamily: Secondary400,
+                              color: AppColor.black,
+                            }}
+                          >
+                            {"Time"}
+                          </Text>
+                          <Text
+                            numberOfLines={1}
+                            style={{
+                              fontSize: 14,
+                              fontFamily: Secondary400,
+                              color: AppColor.black,
+                            }}
+                          >
+                            {locationTimeAdvanceData?.advanceTime}
+                          </Text>
+                        </View>
+                      </View>
+                    ) : null}
+
+                    {/* Order ID Text */}
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginHorizontal: 8,
+                      }}
+                    >
+                      <View style={{ width: "75%", paddingRight: 8 }}>
+                        <Text style={styles.orderIdText}>
+                          {"Order #" + newOrderData?._id}
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          maxWidth: "25%",
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "flex-end",
+                          gap: 4,
+                        }}
+                      >
+                        <MaterialCommunityIcons
+                          name="map-marker-outline"
+                          size={16}
+                          color={AppColor.black}
+                        />
+                        <Text
+                          numberOfLines={1}
+                          style={{
+                            fontSize: 14,
+                            fontFamily: Secondary400,
+                            color: AppColor.black,
+                          }}
+                        >
+                          {locationTimeAdvanceData?.locationTitle || ""}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.orderHeader}>
+                      <View style={styles.orderUserImageContainer}>
+                        <FastImage
+                          source={{
+                            uri: newOrderData.user.profilePic || PROFILE_AVATAR,
+                          }}
+                          style={styles.orderUserImage}
+                        />
+                      </View>
+                      <View style={styles.orderUserInfo}>
+                        <Text
+                          style={styles.orderUserName}
+                        >{`${newOrderData.user.firstName} ${newOrderData.user.lastName}`}</Text>
+                        <Text
+                          style={styles.orderItemCount}
+                        >{`${newOrderData.items.length} Items`}</Text>
+                      </View>
+                      <View>
+                        <Text style={styles.orderDate}>
+                          {moment(newOrderData.createdAt).format(
+                            "DD MMM, YYYY"
+                          )}
+                        </Text>
+                        <View style={styles.orderTimeContainer}>
+                          <MaterialCommunityIcons
+                            name="clock-outline"
+                            size={16}
+                            color="#6F6F6F"
+                          />
+                          <Text style={styles.orderTime}>
+                            {moment(newOrderData.createdAt).format("hh:mm A")}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                    <Divider style={styles.orderDivider} />
+                    {/* Item Details */}
+                    {newOrderData.items.map((item, index) => (
+                      <View style={styles.orderItemContainer} key={index}>
+                        <View style={styles.orderItemDetails}>
+                          <Text
+                            style={styles.orderItemName}
+                          >{`${item.qty} x ${item.menuItem.name}`}</Text>
+                          <Text style={styles.orderItemDescription}>
+                            {item.menuItem.description}
+                          </Text>
+                        </View>
+                        <View>
+                          <Text
+                            style={styles.orderItemPrice}
+                          >{`$${item.menuItem.price}`}</Text>
+                        </View>
+                      </View>
+                    ))}
+                    {/* for dessert */}
+                    {/* <View style={styles.orderItemContainer}>
                   <View style={styles.freeItemContainer}>
                     <Text style={styles.orderItemName}>{"1 x Dessert"}</Text>
                     <Text style={styles.freeItemBadge}>{"Free"}</Text>
@@ -1352,122 +1533,142 @@ const HomeScreen = ({ navigation }) => {
                     <Text style={styles.orderItemPrice}>{"$0.00"}</Text>
                   </View>
                 </View> */}
-                <Divider style={styles.orderDivider} />
-                {/* Total */}
-                <View style={styles.orderTotalContainer}>
-                  <Text
-                    style={styles.orderTotalText}
-                  >{`$${newOrderData.subTotal.toFixed(2)}`}</Text>
-                  <View style={styles.orderActionButtons}>
-                    <TouchableOpacity
-                      style={styles.rejectOrderBtn}
-                      activeOpacity={0.7}
-                      onPress={() => handleRejectOrderPress(newOrderData)}
-                    >
+                    <Divider style={styles.orderDivider} />
+                    {/* Total */}
+                    <View style={styles.orderTotalContainer}>
                       <Text
-                        style={[
-                          styles.orderBtnText,
-                          { color: AppColor.primary },
-                        ]}
-                      >
-                        {"Reject"}
-                      </Text>
-                    </TouchableOpacity>
+                        style={styles.orderTotalText}
+                      >{`$${newOrderData.subTotal.toFixed(2)}`}</Text>
+                      <View style={styles.orderActionButtons}>
+                        <TouchableOpacity
+                          style={styles.rejectOrderBtn}
+                          activeOpacity={0.7}
+                          disabled={orderRejectBtnLoading}
+                          onPress={() => handleRejectOrderPress(newOrderData)}
+                        >
+                          {orderRejectBtnLoading ? (
+                            <ActivityIndicator color={AppColor.primary} />
+                          ) : (
+                            <Text
+                              style={[
+                                styles.orderBtnText,
+                                { color: AppColor.primary },
+                              ]}
+                            >
+                              {"Reject"}
+                            </Text>
+                          )}
+                        </TouchableOpacity>
 
-                    <TouchableOpacity
-                      style={styles.acceptOrderBtn}
-                      activeOpacity={0.7}
-                      onPress={() => handleAcceptAndPrintPress(newOrderData)}
+                        <TouchableOpacity
+                          style={styles.acceptOrderBtn}
+                          activeOpacity={0.7}
+                          disabled={orderAcceptBtnLoading}
+                          onPress={() =>
+                            handleAcceptAndPrintPress(newOrderData)
+                          }
+                        >
+                          {orderAcceptBtnLoading ? (
+                            <ActivityIndicator color={AppColor.primary} />
+                          ) : (
+                            <Text style={styles.orderBtnText}>
+                              {"Accept & Print"}
+                            </Text>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ) : (
+                  <Pressable
+                    style={{
+                      height: 80,
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                    onPress={() => navigation.navigate("orderScreen")}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: Secondary400,
+                        fontSize: 16,
+                        color: AppColor.black,
+                      }}
                     >
-                      <Text style={styles.orderBtnText}>
-                        {"Accept & Print"}
+                      {"Check current order?"}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+
+              {/* Sales Overview */}
+              <View style={styles.salesOverviewContainer}>
+                <View style={styles.sectionTitleContainer}>
+                  <Text style={styles.sectionTitle}>{"Sales Overview"}</Text>
+                </View>
+                <Divider />
+                <View style={styles.salesOverviewCards}>
+                  <View style={styles.salesCard}>
+                    <FastImage
+                      source={require("../assets/images/pieChartIcon.png")}
+                      style={styles.pieChartIcon}
+                    />
+                    <View style={styles.salesCardTextContainer}>
+                      <Text style={styles.salesCardAmount}>{"$2,500"}</Text>
+                      <Text style={styles.salesCardLabel}>
+                        {"Today's Sales "}
                       </Text>
-                    </TouchableOpacity>
+                    </View>
+                  </View>
+                  <View
+                    style={[styles.salesCard, { backgroundColor: "#008B8B" }]}
+                  >
+                    <FastImage
+                      source={require("../assets/images/pieChartIcon.png")}
+                      style={styles.pieChartIcon}
+                    />
+                    <View style={styles.salesCardTextContainer}>
+                      <Text style={styles.salesCardAmount}>{"15"}</Text>
+                      <Text style={styles.salesCardLabel}>
+                        {"Today's Order"}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </TouchableOpacity>
-            ) : (
-              <Pressable
-                style={{
-                  height: 80,
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-                onPress={() => navigation.navigate("orderScreen")}
-              >
-                <Text
-                  style={{
-                    fontFamily: Secondary400,
-                    fontSize: 16,
-                    color: AppColor.black,
-                  }}
-                >
-                  {"Check current order?"}
-                </Text>
-              </Pressable>
-            )}
-          </View>
-
-          {/* Sales Overview */}
-          <View style={styles.salesOverviewContainer}>
-            <View style={styles.sectionTitleContainer}>
-              <Text style={styles.sectionTitle}>{"Sales Overview"}</Text>
-            </View>
-            <Divider />
-            <View style={styles.salesOverviewCards}>
-              <View style={styles.salesCard}>
-                <FastImage
-                  source={require("../assets/images/pieChartIcon.png")}
-                  style={styles.pieChartIcon}
-                />
-                <View style={styles.salesCardTextContainer}>
-                  <Text style={styles.salesCardAmount}>{"$2,500"}</Text>
-                  <Text style={styles.salesCardLabel}>{"Today's Sales "}</Text>
-                </View>
               </View>
-              <View style={[styles.salesCard, { backgroundColor: "#008B8B" }]}>
-                <FastImage
-                  source={require("../assets/images/pieChartIcon.png")}
-                  style={styles.pieChartIcon}
-                />
-                <View style={styles.salesCardTextContainer}>
-                  <Text style={styles.salesCardAmount}>{"15"}</Text>
-                  <Text style={styles.salesCardLabel}>{"Today's Order"}</Text>
+
+              {/* Quick Stats */}
+              <View style={styles.quickStatsSection}>
+                <View style={styles.sectionTitleContainer}>
+                  <Text style={styles.sectionTitle}>{"Quick Stats"}</Text>
+                </View>
+                <Divider />
+                <View style={styles.quickStatsItemsContainer}>
+                  <QuickStatsComponent
+                    title={"Monthly Earnings"}
+                    subTitle={"$350.00"}
+                    icon={require("../assets/images/monthlyEarningIcon.png")}
+                  />
+                  <QuickStatsComponent
+                    title={"Monthly Delivered Desserts"}
+                    subTitle={"50"}
+                    icon={require("../assets/images/monthlyDeliveredDessertIcon.png")}
+                  />
+                  <QuickStatsComponent
+                    title={"Active Customers"}
+                    subTitle={"35"}
+                    icon={require("../assets/images/activeCustomerIcon.png")}
+                  />
+                  <QuickStatsComponent
+                    title={"Trending Items"}
+                    subTitle={"Burger"}
+                    icon={require("../assets/images/trendingItemsIcon.png")}
+                  />
                 </View>
               </View>
             </View>
-          </View>
-
-          {/* Quick Stats */}
-          <View style={styles.quickStatsSection}>
-            <View style={styles.sectionTitleContainer}>
-              <Text style={styles.sectionTitle}>{"Quick Stats"}</Text>
-            </View>
-            <Divider />
-            <View style={styles.quickStatsItemsContainer}>
-              <QuickStatsComponent
-                title={"Monthly Earnings"}
-                subTitle={"$350.00"}
-                icon={require("../assets/images/monthlyEarningIcon.png")}
-              />
-              <QuickStatsComponent
-                title={"Monthly Delivered Desserts"}
-                subTitle={"50"}
-                icon={require("../assets/images/monthlyDeliveredDessertIcon.png")}
-              />
-              <QuickStatsComponent
-                title={"Active Customers"}
-                subTitle={"35"}
-                icon={require("../assets/images/activeCustomerIcon.png")}
-              />
-              <QuickStatsComponent
-                title={"Trending Items"}
-                subTitle={"Burger"}
-                icon={require("../assets/images/trendingItemsIcon.png")}
-              />
-            </View>
-          </View>
-        </View>
+          </>
+        ) : null}
       </ScrollView>
 
       {/* Preparation Time Modal */}
@@ -1634,7 +1835,6 @@ const styles = StyleSheet.create({
     fontFamily: Secondary400,
     fontSize: 14,
     color: "#6F6F6F",
-    marginHorizontal: 16,
   },
   orderHeader: {
     flexDirection: "row",

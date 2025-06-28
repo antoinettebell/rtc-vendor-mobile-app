@@ -26,6 +26,8 @@ import {
 } from "../redux/slices/foodTruckProfileSlice";
 import FastImage from "@d11/react-native-fast-image";
 
+const dishLocalImage = require("../assets/images/cutlery.png");
+
 const MenuDishListScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -55,7 +57,7 @@ const MenuDishListScreen = ({ navigation, route }) => {
         payload: { available: value },
         fooditem_id: menuId,
       });
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         dispatch(setSelectedFoodItems(temp));
       }
     } catch (error) {
@@ -69,7 +71,7 @@ const MenuDishListScreen = ({ navigation, route }) => {
     setDataLoading(true);
     try {
       const response = await getAllFoodItemsByCatID_API(category_id);
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         console.log("response => ", response);
         // set all food items of a category
         dispatch(setSelectedFoodItems(response.data.menuList || []));
@@ -179,7 +181,9 @@ const MenuDishListScreen = ({ navigation, route }) => {
                 }}
               >
                 <FastImage
-                  source={{ uri: item.imgUrls[0] }}
+                  source={
+                    item.imgUrls[0] ? { uri: item.imgUrls[0] } : dishLocalImage
+                  }
                   style={{
                     height: 83,
                     width: 83,

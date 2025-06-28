@@ -45,3 +45,19 @@ export const orderCurrentStatusNames = {
   READY_FOR_PICKUP: "Ready for pickup",
   COMPLETED: "Completed",
 };
+
+export const notificationTypes = {
+  new_order: "NEW_ORDER",
+  order_cancelled: "ORDER_CANCELLED",
+  order_accepted: "ORDER_ACCEPTED",
+  order_rejected: "ORDER_REJECTED",
+  order_preparing: "ORDER_PREPARING",
+  order_ready_for_pickup: "ORDER_READY_FOR_PICKUP",
+  order_completed: "ORDER_COMPLETED",
+};
+
+export const vendorProfileStatus = {
+  pending: "PENDING",
+  approved: "APPROVED",
+  rejected: "REJECTED",
+};

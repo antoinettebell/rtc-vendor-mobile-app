@@ -59,7 +59,7 @@ const ForgetPasswordScreen = () => {
           userType: "VENDOR",
         });
         console.log("forgotPassword_API API response ====> ", response);
-        if (response.success && response.data) {
+        if (response?.success && response?.data) {
           navigation.navigate("otpVerification", {
             verificationFor: "forget-password",
             data: { ...response.data, user: { email } },

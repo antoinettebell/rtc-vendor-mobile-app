@@ -17,7 +17,7 @@ const TermsOfServiceScreen = ({ navigation }) => {
     setLoading(true);
     try {
       const response = await tnc_API();
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         console.log("Response => ", response);
         setHtmlContent(response.data.termsConditions);
       }

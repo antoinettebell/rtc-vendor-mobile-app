@@ -141,7 +141,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
         payload,
         foodTruckId: user?.foodTruck?._id,
       });
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         console.log("response => ", response);
         dispatch(updateFoodTruck(response.data.foodtruck));
         dispatch(setSelectedCuisine(response.data.foodtruck.cuisine));
@@ -205,7 +205,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
     try {
       const foodtruck_id = user?.foodTruck?._id;
       const response = await getFoodtruckDetail_API(foodtruck_id);
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         console.log("response => ", response);
         // dispatch(updateFoodTruck(response.data.foodtruck));
         // dispatch(setSelectedCuisine(response.data.foodtruck.cuisine));

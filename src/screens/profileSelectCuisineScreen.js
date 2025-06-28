@@ -63,7 +63,7 @@ const ProfileSelectCuisineScreen = ({ navigation }) => {
       if (totalPage > page) {
         const response = await cuisineList_API({ page: page + 1 });
         console.log("response => ", response);
-        if (response.success && response.data) {
+        if (response?.success && response?.data) {
           if (Number(response.data.page) === 1) {
             setCuisineData(response.data.cuisineList || []);
           } else {
@@ -101,7 +101,7 @@ const ProfileSelectCuisineScreen = ({ navigation }) => {
         payload: foodTruckPayload,
         foodTruckId,
       });
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         dispatch(updateFoodTruck(response.data.foodtruck));
         dispatch(setSelectedCuisine(selectedCuisines));
         dispatch(setSelectedLocations(response.data.foodtruck.locations));
@@ -164,6 +164,7 @@ const ProfileSelectCuisineScreen = ({ navigation }) => {
             onChangeText={setSearchText}
             style={styles.searchInput}
             contentStyle={{ fontFamily: Secondary400 }}
+            autoCapitalize="sentences"
             outlineColor="transparent"
             activeOutlineColor={AppColor.primary}
             left={<TextInput.Icon icon="magnify" color="#C5C5C7" />}

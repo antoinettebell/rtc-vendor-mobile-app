@@ -18,11 +18,17 @@ import StatusBarManager from "../components/StatusBarManager";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
 import { Divider, Menu } from "react-native-paper";
 import { getOrderList_API, updateOrderStatusByID_API } from "../api/appAPI";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
-import { orderStatusStrings, PROFILE_AVATAR } from "../utils/constants";
+import {
+  orderCurrentStatusNames,
+  orderStatusStrings,
+  PROFILE_AVATAR,
+  vendorProfileStatus,
+} from "../utils/constants";
 import {
   calculateTotalPreparationTime,
+  extractAdvanceOrderLocationAndTime,
   getDisabledStatuses,
 } from "../helpers/order.helper";
 import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
@@ -30,6 +36,7 @@ import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
 const OrderScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
+  const { profileStatus } = useSelector((state) => state.userReducer);
 
   const [dataLoading, setDataLoading] = useState(false);
   const [activeStage, setActiveStage] = useState("current");
@@ -52,6 +59,7 @@ const OrderScreen = ({ navigation }) => {
       item.orderStatus === orderStatusStrings.completed ||
       item.orderStatus === orderStatusStrings.cancel ||
       false;
+    const locationData = extractAdvanceOrderLocationAndTime(item);
 
     return (
       <TouchableOpacity
@@ -80,7 +88,7 @@ const OrderScreen = ({ navigation }) => {
                 onPress={() => handleMenuVisibility({ menuIndex: index })}
               >
                 <Text style={styles.menuAnchorText}>
-                  {item.orderStatus.replace(/_/g, " ")}
+                  {orderCurrentStatusNames[item.orderStatus]}
                 </Text>
                 <Feather
                   name="chevron-down"
@@ -174,16 +182,20 @@ const OrderScreen = ({ navigation }) => {
         </View>
         {/* Order ID and Location */}
         <View style={styles.orderIdLocationContainer}>
-          <Text numberOfLines={1} style={styles.orderIdText}>
-            {"Order #" + item._id}
-          </Text>
+          <View style={{ width: "75%", paddingRight: 8 }}>
+            <Text numberOfLines={1} style={styles.orderIdText}>
+              {"Order #" + item._id}
+            </Text>
+          </View>
           <View style={styles.locationContainer}>
             <MaterialCommunityIcons
               name="map-marker-outline"
               size={16}
               color={AppColor.black}
             />
-            <Text style={styles.locationText}>{"13 Streat"}</Text>
+            <Text numberOfLines={1} style={styles.locationText}>
+              {locationData?.locationTitle}
+            </Text>
           </View>
         </View>
         {/* Order User Details */}
@@ -370,7 +382,7 @@ const OrderScreen = ({ navigation }) => {
                 },
               });
               console.log("response => ", response);
-              if (response.success && response.data) {
+              if (response?.success && response?.data) {
                 const tempOrderData = orderData.map((item) => {
                   if (item._id === order?._id) {
                     return {
@@ -445,7 +457,7 @@ const OrderScreen = ({ navigation }) => {
         },
       });
       console.log("response => ", response);
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         const tempOrderData = orderData.map((item) => {
           if (item._id === timeModal?.orderData?._id) {
             return {
@@ -506,7 +518,7 @@ const OrderScreen = ({ navigation }) => {
         payload,
       });
       console.log("response => ", response);
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         const tempOrderData = orderData.map((item) => {
           if (item._id === order_id) {
             return {
@@ -539,7 +551,7 @@ const OrderScreen = ({ navigation }) => {
     try {
       const response = await getOrderList_API({ page, limit: 20, advance });
       console.log("reponse => ", response);
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         setTotalPages(response.data.totalPages);
         setCurrentPage(page);
 
@@ -584,67 +596,93 @@ const OrderScreen = ({ navigation }) => {
         <Text style={styles.headerTitle}>{"Orders"}</Text>
       </View>
 
-      {/* Button Container */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={
-            activeStage === "current"
-              ? styles.activeButton
-              : styles.inactiveButton
-          }
-          onPress={() => handleStageChange("current")}
-          disabled={dataLoading}
-        >
-          <Text
-            style={
-              activeStage === "current"
-                ? styles.activeButtonText
-                : styles.inactiveButtonText
-            }
-          >
-            {"Current Orders"}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={
-            activeStage === "advance"
-              ? styles.activeButton
-              : styles.inactiveButton
-          }
-          onPress={() => handleStageChange("advance")}
-          disabled={dataLoading}
-        >
-          <Text
-            style={
-              activeStage === "advance"
-                ? styles.activeButtonText
-                : styles.inactiveButtonText
-            }
-          >
-            {"Advance Orders"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {profileStatus === vendorProfileStatus.approved ? (
+        <>
+          {/* Button Container */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={
+                activeStage === "current"
+                  ? styles.activeButton
+                  : styles.inactiveButton
+              }
+              onPress={() => handleStageChange("current")}
+              disabled={dataLoading}
+            >
+              <Text
+                style={
+                  activeStage === "current"
+                    ? styles.activeButtonText
+                    : styles.inactiveButtonText
+                }
+              >
+                {"Current Orders"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={
+                activeStage === "advance"
+                  ? styles.activeButton
+                  : styles.inactiveButton
+              }
+              onPress={() => handleStageChange("advance")}
+              disabled={dataLoading}
+            >
+              <Text
+                style={
+                  activeStage === "advance"
+                    ? styles.activeButtonText
+                    : styles.inactiveButtonText
+                }
+              >
+                {"Advance Orders"}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-      {/* Content Container */}
-      <View style={styles.contentContainer}>
-        <FlatList
-          data={orderData}
-          extraData={orderData}
-          keyExtractor={(item) => item._id.toString()}
-          renderItem={renderOrderComponent}
-          contentContainerStyle={styles.flatListContent}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.8}
-          ListFooterComponent={renderFooter}
-          refreshing={dataLoading}
-          onRefresh={handleRefresh}
-          ListEmptyComponent={renderEmptyComponent}
-          showsVerticalScrollIndicator={false}
-        />
-      </View>
+          {/* Content Container */}
+          <View style={styles.contentContainer}>
+            <FlatList
+              data={orderData}
+              extraData={orderData}
+              keyExtractor={(item) => item._id.toString()}
+              renderItem={renderOrderComponent}
+              contentContainerStyle={styles.flatListContent}
+              onEndReached={handleLoadMore}
+              onEndReachedThreshold={0.8}
+              ListFooterComponent={renderFooter}
+              refreshing={dataLoading}
+              onRefresh={handleRefresh}
+              ListEmptyComponent={renderEmptyComponent}
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
+        </>
+      ) : (
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            paddingHorizontal: 16,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 16,
+              fontFamily: Secondary400,
+              color: AppColor.black,
+              textAlign: "center",
+            }}
+          >
+            {
+              "This feature will become available once your\nprofile is approved."
+            }
+          </Text>
+        </View>
+      )}
 
       {/* Preparation Time Modal */}
       <CustomPrepTimeModal
@@ -898,11 +936,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 16,
   },
   locationContainer: {
+    maxWidth: "25%",
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "flex-end",
     gap: 4,
   },
   locationText: {

@@ -28,6 +28,7 @@ import {
 import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
 import {
   calculateTotalPreparationTime,
+  extractAdvanceOrderLocationAndTime,
   getNextOrderStatus,
 } from "../helpers/order.helper";
 
@@ -44,6 +45,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
   const [timeModal, setTimeModal] = useState(null);
   const [prepTimeError, setPrepTimeError] = useState("");
   const [nextOrderStatus, setNextOrderStatus] = useState(null);
+  const [locationTimeAdvanceData, setLocationTimeAdvanceData] = useState(null);
 
   // Modal cancel press
   const onModalCancelPress = () => {
@@ -76,7 +78,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
         },
       });
       console.log("response => ", response);
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         setOrderData((prev) => ({
           ...prev,
           orderStatus: response.data.order.orderStatus,
@@ -126,7 +128,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                 },
               });
               console.log("response => ", response);
-              if (response.success && response.data) {
+              if (response?.success && response?.data) {
                 setOrderData((prev) => ({
                   ...prev,
                   orderStatus: response.data.order.orderStatus,
@@ -198,7 +200,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
         },
       });
       console.log("response => ", response);
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         setOrderData((prev) => ({
           ...prev,
           orderStatus: response.data.order.orderStatus,
@@ -228,10 +230,14 @@ const OrderDetailsScreen = ({ navigation, route }) => {
       const order_id = params.orderId;
       const response = await getOrderByID_API(order_id);
       console.log("response => ", response);
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         setOrderData(response.data.order);
+        setLocationTimeAdvanceData(
+          extractAdvanceOrderLocationAndTime(response.data.order)
+        );
       } else {
         setOrderData(null);
+        setLocationTimeAdvanceData(null);
       }
     } catch (error) {
       console.log("error => ", error);
@@ -294,6 +300,94 @@ const OrderDetailsScreen = ({ navigation, route }) => {
           contentContainerStyle={styles.scrollViewContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* Advance Order Location and Time */}
+          {locationTimeAdvanceData?.advanceOrder ? (
+            <View
+              style={[
+                styles.orderDetailsContainer,
+                { backgroundColor: "rgba(252, 123, 3, 0.1)" },
+              ]}
+            >
+              <Text
+                numberOfLines={1}
+                style={{
+                  fontFamily: Primary400,
+                  fontSize: 18,
+                  color: AppColor.primary,
+                  alignSelf: "center",
+                }}
+              >
+                {"Advance Order"}
+              </Text>
+              <Divider
+                style={{
+                  marginVertical: 16,
+                  backgroundColor: AppColor.primary,
+                }}
+              />
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginHorizontal: 8,
+                  marginTop: 8,
+                  gap: 8,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontFamily: Secondary400,
+                    color: AppColor.black,
+                  }}
+                >
+                  {"Location"}
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    fontSize: 14,
+                    fontFamily: Secondary400,
+                    color: AppColor.black,
+                  }}
+                >
+                  {locationTimeAdvanceData?.advanceLocationTitle}
+                </Text>
+              </View>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginHorizontal: 8,
+                  marginTop: 8,
+                  gap: 8,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontFamily: Secondary400,
+                    color: AppColor.black,
+                  }}
+                >
+                  {"Time"}
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    fontSize: 14,
+                    fontFamily: Secondary400,
+                    color: AppColor.black,
+                  }}
+                >
+                  {locationTimeAdvanceData?.advanceTime}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
           {/* Order Details Container */}
           <View style={styles.orderDetailsContainer}>
             {/* Order Header */}
@@ -301,12 +395,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
               <Text style={[styles.orderIdText, { color: AppColor.black }]}>
                 {"Order Status"}
               </Text>
-              <Text
-                style={[
-                  styles.orderIdText,
-                  { color: AppColor.primary, textTransform: "capitalize" },
-                ]}
-              >
+              <Text style={[styles.orderIdText, { color: AppColor.primary }]}>
                 {orderCurrentStatusNames[orderData?.orderStatus]}
               </Text>
             </View>
@@ -319,14 +408,19 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                 marginHorizontal: 8,
               }}
             >
-              <Text
-                numberOfLines={1}
-                style={styles.orderIdText}
-              >{`Order #${orderData?._id}`}</Text>
+              <View style={{ width: "75%", paddingRight: 8 }}>
+                <Text
+                  numberOfLines={1}
+                  style={styles.orderIdText}
+                >{`Order #${orderData?._id}`}</Text>
+              </View>
+
               <View
                 style={{
+                  maxWidth: "25%",
                   flexDirection: "row",
                   alignItems: "center",
+                  justifyContent: "flex-end",
                   gap: 4,
                 }}
               >
@@ -336,13 +430,14 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   color={AppColor.black}
                 />
                 <Text
+                  numberOfLines={1}
                   style={{
                     fontSize: 14,
                     fontFamily: Secondary400,
                     color: AppColor.black,
                   }}
                 >
-                  {"13 Streat"}
+                  {locationTimeAdvanceData?.locationTitle || ""}
                 </Text>
               </View>
             </View>

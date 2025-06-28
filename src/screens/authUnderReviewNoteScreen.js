@@ -6,20 +6,43 @@ import {
   TouchableOpacity,
   Platform,
 } from "react-native";
-import { Text, IconButton } from "react-native-paper";
+import { Text, IconButton, ActivityIndicator } from "react-native-paper";
 import Octicons from "react-native-vector-icons/Octicons";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch } from "react-redux";
 import { onSignin } from "../redux/slices/authSlice";
 import StatusBarManager from "../components/StatusBarManager";
+import {
+  checkFcmToken,
+  checkInstallationId,
+} from "../helpers/notification.helper";
+import { setFcmToken_API } from "../api/appAPI";
 
 export default function AuthUnderReviewNoteScreen() {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
 
-  const handleContinueBtnPress = () => {
-    dispatch(onSignin(true));
+  const [loading, setLoading] = useState(false);
+
+  const handleContinueBtnPress = async () => {
+    setLoading(true);
+    try {
+      const deviceId = await checkInstallationId();
+      const fcmToken = await checkFcmToken();
+      if (deviceId && fcmToken) {
+        const response1 = await setFcmToken_API({
+          token: fcmToken,
+          deviceId: deviceId,
+        });
+        console.log("response => ", response1);
+      }
+    } catch (error) {
+      console.log("error => ", error);
+    } finally {
+      setLoading(false);
+      dispatch(onSignin(true));
+    }
   };
 
   return (
@@ -66,9 +89,14 @@ export default function AuthUnderReviewNoteScreen() {
       <TouchableOpacity
         style={styles.continueButton}
         activeOpacity={0.7}
+        disabled={loading}
         onPress={handleContinueBtnPress}
       >
-        <Text style={styles.continueButtonText}>{"Continue"}</Text>
+        {loading ? (
+          <ActivityIndicator color={AppColor.primary} />
+        ) : (
+          <Text style={styles.continueButtonText}>{"Continue"}</Text>
+        )}
       </TouchableOpacity>
     </View>
   );

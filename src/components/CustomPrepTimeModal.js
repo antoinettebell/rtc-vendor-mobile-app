@@ -71,6 +71,7 @@ const CustomPrepTimeModal = ({
             keyboardType="numeric"
             returnKeyLabel="done"
             returnKeyType="done"
+            autoCapitalize="none"
             error={!!prepTimeError}
             outlineColor={AppColor.border}
             activeOutlineColor={AppColor.primary}

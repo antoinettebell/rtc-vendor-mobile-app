@@ -4,6 +4,7 @@ const initialState = {
   user: null,
   authToken: null,
   selectedPlan: null,
+  profileStatus: null,
 };
 
 const userSlice = createSlice({
@@ -24,6 +25,9 @@ const userSlice = createSlice({
     setSelectedPlan: (state, { payload }) => {
       state.selectedPlan = payload;
     },
+    setProfileStatus: (state, { payload }) => {
+      state.profileStatus = payload;
+    },
     clearUserSlice: () => initialState,
   },
 });
@@ -33,6 +37,7 @@ export const {
   updateFoodTruck,
   setAuthToken,
   setSelectedPlan,
+  setProfileStatus,
   clearUserSlice,
 } = userSlice.actions;
 export default userSlice.reducer;

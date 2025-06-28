@@ -237,7 +237,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                     : {
                         mode: "media",
                         uri: i?.path,
-                        name: i?.filename,
+                        name: `${i?.path?.split("/").pop()}`, // did this because in android > choose from gallary; not have filename
                         type: i.mime,
                       }
                 );
@@ -370,16 +370,12 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
         preparationTime: parseInt(prepTime || 0, 10),
         allowCustomize: customization,
         discount: parseFloat(parseFloat(itemDiscount || 0).toFixed(2)),
+        diet: selectedDiet?.length > 0 ? selectedDiet : [],
       };
-
-      if (selectedDiet.length > 0) {
-        payload.diet = selectedDiet;
-      }
 
       // manage photos image upload
       const imageResult = [];
       for (const image of selectedPhotos) {
-        console.log("image of selectedPhotos => ", image);
         if (image.old === undefined) {
           const formData = new FormData();
           formData.append("file", {
@@ -387,10 +383,9 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
             name: image.name,
             type: image.type,
           });
-          console.log("photo => ", formData);
           try {
             const response = await uploadImage_API(formData);
-            if (response.success && response.data)
+            if (response?.success && response?.data)
               imageResult.push(response.data.file);
           } catch (error) {
             console.log("photo upload error => ", error);
@@ -402,7 +397,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
       payload.imgUrls = imageResult;
 
       const response = await updateFooditemByID_API({ payload, fooditem_id });
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         console.log("response => ", response);
 
         // Update item to food item for a category
@@ -465,7 +460,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
     try {
       const fooditem_id = Params?.foodItem?._id;
       const response = await getFoodItemByID_API(fooditem_id);
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         console.log("response => ", response);
         transformApiDataToState(response.data.menu);
       }
@@ -563,7 +558,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                   outlineColor={AppColor.border}
                   activeOutlineColor={AppColor.primary}
                   outlineStyle={{ borderRadius: 8 }}
-                  autoCapitalize="none"
+                  autoCapitalize="sentences"
                   theme={{ colors: { onSurfaceVariant: "#777" } }}
                 />
                 {!!errors.itemName && (
@@ -663,7 +658,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                   outlineColor={AppColor.border}
                   activeOutlineColor={AppColor.primary}
                   outlineStyle={{ borderRadius: 8 }}
-                  autoCapitalize="none"
+                  autoCapitalize="sentences"
                   theme={{ colors: { onSurfaceVariant: "#777" } }}
                 />
                 {!!errors.itemDescription && (
@@ -765,7 +760,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                     value={itemPrice}
                     onChangeText={handleItemPriceChange}
                     style={styles.input}
-                    contentStyle={styles.inputText}
+                    contentStyle={[styles.inputText, { fontSize: 18 }]}
                     placeholder=""
                     placeholderTextColor={AppColor.placeholderTextColor}
                     mode="outlined"
@@ -775,6 +770,13 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                     activeOutlineColor={AppColor.primary}
                     outlineStyle={{ borderRadius: 8 }}
                     autoCapitalize="none"
+                    left={
+                      <TextInput.Icon
+                        icon={"currency-usd"}
+                        color={AppColor.textHighlighter}
+                        size={20}
+                      />
+                    }
                     theme={{ colors: { onSurfaceVariant: "#777" } }}
                   />
                   {!!errors.itemPrice && (
@@ -795,7 +797,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                     value={itemDiscount}
                     onChangeText={handleItemDiscountChange}
                     style={styles.input}
-                    contentStyle={styles.inputText}
+                    contentStyle={[styles.inputText, { fontSize: 18 }]}
                     placeholder=""
                     placeholderTextColor={AppColor.placeholderTextColor}
                     mode="outlined"
@@ -805,6 +807,13 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                     activeOutlineColor={AppColor.primary}
                     outlineStyle={{ borderRadius: 8 }}
                     autoCapitalize="none"
+                    left={
+                      <TextInput.Icon
+                        icon={"currency-usd"}
+                        color={AppColor.textHighlighter}
+                        size={20}
+                      />
+                    }
                     theme={{ colors: { onSurfaceVariant: "#777" } }}
                   />
                   {!!errors.itemDiscount && (
@@ -837,7 +846,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                     value={minQt}
                     onChangeText={handleMinQtChange}
                     style={styles.input}
-                    contentStyle={styles.inputText}
+                    contentStyle={[styles.inputText, { fontSize: 18 }]}
                     placeholder=""
                     placeholderTextColor={AppColor.placeholderTextColor}
                     mode="outlined"
@@ -847,6 +856,13 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                     activeOutlineColor={AppColor.primary}
                     outlineStyle={{ borderRadius: 8 }}
                     autoCapitalize="none"
+                    left={
+                      <TextInput.Icon
+                        icon={"cart-minus"}
+                        color={AppColor.textHighlighter}
+                        size={20}
+                      />
+                    }
                     theme={{ colors: { onSurfaceVariant: "#777" } }}
                   />
                   {!!errors.qtMin && (
@@ -868,7 +884,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                     value={maxQt}
                     onChangeText={handleMaxQtChange}
                     style={styles.input}
-                    contentStyle={styles.inputText}
+                    contentStyle={[styles.inputText, { fontSize: 18 }]}
                     placeholder=""
                     placeholderTextColor={AppColor.placeholderTextColor}
                     mode="outlined"
@@ -878,6 +894,13 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                     activeOutlineColor={AppColor.primary}
                     outlineStyle={{ borderRadius: 8 }}
                     autoCapitalize="none"
+                    left={
+                      <TextInput.Icon
+                        icon={"cart-plus"}
+                        color={AppColor.textHighlighter}
+                        size={20}
+                      />
+                    }
                     theme={{ colors: { onSurfaceVariant: "#777" } }}
                   />
                   {!!errors.qtMax && (
@@ -902,7 +925,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                   value={prepTime}
                   onChangeText={handlePrepTimeChange}
                   style={styles.input}
-                  contentStyle={styles.inputText}
+                  contentStyle={[styles.inputText, { fontSize: 18 }]}
                   placeholder=""
                   placeholderTextColor={AppColor.placeholderTextColor}
                   mode="outlined"
@@ -912,6 +935,13 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                   outlineStyle={{ borderRadius: 8 }}
                   autoCapitalize="none"
                   keyboardType="numeric"
+                  left={
+                    <TextInput.Icon
+                      icon={"clock-outline"}
+                      color={AppColor.textHighlighter}
+                      size={20}
+                    />
+                  }
                   theme={{ colors: { onSurfaceVariant: "#777" } }}
                 />
                 {!!errors.prepTime && (

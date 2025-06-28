@@ -262,14 +262,14 @@ export const getOrderList_API = async ({
   page = 1,
   limit = 20,
   status = null,
-  advance = false,
+  advance = undefined,
 } = {}) => {
   try {
     let URL = `${GET_ORDER_LIST}?page=${page}&limit=${limit}`;
     if (status) {
       URL = `${URL}&orderStatus=${status}`;
     }
-    if (advance) {
+    if (advance !== undefined) {
       URL = `${URL}&advance=${advance}`;
     }
     const response = await apiClient.get(URL, { skipToken: false });

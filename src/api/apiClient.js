@@ -5,6 +5,7 @@ import { store } from "../redux/store";
 import { clearUserSlice } from "../redux/slices/userSlice";
 import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlice";
 import { onSignOut } from "../redux/slices/authSlice";
+import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlice";
 
 const API_URL = Config.API_URL;
 const API_PREFIX = Config.API_PREFIX;
@@ -54,6 +55,7 @@ apiClient.interceptors.response.use(
       store.dispatch(clearUserSlice());
       store.dispatch(clearFoodTruckProfileSlice());
       store.dispatch(onSignOut());
+      store.dispatch(clearPushNotificationRedux());
 
       // showToast({
       //   type: "error",

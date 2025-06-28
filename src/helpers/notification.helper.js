@@ -7,6 +7,9 @@ import {
   AuthorizationStatus,
 } from "@react-native-firebase/messaging";
 import notifee from "@notifee/react-native";
+import { notificationTypes } from "../utils/constants";
+import { store } from "../redux/store";
+import { addPushNotificationOrder } from "../redux/slices/pushNotificationSlice";
 
 const installationsInstance = getInstallations();
 const messagingInstance = getMessaging();
@@ -74,5 +77,24 @@ export const onDisplayNotification = async (remoteMessage) => {
     });
   } catch (err) {
     console.log("onDisplayNotification Error => ", err);
+  }
+};
+
+export const handleNotificationAction = async (notification) => {
+  console.log("handleNotificationAction => ", notification);
+
+  if (!notification?.data) return;
+  const notificationData = notification.data;
+
+  if (notificationData?.activityType === notificationTypes.new_order) {
+    const isSignedIn = store.getState().authReducer.isSignedIn;
+
+    console.log("New Order Notification");
+    // TODO: Handle new order notification
+    if (notificationData && notificationData?.orderId && isSignedIn) {
+      store.dispatch(
+        addPushNotificationOrder({ orderId: notificationData.orderId })
+      );
+    }
   }
 };

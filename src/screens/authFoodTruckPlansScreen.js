@@ -24,6 +24,7 @@ import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlic
 import { onSignOut } from "../redux/slices/authSlice";
 import StatusBarManager from "../components/StatusBarManager";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
+import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlice";
 
 const AuthFoodTruckPlansScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -66,6 +67,7 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
             dispatch(clearUserSlice());
             dispatch(clearFoodTruckProfileSlice());
             dispatch(onSignOut());
+            dispatch(clearPushNotificationRedux());
           },
         },
       ]
@@ -218,7 +220,7 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
     setDataLoading(true);
     try {
       const response = await getPlansData_API();
-      if (response.success && response.data) {
+      if (response?.success && response?.data) {
         console.log("response => ", response);
         setPlansData(response.data.planList);
         if (selectedPlan) {

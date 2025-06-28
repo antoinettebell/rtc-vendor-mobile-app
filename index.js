@@ -12,21 +12,26 @@ import { persistor, store } from "./src/redux/store";
 import Config from "react-native-config";
 import notifee, { EventType } from "@notifee/react-native";
 import { getMessaging } from "@react-native-firebase/messaging";
-import { onDisplayNotification } from "./src/helpers/notification.helper";
+import {
+  handleNotificationAction,
+  onDisplayNotification,
+} from "./src/helpers/notification.helper";
 
 console.log(Config);
 
-const ProcessOnNotification = (notification) => {
+const processOnNotification = async (notification) => {
   // Android: when user clicked on backgroud state notification
-  console.log("ProcessOnNotification => ", notification);
+  console.log("processOnNotification => ", notification);
+  await handleNotificationAction(notification);
 };
 
-getMessaging().onMessage((remoteMessage) => {
-  onDisplayNotification(remoteMessage);
-  console.log("forground remoteMessage ================> ", remoteMessage);
+getMessaging().onMessage(async (notification) => {
+  console.log("Forground Remote-Message => ", notification);
+  await onDisplayNotification(notification);
+  await handleNotificationAction(notification);
 });
 
-getMessaging().onNotificationOpenedApp(ProcessOnNotification);
+getMessaging().onNotificationOpenedApp(processOnNotification);
 
 notifee.onForegroundEvent(
   // android/ios both: function trigger when any notification trigger on foreground state
@@ -38,6 +43,7 @@ notifee.onForegroundEvent(
         break;
       case EventType.PRESS:
         console.log("User pressed notification", detail.notification);
+        processOnNotification(detail.notification);
         break;
     }
   }

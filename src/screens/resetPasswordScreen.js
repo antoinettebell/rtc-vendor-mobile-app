@@ -92,7 +92,7 @@ const ResetPasswordScreen = ({ route }) => {
       };
       const response = await changePassword_API(payload);
       console.log("Response => ", response);
-      if (response.success) {
+      if (response?.success) {
         setModalVisible(true);
       }
     } catch (error) {
@@ -203,11 +203,13 @@ const ResetPasswordScreen = ({ route }) => {
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
                 outlineStyle={{ borderRadius: 8 }}
+                autoCapitalize="none"
                 right={
                   <TextInput.Icon
                     icon={passwordVisible ? "eye-off" : "eye"}
                     onPress={togglePasswordVisibility}
                     color={AppColor.textHighlighter}
+                    forceTextInputFocus={false}
                   />
                 }
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
@@ -230,6 +232,7 @@ const ResetPasswordScreen = ({ route }) => {
                 mode="outlined"
                 secureTextEntry={!passwordVisible}
                 dense
+                autoCapitalize="sentences"
                 style={styles.input}
                 contentStyle={styles.inputText}
                 outlineColor={AppColor.border}
@@ -240,6 +243,7 @@ const ResetPasswordScreen = ({ route }) => {
                     icon={passwordVisible ? "eye-off" : "eye"}
                     onPress={togglePasswordVisibility}
                     color={AppColor.textHighlighter}
+                    forceTextInputFocus={false}
                   />
                 }
                 theme={{ colors: { onSurfaceVariant: "#777" } }}

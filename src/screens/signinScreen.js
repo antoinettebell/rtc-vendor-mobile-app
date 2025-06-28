@@ -286,7 +286,7 @@ const SignInScreen = () => {
       try {
         const response = await login_API({ email, password });
         console.log("response ====> ", response);
-        if (response.success && response.data) {
+        if (response?.success && response?.data) {
           dispatch(setUser(response.data.user));
           dispatch(
             setSelectedCuisine(response.data.user.foodTruck.cuisine || [])
@@ -431,6 +431,7 @@ const SignInScreen = () => {
                 placeholder=""
                 placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
+                autoCapitalize="none"
                 error={!!passwordError}
                 secureTextEntry={!passwordVisible}
                 outlineColor={AppColor.border}
@@ -441,6 +442,7 @@ const SignInScreen = () => {
                     icon={passwordVisible ? "eye-off" : "eye"}
                     onPress={togglePasswordVisibility}
                     color={AppColor.textHighlighter}
+                    forceTextInputFocus={false}
                   />
                 }
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
