@@ -32,7 +32,7 @@ import AuthFoodTruckProfileScreen from "./src/screens/authFoodTruckProfileScreen
 import AuthSelectCuisineScreen from "./src/screens/authSelectCuisineScreen";
 import AuthServingLocationScreen from "./src/screens/authServingLocationScreen";
 import AuthMapScreen from "./src/screens/authMapScreen";
-import AuthAvailabilityScreen from "./src/screens/authSetAvilabilityScreen";
+import AuthAvailabilityScreen from "./src/screens/authSetAvailabilityScreen";
 import AuthUnderReviewNoteScreen from "./src/screens/authUnderReviewNoteScreen";
 import ForgetPasswordScreen from "./src/screens/forgetPasswordScreen";
 import HomeScreen from "./src/screens/homeScreen";
@@ -44,7 +44,7 @@ import EditProfileScreen from "./src/screens/editProfileScreen";
 import ProfileSelectCuisineScreen from "./src/screens/profileSelectCuisineScreen";
 import ProfileServingLocationScreen from "./src/screens/profileServingLocationScreen";
 import ProfileMapScreen from "./src/screens/profileMapScreen";
-import ProfileAvailabilityScreen from "./src/screens/profileSetAvilabilityScreen";
+import ProfileAvailabilityScreen from "./src/screens/profileSetAvailabilityScreen";
 import MenuDishListScreen from "./src/screens/menuDishListScreen";
 import MenuAddDishItemScreen from "./src/screens/menuAddDishItemScreen";
 import MenuEditDishItemScreen from "./src/screens/menuEditDishItemScreen";

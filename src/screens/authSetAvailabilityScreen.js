@@ -35,7 +35,7 @@ import { fullDayNames } from "../utils/constants";
 
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-const AuthSetAvilabilityScreen = ({ navigation }) => {
+const AuthSetAvailabilityScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
 
@@ -521,7 +521,7 @@ const AuthSetAvilabilityScreen = ({ navigation }) => {
   );
 };
 
-export default AuthSetAvilabilityScreen;
+export default AuthSetAvailabilityScreen;
 
 const styles = StyleSheet.create({
   container: {
