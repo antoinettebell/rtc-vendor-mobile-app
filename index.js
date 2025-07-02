@@ -12,6 +12,7 @@ import { persistor, store } from "./src/redux/store";
 import Config from "react-native-config";
 import notifee, { EventType } from "@notifee/react-native";
 import { getMessaging } from "@react-native-firebase/messaging";
+import "react-native-get-random-values";
 import {
   handleNotificationAction,
   onDisplayNotification,

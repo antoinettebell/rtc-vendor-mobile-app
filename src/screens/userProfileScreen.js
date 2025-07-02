@@ -39,7 +39,7 @@ const UserProfileScreen = ({ navigation }) => {
   const [socialMedia, setSocialMedia] = useState([]);
 
   const updateStateOnDataFetch = (USER_DATA, FOOD_TRUCK_DATA) => {
-    setSocialMedia(FOOD_TRUCK_DATA?.socialMedia);
+    setSocialMedia(FOOD_TRUCK_DATA?.socialMedia || []);
 
     dispatch(setSelectedCuisine(FOOD_TRUCK_DATA?.cuisine));
     dispatch(setSelectedLocations(FOOD_TRUCK_DATA?.locations));

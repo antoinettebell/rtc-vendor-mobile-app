@@ -42,6 +42,38 @@
       "sha1": "352e52b71c4a96eff8acddfa30625f6ea13d0dde"
     },
     {
+      "path": "src/assets/fonts/Mulish-Black.ttf",
+      "sha1": "a7c7922e247c0271f9f1b4d52b301c20b2527a50"
+    },
+    {
+      "path": "src/assets/fonts/Mulish-Bold.ttf",
+      "sha1": "add99a28114b7a1587754f5442ebfe2d2984a7b2"
+    },
+    {
+      "path": "src/assets/fonts/Mulish-ExtraBold.ttf",
+      "sha1": "e418d204b753ba1b6031576a69b23c992b66df15"
+    },
+    {
+      "path": "src/assets/fonts/Mulish-ExtraLight.ttf",
+      "sha1": "f159d18c94352b388e44309ab961f339fd900341"
+    },
+    {
+      "path": "src/assets/fonts/Mulish-Light.ttf",
+      "sha1": "aaa55e7a1d1390a5880bc27711197c4d0ea3f2bd"
+    },
+    {
+      "path": "src/assets/fonts/Mulish-Medium.ttf",
+      "sha1": "72eec8219aa7f14d925c4ddd8fec512639e4bb3f"
+    },
+    {
+      "path": "src/assets/fonts/Mulish-Regular.ttf",
+      "sha1": "b6b9880411d487a765ce0c795b0505c1ff37a012"
+    },
+    {
+      "path": "src/assets/fonts/Mulish-SemiBold.ttf",
+      "sha1": "e8837467f789e00816d52dae60f5d10132402734"
+    },
+    {
       "path": "src/assets/fonts/P22 Arts And Crafts Regular.ttf",
       "sha1": "e4f5178c42539b9ee0151223e78f4da62b5cf27c"
     }

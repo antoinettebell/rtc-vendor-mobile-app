@@ -45,3 +45,12 @@ export const SubPrimary400 =
 
 export const Secondary400 =
   Platform.OS === "ios" ? "IM Fell English" : "IMFellEnglish-Regular";
+
+export const Mulish200 = "Mulish-ExtraLight";
+export const Mulish300 = "Mulish-Light";
+export const Mulish400 = "Mulish-Regular";
+export const Mulish500 = "Mulish-Medium";
+export const Mulish600 = "Mulish-SemiBold";
+export const Mulish700 = "Mulish-Bold";
+export const Mulish800 = "Mulish-ExtraBold";
+export const Mulish900 = "Mulish-Black";

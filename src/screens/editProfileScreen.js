@@ -28,7 +28,7 @@ import ImagePicker from "react-native-image-crop-picker";
 import { RESULTS } from "react-native-permissions";
 import FastImage from "@d11/react-native-fast-image";
 import usePermission from "../hooks/usePermission";
-import { permission } from "../utils/permissions";
+import { permission } from "../helpers/permission.helper";
 import StatusBarManager from "../components/StatusBarManager";
 import MediaPickerDialog from "../components/MediaPickerDialog";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
@@ -494,7 +494,7 @@ const EditProfileScreen = ({ navigation }) => {
 
     // manage social media links
     processSocialMediaResponse(
-      FOOD_TRUCK_DATA?.socialMedia,
+      FOOD_TRUCK_DATA?.socialMedia || [],
       isElitePlan ? "elite" : isPlatinumPlan ? "platinum" : "basic"
     );
 

@@ -16,7 +16,7 @@ import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplet
 import Geolocation from "@react-native-community/geolocation";
 import Config from "react-native-config";
 import usePermission from "../hooks/usePermission";
-import { permission } from "../utils/permissions";
+import { permission } from "../helpers/permission.helper";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { getLocationName } from "../api/appAPI";

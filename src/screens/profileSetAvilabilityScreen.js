@@ -18,8 +18,10 @@ import {
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { Dropdown } from "react-native-element-dropdown";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import moment from "moment";
+import { v4 as uuidv4 } from "uuid";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getFoodtruckDetail_API,
@@ -27,10 +29,17 @@ import {
 } from "../api/appAPI";
 import { updateFoodTruck } from "../redux/slices/userSlice";
 import StatusBarManager from "../components/StatusBarManager";
-import { setSelectedCuisine, setSelectedLocations } from "../redux/slices/foodTruckProfileSlice";
+import {
+  setSelectedCuisine,
+  setSelectedLocations,
+} from "../redux/slices/foodTruckProfileSlice";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
-
-const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+import {
+  hasTimeOverlap,
+  transformApiDataToState,
+  transformLocationsForAPI,
+} from "../helpers/availability.helper";
+import { fullDayNames } from "../utils/constants";
 
 export default function ProfileAvailabilityScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -89,6 +98,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
   const addLocation = (dayIndex) => {
     const updated = [...availability];
     updated[dayIndex].locations.push({
+      uniqueId: uuidv4(),
       value: null,
       openTime: moment().startOf("day").toDate(), // 00:00
       closeTime: moment().startOf("day").toDate(), // 00:00
@@ -97,39 +107,159 @@ export default function ProfileAvailabilityScreen({ navigation }) {
     setAvailability(updated);
   };
 
-  const transformLocations = (data) => {
-    return data.flatMap((dayItem) =>
-      dayItem.locations
-        .filter((location) => location.enabled && location.value)
-        .map((location) => {
-          return {
-            _id: location._id, // Keep existing ID if available
-            locationId: location.value,
-            day: dayItem.day.toLowerCase(),
-            startTime: moment(location.openTime).format("HH:mm"),
-            endTime: moment(location.closeTime).format("HH:mm"),
-            available: true,
-          };
-        })
+  const removeLocation = (dayIndex, locIndex) => {
+    Alert.alert(
+      "Remove Timeslot",
+      "Are you sure you want to remove this time slot?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Remove",
+          onPress: () => {
+            const updatedAvailability = [...availability];
+            const dayToUpdate = updatedAvailability[dayIndex];
+
+            // Remove the specific location slot
+            dayToUpdate.locations.splice(locIndex, 1);
+
+            // If, after removal, there are no more locations for this day,
+            // add a default, disabled one.
+            if (dayToUpdate.locations.length === 0) {
+              dayToUpdate.locations.push({
+                uniqueId: uuidv4(),
+                value: null,
+                openTime: moment().startOf("day").toDate(), // 00:00
+                closeTime: moment().startOf("day").toDate(), // 00:00
+                enabled: false,
+              });
+            }
+            setAvailability(updatedAvailability);
+          },
+        },
+      ],
+      { cancelable: true }
     );
   };
 
+  // Handle API call for saving data
   const handleContinuePress = async () => {
     console.log("availability => ", availability);
 
+    // --- Validation: Check for missing location ---
     for (let day of availability) {
       for (let loc of day.locations) {
         if (loc.enabled && !loc.value) {
           Alert.alert(
             "Missing Location",
-            `Please select a location for ${day.day} before continuing.`
+            `Please select a location for ${fullDayNames[day.day] || day.day} before continuing.`
           );
           return;
         }
       }
     }
 
-    const finalResult = transformLocations(availability);
+    // --- COMBINED VALIDATION: End Time strictly after Start Time & Time Slot Overlaps for the same day ---
+    console.log("Starting combined time slot validations...");
+    for (let i = 0; i < availability.length; i++) {
+      const currentDay = availability[i];
+      const fullCurrentDayName = fullDayNames[currentDay.day] || currentDay.day; // Get full day name
+      console.log(`Checking availability for day: ${fullCurrentDayName}`);
+
+      // Filter only enabled slots that have a location selected
+      const enabledAndSelectedLocations = currentDay.locations.filter(
+        (loc) => loc.enabled && loc.value
+      );
+      console.log(
+        `  Enabled and selected locations for ${fullCurrentDayName}:`,
+        enabledAndSelectedLocations.length
+      );
+
+      // FIRST: Validate each individual slot's StartTime vs EndTime
+      for (let j = 0; j < enabledAndSelectedLocations.length; j++) {
+        const loc = enabledAndSelectedLocations[j];
+        const startTime = moment(loc.openTime);
+        const endTime = moment(loc.closeTime);
+
+        console.log(
+          `    Checking Open Time vs Close Time for '${loc.locationTitle || "Unnamed Location"}' on ${fullCurrentDayName}: ${startTime.format("HH:mm")} - ${endTime.format("HH:mm")}`
+        );
+
+        if (!endTime.isAfter(startTime)) {
+          Alert.alert(
+            "Invalid Time Slot",
+            `On ${fullCurrentDayName}, the **Close Time** (${endTime.format("h:mm A")}) for '${loc.locationTitle || "an unnamed location slot"}' must be after its **Open Time** (${startTime.format("h:mm A")}). Please adjust.`
+          );
+          console.log("Here I'm stopped!!! Invalid Open/Close Time detected.");
+          return; // Stop execution if an invalid individual time slot is found
+        }
+      }
+
+      // If there's 0 or 1 enabled slot, no overlap is possible for this day, so continue to the next day
+      if (enabledAndSelectedLocations.length < 2) {
+        console.log(
+          `  Not enough enabled slots on ${fullCurrentDayName} to check for overlap.`
+        );
+        continue;
+      }
+
+      // SECOND: Check for overlaps between pairs of time slots on the same day
+      for (let j = 0; j < enabledAndSelectedLocations.length; j++) {
+        const loc1 = enabledAndSelectedLocations[j];
+        console.log(`    Comparing loc1 (index ${j}):`, {
+          day: fullCurrentDayName,
+          location: loc1.locationTitle,
+          open: moment(loc1.openTime).format("HH:mm"),
+          close: moment(loc1.closeTime).format("HH:mm"),
+        });
+
+        // Start inner loop from j + 1 to avoid comparing a slot with itself and to avoid duplicate checks
+        for (let k = j + 1; k < enabledAndSelectedLocations.length; k++) {
+          const loc2 = enabledAndSelectedLocations[k];
+          console.log(`      Comparing with loc2 (index ${k}):`, {
+            day: fullCurrentDayName,
+            location: loc2.locationTitle,
+            open: moment(loc2.openTime).format("HH:mm"),
+            close: moment(loc2.closeTime).format("HH:mm"),
+          });
+
+          if (
+            hasTimeOverlap(
+              loc1.openTime,
+              loc1.closeTime,
+              loc2.openTime,
+              loc2.closeTime
+            )
+          ) {
+            const loc1Name = loc1.locationTitle || "an unnamed location slot";
+            const loc2Name = loc2.locationTitle || "an unnamed location slot";
+
+            Alert.alert(
+              "Time Slot Overlap Detected",
+              `On ${fullCurrentDayName}, the time slot for '${loc1Name}' (**Open Time**: ${moment(loc1.openTime).format("h:mm A")} - **Close Time**: ${moment(loc1.closeTime).format("h:mm A")}) overlaps with the time slot for '${loc2Name}' (**Open Time**: ${moment(loc2.openTime).format("h:mm A")} - **Close Time**: ${moment(loc2.closeTime).format("h:mm A")}). Please adjust your times.`,
+              [{ text: "OK" }]
+            );
+            console.log("Here I'm stopped!!! Overlap detected!");
+            console.log(`    Overlap details:
+            Day: ${fullCurrentDayName}
+            Slot 1: ${loc1Name} (Open Time: ${moment(loc1.openTime).format("HH:mm")} - Close Time: ${moment(loc1.closeTime).format("HH:mm")})
+            Slot 2: ${loc2Name} (Open Time: ${moment(loc2.openTime).format("HH:mm")} - Close Time: ${moment(loc2.closeTime).format("HH:mm")})
+          `);
+            return; // Stop execution if an overlap is found
+          } else {
+            console.log(
+              `      No overlap between ${loc1.locationTitle} and ${loc2.locationTitle}`
+            );
+          }
+        }
+      }
+    }
+    console.log("All combined time slot validations completed with no issues.");
+    // --- END COMBINED VALIDATION ---
+
+    const finalResult = transformLocationsForAPI(availability);
     console.log("finalResult => ", finalResult);
 
     setLoading(true);
@@ -154,50 +284,6 @@ export default function ProfileAvailabilityScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Function to transform API data to component format
-  const transformApiDataToState = (apiData, locationData = []) => {
-    return days.map((day) => {
-      const dayLower = day.toLowerCase();
-      const dayEntries = apiData.filter((item) => item.day === dayLower);
-
-      // If no entries for this day, return default
-      if (dayEntries.length === 0) {
-        return {
-          day,
-          locations: [
-            {
-              value: null,
-              locationTitle: "",
-              openTime: moment().startOf("day").toDate(),
-              closeTime: moment().startOf("day").toDate(),
-              enabled: false,
-            },
-          ],
-        };
-      }
-
-      // Transform each location entry for this day
-      return {
-        day,
-        locations: dayEntries.map((entry) => {
-          // Find the matching location from locationData
-          const location = locationData.find(
-            (loc) => loc._id === entry.locationId
-          );
-
-          return {
-            value: entry.locationId,
-            locationTitle: location?.title || "",
-            openTime: moment(entry.startTime, "HH:mm").toDate(),
-            closeTime: moment(entry.endTime, "HH:mm").toDate(),
-            enabled: entry.available,
-            _id: entry._id,
-          };
-        }),
-      };
-    });
   };
 
   const getDataFromAPI = async () => {
@@ -237,6 +323,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
     <View style={styles.container}>
       <StatusBarManager />
 
+      {/* Header Container */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <IconButton
           icon="arrow-left"
@@ -248,6 +335,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
         <View style={{ width: 48 }} />
       </View>
 
+      {/* Content Container */}
       {dataLoading ? (
         <View
           style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
@@ -255,138 +343,176 @@ export default function ProfileAvailabilityScreen({ navigation }) {
           <NativeIndicator color={AppColor.primary} size="large" />
         </View>
       ) : (
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom }}
-          bounces={false}
-          showsVerticalScrollIndicator={false}
-          pointerEvents={loading ? "none" : "auto"}
-        >
-          <View style={{ flex: 1 }}>
-            <View
-              style={{
-                marginTop: 15,
-                paddingHorizontal: 16,
-                paddingVertical: 30,
-                backgroundColor: AppColor.white,
-              }}
-            >
-              <Text
+        <>
+          <ScrollView
+            contentContainerStyle={{ flexGrow: 1 }}
+            bounces={false}
+            showsVerticalScrollIndicator={false}
+            pointerEvents={loading ? "none" : "auto"}
+          >
+            <View style={{ flex: 1 }}>
+              <View
                 style={{
-                  marginBottom: 12,
-                  color: AppColor.black,
-                  fontSize: 24,
-                  fontFamily: Primary400,
+                  marginTop: 15,
+                  paddingHorizontal: 16,
+                  paddingVertical: 30,
+                  backgroundColor: AppColor.white,
                 }}
               >
-                Availability
-              </Text>
-              <Text
-                style={{
-                  color: "#606268",
-                  fontSize: 14,
-                  fontFamily: Secondary400,
-                }}
-              >
-                Set open & close time of your food-truck
-              </Text>
-            </View>
+                <Text
+                  style={{
+                    marginBottom: 12,
+                    color: AppColor.black,
+                    fontSize: 24,
+                    fontFamily: Primary400,
+                  }}
+                >
+                  Availability
+                </Text>
+                <Text
+                  style={{
+                    color: "#606268",
+                    fontSize: 14,
+                    fontFamily: Secondary400,
+                  }}
+                >
+                  Set open & close time of your food-truck
+                </Text>
+              </View>
 
-            <View style={{ padding: 16 }}>
-              {availability.map((item, index) => (
-                <View key={index} style={styles.dayContainer}>
-                  {item.locations.map((loc, locIndex) => (
-                    <View
-                      key={`${index}-${locIndex}`}
-                      style={{ marginBottom: 16 }}
-                    >
-                      <View style={styles.timeRow}>
-                        <View style={styles.dayCircle}>
-                          <Text
-                            style={{
-                              color: "#fff",
-                              fontSize: 16,
-                              fontFamily: Secondary400,
-                            }}
+              <View style={{ padding: 16 }}>
+                {availability.map((item, index) => (
+                  <View key={index} style={styles.dayContainer}>
+                    {item.locations.map((loc, locIndex) => (
+                      <View
+                        key={`${index}-${locIndex}`}
+                        style={{ marginBottom: 16 }}
+                      >
+                        <View style={styles.timeRow}>
+                          <View style={styles.dayCircle}>
+                            <Text
+                              style={{
+                                color: "#fff",
+                                fontSize: 16,
+                                fontFamily: Secondary400,
+                              }}
+                            >
+                              {item.day}
+                            </Text>
+                          </View>
+
+                          <TouchableOpacity
+                            onPress={() =>
+                              showTimePicker(index, locIndex, "openTime")
+                            }
                           >
-                            {item.day}
-                          </Text>
+                            <Text style={styles.timeLabel}>
+                              {loc.openTime.toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </Text>
+                            <Text style={styles.timeSubLabel}>Open</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            onPress={() =>
+                              showTimePicker(index, locIndex, "closeTime")
+                            }
+                          >
+                            <Text style={styles.timeLabel}>
+                              {loc.closeTime.toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </Text>
+                            <Text style={styles.timeSubLabel}>Close</Text>
+                          </TouchableOpacity>
+
+                          <Switch
+                            color={AppColor.primary}
+                            value={loc.enabled}
+                            onValueChange={() => toggleSwitch(index, locIndex)}
+                          />
                         </View>
 
-                        <TouchableOpacity
-                          onPress={() =>
-                            showTimePicker(index, locIndex, "openTime")
-                          }
-                        >
-                          <Text style={styles.timeLabel}>
-                            {loc.openTime.toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </Text>
-                          <Text style={styles.timeSubLabel}>Open</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          onPress={() =>
-                            showTimePicker(index, locIndex, "closeTime")
-                          }
-                        >
-                          <Text style={styles.timeLabel}>
-                            {loc.closeTime.toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </Text>
-                          <Text style={styles.timeSubLabel}>Close</Text>
-                        </TouchableOpacity>
-
-                        <Switch
-                          color={AppColor.primary}
-                          value={loc.enabled}
-                          onValueChange={() => toggleSwitch(index, locIndex)}
-                        />
-                      </View>
-
-                      <Dropdown
-                        data={selectedLocations}
-                        labelField="title"
-                        valueField="_id"
-                        value={loc.value}
-                        onChange={(selectedItem) =>
-                          updateLocation(index, locIndex, selectedItem)
-                        }
-                        placeholder="Select Location"
-                        style={styles.dropdown}
-                        placeholderStyle={{ fontFamily: Secondary400 }}
-                        itemTextStyle={{ fontFamily: Secondary400 }}
-                        selectedTextStyle={{ fontFamily: Secondary400 }}
-                      />
-
-                      {locIndex !== item?.locations?.length - 1 && (
                         <View
                           style={{
-                            borderBottomColor: "#E5E5EA",
-                            borderBottomWidth: 1,
-                            marginTop: 16,
+                            flex: 1,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            marginTop: 12,
                           }}
-                        />
-                      )}
-                    </View>
-                  ))}
+                        >
+                          <Dropdown
+                            data={selectedLocations}
+                            labelField="title"
+                            valueField="_id"
+                            value={loc.value}
+                            onChange={(selectedItem) =>
+                              updateLocation(index, locIndex, selectedItem)
+                            }
+                            placeholder="Select Location"
+                            style={styles.dropdown}
+                            placeholderStyle={{ fontFamily: Secondary400 }}
+                            itemTextStyle={{ fontFamily: Secondary400 }}
+                            selectedTextStyle={{ fontFamily: Secondary400 }}
+                          />
 
-                  <Button
-                    icon="plus"
-                    mode="outlined"
-                    onPress={() => addLocation(index)}
-                    style={styles.addButton}
-                    labelStyle={{ fontFamily: Secondary400 }}
-                  >
-                    Add Location
-                  </Button>
-                </View>
-              ))}
+                          <TouchableOpacity
+                            activeOpacity={0.7}
+                            style={{
+                              alignItems: "flex-end",
+                              justifyContent: "center",
+                              height: 40,
+                              width: "16%",
+                            }}
+                            onPress={() => removeLocation(index, locIndex)}
+                          >
+                            <MaterialCommunityIcons
+                              name="trash-can"
+                              color={AppColor.red}
+                              size={32}
+                            />
+                          </TouchableOpacity>
+                        </View>
+
+                        {locIndex !== item?.locations?.length - 1 && (
+                          <View
+                            style={{
+                              borderBottomColor: "#E5E5EA",
+                              borderBottomWidth: 1,
+                              marginTop: 16,
+                            }}
+                          />
+                        )}
+                      </View>
+                    ))}
+
+                    <Button
+                      icon="plus"
+                      mode="outlined"
+                      onPress={() => addLocation(index)}
+                      style={styles.addButton}
+                      labelStyle={{ fontFamily: Secondary400 }}
+                    >
+                      Add Location
+                    </Button>
+                  </View>
+                ))}
+              </View>
             </View>
+          </ScrollView>
 
+          {/* Continue Button */}
+          <View
+            style={{
+              paddingBottom: insets.bottom,
+              borderTopWidth: 1,
+              borderColor: AppColor.border,
+              backgroundColor: AppColor.white,
+            }}
+          >
             <TouchableOpacity
               style={styles.continueButton}
               activeOpacity={0.7}
@@ -400,8 +526,10 @@ export default function ProfileAvailabilityScreen({ navigation }) {
               )}
             </TouchableOpacity>
           </View>
-        </ScrollView>
+        </>
       )}
+
+      {/* Date Time Picker Modal */}
       <DateTimePickerModal
         isVisible={isPickerVisible}
         mode="time"
@@ -501,11 +629,11 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     height: 40,
+    width: "84%",
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 6,
     paddingHorizontal: 12,
-    marginTop: 12,
   },
   addButton: {
     marginBottom: 16,
@@ -518,7 +646,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: AppColor.primary,
-    marginBottom: 20,
+    marginVertical: 10,
     marginHorizontal: 16,
     ...Platform.select({
       ios: {

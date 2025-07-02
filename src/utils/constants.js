@@ -61,3 +61,13 @@ export const vendorProfileStatus = {
   approved: "APPROVED",
   rejected: "REJECTED",
 };
+
+export const fullDayNames = {
+  Mon: "Monday",
+  Tue: "Tuesday",
+  Wed: "Wednesday",
+  Thu: "Thursday",
+  Fri: "Friday",
+  Sat: "Saturday",
+  Sun: "Sunday",
+};

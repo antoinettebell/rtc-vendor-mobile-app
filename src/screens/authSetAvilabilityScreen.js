@@ -1,659 +1,8 @@
-// import React, { useState } from "react";
-// import { View, ScrollView, StyleSheet, StatusBar } from "react-native";
-// import { Text, Button, Switch, Card, IconButton } from "react-native-paper";
-// import DateTimePickerModal from "react-native-modal-datetime-picker";
-// import { Dropdown } from "react-native-element-dropdown";
-// import { AppColor, Primary400, Secondary400 } from "../utils/theme";
-// import { useSafeAreaInsets } from "react-native-safe-area-context";
-// import { useNavigation } from "@react-navigation/native";
-// import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
-
-// const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-// const dummyLocations = [
-//   { label: "13th Street", value: "13th_street" },
-//   { label: "Charlotte", value: "charlotte" },
-//   { label: "Downtown", value: "downtown" },
-//   { label: "Uptown", value: "uptown" },
-// ];
-
-// export default function AvailabilityScreen() {
-//   const insets = useSafeAreaInsets();
-//   const navigation = useNavigation();
-
-//   const [availability, setAvailability] = useState(
-//     days.map((day) => ({
-//       day,
-//       openTime: new Date(),
-//       closeTime: new Date(),
-//       isPickerVisible: false,
-//       pickerField: null,
-//       enabled: true,
-//       locations: ["13th_street"],
-//     }))
-//   );
-
-//   const [activePickerIndex, setActivePickerIndex] = useState(null);
-//   const [pickerField, setPickerField] = useState(null);
-//   const [isPickerVisible, setPickerVisible] = useState(false);
-
-//   const showTimePicker = (index, field) => {
-//     setActivePickerIndex(index);
-//     setPickerField(field);
-//     setPickerVisible(true);
-//   };
-
-//   const handleConfirm = (selectedDate) => {
-//     const updated = [...availability];
-//     if (pickerField && activePickerIndex !== null) {
-//       updated[activePickerIndex][pickerField] = selectedDate;
-//       setAvailability(updated);
-//     }
-//     setPickerVisible(false);
-//   };
-
-//   const toggleSwitch = (index) => {
-//     const updated = [...availability];
-//     updated[index].enabled = !updated[index].enabled;
-//     setAvailability(updated);
-//   };
-
-//   const updateLocation = (index, locIndex, value) => {
-//     const updated = [...availability];
-//     updated[index].locations[locIndex] = value;
-//     setAvailability(updated);
-//   };
-
-//   const addLocation = (index) => {
-//     const updated = [...availability];
-//     updated[index].locations.push("");
-//     setAvailability(updated);
-//   };
-
-//   return (
-//     <View style={styles.container}>
-//       <StatusBar backgroundColor={AppColor.white} barStyle="dark-content" />
-
-//       {/* Header */}
-//       <View style={[styles.header, { paddingTop: insets.top }]}>
-//         <IconButton
-//           icon="arrow-left"
-//           iconColor={AppColor.black}
-//           size={24}
-//           onPress={() => navigation.goBack()}
-//         />
-//         <Text style={styles.headerTitle}>{"Set Availability"}</Text>
-//         <View style={{ width: 48 }} />
-//       </View>
-
-//       <ScrollView
-//         contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom }}
-//         bounces={false}
-//         showsVerticalScrollIndicator={false}
-//       >
-//         <View style={{ flex: 1 }}>
-//           {/* Step Container */}
-//           <View style={styles.stepContainer}>
-//             {/* Step 1 - filled circle with checkmark */}
-//             <View style={styles.stepSubContainer}>
-//               <View style={styles.filledCircle}>
-//                 <FontAwesome6 name="check" color={AppColor.white} size={18} />
-//               </View>
-//             </View>
-
-//             {/* Line connecting steps */}
-//             <View style={styles.line} />
-
-//             {/* Step 2 - filled circle with checkmark */}
-//             <View style={styles.stepSubContainer}>
-//               <View style={styles.filledCircle}>
-//                 <FontAwesome6 name="check" color={AppColor.white} size={18} />
-//               </View>
-//             </View>
-//           </View>
-
-//           {/* SubHeader Container */}
-//           <View
-//             style={{
-//               backgroundColor: AppColor.white,
-//               paddingHorizontal: 16,
-//               paddingVertical: 30,
-//             }}
-//           >
-//             <Text
-//               variant="headlineMedium"
-//               style={{
-//                 marginBottom: 12,
-//                 color: AppColor.black,
-//                 fontSize: 24,
-//                 fontFamily: Primary400,
-//               }}
-//             >
-//               {"Availability"}
-//             </Text>
-//             <Text
-//               style={{
-//                 color: "#606268",
-//                 fontSize: 14,
-//                 fontFamily: Secondary400,
-//               }}
-//             >
-//               {"Set open & close time of your food-truck"}
-//             </Text>
-//           </View>
-
-//           {/* Days Container */}
-//           <View style={{ padding: 16 }}>
-//             {availability.map((item, index) => (
-//               <View
-//                 key={item.day}
-//                 style={{
-//                   marginBottom: 16,
-//                   padding: 16,
-//                   backgroundColor: AppColor.white,
-//                   borderWidth: 1,
-//                   borderRadius: 10,
-//                   borderColor: "#E5E5EA",
-//                 }}
-//               >
-//                 <View
-//                   style={{
-//                     flexDirection: "row",
-//                     alignItems: "center",
-//                     justifyContent: "space-between",
-//                   }}
-//                 >
-//                   <Button
-//                     mode="contained-tonal"
-//                     textColor={AppColor.white}
-//                     style={{
-//                       borderRadius: 20,
-//                       backgroundColor: AppColor.primary,
-//                     }}
-//                     labelStyle={{
-//                       fontFamily: Secondary400,
-//                       fontSize: 16.7,
-//                     }}
-//                   >
-//                     {item.day}
-//                   </Button>
-
-//                   <Button onPress={() => showTimePicker(index, "openTime")}>
-//                     {item.openTime.toLocaleTimeString([], {
-//                       hour: "2-digit",
-//                       minute: "2-digit",
-//                     })}
-//                   </Button>
-
-//                   <Button onPress={() => showTimePicker(index, "closeTime")}>
-//                     {item.closeTime.toLocaleTimeString([], {
-//                       hour: "2-digit",
-//                       minute: "2-digit",
-//                     })}
-//                   </Button>
-
-//                   <Switch
-//                     trackColor={AppColor.primary}
-//                     value={item.enabled}
-//                     onValueChange={() => toggleSwitch(index)}
-//                   />
-//                 </View>
-
-//                 {item.locations.map((loc, locIndex) => (
-//                   <Dropdown
-//                     key={locIndex}
-//                     data={dummyLocations}
-//                     labelField="label"
-//                     valueField="value"
-//                     value={loc}
-//                     onChange={(item) =>
-//                       updateLocation(index, locIndex, item.value)
-//                     }
-//                     style={{
-//                       borderWidth: 1,
-//                       borderColor: "#ccc",
-//                       borderRadius: 6,
-//                       paddingHorizontal: 12,
-//                       marginTop: 10,
-//                     }}
-//                     placeholder="Select Location"
-//                   />
-//                 ))}
-
-//                 <Button
-//                   icon="plus"
-//                   mode="text"
-//                   onPress={() => addLocation(index)}
-//                   style={{ marginTop: 8 }}
-//                 >
-//                   Add Location
-//                 </Button>
-//               </View>
-//             ))}
-//           </View>
-
-//           <Button
-//             mode="contained"
-//             onPress={() => console.log("Submit:", availability)}
-//             style={{ marginTop: 20 }}
-//           >
-//             Continue
-//           </Button>
-//         </View>
-//       </ScrollView>
-
-//       {/* TimePicker Modal */}
-//       <DateTimePickerModal
-//         isVisible={isPickerVisible}
-//         mode="time"
-//         date={availability[activePickerIndex]?.[pickerField] || new Date()}
-//         onConfirm={handleConfirm}
-//         onCancel={() => setPickerVisible(false)}
-//         is24Hour={false}
-//       />
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     backgroundColor: "#F9FAFB",
-//   },
-//   header: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     justifyContent: "space-between",
-//     backgroundColor: AppColor.white,
-//     paddingHorizontal: 8,
-//     paddingBottom: 5,
-//     borderBottomWidth: 1,
-//     borderColor: "#E5E5EA",
-//   },
-//   headerTitle: {
-//     color: AppColor.black,
-//     fontSize: 20,
-//     fontFamily: Primary400,
-//   },
-
-//   stepContainer: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     justifyContent: "center",
-//     marginVertical: 15,
-//   },
-//   stepSubContainer: {
-//     alignItems: "center",
-//     justifyContent: "center",
-//   },
-//   filledCircle: {
-//     width: 32,
-//     height: 32,
-//     borderRadius: 16,
-//     backgroundColor: AppColor.primary,
-//     justifyContent: "center",
-//     alignItems: "center",
-//   },
-//   line: {
-//     width: "25%",
-//     height: 2,
-//     backgroundColor: AppColor.primary,
-//   },
-// });
-
-// import React, { useState } from "react";
-// import {
-//   View,
-//   ScrollView,
-//   StyleSheet,
-//   StatusBar,
-//   TouchableOpacity,
-// } from "react-native";
-// import { Text, Button, Switch, IconButton } from "react-native-paper";
-// import DateTimePickerModal from "react-native-modal-datetime-picker";
-// import { Dropdown } from "react-native-element-dropdown";
-// import { AppColor, Primary400, Secondary400 } from "../utils/theme";
-// import { useSafeAreaInsets } from "react-native-safe-area-context";
-// import { useNavigation } from "@react-navigation/native";
-// import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
-
-// const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-// const dummyLocations = [
-//   { label: "13th Street", value: "13th_street" },
-//   { label: "Charlotte", value: "charlotte" },
-//   { label: "Downtown", value: "downtown" },
-//   { label: "Uptown", value: "uptown" },
-// ];
-
-// export default function AvailabilityScreen() {
-//   const insets = useSafeAreaInsets();
-//   const navigation = useNavigation();
-
-//   const [availability, setAvailability] = useState(
-//     days.map((day) => ({
-//       day,
-//       openTime: new Date(),
-//       closeTime: new Date(),
-//       enabled: true,
-//       locations: ["13th_street"],
-//     }))
-//   );
-
-//   const [activePickerIndex, setActivePickerIndex] = useState(null);
-//   const [pickerField, setPickerField] = useState(null);
-//   const [isPickerVisible, setPickerVisible] = useState(false);
-
-//   const showTimePicker = (index, field) => {
-//     setActivePickerIndex(index);
-//     setPickerField(field);
-//     setPickerVisible(true);
-//   };
-
-//   const handleConfirm = (selectedDate) => {
-//     const updated = [...availability];
-//     if (pickerField && activePickerIndex !== null) {
-//       updated[activePickerIndex][pickerField] = selectedDate;
-//       setAvailability(updated);
-//     }
-//     setPickerVisible(false);
-//   };
-
-//   const toggleSwitch = (index) => {
-//     const updated = [...availability];
-//     updated[index].enabled = !updated[index].enabled;
-//     setAvailability(updated);
-//   };
-
-//   const updateLocation = (index, locIndex, value) => {
-//     const updated = [...availability];
-//     updated[index].locations[locIndex] = value;
-//     setAvailability(updated);
-//   };
-
-//   const addLocation = (index) => {
-//     const updated = [...availability];
-//     updated[index].locations.push("");
-//     setAvailability(updated);
-//   };
-
-//   return (
-//     <View style={styles.container}>
-//       <StatusBar backgroundColor={AppColor.white} barStyle="dark-content" />
-
-//       {/* Header */}
-//       <View style={[styles.header, { paddingTop: insets.top }]}>
-//         <IconButton
-//           icon="arrow-left"
-//           iconColor={AppColor.black}
-//           size={24}
-//           onPress={() => navigation.goBack()}
-//         />
-//         <Text style={styles.headerTitle}>Set Availability</Text>
-//         <View style={{ width: 48 }} />
-//       </View>
-
-//       <ScrollView
-//         contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom }}
-//         bounces={false}
-//         showsVerticalScrollIndicator={false}
-//       >
-//         <View style={{ flex: 1 }}>
-//           {/* Step Container */}
-//           <View style={styles.stepContainer}>
-//             {/* Step 1 - filled circle with checkmark */}
-//             <View style={styles.stepSubContainer}>
-//               <View style={styles.filledCircle}>
-//                 <FontAwesome6 name="check" color={AppColor.white} size={18} />
-//               </View>
-//             </View>
-
-//             {/* Line connecting steps */}
-//             <View style={styles.line} />
-
-//             {/* Step 2 - filled circle with checkmark */}
-//             <View style={styles.stepSubContainer}>
-//               <View style={styles.filledCircle}>
-//                 <FontAwesome6 name="check" color={AppColor.white} size={18} />
-//               </View>
-//             </View>
-//           </View>
-
-//           {/* SubHeader */}
-//           <View
-//             style={{
-//               backgroundColor: AppColor.white,
-//               paddingHorizontal: 16,
-//               paddingVertical: 30,
-//             }}
-//           >
-//             <Text
-//               style={{
-//                 marginBottom: 12,
-//                 color: AppColor.black,
-//                 fontSize: 24,
-//                 fontFamily: Primary400,
-//               }}
-//             >
-//               Availability
-//             </Text>
-//             <Text
-//               style={{
-//                 color: "#606268",
-//                 fontSize: 14,
-//                 fontFamily: Secondary400,
-//               }}
-//             >
-//               Set open & close time of your food-truck
-//             </Text>
-//           </View>
-
-//           {/* Days Container */}
-//           <View style={{ padding: 16 }}>
-//             {availability.map((item, index) => (
-//               <View key={index} style={styles.dayContainer}>
-//                 {item.locations.map((loc, locIndex) => (
-//                   <View
-//                     key={`${index}-${locIndex}`}
-//                     style={{ marginBottom: 16 }}
-//                   >
-//                     <View style={styles.timeRow}>
-//                       {/* Day circle or truck icon */}
-//                       <View style={styles.dayCircle}>
-//                         <Text style={{ color: "#fff", fontSize: 16 }}>
-//                           {item.day}
-//                         </Text>
-//                       </View>
-
-//                       {/* Open Time */}
-//                       <TouchableOpacity
-//                         onPress={() => showTimePicker(index, "openTime")}
-//                       >
-//                         <Text style={styles.timeLabel}>
-//                           {item.openTime.toLocaleTimeString([], {
-//                             hour: "2-digit",
-//                             minute: "2-digit",
-//                           })}
-//                         </Text>
-//                         <Text style={styles.timeSubLabel}>Open</Text>
-//                       </TouchableOpacity>
-
-//                       {/* Close Time */}
-//                       <TouchableOpacity
-//                         onPress={() => showTimePicker(index, "closeTime")}
-//                       >
-//                         <Text style={styles.timeLabel}>
-//                           {item.closeTime.toLocaleTimeString([], {
-//                             hour: "2-digit",
-//                             minute: "2-digit",
-//                           })}
-//                         </Text>
-//                         <Text style={styles.timeSubLabel}>Close</Text>
-//                       </TouchableOpacity>
-
-//                       {/* Switch */}
-//                       <Switch
-//                         trackColor={AppColor.primary}
-//                         value={item.enabled}
-//                         onValueChange={() => toggleSwitch(index)}
-//                       />
-//                     </View>
-
-//                     {/* Location Dropdown */}
-//                     <Dropdown
-//                       data={dummyLocations}
-//                       labelField="label"
-//                       valueField="value"
-//                       value={loc}
-//                       onChange={(selected) =>
-//                         updateLocation(index, locIndex, selected.value)
-//                       }
-//                       style={styles.dropdown}
-//                       placeholder="Select Location"
-//                     />
-
-//                     {/* Optional divider between entries */}
-//                     {locIndex !== item.locations.length - 1 && (
-//                       <View
-//                         style={{
-//                           borderBottomColor: "#E5E5EA",
-//                           borderBottomWidth: 1,
-//                           marginTop: 16,
-//                         }}
-//                       />
-//                     )}
-//                   </View>
-//                 ))}
-
-//                 {/* Add Location button inside the container */}
-//                 <Button
-//                   icon="plus"
-//                   mode="outlined"
-//                   onPress={() => addLocation(index)}
-//                   style={styles.addButton}
-//                 >
-//                   Add Location
-//                 </Button>
-//               </View>
-//             ))}
-//           </View>
-
-//           <Button
-//             mode="contained"
-//             onPress={() => console.log("Submit:", availability)}
-//             style={{ margin: 20 }}
-//           >
-//             Continue
-//           </Button>
-//         </View>
-//       </ScrollView>
-
-//       {/* Time Picker */}
-//       <DateTimePickerModal
-//         isVisible={isPickerVisible}
-//         mode="time"
-//         date={availability[activePickerIndex]?.[pickerField] || new Date()}
-//         onConfirm={handleConfirm}
-//         onCancel={() => setPickerVisible(false)}
-//         is24Hour={false}
-//       />
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     backgroundColor: "#F9FAFB",
-//   },
-//   header: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     justifyContent: "space-between",
-//     backgroundColor: AppColor.white,
-//     paddingHorizontal: 8,
-//     paddingBottom: 5,
-//     borderBottomWidth: 1,
-//     borderColor: "#E5E5EA",
-//   },
-//   headerTitle: {
-//     color: AppColor.black,
-//     fontSize: 20,
-//     fontFamily: Primary400,
-//   },
-
-//   stepContainer: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     justifyContent: "center",
-//     marginVertical: 15,
-//   },
-//   stepSubContainer: {
-//     alignItems: "center",
-//     justifyContent: "center",
-//   },
-//   filledCircle: {
-//     width: 32,
-//     height: 32,
-//     borderRadius: 16,
-//     backgroundColor: AppColor.primary,
-//     justifyContent: "center",
-//     alignItems: "center",
-//   },
-//   line: {
-//     width: "25%",
-//     height: 2,
-//     backgroundColor: AppColor.primary,
-//   },
-
-//   dayContainer: {
-//     marginBottom: 16,
-//     padding: 16,
-//     backgroundColor: AppColor.white,
-//     borderWidth: 1,
-//     borderRadius: 10,
-//     borderColor: "#E5E5EA",
-//   },
-//   dayCircle: {
-//     width: 40,
-//     height: 40,
-//     borderRadius: 20,
-//     backgroundColor: AppColor.primary,
-//     justifyContent: "center",
-//     alignItems: "center",
-//   },
-//   timeRow: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     justifyContent: "space-between",
-//   },
-//   timeLabel: {
-//     fontSize: 16,
-//     color: AppColor.black,
-//     textAlign: "center",
-//   },
-//   timeSubLabel: {
-//     fontSize: 12,
-//     color: "#888",
-//     textAlign: "center",
-//   },
-//   dropdown: {
-//     borderWidth: 1,
-//     borderColor: "#ccc",
-//     borderRadius: 6,
-//     paddingHorizontal: 12,
-//     marginTop: 12,
-//   },
-//   addButton: {
-//     marginBottom: 16,
-//     borderRadius: 6,
-//   },
-// });
-
 import React, { useState } from "react";
 import {
   View,
   ScrollView,
   StyleSheet,
-  StatusBar,
   TouchableOpacity,
   Platform,
   Alert,
@@ -667,16 +16,22 @@ import {
 } from "react-native-paper";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { Dropdown } from "react-native-element-dropdown";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import moment from "moment";
 import { useDispatch, useSelector } from "react-redux";
+import { v4 as uuidv4 } from "uuid";
+import { AppColor, Primary400, Secondary400 } from "../utils/theme";
 import { updateFoodTruckProfile_API } from "../api/appAPI";
 import { setUser } from "../redux/slices/userSlice";
 import StatusBarManager from "../components/StatusBarManager";
 import { onUnderReview } from "../redux/slices/authSlice";
+import {
+  hasTimeOverlap,
+  transformLocationsForAPI,
+} from "../helpers/availability.helper";
+import { fullDayNames } from "../utils/constants";
 
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -694,6 +49,7 @@ const AuthSetAvilabilityScreen = ({ navigation }) => {
       day,
       locations: [
         {
+          uniqueId: uuidv4(),
           value: null,
           openTime: moment().startOf("day").toDate(), // 00:00
           closeTime: moment().startOf("day").toDate(), // 00:00
@@ -742,6 +98,7 @@ const AuthSetAvilabilityScreen = ({ navigation }) => {
   const addLocation = (dayIndex) => {
     const updated = [...availability];
     updated[dayIndex].locations.push({
+      uniqueId: uuidv4(),
       value: null,
       openTime: moment().startOf("day").toDate(), // 00:00
       closeTime: moment().startOf("day").toDate(), // 00:00
@@ -750,38 +107,158 @@ const AuthSetAvilabilityScreen = ({ navigation }) => {
     setAvailability(updated);
   };
 
-  const transformLocations = (data) => {
-    return data.flatMap((dayItem) =>
-      dayItem.locations
-        .filter((location) => location.enabled && location.value)
-        .map((location) => {
-          return {
-            locationId: location.value,
-            day: dayItem.day.toLowerCase(),
-            startTime: moment(location.openTime).format("HH:mm"),
-            endTime: moment(location.closeTime).format("HH:mm"),
-            available: true,
-          };
-        })
+  const removeLocation = (dayIndex, locIndex) => {
+    Alert.alert(
+      "Remove Timeslot",
+      "Are you sure you want to remove this time slot?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Remove",
+          onPress: () => {
+            const updatedAvailability = [...availability];
+            const dayToUpdate = updatedAvailability[dayIndex];
+
+            // Remove the specific location slot
+            dayToUpdate.locations.splice(locIndex, 1);
+
+            // If, after removal, there are no more locations for this day,
+            // add a default, disabled one.
+            if (dayToUpdate.locations.length === 0) {
+              dayToUpdate.locations.push({
+                uniqueId: uuidv4(),
+                value: null,
+                openTime: moment().startOf("day").toDate(), // 00:00
+                closeTime: moment().startOf("day").toDate(), // 00:00
+                enabled: false,
+              });
+            }
+            setAvailability(updatedAvailability);
+          },
+        },
+      ],
+      { cancelable: true }
     );
   };
 
   const handleContinuePress = async () => {
     console.log("availability => ", availability);
 
+    // --- Validation: Check for missing location ---
     for (let day of availability) {
       for (let loc of day.locations) {
         if (loc.enabled && !loc.value) {
           Alert.alert(
             "Missing Location",
-            `Please select a location for ${day.day} before continuing.`
+            `Please select a location for ${fullDayNames[day.day] || day.day} before continuing.`
           );
           return;
         }
       }
     }
 
-    const finalResult = transformLocations(availability);
+    // --- COMBINED VALIDATION: End Time strictly after Start Time & Time Slot Overlaps for the same day ---
+    console.log("Starting combined time slot validations...");
+    for (let i = 0; i < availability.length; i++) {
+      const currentDay = availability[i];
+      const fullCurrentDayName = fullDayNames[currentDay.day] || currentDay.day; // Get full day name
+      console.log(`Checking availability for day: ${fullCurrentDayName}`);
+
+      // Filter only enabled slots that have a location selected
+      const enabledAndSelectedLocations = currentDay.locations.filter(
+        (loc) => loc.enabled && loc.value
+      );
+      console.log(
+        `  Enabled and selected locations for ${fullCurrentDayName}:`,
+        enabledAndSelectedLocations.length
+      );
+
+      // FIRST: Validate each individual slot's StartTime vs EndTime
+      for (let j = 0; j < enabledAndSelectedLocations.length; j++) {
+        const loc = enabledAndSelectedLocations[j];
+        const startTime = moment(loc.openTime);
+        const endTime = moment(loc.closeTime);
+
+        console.log(
+          `    Checking Open Time vs Close Time for '${loc.locationTitle || "Unnamed Location"}' on ${fullCurrentDayName}: ${startTime.format("HH:mm")} - ${endTime.format("HH:mm")}`
+        );
+
+        if (!endTime.isAfter(startTime)) {
+          Alert.alert(
+            "Invalid Time Slot",
+            `On ${fullCurrentDayName}, the **Close Time** (${endTime.format("h:mm A")}) for '${loc.locationTitle || "an unnamed location slot"}' must be after its **Open Time** (${startTime.format("h:mm A")}). Please adjust.`
+          );
+          console.log("Here I'm stopped!!! Invalid Open/Close Time detected.");
+          return; // Stop execution if an invalid individual time slot is found
+        }
+      }
+
+      // If there's 0 or 1 enabled slot, no overlap is possible for this day, so continue to the next day
+      if (enabledAndSelectedLocations.length < 2) {
+        console.log(
+          `  Not enough enabled slots on ${fullCurrentDayName} to check for overlap.`
+        );
+        continue;
+      }
+
+      // SECOND: Check for overlaps between pairs of time slots on the same day
+      for (let j = 0; j < enabledAndSelectedLocations.length; j++) {
+        const loc1 = enabledAndSelectedLocations[j];
+        console.log(`    Comparing loc1 (index ${j}):`, {
+          day: fullCurrentDayName,
+          location: loc1.locationTitle,
+          open: moment(loc1.openTime).format("HH:mm"),
+          close: moment(loc1.closeTime).format("HH:mm"),
+        });
+
+        // Start inner loop from j + 1 to avoid comparing a slot with itself and to avoid duplicate checks
+        for (let k = j + 1; k < enabledAndSelectedLocations.length; k++) {
+          const loc2 = enabledAndSelectedLocations[k];
+          console.log(`      Comparing with loc2 (index ${k}):`, {
+            day: fullCurrentDayName,
+            location: loc2.locationTitle,
+            open: moment(loc2.openTime).format("HH:mm"),
+            close: moment(loc2.closeTime).format("HH:mm"),
+          });
+
+          if (
+            hasTimeOverlap(
+              loc1.openTime,
+              loc1.closeTime,
+              loc2.openTime,
+              loc2.closeTime
+            )
+          ) {
+            const loc1Name = loc1.locationTitle || "an unnamed location slot";
+            const loc2Name = loc2.locationTitle || "an unnamed location slot";
+
+            Alert.alert(
+              "Time Slot Overlap Detected",
+              `On ${fullCurrentDayName}, the time slot for '${loc1Name}' (**Open Time**: ${moment(loc1.openTime).format("h:mm A")} - **Close Time**: ${moment(loc1.closeTime).format("h:mm A")}) overlaps with the time slot for '${loc2Name}' (**Open Time**: ${moment(loc2.openTime).format("h:mm A")} - **Close Time**: ${moment(loc2.closeTime).format("h:mm A")}). Please adjust your times.`,
+              [{ text: "OK" }]
+            );
+            console.log("Here I'm stopped!!! Overlap detected!");
+            console.log(`    Overlap details:
+            Day: ${fullCurrentDayName}
+            Slot 1: ${loc1Name} (Open Time: ${moment(loc1.openTime).format("HH:mm")} - Close Time: ${moment(loc1.closeTime).format("HH:mm")})
+            Slot 2: ${loc2Name} (Open Time: ${moment(loc2.openTime).format("HH:mm")} - Close Time: ${moment(loc2.closeTime).format("HH:mm")})
+          `);
+            return; // Stop execution if an overlap is found
+          } else {
+            console.log(
+              `      No overlap between ${loc1.locationTitle} and ${loc2.locationTitle}`
+            );
+          }
+        }
+      }
+    }
+    console.log("All combined time slot validations completed with no issues.");
+    // --- END COMBINED VALIDATION ---
+
+    const finalResult = transformLocationsForAPI(availability);
     console.log("finalResult => ", finalResult);
 
     setLoading(true);
@@ -816,7 +293,7 @@ const AuthSetAvilabilityScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <StatusBarManager />
-
+      {/* Header Container */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <IconButton
           icon="arrow-left"
@@ -827,15 +304,21 @@ const AuthSetAvilabilityScreen = ({ navigation }) => {
         <Text style={styles.headerTitle}>Set Availability</Text>
         <View style={{ width: 48 }} />
       </View>
-
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom }}
+        contentContainerStyle={{ flexGrow: 1 }}
         bounces={false}
         showsVerticalScrollIndicator={false}
         pointerEvents={loading ? "none" : "auto"}
       >
         <View style={{ flex: 1 }}>
+          {/* Step Container */}
           <View style={styles.stepContainer}>
+            <View style={styles.stepSubContainer}>
+              <View style={styles.filledCircle}>
+                <FontAwesome6 name="check" color={AppColor.white} size={18} />
+              </View>
+            </View>
+            <View style={styles.line} />
             <View style={styles.stepSubContainer}>
               <View style={styles.filledCircle}>
                 <FontAwesome6 name="check" color={AppColor.white} size={18} />
@@ -849,6 +332,7 @@ const AuthSetAvilabilityScreen = ({ navigation }) => {
             </View>
           </View>
 
+          {/* Content Header Continer */}
           <View
             style={{
               backgroundColor: AppColor.white,
@@ -877,14 +361,12 @@ const AuthSetAvilabilityScreen = ({ navigation }) => {
             </Text>
           </View>
 
+          {/* TimeSlots Container */}
           <View style={{ padding: 16 }}>
             {availability.map((item, index) => (
               <View key={index} style={styles.dayContainer}>
                 {item.locations.map((loc, locIndex) => (
-                  <View
-                    key={`${index}-${locIndex}`}
-                    style={{ marginBottom: 16 }}
-                  >
+                  <View key={loc.uniqueId} style={{ marginBottom: 16 }}>
                     <View style={styles.timeRow}>
                       <View style={styles.dayCircle}>
                         <Text
@@ -933,20 +415,45 @@ const AuthSetAvilabilityScreen = ({ navigation }) => {
                       />
                     </View>
 
-                    <Dropdown
-                      data={selectedLocations}
-                      labelField="title"
-                      valueField="_id"
-                      value={loc._id}
-                      onChange={(selected) =>
-                        updateLocation(index, locIndex, selected._id)
-                      }
-                      placeholder="Select Location"
-                      style={styles.dropdown}
-                      placeholderStyle={{ fontFamily: Secondary400 }}
-                      itemTextStyle={{ fontFamily: Secondary400 }}
-                      selectedTextStyle={{ fontFamily: Secondary400 }}
-                    />
+                    <View
+                      style={{
+                        flex: 1,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        marginTop: 12,
+                      }}
+                    >
+                      <Dropdown
+                        data={selectedLocations}
+                        labelField="title"
+                        valueField="_id"
+                        value={loc._id}
+                        onChange={(selected) =>
+                          updateLocation(index, locIndex, selected._id)
+                        }
+                        placeholder="Select Location"
+                        style={styles.dropdown}
+                        placeholderStyle={{ fontFamily: Secondary400 }}
+                        itemTextStyle={{ fontFamily: Secondary400 }}
+                        selectedTextStyle={{ fontFamily: Secondary400 }}
+                      />
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        style={{
+                          alignItems: "flex-end",
+                          justifyContent: "center",
+                          height: 40,
+                          width: "16%",
+                        }}
+                        onPress={() => removeLocation(index, locIndex)}
+                      >
+                        <MaterialCommunityIcons
+                          name="trash-can"
+                          color={AppColor.red}
+                          size={32}
+                        />
+                      </TouchableOpacity>
+                    </View>
 
                     {locIndex !== item?.locations?.length - 1 && (
                       <View
@@ -972,21 +479,31 @@ const AuthSetAvilabilityScreen = ({ navigation }) => {
               </View>
             ))}
           </View>
-
-          <TouchableOpacity
-            style={styles.continueButton}
-            activeOpacity={0.7}
-            onPress={handleContinuePress}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={AppColor.white} />
-            ) : (
-              <Text style={styles.continueButtonText}>{"Continue"}</Text>
-            )}
-          </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Continue Button */}
+      <View
+        style={{
+          paddingBottom: insets.bottom,
+          borderTopWidth: 1,
+          borderColor: AppColor.border,
+          backgroundColor: AppColor.white,
+        }}
+      >
+        <TouchableOpacity
+          style={styles.continueButton}
+          activeOpacity={0.7}
+          onPress={handleContinuePress}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color={AppColor.white} />
+          ) : (
+            <Text style={styles.continueButtonText}>{"Continue"}</Text>
+          )}
+        </TouchableOpacity>
+      </View>
 
       <DateTimePickerModal
         isVisible={isPickerVisible}
@@ -1030,7 +547,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginVertical: 15,
+    marginVertical: 10,
   },
   stepSubContainer: {
     alignItems: "center",
@@ -1084,11 +601,11 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     height: 40,
+    width: "84%",
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 6,
     paddingHorizontal: 12,
-    marginTop: 12,
   },
   addButton: {
     marginBottom: 16,
@@ -1101,7 +618,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: AppColor.primary,
-    marginBottom: 20,
+    marginVertical: 10,
     marginHorizontal: 16,
     ...Platform.select({
       ios: {

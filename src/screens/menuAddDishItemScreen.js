@@ -27,7 +27,7 @@ import MediaPickerDialog from "../components/MediaPickerDialog";
 import ImagePicker from "react-native-image-crop-picker";
 import FastImage from "@d11/react-native-fast-image";
 import usePermission from "../hooks/usePermission";
-import { permission } from "../utils/permissions";
+import { permission } from "../helpers/permission.helper";
 import { RESULTS } from "react-native-permissions";
 import { MultiSelect } from "react-native-element-dropdown";
 import {

@@ -24,7 +24,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { RESULTS } from "react-native-permissions";
 import ImagePicker from "react-native-image-crop-picker";
 import usePermission from "../hooks/usePermission";
-import { permission } from "../utils/permissions";
+import { permission } from "../helpers/permission.helper";
 import MediaPickerDialog from "../components/MediaPickerDialog";
 import { useDispatch, useSelector } from "react-redux";
 import { updateFoodTruckProfile_API, uploadImage_API } from "../api/appAPI";

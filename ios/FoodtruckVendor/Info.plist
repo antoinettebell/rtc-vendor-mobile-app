@@ -84,6 +84,14 @@
 		<string>Inter-Regular.otf</string>
 		<string>Inter-SemiBold.otf</string>
 		<string>Inter-Thin-BETA.otf</string>
+		<string>Mulish-Black.ttf</string>
+		<string>Mulish-Bold.ttf</string>
+		<string>Mulish-ExtraBold.ttf</string>
+		<string>Mulish-ExtraLight.ttf</string>
+		<string>Mulish-Light.ttf</string>
+		<string>Mulish-Medium.ttf</string>
+		<string>Mulish-Regular.ttf</string>
+		<string>Mulish-SemiBold.ttf</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>
