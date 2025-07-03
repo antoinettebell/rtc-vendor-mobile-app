@@ -25,7 +25,7 @@ import usePermission from "../hooks/usePermission";
 import { permission } from "../helpers/permission.helper";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import { getLocationName } from "../api/appAPI";
+import { getLocationDetailsFromLatLong } from "../api/appAPI";
 import { RESULTS } from "react-native-permissions";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedLocations } from "../redux/slices/foodTruckProfileSlice";
@@ -58,6 +58,7 @@ const AuthMapScreen = ({ navigation, route }) => {
   const [searchTxt, setSearchTxt] = useState(null);
   const [title, setTitle] = useState("");
   const [locationName, setLocationName] = useState("");
+  const [zipcode, setZipcode] = useState("");
   const [currentRegion, setCurrentRegion] = useState(initialRegion);
   const [snackbar, setSnackbar] = useState({
     visible: false,
@@ -89,14 +90,22 @@ const AuthMapScreen = ({ navigation, route }) => {
     });
   };
 
-  const getPlaceName = async (lat, long) => {
+  const getPlaceName = async (lat, long, onlyZipCode = null) => {
     try {
       const payload = { lat, long };
-      let response = await getLocationName(payload);
-      if (response.status === "OK") {
-        const adrs = response.results[0].formatted_address;
-        setTitle(adrs.split(",").slice(0, 1).join(",").trim());
-        setLocationName(adrs);
+      let response = await getLocationDetailsFromLatLong(payload);
+      if (response.status === "OK" && response?.results?.length) {
+        const adrsComponent = response.results[0].address_components;
+        const zipCode = adrsComponent.find((item) =>
+          item?.types?.includes("postal_code")
+        )?.long_name;
+        setZipcode(zipCode || "");
+
+        if (!onlyZipCode) {
+          const adrs = response.results[0].formatted_address;
+          setTitle(adrs.split(",").slice(0, 1).join(",").trim());
+          setLocationName(adrs);
+        }
         return;
       } else {
         switch (response.status) {
@@ -236,6 +245,7 @@ const AuthMapScreen = ({ navigation, route }) => {
       address: locationName,
       lat: String(currentRegion.latitude),
       long: String(currentRegion.longitude),
+      zipcode: zipcode,
     };
     Params?.onGoBack(newLocation);
     // dispatch(setSelectedLocations([...(selectedLocations || []), payload]));
@@ -338,6 +348,23 @@ const AuthMapScreen = ({ navigation, route }) => {
               setTitle(adrs.split(",").slice(0, 1).join(",").trim());
               setSearchTxt(adrs);
               setLocationName(adrs);
+              if (details) {
+                const adrsComponent = details.address_components;
+                const zipCode = adrsComponent.find((item) =>
+                  item?.types?.includes("postal_code")
+                )?.long_name;
+                if (zipCode) {
+                  setZipcode(zipCode);
+                } else {
+                  getPlaceName(
+                    details?.geometry?.location?.lat,
+                    details?.geometry?.location?.lng,
+                    true // this is for, only change the zipcode
+                  );
+                }
+              } else {
+                setZipcode("");
+              }
               // Animate the map to the new coordinates
               mapRef.current?.animateToRegion(region);
               // when user press on the search result then if there is anything in search box then it will be emptied.

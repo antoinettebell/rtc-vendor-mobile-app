@@ -751,7 +751,7 @@ const EditProfileScreen = ({ navigation }) => {
     <View style={[styles.container]}>
       <StatusBarManager />
 
-      {/* Header */}
+      {/* Header Container */}
       <View
         style={{
           flexDirection: "row",
@@ -858,19 +858,52 @@ const EditProfileScreen = ({ navigation }) => {
 
             {/* Photos Upload */}
             <View style={styles.section}>
-              <Text style={styles.label}>Change Food Truck Photos</Text>
-              <TouchableOpacity
-                style={[
-                  styles.photoUploadContainer,
-                  {
-                    borderColor: !!errors.photos ? AppColor.red : AppColor.gray,
-                  },
-                ]}
-                onPress={onPressUploadPhotos}
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 8,
+                }}
               >
-                <FontAwesome6 name="upload" color={AppColor.black} size={20} />
-                <Text style={styles.uploadButtonText}>Upload Photos</Text>
-              </TouchableOpacity>
+                <Text style={[styles.label, { marginBottom: 0 }]}>
+                  Change Food Truck Photos
+                </Text>
+                {selectedPhotos?.length > 0 && (
+                  <TouchableOpacity
+                    hitSlop={5}
+                    activeOpacity={0.7}
+                    onPress={onPressUploadPhotos}
+                  >
+                    <AntDesign
+                      name="plussquareo"
+                      size={20}
+                      color={AppColor.primary}
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {selectedPhotos?.length === 0 && (
+                <TouchableOpacity
+                  style={[
+                    styles.photoUploadContainer,
+                    {
+                      borderColor: !!errors.photos
+                        ? AppColor.red
+                        : AppColor.gray,
+                    },
+                  ]}
+                  onPress={onPressUploadPhotos}
+                >
+                  <FontAwesome6
+                    name="upload"
+                    color={AppColor.black}
+                    size={20}
+                  />
+                  <Text style={styles.uploadButtonText}>Upload Photos</Text>
+                </TouchableOpacity>
+              )}
 
               {selectedPhotos?.length > 0 && (
                 <View>
@@ -1317,8 +1350,8 @@ const styles = StyleSheet.create({
   },
   thumbnailContainer: { flexDirection: "row" },
   thumbnail: {
-    width: 50,
-    height: 50,
+    width: 80,
+    height: 80,
     borderRadius: 5,
   },
 

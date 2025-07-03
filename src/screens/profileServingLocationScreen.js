@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -21,10 +21,7 @@ import {
   HelperText,
 } from "react-native-paper";
 import { AppColor, Primary400, Secondary400 } from "../utils/theme";
-import Ionicons from "react-native-vector-icons/Ionicons";
 import SimpleLineIcons from "react-native-vector-icons/SimpleLineIcons";
-import Feather from "react-native-vector-icons/Feather";
-import FontAwesome from "react-native-vector-icons/FontAwesome";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import AntDesign from "react-native-vector-icons/AntDesign";
 import { useDispatch, useSelector } from "react-redux";
@@ -463,7 +460,24 @@ const ProfileServingLocationScreen = ({ navigation }) => {
     });
   };
 
+  // Continue Btn API Call
   const handleLocationSavePress = async () => {
+    for (let i = 0; i < locationsData.length; i++) {
+      const location = locationsData[i];
+      if (
+        location.zipcode === "" ||
+        location.zipcode === null ||
+        location.zipcode === undefined
+      ) {
+        Alert.alert(
+          "Zipcode required",
+          `Please provide a valid zipcode for "${location.title}".`,
+          [{ text: "OK" }]
+        );
+        return true; // Stop execution and indicate validation failure
+      }
+    }
+
     setLoading(true);
     try {
       const foodTruckPayload = {
@@ -760,40 +774,6 @@ const ProfileServingLocationScreen = ({ navigation }) => {
                         leadingIcon={"trash-can"}
                       />
                     </Menu>
-                    {/* <View style={[styles.locationItem, { gap: 8 }]}>
-                      <TouchableOpacity
-                        activeOpacity={0.5}
-                        style={{
-                          height: 24,
-                          width: 24,
-                          alignItems: "center",
-                          justifyContent: "center",
-                          borderRadius: 3,
-                          backgroundColor: "#FF4A4A",
-                        }}
-                        onPress={() => onRemoveLocationPress(index)}
-                      >
-                        <Feather
-                          name="trash-2"
-                          size={16}
-                          color={AppColor.white}
-                        />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        activeOpacity={0.5}
-                        style={{
-                          height: 24,
-                          width: 24,
-                          alignItems: "center",
-                          justifyContent: "center",
-                          borderRadius: 3,
-                          backgroundColor: AppColor.primary,
-                        }}
-                        onPress={() => onEditLocationPress({ item, index })}
-                      >
-                        <Feather name="edit" size={16} color={AppColor.white} />
-                      </TouchableOpacity>
-                    </View> */}
                   </View>
                   <View style={styles.locationItem}>
                     <SimpleLineIcons

@@ -1,8 +1,7 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   KeyboardAvoidingView,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   View,
@@ -10,33 +9,34 @@ import {
   TouchableOpacity,
   Platform,
   FlatList,
-  Alert,
   TextInput,
   Dimensions,
   Pressable,
 } from "react-native";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
-import { ActivityIndicator, Divider, IconButton } from "react-native-paper";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  ActivityIndicator,
+  Divider,
+  HelperText,
+  IconButton,
+} from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
-import Octicons from "react-native-vector-icons/Octicons";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import AntDesign from "react-native-vector-icons/AntDesign";
 import { RESULTS } from "react-native-permissions";
-import ImagePicker from "react-native-image-crop-picker";
-import usePermission from "../hooks/usePermission";
-import { permission } from "../helpers/permission.helper";
-import MediaPickerDialog from "../components/MediaPickerDialog";
-import { useDispatch, useSelector } from "react-redux";
-import { updateFoodTruckProfile_API, uploadImage_API } from "../api/appAPI";
-import { clearUserSlice, setUser } from "../redux/slices/userSlice";
-import {
-  clearFoodTruckProfileSlice,
-  setSelectedLocations,
-} from "../redux/slices/foodTruckProfileSlice";
-import { onSignOut } from "../redux/slices/authSlice";
-import StatusBarManager from "../components/StatusBarManager";
 import { Dropdown } from "react-native-element-dropdown";
 import FastImage from "@d11/react-native-fast-image";
+import ImagePicker from "react-native-image-crop-picker";
+import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import usePermission from "../hooks/usePermission";
+import { permission } from "../helpers/permission.helper";
+import { setUser } from "../redux/slices/userSlice";
+import { setSelectedLocations } from "../redux/slices/foodTruckProfileSlice";
+import { updateFoodTruckProfile_API, uploadImage_API } from "../api/appAPI";
+import MediaPickerDialog from "../components/MediaPickerDialog";
+import StatusBarManager from "../components/StatusBarManager";
+import { useFocusEffect } from "@react-navigation/native";
 
 const dropdownData = [
   {
@@ -214,6 +214,12 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
   const [mediaLink2, setMediaLink2] = useState("");
   const [mediaLink3, setMediaLink3] = useState("");
   const [mediaLink4, setMediaLink4] = useState("");
+  const [errors, setErrors] = useState({
+    logo: "",
+    photos: "",
+    cuisine: "",
+    location: "",
+  });
 
   const onPressUploadLogo = () => {
     setSelectedMediaType("logo");
@@ -253,8 +259,16 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
                 };
                 if (mediaType === "logo") {
                   setSelectedLogo(imagedata);
+                  setErrors((prev) => ({
+                    ...prev,
+                    logo: "",
+                  }));
                 } else {
                   setSelectedPhotos((prev) => [...prev, imagedata]);
+                  setErrors((prev) => ({
+                    ...prev,
+                    photos: "",
+                  }));
                 }
               } catch (error) {
                 console.log("error => ", error);
@@ -305,6 +319,10 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
                           type: images.mime,
                         };
                   setSelectedLogo(payload);
+                  setErrors((prev) => ({
+                    ...prev,
+                    logo: "",
+                  }));
                 } else {
                   const tempImages = images.map((i) =>
                     Platform.OS == "ios"
@@ -322,6 +340,10 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
                         }
                   );
                   setSelectedPhotos((prev) => [...prev, ...tempImages]);
+                  setErrors((prev) => ({
+                    ...prev,
+                    photos: "",
+                  }));
                 }
               } catch (error) {
                 console.log("error => ", error);
@@ -410,6 +432,25 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
   };
 
   const handleContinueBtnPress = async () => {
+    // Validate all required fields
+    const newErrors = {
+      logo: selectedLogo ? "" : "Logo is required",
+      photos: selectedPhotos.length > 0 ? "" : "At least one image is required",
+      cuisine:
+        selectedCuisine.length > 0 ? "" : "At least one Cuisine is required",
+      location:
+        selectedLocations.length > 0 ? "" : "At least one Location is required",
+    };
+
+    setErrors(newErrors);
+
+    // Check if there are any errors
+    const hasErrors = Object.values(newErrors).some((error) => error !== "");
+    if (hasErrors) {
+      return;
+    }
+
+    // proceed with saving
     setLoading(true);
     try {
       // upload logo
@@ -503,11 +544,31 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
     }
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+
+        // Conditionally update cuisine error
+        if (selectedCuisine.length > 0) {
+          newErrors.cuisine = ""; // Clear error if cuisine is selected
+        }
+
+        // Conditionally update location error
+        if (selectedLocations.length > 0) {
+          newErrors.location = ""; // Clear error if location is selected
+        }
+
+        return newErrors;
+      });
+    }, [selectedCuisine, selectedLocations])
+  );
+
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <View style={styles.container}>
       <StatusBarManager barStyle="light-content" />
 
-      {/* Header */}
+      {/* Header Container */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <IconButton
           icon="arrow-left"
@@ -523,7 +584,7 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
       <KeyboardAvoidingView
         enabled={Platform.OS === "ios"}
         behavior="padding"
-        style={{ flex: 1, marginBottom: -insets.bottom }}
+        style={{ flex: 1 }}
       >
         <ScrollView
           contentContainerStyle={{ flexGrow: 1 }}
@@ -533,7 +594,7 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
           pointerEvents={loading ? "none" : "auto"}
         >
           <View style={{ flex: 1 }}>
-            {/* Step Indicator */}
+            {/* Step Indicator Container */}
             <View style={styles.stepContainer}>
               <View style={styles.stepSubContainer}>
                 <View style={styles.filledCircle}>
@@ -608,22 +669,55 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
                     <Text style={styles.uploadButtonText}>Upload Photo</Text>
                   </TouchableOpacity>
                 </View>
+                {!!errors.logo && (
+                  <HelperText
+                    type="error"
+                    visible={!!errors.logo}
+                    style={[styles.helper, { alignSelf: "center" }]}
+                  >
+                    {errors.logo}
+                  </HelperText>
+                )}
               </View>
 
               {/* Photos Upload */}
               <View style={styles.section}>
-                <Text style={styles.label}>Select Food Truck Photos</Text>
-                <TouchableOpacity
-                  style={styles.photoUploadContainer}
-                  onPress={onPressUploadPhotos}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 8,
+                  }}
                 >
-                  <FontAwesome6
-                    name="upload"
-                    color={AppColor.black}
-                    size={20}
-                  />
-                  <Text style={styles.uploadButtonText}>Upload Photos</Text>
-                </TouchableOpacity>
+                  <Text style={styles.label}>Select Food Truck Photos</Text>
+                  {selectedPhotos?.length > 0 && (
+                    <TouchableOpacity
+                      hitSlop={5}
+                      activeOpacity={0.7}
+                      onPress={onPressUploadPhotos}
+                    >
+                      <AntDesign
+                        name="plussquareo"
+                        size={20}
+                        color={AppColor.primary}
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {selectedPhotos?.length === 0 && (
+                  <TouchableOpacity
+                    style={styles.photoUploadContainer}
+                    onPress={onPressUploadPhotos}
+                  >
+                    <FontAwesome6
+                      name="upload"
+                      color={AppColor.black}
+                      size={20}
+                    />
+                    <Text style={styles.uploadButtonText}>Upload Photos</Text>
+                  </TouchableOpacity>
+                )}
 
                 {selectedPhotos?.length > 0 && (
                   <View>
@@ -666,6 +760,16 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
                       )}
                     />
                   </View>
+                )}
+
+                {!!errors.photos && (
+                  <HelperText
+                    type="error"
+                    visible={!!errors.photos}
+                    style={[styles.helper, { alignSelf: "center" }]}
+                  >
+                    {errors.photos}
+                  </HelperText>
                 )}
               </View>
 
@@ -781,7 +885,6 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
                     size={18}
                   />
                 </TouchableOpacity>
-
                 {selectedCuisine?.map((item) => (
                   <View key={item._id} style={styles.dropdown}>
                     <Ionicons
@@ -793,6 +896,15 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
                     <Text style={styles.dropdownText}>{item.name}</Text>
                   </View>
                 ))}
+                {!!errors.cuisine && (
+                  <HelperText
+                    type="error"
+                    visible={!!errors.cuisine}
+                    style={styles.helper}
+                  >
+                    {errors.cuisine}
+                  </HelperText>
+                )}
 
                 <TouchableOpacity
                   activeOpacity={0.7}
@@ -824,25 +936,43 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
                     <Text style={styles.dropdownText}>{item.title}</Text>
                   </View>
                 ))}
-              </View>
-
-              {/* Continue Button */}
-              <TouchableOpacity
-                onPress={handleContinueBtnPress}
-                activeOpacity={0.7}
-                style={styles.continueButton}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color={AppColor.white} />
-                ) : (
-                  <Text style={styles.continueButtonText}>Continue</Text>
+                {!!errors.location && (
+                  <HelperText
+                    type="error"
+                    visible={!!errors.location}
+                    style={styles.helper}
+                  >
+                    {errors.location}
+                  </HelperText>
                 )}
-              </TouchableOpacity>
+              </View>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Continue Button */}
+      <View
+        style={{
+          paddingBottom: insets.bottom,
+          borderTopWidth: 1,
+          borderColor: AppColor.border,
+          backgroundColor: AppColor.white,
+        }}
+      >
+        <TouchableOpacity
+          onPress={handleContinueBtnPress}
+          activeOpacity={0.7}
+          style={styles.continueButton}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color={AppColor.white} />
+          ) : (
+            <Text style={styles.continueButtonText}>Continue</Text>
+          )}
+        </TouchableOpacity>
+      </View>
 
       {/* Media Picker Modal */}
       <MediaPickerDialog
@@ -918,7 +1048,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: Secondary400,
     color: AppColor.black,
-    marginBottom: 8,
   },
 
   // Image [Logo, Photos]
@@ -963,8 +1092,8 @@ const styles = StyleSheet.create({
   },
   thumbnailContainer: { flexDirection: "row" },
   thumbnail: {
-    width: 50,
-    height: 50,
+    width: 80,
+    height: 80,
     borderRadius: 5,
   },
 
@@ -1059,7 +1188,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: AppColor.primary,
-    marginVertical: 20,
+    marginVertical: 10,
     marginHorizontal: 24,
     ...Platform.select({
       ios: {

@@ -19,7 +19,7 @@ import usePermission from "../hooks/usePermission";
 import { permission } from "../helpers/permission.helper";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import { getLocationName } from "../api/appAPI";
+import { getLocationDetailsFromLatLong } from "../api/appAPI";
 import { RESULTS } from "react-native-permissions";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedLocations } from "../redux/slices/foodTruckProfileSlice";
@@ -85,15 +85,22 @@ const ProfileMapScreen = ({ navigation, route }) => {
     });
   };
 
-  const getPlaceName = async (lat, long) => {
+  const getPlaceName = async (lat, long, onlyZipCode = null) => {
     try {
       const payload = { lat, long };
-      let response = await getLocationName(payload);
-      if (response.status === "OK") {
-        const adrs = response.results[0].formatted_address;
-        setTitle(adrs.split(",").slice(0, 1).join(",").trim());
-        setLocationName(adrs);
-        setLocationZipcode("");
+      let response = await getLocationDetailsFromLatLong(payload);
+      if (response.status === "OK" && response?.results?.length) {
+        const adrsComponent = response.results[0].address_components;
+        const zipCode = adrsComponent.find((item) =>
+          item?.types?.includes("postal_code")
+        )?.long_name;
+        setLocationZipcode(zipCode || "");
+
+        if (!onlyZipCode) {
+          const adrs = response.results[0].formatted_address;
+          setTitle(adrs.split(",").slice(0, 1).join(",").trim());
+          setLocationName(adrs);
+        }
         return;
       } else {
         switch (response.status) {
@@ -347,7 +354,23 @@ const ProfileMapScreen = ({ navigation, route }) => {
               setTitle(adrs.split(",").slice(0, 1).join(",").trim());
               setSearchTxt(adrs);
               setLocationName(adrs);
-              setLocationZipcode("");
+              if (details) {
+                const adrsComponent = details.address_components;
+                const zipCode = adrsComponent.find((item) =>
+                  item?.types?.includes("postal_code")
+                )?.long_name;
+                if (zipCode) {
+                  setLocationZipcode(zipCode);
+                } else {
+                  getPlaceName(
+                    details?.geometry?.location?.lat,
+                    details?.geometry?.location?.lng,
+                    true // this is for, only change the zipcode
+                  );
+                }
+              } else {
+                setLocationZipcode("");
+              }
               // Animate the map to the new coordinates
               mapRef.current?.animateToRegion(region);
               // Clear the search text

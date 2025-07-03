@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -323,6 +324,26 @@ const AuthServingLocationScreen = ({ navigation }) => {
     dispatch(setSelectedLocations([...(selectedLocations || []), newLocation]));
   };
 
+  const handleBackButtonPress = () => {
+    for (let i = 0; i < locationsData.length; i++) {
+      const location = locationsData[i];
+      if (
+        location.zipcode === "" ||
+        location.zipcode === null ||
+        location.zipcode === undefined
+      ) {
+        Alert.alert(
+          "Zipcode required",
+          `Please provide a valid zipcode for "${location.title}".`,
+          [{ text: "OK" }]
+        );
+        return true; // Stop execution and indicate validation failure
+      }
+    }
+
+    navigation.goBack();
+  };
+
   useEffect(() => {
     setlocationsData(selectedLocations);
   }, [selectedLocations]);
@@ -337,7 +358,7 @@ const AuthServingLocationScreen = ({ navigation }) => {
           icon="arrow-left"
           iconColor={AppColor.black}
           size={24}
-          onPress={() => navigation.goBack()}
+          onPress={handleBackButtonPress}
         />
         <Text style={styles.headerTitle}>{"Serving Location"}</Text>
         <View style={styles.headerIconContainer}>
@@ -499,7 +520,7 @@ const AuthServingLocationScreen = ({ navigation }) => {
             <TouchableOpacity
               style={styles.continueButton}
               activeOpacity={0.7}
-              onPress={() => navigation.goBack()}
+              onPress={handleBackButtonPress}
             >
               <Text style={styles.continueButtonText}>{"Continue"}</Text>
             </TouchableOpacity>

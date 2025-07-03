@@ -27,8 +27,8 @@ import {
 } from "./apiEndPoint";
 import apiClient from "./apiClient";
 
-// Reverse Location
-export const getLocationName = async (payload) => {
+// Reverse Location for Place Detail
+export const getLocationDetailsFromLatLong = async (payload) => {
   try {
     const { lat, long } = payload;
     const API_KEY = Config.GOOGLE_MAP_API_KEY;
@@ -40,8 +40,8 @@ export const getLocationName = async (payload) => {
 
     return data;
   } catch (error) {
-    console.error("Error getting Location Name:", error);
-    throw new Error(error || "Error getting location Name:");
+    console.error("Error getting Location Data:", error);
+    throw new Error(error || "Error getting location Data:");
   }
 };
 
@@ -59,7 +59,7 @@ export const uploadImage_API = async (payload) => {
 // Cuisine List API
 export const cuisineList_API = async (payload) => {
   try {
-    const URL = `${CUISINE}?page=${payload.page}&limit=100`;
+    const URL = `${CUISINE}?page=${payload.page}&limit=1000`;
     const response = await apiClient.get(URL, { skipToken: false });
     return response?.data;
   } catch (error) {

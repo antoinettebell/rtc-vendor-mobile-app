@@ -27,20 +27,20 @@ export const AppColor = {
 };
 
 // Fonts
-export const Primary100 =
+export const Inter100 =
   Platform.OS === "ios" ? "Inter-ThinBETA" : "Inter-Thin-BETA";
-export const Primary200 =
+export const Inter200 =
   Platform.OS === "ios" ? "Inter-ExtraLightBETA" : "Inter-ExtraLight-BETA";
-export const Primary300 =
+export const Inter300 =
   Platform.OS === "ios" ? "Inter-LightBETA" : "Inter-Light-BETA";
-export const Primary400 = "Inter-Regular";
-export const Primary500 = "Inter-Medium";
-export const Primary600 = "Inter-SemiBold";
-export const Primary700 = "Inter-Bold";
-export const Primary800 = "Inter-ExtraBold";
-export const Primary900 = "Inter-Black";
+export const Inter400 = "Inter-Regular";
+export const Inter500 = "Inter-Medium";
+export const Inter600 = "Inter-SemiBold";
+export const Inter700 = "Inter-Bold";
+export const Inter800 = "Inter-ExtraBold";
+export const Inter900 = "Inter-Black";
 
-export const SubPrimary400 =
+export const Primary400 =
   Platform.OS === "ios" ? "P22 ArtsAndCrafts" : "P22 Arts And Crafts Regular";
 
 export const Secondary400 =

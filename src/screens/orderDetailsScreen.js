@@ -489,7 +489,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                 <View>
                   <Text
                     style={styles.orderItemPrice}
-                  >{`$${item.menuItem.price}`}</Text>
+                  >{`$${item.total.toFixed(2)}`}</Text>
                 </View>
               </View>
             ))}
@@ -547,7 +547,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   color: AppColor.black,
                 }}
               >
-                {`$${orderData.total.toFixed(2)}`}
+                {`$${orderData.subTotal.toFixed(2)}`}
               </Text>
             </View>
             <Divider style={{ marginTop: 16 }} />
@@ -603,7 +603,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     color: AppColor.black,
                   }}
                 >
-                  {`$${orderData.discount}`}
+                  {`$${orderData.discount.toFixed(2)}`}
                 </Text>
               </View>
               <View
@@ -630,7 +630,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     color: AppColor.black,
                   }}
                 >
-                  {`$${orderData.taxAmount}`}
+                  {`$0.00`}
                 </Text>
               </View>
               <View
@@ -657,7 +657,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     color: AppColor.black,
                   }}
                 >
-                  {"$0.0"}
+                  {"$0.00"}
                 </Text>
               </View>
             </View>

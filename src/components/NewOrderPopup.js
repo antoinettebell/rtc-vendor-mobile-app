@@ -441,7 +441,7 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
                   </View>
                   <Text
                     style={styles.itemPrice}
-                  >{`$${item.menuItem.price}`}</Text>
+                  >{`$${item.total.toFixed(2)}`}</Text>
                 </View>
               )}
               showsVerticalScrollIndicator={false}
