@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import Modal from "react-native-modal";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 
 const MediaPickerDialog = ({
   isVisible,
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
   },
   optionLabel: {
     fontSize: 16,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.text,
     marginTop: 10,
   },
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   },
   closeButtonText: {
     color: AppColor.white,
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
   },
 });

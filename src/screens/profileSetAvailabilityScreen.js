@@ -17,7 +17,7 @@ import {
 } from "react-native-paper";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { Dropdown } from "react-native-element-dropdown";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import moment from "moment";
@@ -364,7 +364,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
                     marginBottom: 12,
                     color: AppColor.black,
                     fontSize: 24,
-                    fontFamily: Primary400,
+                    fontFamily: Mulish700,
                   }}
                 >
                   Availability
@@ -373,7 +373,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
                   style={{
                     color: "#606268",
                     fontSize: 14,
-                    fontFamily: Secondary400,
+                    fontFamily: Mulish400,
                   }}
                 >
                   Set open & close time of your food-truck
@@ -394,7 +394,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
                               style={{
                                 color: "#fff",
                                 fontSize: 16,
-                                fontFamily: Secondary400,
+                                fontFamily: Mulish700,
                               }}
                             >
                               {item.day}
@@ -454,9 +454,9 @@ export default function ProfileAvailabilityScreen({ navigation }) {
                             }
                             placeholder="Select Location"
                             style={styles.dropdown}
-                            placeholderStyle={{ fontFamily: Secondary400 }}
-                            itemTextStyle={{ fontFamily: Secondary400 }}
-                            selectedTextStyle={{ fontFamily: Secondary400 }}
+                            placeholderStyle={{ fontFamily: Mulish400 }}
+                            itemTextStyle={{ fontFamily: Mulish400 }}
+                            selectedTextStyle={{ fontFamily: Mulish400 }}
                           />
 
                           <TouchableOpacity
@@ -494,7 +494,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
                       mode="outlined"
                       onPress={() => addLocation(index)}
                       style={styles.addButton}
-                      labelStyle={{ fontFamily: Secondary400 }}
+                      labelStyle={{ fontFamily: Mulish400 }}
                     >
                       Add Location
                     </Button>
@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: AppColor.black,
     fontSize: 20,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
   },
 
   // steps
@@ -616,8 +616,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   timeLabel: {
-    fontSize: 16,
-    fontFamily: Secondary400,
+    fontSize: 14,
+    fontFamily: Mulish400,
     color: AppColor.black,
     textAlign: "center",
   },
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#888",
     textAlign: "center",
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   dropdown: {
     height: 40,
@@ -664,7 +664,7 @@ const styles = StyleSheet.create({
     }),
   },
   continueButtonText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.white,
   },

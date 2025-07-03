@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IconButton } from "react-native-paper";
 import { WebView } from "react-native-webview";
 import { tnc_API } from "../api/authAPI";
-import { AppColor, Primary400 } from "../utils/theme";
+import { AppColor, Mulish700 } from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
 
 const AppTermsOfServiceScreen = ({ navigation }) => {
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: AppColor.black,
     fontSize: 20,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
   },
   content: {
     flex: 1,

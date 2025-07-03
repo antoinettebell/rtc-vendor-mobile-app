@@ -7,7 +7,7 @@ import {
   StyleSheet,
   // Easing,
 } from "react-native";
-import { AppColor, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish400 } from "../utils/theme";
 import { ActivityIndicator } from "react-native-paper";
 
 const CustomBanner = ({
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 14,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.black,
     flex: 1,
     marginRight: 8,
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   },
   actionText: {
     color: AppColor.primary,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     fontWeight: "500",
   },

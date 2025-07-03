@@ -31,7 +31,7 @@ import usePermission from "../hooks/usePermission";
 import { permission } from "../helpers/permission.helper";
 import StatusBarManager from "../components/StatusBarManager";
 import MediaPickerDialog from "../components/MediaPickerDialog";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { CountryPicker } from "react-native-country-codes-picker";
 import { emailRegex } from "../utils/constants";
 import {
@@ -126,11 +126,11 @@ const MediaLinksComponent = ({
           style={styles.dropdownForMedia}
           containerStyle={{ width: width - 34 }}
           placeholderStyle={{
-            fontFamily: Secondary400,
+            fontFamily: Mulish400,
             color: AppColor.textHighlighter,
           }}
-          itemTextStyle={{ fontFamily: Secondary400 }}
-          selectedTextStyle={{ fontFamily: Secondary400 }}
+          itemTextStyle={{ fontFamily: Mulish400 }}
+          selectedTextStyle={{ fontFamily: Mulish400 }}
           renderItem={(item) => (
             <Pressable
               disabled={!item.disable} // for dropdown condition works opposite
@@ -770,7 +770,7 @@ const EditProfileScreen = ({ navigation }) => {
         <Text
           style={{
             fontSize: 19.78,
-            fontFamily: Primary400,
+            fontFamily: Mulish700,
             color: AppColor.black,
           }}
         >
@@ -1305,7 +1305,7 @@ const styles = StyleSheet.create({
   //   Logo, Photos
   label: {
     fontSize: 15,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.black,
     marginBottom: 8,
   },
@@ -1335,7 +1335,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 16,
     color: AppColor.black,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   photoUploadContainer: {
     height: 104,
@@ -1385,13 +1385,13 @@ const styles = StyleSheet.create({
   radioLabel: {
     marginLeft: 8,
     fontSize: 15,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.black,
   },
 
   //   Textinputs
   inputLabel: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 15,
     color: AppColor.text,
     marginBottom: 8,
@@ -1400,11 +1400,11 @@ const styles = StyleSheet.create({
     backgroundColor: AppColor.white,
   },
   inputText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 15,
   },
   inputTextWithLine: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 15,
     paddingLeft: 16,
     borderLeftWidth: 1,
@@ -1414,6 +1414,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     paddingLeft: 0,
     paddingTop: 0,
+    fontFamily: Mulish400
   },
 
   //   country code input
@@ -1433,7 +1434,7 @@ const styles = StyleSheet.create({
   countryCodeText: {
     color: AppColor.text,
     fontSize: 15,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
 
   //   Update btn
@@ -1459,7 +1460,7 @@ const styles = StyleSheet.create({
     }),
   },
   buttonLabel: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.white,
   },
@@ -1492,13 +1493,13 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 16,
     fontSize: 16,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   inputForMedia: {
     flex: 1,
     height: 46,
     fontSize: 15,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     backgroundColor: AppColor.white,
     paddingHorizontal: 16,
     paddingVertical: 10,

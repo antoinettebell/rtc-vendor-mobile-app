@@ -20,7 +20,7 @@ import {
   Menu,
   HelperText,
 } from "react-native-paper";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400, Mulish600 } from "../utils/theme";
 import SimpleLineIcons from "react-native-vector-icons/SimpleLineIcons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import AntDesign from "react-native-vector-icons/AntDesign";
@@ -704,7 +704,7 @@ const ProfileServingLocationScreen = ({ navigation }) => {
                     >
                       <Text
                         style={{
-                          fontFamily: Secondary400,
+                          fontFamily: Mulish400,
                           fontSize: 16,
                           color: AppColor.primary,
                         }}
@@ -882,7 +882,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: AppColor.black,
     fontSize: 20,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
   },
   headerIconContainer: {
     width: 48,
@@ -932,17 +932,17 @@ const styles = StyleSheet.create({
   locationTitle: {
     fontSize: 16,
     color: AppColor.black,
-    fontFamily: Secondary400,
+    fontFamily: Mulish600,
   },
   locationAddress: {
     fontSize: 14,
     color: AppColor.gray,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   locationZipCode: {
     fontSize: 14,
     color: AppColor.text,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   separator: {
     height: 4,
@@ -962,7 +962,7 @@ const styles = StyleSheet.create({
   },
   emptyListText: {
     fontSize: 16,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     textAlign: "center",
     color: AppColor.text,
     marginTop: 10,
@@ -996,7 +996,7 @@ const styles = StyleSheet.create({
     }),
   },
   continueButtonText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.white,
   },
@@ -1009,14 +1009,14 @@ const styles = StyleSheet.create({
   modalTitle: {
     marginBottom: 20,
     fontSize: 22,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     color: AppColor.text,
     textAlign: "center",
   },
   modalSubtitle: {
     marginBottom: 20,
     fontSize: 16,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.textHighlighter,
     textAlign: "center",
   },
@@ -1052,12 +1052,12 @@ const styles = StyleSheet.create({
   },
   locationModalBtnText: {
     color: AppColor.white,
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
   },
   inputLabel: {
     fontSize: 15,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.text,
     marginBottom: 8,
   },
@@ -1066,11 +1066,12 @@ const styles = StyleSheet.create({
   },
   inputText: {
     fontSize: 15,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   helper: {
     // marginBottom: 8,
     paddingLeft: 0,
     // paddingTop: 0,
+    fontFamily: Mulish400
   },
 });

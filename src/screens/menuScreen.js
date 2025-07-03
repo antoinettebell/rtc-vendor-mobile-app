@@ -22,7 +22,7 @@ import AntDesign from "react-native-vector-icons/AntDesign";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400, Mulish600 } from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
 import {
   addCategory_API,
@@ -166,6 +166,13 @@ const MenuScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.log("error => ", error);
+      dispatch(
+        showSnackbar({
+          visible: true,
+          message: error.message,
+          type: "error",
+        })
+      );
     } finally {
       setRemoveLoading(false);
       setRemoveIndex(null);
@@ -217,7 +224,7 @@ const MenuScreen = ({ navigation }) => {
           numberOfLines={1}
           style={{
             fontSize: 19.78,
-            fontFamily: Primary400,
+            fontFamily: Mulish700,
             color: AppColor.black,
           }}
         >
@@ -285,7 +292,7 @@ const MenuScreen = ({ navigation }) => {
                     <View style={{ flex: 1 }}>
                       <Text
                         style={{
-                          fontFamily: Primary400,
+                          fontFamily: Mulish700,
                           fontSize: 14,
                           color: AppColor.text,
                         }}
@@ -294,7 +301,7 @@ const MenuScreen = ({ navigation }) => {
                       </Text>
                       <Text
                         style={{
-                          fontFamily: Secondary400,
+                          fontFamily: Mulish400,
                           fontSize: 12,
                           color: AppColor.textHighlighter,
                           marginTop: 5,
@@ -410,7 +417,7 @@ const MenuScreen = ({ navigation }) => {
                       <Text
                         style={{
                           fontSize: 14,
-                          fontFamily: Secondary400,
+                          fontFamily: Mulish600,
                           color: AppColor.text,
                         }}
                       >
@@ -435,7 +442,7 @@ const MenuScreen = ({ navigation }) => {
           <Text
             style={{
               fontSize: 16,
-              fontFamily: Secondary400,
+              fontFamily: Mulish400,
               color: AppColor.black,
               textAlign: "center",
             }}
@@ -712,7 +719,7 @@ const styles = StyleSheet.create({
   },
   emptyListText: {
     fontSize: 16,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     textAlign: "center",
     color: AppColor.text,
     marginTop: 10,
@@ -726,7 +733,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 22,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     color: AppColor.text,
     textAlign: "left",
     marginHorizontal: 26,
@@ -735,14 +742,14 @@ const styles = StyleSheet.create({
     marginTop: 5,
     marginBottom: 20,
     fontSize: 16,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.textHighlighter,
     textAlign: "left",
     marginHorizontal: 26,
   },
   inputLabel: {
     fontSize: 15,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.text,
     marginBottom: 8,
     marginHorizontal: 26,
@@ -753,7 +760,7 @@ const styles = StyleSheet.create({
   },
   inputText: {
     fontSize: 15,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   modalBtnAdd: {
     height: 48,
@@ -787,7 +794,7 @@ const styles = StyleSheet.create({
   },
   modalBtnText: {
     color: AppColor.white,
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
   },
 
@@ -796,5 +803,6 @@ const styles = StyleSheet.create({
     paddingLeft: 0,
     paddingTop: 0,
     marginHorizontal: 26,
+    fontFamily: Mulish400,
   },
 });

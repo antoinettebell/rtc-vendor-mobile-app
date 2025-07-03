@@ -13,7 +13,7 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import moment from "moment";
 import { useDispatch } from "react-redux";
 
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { getOrderByID_API, updateOrderStatusByID_API } from "../api/appAPI";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
 import {
@@ -313,7 +313,7 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
                 <Text
                   style={{
                     fontSize: 14,
-                    fontFamily: Secondary400,
+                    fontFamily: Mulish400,
                     color: AppColor.black,
                   }}
                 >
@@ -323,7 +323,7 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
                   numberOfLines={1}
                   style={{
                     fontSize: 14,
-                    fontFamily: Secondary400,
+                    fontFamily: Mulish400,
                     color: AppColor.black,
                   }}
                 >
@@ -343,7 +343,7 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
                 <Text
                   style={{
                     fontSize: 14,
-                    fontFamily: Secondary400,
+                    fontFamily: Mulish400,
                     color: AppColor.black,
                   }}
                 >
@@ -353,7 +353,7 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
                   numberOfLines={1}
                   style={{
                     fontSize: 14,
-                    fontFamily: Secondary400,
+                    fontFamily: Mulish400,
                     color: AppColor.black,
                   }}
                 >
@@ -371,7 +371,7 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
               numberOfLines={1}
               style={[
                 styles.orderIdText,
-                { color: AppColor.black, fontFamily: Secondary400 },
+                { color: AppColor.black, fontFamily: Mulish400 },
               ]}
               onPress={onCloseCurrentOrder}
             >
@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
   },
   orderStatusInfoText: {
     fontSize: 16,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     color: AppColor.primary,
   },
   itemsListContainer: {
@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
   },
   orderIdText: {
     fontSize: 16,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     color: AppColor.black,
     marginBottom: 16,
   },
@@ -601,18 +601,18 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 16,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     color: AppColor.black,
   },
   itemCount: {
     fontSize: 14,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: "#6F6F6F",
     marginTop: 4,
   },
   orderDate: {
     fontSize: 14,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.black,
     textAlign: "right",
   },
@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
   },
   orderTime: {
     fontSize: 14,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: "#6F6F6F",
     marginLeft: 4,
   },
@@ -643,18 +643,18 @@ const styles = StyleSheet.create({
   },
   itemName: {
     fontSize: 16,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.black,
   },
   itemDescription: {
     fontSize: 14,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: "#6F6F6F",
     marginTop: 4,
   },
   itemPrice: {
     fontSize: 16,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.black,
   },
   totalContainer: {
@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
   },
   totalText: {
     fontSize: 18,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.black,
   },
   actionContainer: {
@@ -691,6 +691,6 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 16,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
 });

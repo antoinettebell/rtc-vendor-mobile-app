@@ -10,7 +10,7 @@ import {
   Alert,
   ActivityIndicator as NativeIndicator,
 } from "react-native";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { ActivityIndicator, IconButton } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: AppColor.white,
     fontSize: 20,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
   },
   stepContainer: {
     flexDirection: "row",
@@ -439,10 +439,10 @@ const styles = StyleSheet.create({
   line: { width: "18%", height: 2, backgroundColor: AppColor.primary },
   content: { flex: 1 },
   section: { marginVertical: 16, paddingHorizontal: 24 },
-  sectionTitle: { fontSize: 18, fontFamily: Primary400, color: AppColor.text },
+  sectionTitle: { fontSize: 18, fontFamily: Mulish700, color: AppColor.text },
   sectionSubtitle: {
     fontSize: 14,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.textHighlighter,
     marginTop: 4,
   },
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 18,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.black,
     marginBottom: 8,
   },
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 16,
     color: AppColor.black,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   photoUploadContainer: {
     height: 104,
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
   radioLabel: {
     marginLeft: 8,
     fontSize: 15,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.black,
   },
   dropdown: {
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 16,
     fontSize: 16,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   continueButton: {
     height: 48,
@@ -572,7 +572,7 @@ const styles = StyleSheet.create({
     }),
   },
   continueButtonText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.white,
   },
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: AppColor.text,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   linkText: {
     color: AppColor.primary,

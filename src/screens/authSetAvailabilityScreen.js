@@ -22,7 +22,7 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import moment from "moment";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { updateFoodTruckProfile_API } from "../api/appAPI";
 import { setUser } from "../redux/slices/userSlice";
 import StatusBarManager from "../components/StatusBarManager";
@@ -345,7 +345,7 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
                 marginBottom: 12,
                 color: AppColor.black,
                 fontSize: 24,
-                fontFamily: Primary400,
+                fontFamily: Mulish700,
               }}
             >
               Availability
@@ -354,7 +354,7 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
               style={{
                 color: "#606268",
                 fontSize: 14,
-                fontFamily: Secondary400,
+                fontFamily: Mulish400,
               }}
             >
               Set open & close time of your food-truck
@@ -373,7 +373,7 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
                           style={{
                             color: "#fff",
                             fontSize: 16,
-                            fontFamily: Secondary400,
+                            fontFamily: Mulish700,
                           }}
                         >
                           {item.day}
@@ -433,9 +433,9 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
                         }
                         placeholder="Select Location"
                         style={styles.dropdown}
-                        placeholderStyle={{ fontFamily: Secondary400 }}
-                        itemTextStyle={{ fontFamily: Secondary400 }}
-                        selectedTextStyle={{ fontFamily: Secondary400 }}
+                        placeholderStyle={{ fontFamily: Mulish400 }}
+                        itemTextStyle={{ fontFamily: Mulish400 }}
+                        selectedTextStyle={{ fontFamily: Mulish400 }}
                       />
                       <TouchableOpacity
                         activeOpacity={0.7}
@@ -472,7 +472,7 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
                   mode="outlined"
                   onPress={() => addLocation(index)}
                   style={styles.addButton}
-                  labelStyle={{ fontFamily: Secondary400 }}
+                  labelStyle={{ fontFamily: Mulish400 }}
                 >
                   Add Location
                 </Button>
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: AppColor.black,
     fontSize: 20,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
   },
   stepContainer: {
     flexDirection: "row",
@@ -588,8 +588,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   timeLabel: {
-    fontSize: 16,
-    fontFamily: Secondary400,
+    fontSize: 14,
+    fontFamily: Mulish400,
     color: AppColor.black,
     textAlign: "center",
   },
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#888",
     textAlign: "center",
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   dropdown: {
     height: 40,
@@ -636,7 +636,7 @@ const styles = StyleSheet.create({
     }),
   },
   continueButtonText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.white,
   },

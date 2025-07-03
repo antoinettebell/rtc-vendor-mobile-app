@@ -12,7 +12,7 @@ import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
 import { getUserDetail_API } from "../api/appAPI";
 import { Divider, IconButton } from "react-native-paper";
@@ -100,7 +100,7 @@ const UserProfileScreen = ({ navigation }) => {
         <Text
           style={{
             fontSize: 19.78,
-            fontFamily: Primary400,
+            fontFamily: Mulish700,
             color: AppColor.black,
           }}
         >
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   },
   itemText: {
     fontSize: 16,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.black,
   },
 });

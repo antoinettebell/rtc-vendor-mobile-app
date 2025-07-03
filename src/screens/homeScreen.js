@@ -14,7 +14,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
 import FastImage from "@d11/react-native-fast-image";
 import CustomBanner from "../components/CustomBanner";
@@ -517,7 +517,7 @@ const HomeScreen = ({ navigation }) => {
                         <Text
                           numberOfLines={1}
                           style={{
-                            fontFamily: Primary400,
+                            fontFamily: Mulish700,
                             fontSize: 18,
                             color: AppColor.primary,
                             alignSelf: "center",
@@ -544,7 +544,7 @@ const HomeScreen = ({ navigation }) => {
                           <Text
                             style={{
                               fontSize: 14,
-                              fontFamily: Secondary400,
+                              fontFamily: Mulish400,
                               color: AppColor.black,
                             }}
                           >
@@ -554,7 +554,7 @@ const HomeScreen = ({ navigation }) => {
                             numberOfLines={1}
                             style={{
                               fontSize: 14,
-                              fontFamily: Secondary400,
+                              fontFamily: Mulish400,
                               color: AppColor.black,
                             }}
                           >
@@ -574,7 +574,7 @@ const HomeScreen = ({ navigation }) => {
                           <Text
                             style={{
                               fontSize: 14,
-                              fontFamily: Secondary400,
+                              fontFamily: Mulish400,
                               color: AppColor.black,
                             }}
                           >
@@ -584,7 +584,7 @@ const HomeScreen = ({ navigation }) => {
                             numberOfLines={1}
                             style={{
                               fontSize: 14,
-                              fontFamily: Secondary400,
+                              fontFamily: Mulish400,
                               color: AppColor.black,
                             }}
                           >
@@ -626,7 +626,7 @@ const HomeScreen = ({ navigation }) => {
                           numberOfLines={1}
                           style={{
                             fontSize: 14,
-                            fontFamily: Secondary400,
+                            fontFamily: Mulish400,
                             color: AppColor.black,
                           }}
                         >
@@ -757,7 +757,7 @@ const HomeScreen = ({ navigation }) => {
                   >
                     <Text
                       style={{
-                        fontFamily: Secondary400,
+                        fontFamily: Mulish400,
                         fontSize: 16,
                         color: AppColor.black,
                       }}
@@ -898,7 +898,7 @@ const styles = StyleSheet.create({
   },
   orderBtnText: {
     color: AppColor.white,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 16,
   },
   // New styles
@@ -924,7 +924,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     color: AppColor.black,
   },
   headerRightContainer: {
@@ -952,14 +952,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dropdownPlaceholder: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.textHighlighter,
   },
   dropdownItemText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   dropdownSelectedText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   dropdownOverlay: {
     flex: 1,
@@ -973,7 +973,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   switchText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 12,
     color: AppColor.black,
     marginTop: 5,
@@ -986,7 +986,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   sectionTitle: {
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     fontSize: 18,
     color: AppColor.black,
   },
@@ -999,7 +999,7 @@ const styles = StyleSheet.create({
     borderColor: AppColor.border,
   },
   orderIdText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: "#6F6F6F",
   },
@@ -1027,18 +1027,18 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   orderUserName: {
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.black,
   },
   orderItemCount: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: "#6F6F6F",
     paddingVertical: 5,
   },
   orderDate: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: "#6F6F6F",
   },
@@ -1049,7 +1049,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   orderTime: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: "#6F6F6F",
   },
@@ -1067,17 +1067,17 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   orderItemName: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: AppColor.black,
   },
   orderItemDescription: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: AppColor.black,
   },
   orderItemPrice: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: AppColor.black,
   },
@@ -1088,7 +1088,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   freeItemBadge: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 10,
     color: "#008B8B",
     backgroundColor: "#C2FFFF",
@@ -1105,7 +1105,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   orderTotalText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 20,
     color: AppColor.black,
   },
@@ -1140,12 +1140,12 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   salesCardAmount: {
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     fontSize: 24.65,
     color: AppColor.white,
   },
   salesCardLabel: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 12.33,
     color: AppColor.white,
   },
@@ -1170,12 +1170,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   quickStatsTitle: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: "#6F6F6F",
   },
   quickStatsSubTitle: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 16.7,
     color: AppColor.black,
   },

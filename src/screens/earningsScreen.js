@@ -1,6 +1,6 @@
 import React from "react";
 import { StatusBar, StyleSheet, Text, View } from "react-native";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
@@ -31,7 +31,7 @@ const EarningsScreen = () => {
           numberOfLines={1}
           style={{
             fontSize: 19.78,
-            fontFamily: Primary400,
+            fontFamily: Mulish700,
             color: AppColor.black,
           }}
         >
@@ -53,7 +53,7 @@ const EarningsScreen = () => {
           <Text
             style={{
               fontSize: 16,
-              fontFamily: Secondary400,
+              fontFamily: Mulish400,
               color: AppColor.black,
               textAlign: "center",
             }}

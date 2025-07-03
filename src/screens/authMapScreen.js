@@ -8,7 +8,7 @@ import {
   Pressable,
   TouchableOpacity,
 } from "react-native";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import {
   ActivityIndicator,
   IconButton,
@@ -427,7 +427,7 @@ const AuthMapScreen = ({ navigation, route }) => {
             <Text
               style={{
                 fontSize: 16,
-                fontFamily: Secondary400,
+                fontFamily: Mulish700,
                 color: AppColor.text,
               }}
             >
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: AppColor.black,
     fontSize: 20,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
   },
 
   contentContainer: {
@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     paddingHorizontal: 12,
     fontSize: 15,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   GPAC_Listview: {
     borderRadius: 6,
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
   },
   GPAC_Description: {
     fontSize: 13,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   GPAC_Loadder: {
     flexDirection: "row",
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   locationNameTxt: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
 
   bottomBrnContainer: { position: "absolute", right: 0, left: 0 },
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
     }),
   },
   saveButtonText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.white,
   },

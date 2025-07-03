@@ -1,282 +1,9 @@
-// import React, { useState } from "react";
-// import { View, StyleSheet, ScrollView } from "react-native";
-// import { TextInput, Button, Text, HelperText } from "react-native-paper";
-// import { TouchableOpacity } from "react-native";
-// import Ionicons from "react-native-vector-icons/Ionicons";
-
-// const SignUpScreen = () => {
-//   const [firstName, setFirstName] = useState("");
-//   const [lastName, setLastName] = useState("");
-//   const [email, setEmail] = useState("");
-//   const [emailError, setEmailError] = useState("");
-//   const [password, setPassword] = useState("");
-//   const [confirmPassword, setConfirmPassword] = useState("");
-//   const [passwordError, setPasswordError] = useState("");
-//   const [confirmError, setConfirmError] = useState("");
-//   const [showPassword, setShowPassword] = useState(false);
-//   const [showConfirm, setShowConfirm] = useState(false);
-//   const [agreed, setAgreed] = useState(false);
-
-//   const validateEmail = (value) => {
-//     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-//     return emailRegex.test(value);
-//   };
-
-//   const validatePassword = (value) => {
-//     const passwordRegex =
-//       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,15}$/;
-//     return passwordRegex.test(value);
-//   };
-
-//   const handleSignUp = () => {
-//     let isValid = true;
-
-//     if (!validateEmail(email)) {
-//       setEmailError("Enter a valid email.");
-//       isValid = false;
-//     } else {
-//       setEmailError("");
-//     }
-
-//     if (!validatePassword(password)) {
-//       setPasswordError(
-//         "Password must be 8–15 chars, 1 upper, 1 lower, 1 digit, 1 special char."
-//       );
-//       isValid = false;
-//     } else {
-//       setPasswordError("");
-//     }
-
-//     if (password !== confirmPassword) {
-//       setConfirmError("Passwords do not match.");
-//       isValid = false;
-//     } else {
-//       setConfirmError("");
-//     }
-
-//     if (isValid) {
-//       console.log("✅ Signing up:", {
-//         firstName,
-//         lastName,
-//         email,
-//         password,
-//       });
-//       // Handle API/signup logic here
-//     }
-//   };
-
-//   return (
-//     <ScrollView contentContainerStyle={styles.container}>
-//       <Text variant="headlineMedium" style={styles.header}>
-//         👋 Create Account
-//       </Text>
-//       <Text variant="bodyMedium" style={styles.subHeader}>
-//         Join us and let’s build something cool!
-//       </Text>
-
-//       <View style={styles.row}>
-//         <TextInput
-//           label="First Name"
-//           value={firstName}
-//           onChangeText={setFirstName}
-//           mode="outlined"
-//           style={[styles.input, styles.halfInput, { marginRight: 6 }]}
-//         />
-//         <TextInput
-//           label="Last Name"
-//           value={lastName}
-//           onChangeText={setLastName}
-//           mode="outlined"
-//           style={[styles.input, styles.halfInput, { marginLeft: 6 }]}
-//         />
-//       </View>
-
-//       <TextInput
-//         label="Email"
-//         value={email}
-//         onChangeText={(text) => {
-//           setEmail(text);
-//           setEmailError(validateEmail(text) ? "" : "Enter a valid email.");
-//         }}
-//         autoCapitalize="none"
-//         keyboardType="email-address"
-//         mode="outlined"
-//         error={!!emailError}
-//         style={styles.input}
-//       />
-//       {!!emailError && (
-//         <HelperText type="error" visible={!!emailError} style={styles.helper}>
-//           {emailError}
-//         </HelperText>
-//       )}
-
-//       <TextInput
-//         label="Password"
-//         value={password}
-//         onChangeText={(text) => {
-//           setPassword(text);
-//           setPasswordError(
-//             validatePassword(text)
-//               ? ""
-//               : "Password must be 8–15 chars, 1 upper, 1 lower, 1 digit, 1 special char."
-//           );
-//         }}
-//         secureTextEntry={!showPassword}
-//         mode="outlined"
-//         style={styles.input}
-//         error={!!passwordError}
-//         right={
-//           <TextInput.Icon
-//             icon={showPassword ? "eye-off" : "eye"}
-//             onPress={() => setShowPassword(!showPassword)}
-//           />
-//         }
-//       />
-//       {!!passwordError && (
-//         <HelperText
-//           type="error"
-//           visible={!!passwordError}
-//           style={styles.helper}
-//         >
-//           {passwordError}
-//         </HelperText>
-//       )}
-
-//       <TextInput
-//         label="Confirm Password"
-//         value={confirmPassword}
-//         onChangeText={(text) => {
-//           setConfirmPassword(text);
-//           setConfirmError(text === password ? "" : "Passwords do not match.");
-//         }}
-//         secureTextEntry={!showConfirm}
-//         mode="outlined"
-//         style={styles.input}
-//         error={!!confirmError}
-//         right={
-//           <TextInput.Icon
-//             icon={showConfirm ? "eye-off" : "eye"}
-//             onPress={() => setShowConfirm(!showConfirm)}
-//           />
-//         }
-//       />
-//       {!!confirmError && (
-//         <HelperText type="error" visible={!!confirmError} style={styles.helper}>
-//           {confirmError}
-//         </HelperText>
-//       )}
-
-//       <View style={styles.termsContainer}>
-//         <TouchableOpacity
-//           onPress={() => setAgreed(!agreed)}
-//           style={styles.iconBox}
-//         >
-//           <Ionicons
-//             name={agreed ? "checkbox" : "square-outline"}
-//             size={24}
-//             color="#007BFF"
-//           />
-//         </TouchableOpacity>
-
-//         <Text style={styles.termsText} onPress={() => setAgreed(!agreed)}>
-//           I agree to the <Text style={styles.linkText}>Terms & Conditions</Text>{" "}
-//           and <Text style={styles.linkText}>Privacy Policy</Text>
-//         </Text>
-//       </View>
-
-//       <Button
-//         mode="contained"
-//         onPress={handleSignUp}
-//         style={styles.button}
-//         contentStyle={styles.buttonContent}
-//         labelStyle={{ fontWeight: "bold" }}
-//         disabled={
-//           !firstName ||
-//           !lastName ||
-//           !email ||
-//           !password ||
-//           !confirmPassword ||
-//           !!emailError ||
-//           !!passwordError ||
-//           !!confirmError ||
-//           !agreed
-//         }
-//       >
-//         Sign Up 🚀
-//       </Button>
-//     </ScrollView>
-//   );
-// };
-
-// export default SignUpScreen;
-
-// const styles = StyleSheet.create({
-//   container: {
-//     padding: 24,
-//     backgroundColor: "#F7F9FC",
-//     flexGrow: 1,
-//     justifyContent: "center",
-//   },
-//   header: {
-//     textAlign: "center",
-//     marginBottom: 8,
-//     fontWeight: "bold",
-//   },
-//   subHeader: {
-//     textAlign: "center",
-//     marginBottom: 24,
-//     color: "#666",
-//   },
-//   input: {
-//     backgroundColor: "#fff",
-//     marginBottom: 10,
-//   },
-//   button: {
-//     marginTop: 20,
-//     borderRadius: 8,
-//   },
-//   buttonContent: {
-//     paddingVertical: 8,
-//   },
-//   termsContainer: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     marginTop: 16,
-//     marginBottom: 4,
-//   },
-//   termsText: {
-//     flex: 1,
-//     color: "#555",
-//     fontSize: 14,
-//   },
-//   linkText: {
-//     color: "#007BFF",
-//     textDecorationLine: "underline",
-//   },
-//   iconBox: {
-//     padding: 4,
-//     marginRight: 6,
-//   },
-//   row: {
-//     flexDirection: "row",
-//     justifyContent: "space-between",
-//   },
-//   halfInput: {
-//     flex: 1,
-//   },
-//   helper: {
-//     marginBottom: 4,
-//     marginTop: -4, // pulls it closer to input
-//   },
-// });
-
 import React, { useState } from "react";
 import {
   View,
   StyleSheet,
   Text,
   TouchableOpacity,
-  StatusBar,
   Image,
   ScrollView,
   KeyboardAvoidingView,
@@ -285,19 +12,16 @@ import {
 import {
   TextInput,
   IconButton,
-  Button,
   HelperText,
   ActivityIndicator,
   Portal,
   Snackbar,
 } from "react-native-paper";
-import { useNavigation } from "@react-navigation/native";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CountryPicker } from "react-native-country-codes-picker";
 import AntDesign from "react-native-vector-icons/AntDesign";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import { emailRegex, passwordRegex } from "../utils/constants";
 import { registerVendor_API } from "../api/authAPI";
 import StatusBarManager from "../components/StatusBarManager";
@@ -314,8 +38,6 @@ const SignUpScreen = ({ navigation }) => {
   const [countryCode, setCountryCode] = useState("+1");
   const [mobileNumber, setMobileNumber] = useState("");
   const [agreed, setAgreed] = useState(false);
-  // const [instagramLink, setInstagramLink] = useState("");
-  // const [facebookLink, setFacebookLink] = useState("");
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({
     visible: false,
@@ -396,8 +118,6 @@ const SignUpScreen = ({ navigation }) => {
       foodTruck: {
         name: foodTruckName,
         infoType: "truck",
-        // ...(facebookLink.trim() && { facebookLink }),
-        // ...(instagramLink.trim() && { instagramLink }),
       },
       email,
       password,
@@ -546,57 +266,6 @@ const SignUpScreen = ({ navigation }) => {
                   {errors.foodTruckName}
                 </HelperText>
               )}
-
-              {/* Social Media Link */}
-              {/* <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                {"Social Media Link"}
-              </Text> */}
-
-              {/* Instagram Input */}
-              {/* <TextInput
-                dense
-                value={instagramLink}
-                onChangeText={setInstagramLink}
-                style={[styles.input, { marginBottom: 16 }]}
-                contentStyle={styles.inputTextWithLine}
-                placeholder="Enter Instagram Link"
-                placeholderTextColor={AppColor.placeholderTextColor}
-                mode="outlined"
-                outlineColor={AppColor.border}
-                activeOutlineColor={AppColor.primary}
-                outlineStyle={{ borderRadius: 8 }}
-                left={
-                  <TextInput.Icon
-                    icon={() => (
-                      <FontAwesome6 name="instagram" size={20} color="#777" />
-                    )}
-                  />
-                }
-                theme={{ colors: { onSurfaceVariant: "#777" } }}
-              /> */}
-
-              {/* Facebook Input */}
-              {/* <TextInput
-                dense
-                value={facebookLink}
-                onChangeText={setFacebookLink}
-                style={styles.input}
-                contentStyle={styles.inputTextWithLine}
-                placeholder="Enter Facebook Link"
-                placeholderTextColor={AppColor.placeholderTextColor}
-                mode="outlined"
-                outlineColor={AppColor.border}
-                activeOutlineColor={AppColor.primary}
-                outlineStyle={{ borderRadius: 8 }}
-                left={
-                  <TextInput.Icon
-                    icon={() => (
-                      <FontAwesome6 name="facebook" size={20} color="#777" />
-                    )}
-                  />
-                }
-                theme={{ colors: { onSurfaceVariant: "#777" } }}
-              /> */}
 
               {/* Mobile No */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
@@ -806,15 +475,15 @@ const SignUpScreen = ({ navigation }) => {
                 )}
               </TouchableOpacity>
 
-              <View style={styles.signUpContainer}>
-                <Text style={styles.signUpText}>
+              <View style={styles.signInContainer}>
+                <Text style={styles.signInText}>
                   {"Already have an account? "}{" "}
                 </Text>
                 <TouchableOpacity
                   onPress={() => navigation.navigate("signin")}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.signUpLink}>{"Sign In"}</Text>
+                  <Text style={styles.signInLink}>{"Sign In"}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -860,7 +529,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: AppColor.white,
     fontSize: 20,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
   },
   content: {
     flex: 1,
@@ -872,13 +541,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     fontSize: 24,
     color: AppColor.text,
     marginBottom: 8,
   },
   subtitle: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: AppColor.textHighlighter,
     marginBottom: 10,
@@ -887,7 +556,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inputLabel: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 15,
     color: AppColor.text,
     marginBottom: 8,
@@ -896,11 +565,11 @@ const styles = StyleSheet.create({
     backgroundColor: AppColor.white,
   },
   inputText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 15,
   },
   inputTextWithLine: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 15,
     paddingLeft: 16,
     borderLeftWidth: 1,
@@ -910,6 +579,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingLeft: 0,
     paddingTop: 0,
+    fontFamily: Mulish400
   },
 
   countryPickerButton: {
@@ -928,7 +598,7 @@ const styles = StyleSheet.create({
   countryCodeText: {
     color: AppColor.text,
     fontSize: 15,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   signInButton: {
     height: 48,
@@ -952,23 +622,23 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  signUpContainer: {
+  signInContainer: {
     flexDirection: "row",
     justifyContent: "center",
     marginBottom: 20,
   },
-  signUpText: {
+  signInText: {
     color: AppColor.textHighlighter,
     fontSize: 14,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
-  signUpLink: {
+  signInLink: {
     color: AppColor.text,
     fontSize: 14,
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
   },
   buttonLabel: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.white,
   },
@@ -982,7 +652,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: AppColor.text,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   linkText: {
     color: AppColor.primary,

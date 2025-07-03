@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IconButton } from "react-native-paper";
 import { WebView } from "react-native-webview";
 import { privacyPolicy_API } from "../api/authAPI";
-import { AppColor, Primary400 } from "../utils/theme";
+import { AppColor, Mulish700 } from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
 
 const PrivacyPolicyScreen = ({ navigation }) => {
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: AppColor.white,
     fontSize: 20,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
   },
   content: {
     flex: 1,

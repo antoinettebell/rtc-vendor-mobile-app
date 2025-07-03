@@ -13,7 +13,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IconButton, Portal, Snackbar, TextInput } from "react-native-paper";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import AntDesign from "react-native-vector-icons/AntDesign";
 import { cuisineList_API } from "../api/appAPI";
@@ -140,7 +140,7 @@ const AuthSelectCuisineScreen = () => {
             value={searchText}
             onChangeText={setSearchText}
             style={styles.searchInput}
-            contentStyle={{ fontFamily: Secondary400 }}
+            contentStyle={{ fontFamily: Mulish400 }}
             outlineColor="transparent"
             autoCapitalize="sentences"
             activeOutlineColor={AppColor.primary}
@@ -249,7 +249,7 @@ const AuthSelectCuisineScreen = () => {
                   <Text
                     style={{
                       fontSize: 16,
-                      fontFamily: Secondary400,
+                      fontFamily: Mulish400,
                       color: AppColor.black,
                     }}
                   >
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: AppColor.black,
     fontSize: 20,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
   },
   searchInput: {
     marginTop: 8,
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     color: AppColor.white,
     fontSize: 14,
     marginRight: 6,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   removeIcon: {
     color: AppColor.white,
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   cuisineText: {
     fontSize: 16,
     color: AppColor.black,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   addIcon: {
     color: AppColor.primary,
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     }),
   },
   continueButtonText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.white,
   },

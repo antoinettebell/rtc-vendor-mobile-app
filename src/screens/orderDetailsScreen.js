@@ -15,7 +15,7 @@ import moment from "moment";
 import FastImage from "@d11/react-native-fast-image";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import StatusBarManager from "../components/StatusBarManager";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { getOrderByID_API, updateOrderStatusByID_API } from "../api/appAPI";
 import { useDispatch } from "react-redux";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
@@ -311,7 +311,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
               <Text
                 numberOfLines={1}
                 style={{
-                  fontFamily: Primary400,
+                  fontFamily: Mulish700,
                   fontSize: 18,
                   color: AppColor.primary,
                   alignSelf: "center",
@@ -338,7 +338,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                 <Text
                   style={{
                     fontSize: 14,
-                    fontFamily: Secondary400,
+                    fontFamily: Mulish400,
                     color: AppColor.black,
                   }}
                 >
@@ -348,7 +348,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   numberOfLines={1}
                   style={{
                     fontSize: 14,
-                    fontFamily: Secondary400,
+                    fontFamily: Mulish400,
                     color: AppColor.black,
                   }}
                 >
@@ -368,7 +368,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                 <Text
                   style={{
                     fontSize: 14,
-                    fontFamily: Secondary400,
+                    fontFamily: Mulish400,
                     color: AppColor.black,
                   }}
                 >
@@ -378,7 +378,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   numberOfLines={1}
                   style={{
                     fontSize: 14,
-                    fontFamily: Secondary400,
+                    fontFamily: Mulish400,
                     color: AppColor.black,
                   }}
                 >
@@ -433,7 +433,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   numberOfLines={1}
                   style={{
                     fontSize: 14,
-                    fontFamily: Secondary400,
+                    fontFamily: Mulish400,
                     color: AppColor.black,
                   }}
                 >
@@ -533,7 +533,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
             >
               <Text
                 style={{
-                  fontFamily: Primary400,
+                  fontFamily: Mulish700,
                   fontSize: 18,
                   color: AppColor.black,
                 }}
@@ -542,7 +542,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
               </Text>
               <Text
                 style={{
-                  fontFamily: Secondary400,
+                  fontFamily: Mulish400,
                   fontSize: 18,
                   color: AppColor.black,
                 }}
@@ -562,7 +562,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
               >
                 <Text
                   style={{
-                    fontFamily: Secondary400,
+                    fontFamily: Mulish400,
                     fontSize: 14,
                     color: AppColor.black,
                   }}
@@ -571,7 +571,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                 </Text>
                 <Text
                   style={{
-                    fontFamily: Secondary400,
+                    fontFamily: Mulish400,
                     fontSize: 14,
                     color: AppColor.black,
                   }}
@@ -589,7 +589,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
               >
                 <Text
                   style={{
-                    fontFamily: Secondary400,
+                    fontFamily: Mulish400,
                     fontSize: 14,
                     color: AppColor.black,
                   }}
@@ -598,7 +598,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                 </Text>
                 <Text
                   style={{
-                    fontFamily: Secondary400,
+                    fontFamily: Mulish400,
                     fontSize: 14,
                     color: AppColor.black,
                   }}
@@ -616,7 +616,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
               >
                 <Text
                   style={{
-                    fontFamily: Secondary400,
+                    fontFamily: Mulish400,
                     fontSize: 14,
                     color: AppColor.black,
                   }}
@@ -625,7 +625,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                 </Text>
                 <Text
                   style={{
-                    fontFamily: Secondary400,
+                    fontFamily: Mulish400,
                     fontSize: 14,
                     color: AppColor.black,
                   }}
@@ -643,7 +643,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
               >
                 <Text
                   style={{
-                    fontFamily: Secondary400,
+                    fontFamily: Mulish400,
                     fontSize: 14,
                     color: AppColor.black,
                   }}
@@ -652,7 +652,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                 </Text>
                 <Text
                   style={{
-                    fontFamily: Secondary400,
+                    fontFamily: Mulish400,
                     fontSize: 14,
                     color: AppColor.black,
                   }}
@@ -681,7 +681,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
             >
               <Text
                 style={{
-                  fontFamily: Primary400,
+                  fontFamily: Mulish700,
                   fontSize: 18,
                   color: AppColor.black,
                 }}
@@ -690,7 +690,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
               </Text>
               <Text
                 style={{
-                  fontFamily: Secondary400,
+                  fontFamily: Mulish400,
                   fontSize: 18,
                   color: AppColor.black,
                 }}
@@ -755,7 +755,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
         <View style={styles.loadingContainer}>
           <Text
             style={{
-              fontFamily: Secondary400,
+              fontFamily: Mulish400,
               fontSize: 18,
               color: AppColor.black,
               textAlign: "center",
@@ -801,7 +801,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: AppColor.black,
     fontSize: 20,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
   },
   headerIconContainer: {
     width: 48,
@@ -834,7 +834,7 @@ const styles = StyleSheet.create({
     backgroundColor: AppColor.white,
   },
   orderIdText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: "#6F6F6F",
   },
@@ -862,18 +862,18 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   orderUserName: {
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.black,
   },
   orderItemCount: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: "#6F6F6F",
     paddingVertical: 5,
   },
   orderDate: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: "#6F6F6F",
   },
@@ -884,7 +884,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   orderTime: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: "#6F6F6F",
   },
@@ -902,17 +902,17 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   orderItemName: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: AppColor.black,
   },
   orderItemDescription: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: AppColor.black,
   },
   orderItemPrice: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: AppColor.black,
   },
@@ -923,7 +923,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   freeItemBadge: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 10,
     color: "#008B8B",
     backgroundColor: "#C2FFFF",
@@ -940,8 +940,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   orderTotalText: {
-    fontFamily: Secondary400,
-    fontSize: 20,
+    fontFamily: Mulish400,
+    fontSize: 18,
     color: AppColor.black,
   },
 
@@ -977,7 +977,7 @@ const styles = StyleSheet.create({
   },
   orderBtnText: {
     color: AppColor.white,
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
   },
   orderStatusInfoView: {
@@ -992,7 +992,7 @@ const styles = StyleSheet.create({
   },
   orderStatusInfoText: {
     color: AppColor.black,
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 20,
   },
 });

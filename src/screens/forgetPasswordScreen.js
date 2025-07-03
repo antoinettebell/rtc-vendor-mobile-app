@@ -22,7 +22,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { useDispatch } from "react-redux";
 
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import {
+  AppColor,
+  Mulish700,
+  Mulish400,
+  Mulish500,
+  Mulish600,
+} from "../utils/theme";
 import { emailRegex } from "../utils/constants";
 import { forgotPassword_API } from "../api/authAPI";
 import StatusBarManager from "../components/StatusBarManager";
@@ -216,7 +222,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: AppColor.white,
     fontSize: 20,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
   },
   content: {
     flex: 1,
@@ -232,35 +238,36 @@ const styles = StyleSheet.create({
     width: 104,
   },
   title: {
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     fontSize: 24,
     color: AppColor.text,
     marginBottom: 8,
   },
   subtitle: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: AppColor.textHighlighter,
     marginBottom: 50,
     marginTop: 5,
   },
   inputLabel: {
-    fontFamily: Secondary400,
-    fontSize: 14,
+    fontFamily: Mulish400,
+    fontSize: 15,
     color: AppColor.text,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   input: {
     backgroundColor: AppColor.white,
   },
   inputText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 15,
   },
   helper: {
     marginBottom: 8,
     paddingLeft: 0,
     paddingTop: 0,
+    fontFamily: Mulish400,
   },
   sendButton: {
     height: 48,
@@ -282,7 +289,7 @@ const styles = StyleSheet.create({
     }),
   },
   buttonLabel: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.white,
   },

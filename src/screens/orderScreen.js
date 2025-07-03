@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import FastImage from "@d11/react-native-fast-image";
 import moment from "moment";
 import StatusBarManager from "../components/StatusBarManager";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { Divider, Menu } from "react-native-paper";
 import { getOrderList_API, updateOrderStatusByID_API } from "../api/appAPI";
 import { useDispatch, useSelector } from "react-redux";
@@ -672,7 +672,7 @@ const OrderScreen = ({ navigation }) => {
           <Text
             style={{
               fontSize: 16,
-              fontFamily: Secondary400,
+              fontFamily: Mulish400,
               color: AppColor.black,
               textAlign: "center",
             }}
@@ -717,7 +717,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 19.78,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     color: AppColor.black,
   },
 
@@ -736,7 +736,7 @@ const styles = StyleSheet.create({
     backgroundColor: AppColor.primary,
   },
   activeButtonText: {
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.white,
   },
@@ -752,7 +752,7 @@ const styles = StyleSheet.create({
     backgroundColor: AppColor.white,
   },
   inactiveButtonText: {
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.primary,
   },
@@ -783,7 +783,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: AppColor.black,
   },
@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
     backgroundColor: AppColor.white,
   },
   orderIdText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: "#6F6F6F",
   },
@@ -825,18 +825,18 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   orderUserName: {
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.black,
   },
   orderItemCount: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: "#6F6F6F",
     paddingVertical: 5,
   },
   orderDate: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: "#6F6F6F",
   },
@@ -847,7 +847,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   orderTime: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: "#6F6F6F",
   },
@@ -861,7 +861,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   orderTotalText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 20,
     color: AppColor.black,
   },
@@ -900,7 +900,7 @@ const styles = StyleSheet.create({
   },
   orderBtnText: {
     color: AppColor.white,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 16,
   },
 
@@ -911,7 +911,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   menuAnchorText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: AppColor.primary,
     textTransform: "capitalize",
@@ -946,7 +946,7 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 14,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.black,
   },
 });

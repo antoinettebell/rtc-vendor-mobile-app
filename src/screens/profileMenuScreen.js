@@ -17,7 +17,7 @@ import FontAwesome from "react-native-vector-icons/FontAwesome";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Modal from "react-native-modal";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { onSignOut } from "../redux/slices/authSlice";
 import { clearUserSlice } from "../redux/slices/userSlice";
 import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlice";
@@ -483,7 +483,7 @@ const ProfileMenuScreen = ({ navigation }) => {
         <Text
           style={{
             fontSize: 19.78,
-            fontFamily: Primary400,
+            fontFamily: Mulish700,
             color: AppColor.black,
           }}
         >
@@ -567,7 +567,7 @@ const ProfileMenuScreen = ({ navigation }) => {
           <Text
             style={{
               fontSize: 18,
-              fontFamily: Primary400,
+              fontFamily: Mulish700,
               color: AppColor.black,
               textAlign: "center",
               marginVertical: 2,
@@ -614,7 +614,7 @@ const ProfileMenuScreen = ({ navigation }) => {
                   <Text
                     style={{
                       fontSize: 12,
-                      fontFamily: Secondary400,
+                      fontFamily: Mulish400,
                       color: AppColor.black,
                     }}
                   >
@@ -626,7 +626,7 @@ const ProfileMenuScreen = ({ navigation }) => {
                     key={index}
                     style={{
                       fontSize: 12,
-                      fontFamily: Secondary400,
+                      fontFamily: Mulish400,
                       color: AppColor.black,
                     }}
                   >
@@ -638,7 +638,7 @@ const ProfileMenuScreen = ({ navigation }) => {
                     <Text
                       style={{
                         fontSize: 12,
-                        fontFamily: Secondary400,
+                        fontFamily: Mulish400,
                         color: AppColor.black,
                       }}
                     >
@@ -652,7 +652,7 @@ const ProfileMenuScreen = ({ navigation }) => {
           {/* Category */}
           <Text
             style={{
-              fontFamily: Secondary400,
+              fontFamily: Mulish400,
               fontSize: 14,
               color: AppColor.black,
               textAlign: "center",
@@ -789,7 +789,7 @@ const styles = StyleSheet.create({
     }),
   },
   buttonLabel: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 16,
     color: AppColor.white,
   },
@@ -805,7 +805,7 @@ const styles = StyleSheet.create({
   componentLabel: {
     flex: 1,
     fontSize: 16,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
 
   // HR
@@ -825,14 +825,14 @@ const styles = StyleSheet.create({
   modalTitle: {
     marginBottom: 30,
     fontSize: 22,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     color: AppColor.text,
     textAlign: "center",
   },
   modalSubtitle: {
     marginBottom: 20,
     fontSize: 16,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.textHighlighter,
     textAlign: "center",
   },
@@ -868,14 +868,14 @@ const styles = StyleSheet.create({
   },
   signoutModalBtnText: {
     color: AppColor.white,
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
   },
 
   // PWD Modal
   inputLabel: {
     fontSize: 15,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.text,
     marginBottom: 8,
   },
@@ -884,12 +884,13 @@ const styles = StyleSheet.create({
   },
   inputText: {
     fontSize: 15,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   helper: {
     // marginBottom: 8,
     paddingLeft: 0,
     // paddingTop: 0,
+    fontFamily: Mulish400
   },
 
   // Rating Container
@@ -905,7 +906,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   ratingText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 12,
     color: AppColor.black,
   },

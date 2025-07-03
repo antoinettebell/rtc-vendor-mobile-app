@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { Text, IconButton, ActivityIndicator } from "react-native-paper";
 import Octicons from "react-native-vector-icons/Octicons";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch } from "react-redux";
 import { onSignin } from "../redux/slices/authSlice";
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   },
   title: {
     width: "90%",
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     fontSize: 18,
     color: AppColor.text,
     marginVertical: 20,
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
   subTitle: {
     flexWrap: "wrap",
     fontSize: 14,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     textAlign: "left",
     color: AppColor.textHighlighter,
   },
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     }),
   },
   continueButtonText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.white,
   },

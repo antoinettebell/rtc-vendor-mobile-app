@@ -8,7 +8,7 @@ import {
   TextInput,
 } from "react-native-paper";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 
 // validate prep time
 const validatePrepTime = (value) => {
@@ -138,17 +138,17 @@ const styles = StyleSheet.create({
   modalTitle: {
     marginBottom: 4,
     fontSize: 20,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     color: AppColor.text,
   },
   modalSubtitle: {
     fontSize: 14,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.textHighlighter,
   },
   inputLabel: {
     fontSize: 15,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.text,
     marginBottom: 8,
   },
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   },
   inputText: {
     fontSize: 15,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   modalBtnAdd: {
     height: 48,
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   },
   modalBtnText: {
     color: AppColor.white,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 16,
   },
 

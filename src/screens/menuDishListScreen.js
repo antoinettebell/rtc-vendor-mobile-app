@@ -12,7 +12,7 @@ import AntDesign from "react-native-vector-icons/AntDesign";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
 import { useDispatch, useSelector } from "react-redux";
 import { IconButton, Switch } from "react-native-paper";
@@ -194,7 +194,7 @@ const MenuDishListScreen = ({ navigation, route }) => {
                   <Text
                     numberOfLines={1}
                     style={{
-                      fontFamily: Primary400,
+                      fontFamily: Mulish700,
                       fontSize: 16,
                       color: AppColor.black,
                     }}
@@ -204,7 +204,7 @@ const MenuDishListScreen = ({ navigation, route }) => {
                   <Text
                     numberOfLines={1}
                     style={{
-                      fontFamily: Secondary400,
+                      fontFamily: Mulish400,
                       fontSize: 14,
                       color: AppColor.text,
                       marginTop: 5,
@@ -214,7 +214,7 @@ const MenuDishListScreen = ({ navigation, route }) => {
                   </Text>
                   <Text
                     style={{
-                      fontFamily: Secondary400,
+                      fontFamily: Mulish400,
                       fontSize: 12,
                       color: AppColor.text,
                       marginTop: 5,
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: AppColor.black,
     fontSize: 20,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
   },
   headerIconContainer: {
     width: 48,
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   },
   emptyListText: {
     fontSize: 16,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     textAlign: "center",
     color: AppColor.text,
     marginTop: 10,

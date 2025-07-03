@@ -19,7 +19,7 @@ import {
   ActivityIndicator,
 } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Modal from "react-native-modal";
 import Octicons from "react-native-vector-icons/Octicons";
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: AppColor.white,
     fontSize: 20,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
   },
   content: {
     flex: 1,
@@ -321,13 +321,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     fontSize: 24,
     color: AppColor.text,
     marginBottom: 8,
   },
   subtitle: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: AppColor.textHighlighter,
     marginBottom: 50,
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inputLabel: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 15,
     color: AppColor.text,
     marginBottom: 8,
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     backgroundColor: AppColor.white,
   },
   inputText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 15,
   },
   resetButton: {
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
     }),
   },
   buttonLabel: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.white,
   },
@@ -377,6 +377,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingLeft: 0,
     paddingTop: 0,
+    fontFamily: Mulish400
   },
 
   //   Modal
@@ -389,13 +390,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalTitle: {
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     fontSize: 22,
     color: AppColor.text,
     marginVertical: 10,
   },
   modalSubtitle: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 16,
     color: AppColor.textHighlighter,
     textAlign: "center",
@@ -423,7 +424,7 @@ const styles = StyleSheet.create({
   },
   backToLoginText: {
     color: AppColor.white,
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
   },
 });

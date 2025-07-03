@@ -22,7 +22,7 @@ import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import AntDesign from "react-native-vector-icons/AntDesign";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import StatusBarManager from "../components/StatusBarManager";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import MediaPickerDialog from "../components/MediaPickerDialog";
 import ImagePicker from "react-native-image-crop-picker";
 import FastImage from "@d11/react-native-fast-image";
@@ -525,14 +525,45 @@ const MenuAddDishItemScreen = ({ navigation, route }) => {
 
             {/* Photos Upload */}
             <View style={styles.section}>
-              <Text style={styles.inputLabel}>{"Item Images *"}</Text>
-              <TouchableOpacity
-                style={styles.photoUploadContainer}
-                onPress={onPressUploadPhotos}
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 8,
+                }}
               >
-                <FontAwesome6 name="upload" color={AppColor.black} size={20} />
-                <Text style={styles.uploadButtonText}>{"Upload Photo"}</Text>
-              </TouchableOpacity>
+                <Text style={[styles.inputLabel, { marginBottom: 0 }]}>
+                  {"Item Images *"}
+                </Text>
+                {selectedPhotos?.length > 0 && (
+                  <TouchableOpacity
+                    hitSlop={5}
+                    activeOpacity={0.7}
+                    onPress={onPressUploadPhotos}
+                  >
+                    <AntDesign
+                      name="plussquareo"
+                      size={20}
+                      color={AppColor.primary}
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {selectedPhotos?.length === 0 && (
+                <TouchableOpacity
+                  style={styles.photoUploadContainer}
+                  onPress={onPressUploadPhotos}
+                >
+                  <FontAwesome6
+                    name="upload"
+                    color={AppColor.black}
+                    size={20}
+                  />
+                  <Text style={styles.uploadButtonText}>{"Upload Photo"}</Text>
+                </TouchableOpacity>
+              )}
 
               {selectedPhotos?.length > 0 && (
                 <View>
@@ -652,7 +683,7 @@ const MenuAddDishItemScreen = ({ navigation, route }) => {
                 placeholder="Select Diet"
                 style={styles.dropdown}
                 placeholderStyle={{
-                  fontFamily: Secondary400,
+                  fontFamily: Mulish400,
                   color: AppColor.textHighlighter,
                 }}
                 containerStyle={{
@@ -665,10 +696,10 @@ const MenuAddDishItemScreen = ({ navigation, route }) => {
                   marginVertical: 1,
                 }}
                 itemTextStyle={{
-                  fontFamily: Secondary400,
+                  fontFamily: Mulish400,
                 }}
                 selectedTextStyle={{
-                  fontFamily: Secondary400,
+                  fontFamily: Mulish400,
                 }}
                 renderSelectedItem={(item, unSelect) => (
                   <TouchableOpacity
@@ -701,7 +732,7 @@ const MenuAddDishItemScreen = ({ navigation, route }) => {
                   value={itemPrice}
                   onChangeText={handleItemPriceChange}
                   style={styles.input}
-                  contentStyle={[styles.inputText, { fontSize: 18 }]}
+                  contentStyle={styles.inputText}
                   placeholder=""
                   placeholderTextColor={AppColor.placeholderTextColor}
                   mode="outlined"
@@ -738,7 +769,7 @@ const MenuAddDishItemScreen = ({ navigation, route }) => {
                   value={itemDiscount}
                   onChangeText={handleItemDiscountChange}
                   style={styles.input}
-                  contentStyle={[styles.inputText, { fontSize: 18 }]}
+                  contentStyle={styles.inputText}
                   placeholder=""
                   placeholderTextColor={AppColor.placeholderTextColor}
                   mode="outlined"
@@ -785,7 +816,7 @@ const MenuAddDishItemScreen = ({ navigation, route }) => {
                   value={minQt}
                   onChangeText={handleMinQtChange}
                   style={styles.input}
-                  contentStyle={[styles.inputText, { fontSize: 18 }]}
+                  contentStyle={styles.inputText}
                   placeholder=""
                   placeholderTextColor={AppColor.placeholderTextColor}
                   mode="outlined"
@@ -823,7 +854,7 @@ const MenuAddDishItemScreen = ({ navigation, route }) => {
                   value={maxQt}
                   onChangeText={handleMaxQtChange}
                   style={styles.input}
-                  contentStyle={[styles.inputText, { fontSize: 18 }]}
+                  contentStyle={styles.inputText}
                   placeholder=""
                   placeholderTextColor={AppColor.placeholderTextColor}
                   mode="outlined"
@@ -864,7 +895,7 @@ const MenuAddDishItemScreen = ({ navigation, route }) => {
                 value={prepTime}
                 onChangeText={handlePrepTimeChange}
                 style={styles.input}
-                contentStyle={[styles.inputText, { fontSize: 18 }]}
+                contentStyle={styles.inputText}
                 placeholder=""
                 placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
@@ -945,7 +976,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: AppColor.black,
     fontSize: 20,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
   },
   headerIconContainer: {
     width: 48,
@@ -957,13 +988,13 @@ const styles = StyleSheet.create({
   section: { marginTop: 16, paddingHorizontal: 16 },
   sectionTitle: {
     fontSize: 20,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     color: AppColor.text,
     marginBottom: 16,
   },
   label: {
     fontSize: 18,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.black,
     marginBottom: 8,
   },
@@ -980,7 +1011,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 16,
     color: AppColor.black,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   photoUploadContainer: {
     height: 104,
@@ -995,14 +1026,14 @@ const styles = StyleSheet.create({
   },
   thumbnailContainer: { flexDirection: "row" },
   thumbnail: {
-    width: 50,
-    height: 50,
+    width: 80,
+    height: 80,
     borderRadius: 5,
   },
 
   // input
   inputLabel: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 15,
     color: AppColor.text,
     marginBottom: 8,
@@ -1011,11 +1042,11 @@ const styles = StyleSheet.create({
     backgroundColor: AppColor.white,
   },
   inputText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 15,
   },
   inputTextWithLine: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 15,
     paddingLeft: 16,
     borderLeftWidth: 1,
@@ -1025,6 +1056,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingLeft: 0,
     paddingTop: 0,
+    fontFamily: Mulish400,
   },
 
   // btn
@@ -1051,7 +1083,7 @@ const styles = StyleSheet.create({
     }),
   },
   buttonLabel: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.white,
   },
@@ -1091,7 +1123,7 @@ const styles = StyleSheet.create({
   },
   dropdownSelectedItemText: {
     fontSize: 14,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
 
   // Customization btn
@@ -1103,6 +1135,6 @@ const styles = StyleSheet.create({
   customizationText: {
     fontSize: 15,
     color: AppColor.text,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
 });

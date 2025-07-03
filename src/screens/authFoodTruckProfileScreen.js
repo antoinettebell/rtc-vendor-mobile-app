@@ -28,7 +28,7 @@ import { RESULTS } from "react-native-permissions";
 import { Dropdown } from "react-native-element-dropdown";
 import FastImage from "@d11/react-native-fast-image";
 import ImagePicker from "react-native-image-crop-picker";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import usePermission from "../hooks/usePermission";
 import { permission } from "../helpers/permission.helper";
 import { setUser } from "../redux/slices/userSlice";
@@ -121,11 +121,11 @@ const MediaLinksComponent = ({
           style={styles.dropdownForMedia}
           containerStyle={{ width: width - 50 }}
           placeholderStyle={{
-            fontFamily: Secondary400,
+            fontFamily: Mulish400,
             color: AppColor.textHighlighter,
           }}
-          itemTextStyle={{ fontFamily: Secondary400 }}
-          selectedTextStyle={{ fontFamily: Secondary400 }}
+          itemTextStyle={{ fontFamily: Mulish400 }}
+          selectedTextStyle={{ fontFamily: Mulish400 }}
           renderItem={(item) => (
             <Pressable
               disabled={!item.disable} // for dropdown condition works opposite
@@ -1003,7 +1003,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: AppColor.white,
     fontSize: 20,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
   },
 
   // Step Indicator
@@ -1037,16 +1037,16 @@ const styles = StyleSheet.create({
   // Content
   content: { flex: 1, backgroundColor: AppColor.white },
   section: { marginVertical: 16, paddingHorizontal: 24 },
-  sectionTitle: { fontSize: 24, fontFamily: Primary400, color: AppColor.text },
+  sectionTitle: { fontSize: 24, fontFamily: Mulish700, color: AppColor.text },
   sectionSubtitle: {
     fontSize: 14,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.textHighlighter,
     marginTop: 4,
   },
   label: {
     fontSize: 18,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.black,
   },
 
@@ -1077,7 +1077,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 16,
     color: AppColor.black,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
   photoUploadContainer: {
     height: 104,
@@ -1127,7 +1127,7 @@ const styles = StyleSheet.create({
   radioLabel: {
     marginLeft: 8,
     fontSize: 15,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     color: AppColor.black,
   },
 
@@ -1159,7 +1159,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 16,
     fontSize: 16,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
   },
 
   // Input
@@ -1167,7 +1167,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 46,
     fontSize: 15,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     backgroundColor: AppColor.white,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -1179,6 +1179,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingLeft: 0,
     paddingTop: 0,
+    fontFamily: Mulish400
   },
 
   // Continue Button
@@ -1201,7 +1202,7 @@ const styles = StyleSheet.create({
     }),
   },
   continueButtonText: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.white,
   },

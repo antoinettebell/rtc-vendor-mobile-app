@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   TextInput as NativeInput,
-  StatusBar,
   Platform,
   KeyboardAvoidingView,
   ScrollView,
@@ -21,7 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import Modal from "react-native-modal";
 import Octicons from "react-native-vector-icons/Octicons";
-import { AppColor, Primary400, Secondary400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { resendOTP_API, verifyOTP_API } from "../api/authAPI";
 import { useDispatch } from "react-redux";
 import { onOnBoard } from "../redux/slices/authSlice";
@@ -215,7 +214,7 @@ const OtpVerificationScreen = ({ route }) => {
             <Text style={styles.title}>{"Please check your email"}</Text>
             <Text style={styles.subtitle}>
               {"Enter the code from the mail we sent to"}
-              <Text style={{ color: AppColor.text, fontFamily: Secondary400 }}>
+              <Text style={{ color: AppColor.text, fontFamily: Mulish400 }}>
                 {`\n${params?.data?.user?.email}`}
               </Text>
             </Text>
@@ -353,7 +352,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: AppColor.white,
     fontSize: 20,
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
   },
   content: {
     flex: 1,
@@ -365,13 +364,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     fontSize: 24,
     color: AppColor.text,
     marginBottom: 8,
   },
   subtitle: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 14,
     color: AppColor.textHighlighter,
     marginBottom: 50,
@@ -386,10 +385,10 @@ const styles = StyleSheet.create({
   otpInput: {
     width: 48,
     height: 56,
-    fontSize: 26,
+    fontSize: 22,
     borderRadius: 4,
     textAlign: "center",
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     backgroundColor: AppColor.white,
     ...Platform.select({
       ios: {
@@ -419,7 +418,7 @@ const styles = StyleSheet.create({
   },
   timerText: {
     color: AppColor.text,
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 16,
   },
   signInButton: {
@@ -445,7 +444,7 @@ const styles = StyleSheet.create({
     }),
   },
   buttonLabel: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.white,
   },
@@ -460,14 +459,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalTitle: {
-    fontFamily: Primary400,
+    fontFamily: Mulish700,
     fontSize: 22,
     color: AppColor.text,
     marginVertical: 10,
     textAlign: "center",
   },
   modalSubtitle: {
-    fontFamily: Secondary400,
+    fontFamily: Mulish400,
     fontSize: 16,
     color: AppColor.textHighlighter,
     textAlign: "center",
@@ -495,7 +494,7 @@ const styles = StyleSheet.create({
   },
   backToLoginText: {
     color: AppColor.white,
-    fontFamily: Secondary400,
+    fontFamily: Mulish700,
     fontSize: 16,
   },
 });
