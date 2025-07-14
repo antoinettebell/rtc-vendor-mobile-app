@@ -55,6 +55,8 @@ import AuthFoodTruckPlansScreen from "./src/screens/authFoodTruckPlansScreen";
 import AppTermsOfServiceScreen from "./src/screens/appTermsOfServiceScreen";
 import UserProfileScreen from "./src/screens/userProfileScreen";
 import OrderDetailsScreen from "./src/screens/orderDetailsScreen";
+import PreviousOrderScreen from "./src/screens/previousOrderScreen";
+import RateReviewScreen from "./src/screens/rateReviewScreen";
 
 const Stack = createNativeStackNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -180,7 +182,7 @@ const BottomTabNavigator = ({ insets }) => (
       }}
     />
     <BottomTab.Screen
-      name="earningsScreem"
+      name="earningsScreen"
       component={EarningsScreen}
       options={{
         tabBarLabel: "Earnings",
@@ -246,6 +248,8 @@ const MainAppNavigator = ({ insets }) => (
     />
     <Stack.Screen name="userProfileScreen" component={UserProfileScreen} />
     <Stack.Screen name="orderDetailsScreen" component={OrderDetailsScreen} />
+    <Stack.Screen name="previousOrderScreen" component={PreviousOrderScreen} />
+    <Stack.Screen name="rateReviewScreen" component={RateReviewScreen} />
     {/* <Stack.Screen name="deleteOtpVerification" component={OtpVerificationScreen} /> */}
   </Stack.Navigator>
 );

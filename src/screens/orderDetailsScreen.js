@@ -29,6 +29,7 @@ import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
 import {
   calculateTotalPreparationTime,
   extractAdvanceOrderLocationAndTime,
+  getDisabledStatuses,
   getNextOrderStatus,
 } from "../helpers/order.helper";
 
@@ -265,6 +266,12 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     }
   }, [orderData?.orderStatus]);
 
+  const rjctBtnDisabled =
+    rejectBtnLoading ||
+    getDisabledStatuses(orderData?.orderStatus).includes(
+      orderStatusStrings.rejected
+    );
+
   return (
     <View style={styles.container}>
       <StatusBarManager />
@@ -412,7 +419,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                 <Text
                   numberOfLines={1}
                   style={styles.orderIdText}
-                >{`Order #${orderData?._id}`}</Text>
+                >{`Order #${orderData?.orderNumber || orderData?._id}`}</Text>
               </View>
 
               <View
@@ -708,9 +715,12 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                 }}
               >
                 <TouchableOpacity
-                  style={styles.rejectOrderBtn}
+                  style={[
+                    styles.rejectOrderBtn,
+                    { opacity: rjctBtnDisabled ? 0.5 : 1 },
+                  ]}
                   activeOpacity={0.7}
-                  disabled={rejectBtnLoading}
+                  disabled={rjctBtnDisabled}
                   onPress={() => handleRejectPress(orderData)}
                 >
                   {rejectBtnLoading ? (

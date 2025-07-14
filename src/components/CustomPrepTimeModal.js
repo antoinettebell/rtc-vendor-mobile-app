@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     backgroundColor: AppColor.white,
   },
   inputText: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: Mulish400,
   },
   modalBtnAdd: {
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   },
   modalBtnText: {
     color: AppColor.white,
-    fontFamily: Mulish400,
+    fontFamily: Mulish700,
     fontSize: 16,
   },
 
@@ -188,5 +188,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingLeft: 0,
     paddingTop: 0,
+    fontFamily: Mulish400
   },
 });

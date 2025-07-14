@@ -74,13 +74,18 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
     );
   };
 
+  const onSelectePlan = (item) => {
+    setSelectedPlanId(item._id);
+    setExpandedPlanId(item._id);
+  };
+
   const renderPlanCard = ({ item }) => {
     const isSelected = selectedPlanId === item._id;
     const isExpanded = expandedPlanId === item._id;
 
     return (
       <TouchableOpacity
-        onPress={() => setSelectedPlanId(item._id)}
+        onPress={() => onSelectePlan(item)}
         activeOpacity={0.9}
         style={[
           {
@@ -174,7 +179,7 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
               fontSize: 14,
             }}
           >
-            {"See all benifits"}
+            {"See all benefits"}
           </Text>
           <Feather
             name={isExpanded ? "chevron-up" : "chevron-down"}
@@ -357,12 +362,12 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
                 </TouchableOpacity>
 
                 <Text style={styles.termsText}>
-                  {"I have read and agree with the "}
+                  {"I have reviewed and accept the "}
                   <Text
                     style={styles.linkText}
                     onPress={() => navigation.navigate("agreementScreen")}
                   >
-                    {"Agreement."}
+                    {"Subscription Agreement."}
                   </Text>
                 </Text>
               </View>

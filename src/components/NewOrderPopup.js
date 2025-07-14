@@ -26,6 +26,7 @@ import CustomPrepTimeModal from "./CustomPrepTimeModal";
 import {
   calculateTotalPreparationTime,
   extractAdvanceOrderLocationAndTime,
+  getDisabledStatuses,
   getNextOrderStatus,
 } from "../helpers/order.helper";
 
@@ -204,6 +205,7 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
     setLoading(true);
     try {
       const response = await getOrderByID_API(orderId);
+      console.log("response => ", response);
       if (response?.success && response?.data) {
         setOrderData(response.data.order);
         setLocationTimeAdvanceData(
@@ -238,6 +240,12 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
       setNextOrderStatus(null);
     }
   }, [orderData?.orderStatus]);
+
+  const rjctBtnDisabled =
+    rejectBtnLoading ||
+    getDisabledStatuses(orderData?.orderStatus).includes(
+      orderStatusStrings.rejected
+    );
 
   if (!mounted || loading) {
     return (
@@ -375,7 +383,7 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
               ]}
               onPress={onCloseCurrentOrder}
             >
-              {`#${orderData?._id}`}
+              {`#${orderData?.orderNumber || orderData._id}`}
             </Text>
             <Text
               style={[
@@ -463,7 +471,7 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
               <TouchableOpacity
                 style={styles.rejectButton}
                 activeOpacity={0.7}
-                disabled={rejectBtnLoading}
+                disabled={rjctBtnDisabled}
                 onPress={() => handleRejectPress(orderData)}
               >
                 {rejectBtnLoading ? (

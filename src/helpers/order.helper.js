@@ -39,6 +39,7 @@ export const getDisabledStatuses = (currentStatus) => {
       disabledStatuses.push(
         orderStatusStrings.cancel,
         orderStatusStrings.placed,
+        orderStatusStrings.rejected,
         orderStatusStrings.ready_for_pickup,
         orderStatusStrings.completed
       );
@@ -49,6 +50,7 @@ export const getDisabledStatuses = (currentStatus) => {
       disabledStatuses.push(
         orderStatusStrings.cancel,
         orderStatusStrings.placed,
+        orderStatusStrings.rejected,
         orderStatusStrings.accepted,
         orderStatusStrings.completed
       );
@@ -57,6 +59,7 @@ export const getDisabledStatuses = (currentStatus) => {
       disabledStatuses.push(
         orderStatusStrings.cancel,
         orderStatusStrings.placed,
+        orderStatusStrings.rejected,
         orderStatusStrings.accepted,
         orderStatusStrings.preparing
       );

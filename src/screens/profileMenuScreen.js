@@ -472,14 +472,13 @@ const ProfileMenuScreen = ({ navigation }) => {
         style={{
           flexDirection: "row",
           alignItems: "center",
-          justifyContent: "space-between",
+          justifyContent: "center",
           paddingTop: insets.top + 10,
           paddingBottom: 10,
           backgroundColor: AppColor.white,
           paddingHorizontal: 16,
         }}
       >
-        <View style={{ width: "10%" }} />
         <Text
           style={{
             fontSize: 19.78,
@@ -489,15 +488,6 @@ const ProfileMenuScreen = ({ navigation }) => {
         >
           {"Profile"}
         </Text>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={{
-            width: "10%",
-            alignItems: "flex-end",
-          }}
-        >
-          <MaterialIcons name="more-vert" size={24} color={AppColor.black} />
-        </TouchableOpacity>
       </View>
 
       {/* Main Container */}
@@ -584,12 +574,18 @@ const ProfileMenuScreen = ({ navigation }) => {
               marginTop: 10,
             }}
           >
-            <View style={styles.reatingContainer}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={styles.reatingContainer}
+              onPress={() => navigation.navigate("rateReviewScreen")}
+            >
               <View style={styles.iconContainer}>
                 <FontAwesome name="star" size={14} color={AppColor.yellow} />
               </View>
-              <Text style={styles.ratingText}>{"4.8 (200+ reviews)"}</Text>
-            </View>
+              <Text
+                style={styles.ratingText}
+              >{`${user?.foodTruck?.avgRate || 0} (${user?.foodTruck?.totalReviews || 0} reviews)`}</Text>
+            </TouchableOpacity>
             <View
               style={{
                 width: 1,
@@ -890,7 +886,7 @@ const styles = StyleSheet.create({
     // marginBottom: 8,
     paddingLeft: 0,
     // paddingTop: 0,
-    fontFamily: Mulish400
+    fontFamily: Mulish400,
   },
 
   // Rating Container

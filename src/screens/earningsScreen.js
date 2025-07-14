@@ -40,7 +40,25 @@ const EarningsScreen = () => {
       </View>
 
       {profileStatus === vendorProfileStatus.approved ? (
-        <></>
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            paddingHorizontal: 16,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 16,
+              fontFamily: Mulish400,
+              color: AppColor.black,
+              textAlign: "center",
+            }}
+          >
+            {"This feature will become available soon."}
+          </Text>
+        </View>
       ) : (
         <View
           style={{

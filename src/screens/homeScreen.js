@@ -47,11 +47,12 @@ import { getMessaging } from "@react-native-firebase/messaging";
 import {
   calculateTotalPreparationTime,
   extractAdvanceOrderLocationAndTime,
+  getDisabledStatuses,
 } from "../helpers/order.helper";
 import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
 
-const QuickStatsComponent = ({ title, subTitle, icon }) => (
-  <View style={styles.quickStatsContainer}>
+const QuickStatsComponent = ({ title, subTitle, icon, onPress }) => (
+  <Pressable style={styles.quickStatsContainer} onPress={onPress}>
     <View style={styles.quickStatsTextContainer}>
       <Text numberOfLines={1} style={styles.quickStatsTitle}>
         {title}
@@ -61,7 +62,7 @@ const QuickStatsComponent = ({ title, subTitle, icon }) => (
       </Text>
     </View>
     <FastImage source={icon} style={styles.quickStatsIcon} />
-  </View>
+  </Pressable>
 );
 
 const HomeScreen = ({ navigation }) => {
@@ -161,6 +162,13 @@ const HomeScreen = ({ navigation }) => {
 
   // Handle "accept & print" press
   const handleAcceptAndPrintPress = (order) => {
+    if (
+      getDisabledStatuses(newOrderData?.orderStatus).includes(
+        orderStatusStrings.accepted
+      )
+    ) {
+      return;
+    }
     const estimatedPrepTime = calculateTotalPreparationTime(order);
     setTimeModal({
       orderData: order,
@@ -238,6 +246,14 @@ const HomeScreen = ({ navigation }) => {
 
   // Handle "reject" press
   const handleRejectOrderPress = (order) => {
+    if (
+      getDisabledStatuses(newOrderData?.orderStatus).includes(
+        orderStatusStrings.rejected
+      )
+    ) {
+      return;
+    }
+
     Alert.alert(
       "Reject Order!",
       "Are you sure you want to reject this order?",
@@ -403,16 +419,18 @@ const HomeScreen = ({ navigation }) => {
             {user?.foodTruck?.name || ""}
           </Text>
         </View>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={styles.headerRightContainer}
-        >
-          <MaterialCommunityIcons
-            name="bell-circle"
-            size={38}
-            color={AppColor.primary}
-          />
-        </TouchableOpacity>
+        {false && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.headerRightContainer}
+          >
+            <MaterialCommunityIcons
+              name="bell-circle"
+              size={38}
+              color={AppColor.primary}
+            />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Banner for pending status */}
@@ -477,23 +495,23 @@ const HomeScreen = ({ navigation }) => {
             {/* Order & Stats */}
             <View style={styles.content}>
               {/* New Order */}
-              <View style={styles.newOrderContainer}>
-                {/* title */}
-                <View style={styles.sectionTitleContainer}>
-                  <Text style={styles.sectionTitle}>{"New Order"}</Text>
+              {newOrderLoading ? (
+                <View
+                  style={{
+                    paddingVertical: 50,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <NativeIndicator size="small" color={AppColor.primary} />
                 </View>
-                <Divider />
-                {newOrderLoading ? (
-                  <View
-                    style={{
-                      paddingVertical: 50,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <NativeIndicator size="small" color={AppColor.primary} />
+              ) : newOrderData ? (
+                <View style={styles.newOrderContainer}>
+                  {/* title */}
+                  <View style={styles.sectionTitleContainer}>
+                    <Text style={styles.sectionTitle}>{"New Order"}</Text>
                   </View>
-                ) : newOrderData ? (
+                  <Divider />
                   <TouchableOpacity
                     activeOpacity={0.7}
                     style={styles.orderDetailsContainer}
@@ -605,7 +623,8 @@ const HomeScreen = ({ navigation }) => {
                     >
                       <View style={{ width: "75%", paddingRight: 8 }}>
                         <Text style={styles.orderIdText}>
-                          {"Order #" + newOrderData?._id}
+                          {"Order #" +
+                            (newOrderData?.orderNumber || newOrderData?._id)}
                         </Text>
                       </View>
                       <View
@@ -746,27 +765,8 @@ const HomeScreen = ({ navigation }) => {
                       </View>
                     </View>
                   </TouchableOpacity>
-                ) : (
-                  <Pressable
-                    style={{
-                      height: 80,
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                    onPress={() => navigation.navigate("orderScreen")}
-                  >
-                    <Text
-                      style={{
-                        fontFamily: Mulish400,
-                        fontSize: 16,
-                        color: AppColor.black,
-                      }}
-                    >
-                      {"Check current order?"}
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
+                </View>
+              ) : null}
 
               {/* Sales Overview */}
               <View style={styles.salesOverviewContainer}>
@@ -775,19 +775,23 @@ const HomeScreen = ({ navigation }) => {
                 </View>
                 <Divider />
                 <View style={styles.salesOverviewCards}>
-                  <View style={styles.salesCard}>
+                  <Pressable
+                    style={styles.salesCard}
+                    onPress={() => navigation.navigate("earningsScreen")}
+                  >
                     <FastImage
                       source={require("../assets/images/pieChartIcon.png")}
                       style={styles.pieChartIcon}
                     />
                     <View style={styles.salesCardTextContainer}>
-                      <Text style={styles.salesCardAmount}>{"$2,500"}</Text>
+                      <Text style={styles.salesCardAmount}>{"$0"}</Text>
                       <Text style={styles.salesCardLabel}>
                         {"Today's Sales "}
                       </Text>
                     </View>
-                  </View>
-                  <View
+                  </Pressable>
+                  <Pressable
+                    onPress={() => navigation.navigate("earningsScreen")}
                     style={[styles.salesCard, { backgroundColor: "#008B8B" }]}
                   >
                     <FastImage
@@ -795,12 +799,12 @@ const HomeScreen = ({ navigation }) => {
                       style={styles.pieChartIcon}
                     />
                     <View style={styles.salesCardTextContainer}>
-                      <Text style={styles.salesCardAmount}>{"15"}</Text>
+                      <Text style={styles.salesCardAmount}>{"0"}</Text>
                       <Text style={styles.salesCardLabel}>
                         {"Today's Order"}
                       </Text>
                     </View>
-                  </View>
+                  </Pressable>
                 </View>
               </View>
 
@@ -813,23 +817,27 @@ const HomeScreen = ({ navigation }) => {
                 <View style={styles.quickStatsItemsContainer}>
                   <QuickStatsComponent
                     title={"Monthly Earnings"}
-                    subTitle={"$350.00"}
+                    subTitle={"$0"}
                     icon={require("../assets/images/monthlyEarningIcon.png")}
+                    onPress={() => navigation.navigate("earningsScreen")}
                   />
                   <QuickStatsComponent
                     title={"Monthly Delivered Desserts"}
-                    subTitle={"50"}
+                    subTitle={"0"}
                     icon={require("../assets/images/monthlyDeliveredDessertIcon.png")}
+                    onPress={() => navigation.navigate("earningsScreen")}
                   />
                   <QuickStatsComponent
                     title={"Active Customers"}
-                    subTitle={"35"}
+                    subTitle={"0"}
                     icon={require("../assets/images/activeCustomerIcon.png")}
+                    onPress={() => navigation.navigate("earningsScreen")}
                   />
                   <QuickStatsComponent
                     title={"Trending Items"}
-                    subTitle={"Burger"}
+                    subTitle={"-"}
                     icon={require("../assets/images/trendingItemsIcon.png")}
+                    onPress={() => navigation.navigate("earningsScreen")}
                   />
                 </View>
               </View>

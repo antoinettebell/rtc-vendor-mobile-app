@@ -64,7 +64,7 @@ export default function AuthUnderReviewNoteScreen() {
           <View style={{ flexDirection: "row", marginTop: 8 }}>
             <Text style={styles.subTitle}>{".  "}</Text>
             <Text style={styles.subTitle}>
-              {"The Food Truck Team is reviewing your account."}
+              {"The Round The Corner Team is reviewing your account."}
             </Text>
           </View>
           <View style={{ flexDirection: "row", marginTop: 8 }}>

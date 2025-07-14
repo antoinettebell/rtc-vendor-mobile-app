@@ -27,7 +27,7 @@ import { onOnBoard } from "../redux/slices/authSlice";
 import { setAuthToken, setUser } from "../redux/slices/userSlice";
 import StatusBarManager from "../components/StatusBarManager";
 
-const RESEND_CODE_TIME = 45;
+const RESEND_CODE_TIME = 120;
 
 const OtpVerificationScreen = ({ route }) => {
   const insets = useSafeAreaInsets();
@@ -76,7 +76,7 @@ const OtpVerificationScreen = ({ route }) => {
     if (!validateOtp()) {
       setSnackbar({
         visible: true,
-        message: "Invalid OTP. Must be 6 digits.",
+        message: "Invalid Code. Must be 6 digits.",
         type: "error",
       });
       return;

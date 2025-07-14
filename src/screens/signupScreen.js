@@ -194,7 +194,7 @@ const SignUpScreen = ({ navigation }) => {
             </View>
 
             {/* Sign Up Form */}
-            <Text style={styles.title}>{"Welcome to Food Truck!"}</Text>
+            <Text style={styles.title}>{"Welcome to Round The Corner!"}</Text>
             <Text style={styles.subtitle}>{"Create new vendor account!"}</Text>
 
             <View style={styles.formContainer}>
@@ -466,7 +466,7 @@ const SignUpScreen = ({ navigation }) => {
                 onPress={handleSignUp}
                 activeOpacity={0.7}
                 disabled={!agreed || loading}
-                style={[styles.signInButton, { opacity: agreed ? 1 : 0.8 }]}
+                style={[styles.signInButton, { opacity: agreed ? 1 : 0.5 }]}
               >
                 {loading ? (
                   <ActivityIndicator color={AppColor.white} />
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingLeft: 0,
     paddingTop: 0,
-    fontFamily: Mulish400
+    fontFamily: Mulish400,
   },
 
   countryPickerButton: {

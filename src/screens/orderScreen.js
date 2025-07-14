@@ -16,7 +16,7 @@ import FastImage from "@d11/react-native-fast-image";
 import moment from "moment";
 import StatusBarManager from "../components/StatusBarManager";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
-import { Divider, Menu } from "react-native-paper";
+import { Divider, IconButton, Menu } from "react-native-paper";
 import { getOrderList_API, updateOrderStatusByID_API } from "../api/appAPI";
 import { useDispatch, useSelector } from "react-redux";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
@@ -184,7 +184,7 @@ const OrderScreen = ({ navigation }) => {
         <View style={styles.orderIdLocationContainer}>
           <View style={{ width: "75%", paddingRight: 8 }}>
             <Text numberOfLines={1} style={styles.orderIdText}>
-              {"Order #" + item._id}
+              {"Order #" + (item?.orderNumber || item?._id)}
             </Text>
           </View>
           <View style={styles.locationContainer}>
@@ -247,7 +247,7 @@ const OrderScreen = ({ navigation }) => {
                     opacity: disabledStatuses.includes(
                       orderStatusStrings.rejected
                     )
-                      ? 0.7
+                      ? 0.5
                       : 1,
                   },
                 ]}
@@ -273,7 +273,7 @@ const OrderScreen = ({ navigation }) => {
                     opacity: disabledStatuses.includes(
                       orderStatusStrings.accepted
                     )
-                      ? 0.7
+                      ? 0.5
                       : 1,
                   },
                 ]}
@@ -549,7 +549,16 @@ const OrderScreen = ({ navigation }) => {
     }
 
     try {
-      const response = await getOrderList_API({ page, limit: 20, advance });
+      let payload = {
+        page,
+        limit: 20,
+        advance,
+        status: advance
+          ? "PLACED, ACCEPTED, PREPARING, READY_FOR_PICKUP"
+          : "PLACED, ACCEPTED, PREPARING, READY_FOR_PICKUP",
+      };
+
+      const response = await getOrderList_API(payload);
       console.log("reponse => ", response);
       if (response?.success && response?.data) {
         setTotalPages(response.data.totalPages);
@@ -592,8 +601,17 @@ const OrderScreen = ({ navigation }) => {
       <StatusBarManager />
 
       {/* Header */}
-      <View style={[styles.headerContainer, { paddingTop: insets.top + 10 }]}>
+      <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
+        <View style={{ width: "20%" }} />
         <Text style={styles.headerTitle}>{"Orders"}</Text>
+        <View style={{ width: "20%", alignItems: "flex-end" }}>
+          <IconButton
+            icon="history"
+            iconColor={AppColor.black}
+            size={24}
+            onPress={() => navigation.navigate("previousOrderScreen")}
+          />
+        </View>
       </View>
 
       {profileStatus === vendorProfileStatus.approved ? (
@@ -707,9 +725,9 @@ const styles = StyleSheet.create({
 
   // Header
   headerContainer: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    paddingBottom: 10,
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderColor: AppColor.border,
@@ -719,6 +737,7 @@ const styles = StyleSheet.create({
     fontSize: 19.78,
     fontFamily: Mulish700,
     color: AppColor.black,
+    textAlign: "center",
   },
 
   // Button Container

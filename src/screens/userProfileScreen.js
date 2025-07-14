@@ -6,9 +6,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Linking,
+  Alert,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import AntDesign from "react-native-vector-icons/AntDesign";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,6 +25,7 @@ import {
   setSelectedCuisine,
   setSelectedLocations,
 } from "../redux/slices/foodTruckProfileSlice";
+import { formatEIN, formatSSN } from "../helpers/profile.helper";
 
 const MEDIA_IMAGE_TYPE = {
   INSTAGRAM: require("../assets/images/instagram.png"),
@@ -44,6 +48,24 @@ const UserProfileScreen = ({ navigation }) => {
     dispatch(setSelectedCuisine(FOOD_TRUCK_DATA?.cuisine));
     dispatch(setSelectedLocations(FOOD_TRUCK_DATA?.locations));
     dispatch(setSelectedPlan(FOOD_TRUCK_DATA?.plan));
+  };
+
+  const onSocialLinkPress = async (url) => {
+    try {
+      // Add https:// if missing
+      const processedUrl = url.includes("://") ? url : `https://${url}`;
+
+      const supported = await Linking.canOpenURL(processedUrl);
+      if (supported) {
+        await Linking.openURL(processedUrl);
+      } else {
+        Alert.alert("Error", "Invalid URL! Cannot open URL.");
+        console.log("Can't open URL:", processedUrl);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to open URL");
+      console.log("Error opening URL:", error);
+    }
   };
 
   const getUserDetailFromAPI = async () => {
@@ -154,12 +176,40 @@ const UserProfileScreen = ({ navigation }) => {
             </View>
             <Divider />
 
+            {/* EIN Number */}
+            <View style={styles.itemContainer}>
+              <View style={styles.itemIconContiner}>
+                <AntDesign name="idcard" size={24} color={"#8E8E93"} />
+              </View>
+              <Text style={styles.itemText}>
+                {`EIN: ${formatEIN(user?.foodTruck?.ein) || "N/A"}`}
+              </Text>
+            </View>
+            <Divider />
+
+            {/* SNN Number */}
+            <View style={styles.itemContainer}>
+              <View style={styles.itemIconContiner}>
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={24}
+                  color={"#8E8E93"}
+                />
+              </View>
+              <Text style={styles.itemText}>
+                {`SNN: ${formatSSN(user?.foodTruck?.snn) || "N/A"}`}
+              </Text>
+            </View>
+            <Divider />
+
             {/* Email */}
             <View style={styles.itemContainer}>
               <View style={styles.itemIconContiner}>
                 <Ionicons name="mail-outline" size={24} color={"#8E8E93"} />
               </View>
-              <Text style={styles.itemText}>{user?.email}</Text>
+              <Text style={styles.itemText} numberOfLines={1}>
+                {user?.email}
+              </Text>
             </View>
 
             {socialMedia?.length > 0 && <Divider />}
@@ -177,7 +227,17 @@ const UserProfileScreen = ({ navigation }) => {
                       }}
                     />
                   </View>
-                  <Text style={styles.itemText}>{item.mediaUrl}</Text>
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => onSocialLinkPress(item.mediaUrl)}
+                  >
+                    <Text
+                      style={[styles.itemText, { color: "#0066cc" }]}
+                      numberOfLines={1}
+                    >
+                      {item.mediaUrl}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
                 {index !== socialMedia?.length - 1 && <Divider />}
               </View>

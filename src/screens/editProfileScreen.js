@@ -42,6 +42,7 @@ import {
 } from "../api/appAPI";
 import { setUser, updateFoodTruck } from "../redux/slices/userSlice";
 import { Dropdown } from "react-native-element-dropdown";
+import { formatEIN, formatSSN } from "../helpers/profile.helper";
 
 const dropdownData = [
   {
@@ -209,6 +210,8 @@ const EditProfileScreen = ({ navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [name, setName] = useState("");
   const [foodTruckName, setFoodTruckName] = useState("");
+  const [einNumber, setEinNumber] = useState("");
+  const [snnNumber, setSnnNumber] = useState("");
   const [email, setEmail] = useState("");
   const [countryPickerVisible, setCountryPickerVisible] = useState(false);
   const [countryCode, setCountryCode] = useState("+1");
@@ -232,6 +235,8 @@ const EditProfileScreen = ({ navigation }) => {
     name: "",
     foodTruckName: "",
     mobileNumber: "",
+    einNumber: "",
+    snnNumber: "",
     email: "",
     logo: "",
     photos: "",
@@ -251,6 +256,16 @@ const EditProfileScreen = ({ navigation }) => {
     if (!value.trim()) return "Mobile number is required";
     if (value?.length < 10) return "Enter a valid 10-digit number";
     return "";
+  };
+
+  const validateEinNumber = (text) => {
+    const digitsOnly = text.replace(/\D/g, "");
+    return digitsOnly.length === 9 ? "" : "Please enter a valid 9-digit EIN";
+  };
+
+  const validateSnnNumber = (text) => {
+    const digitsOnly = text.replace(/\D/g, "");
+    return digitsOnly.length === 9 ? "" : "Please enter a valid 9-digit SSN";
   };
 
   const onPressUploadLogo = () => {
@@ -492,6 +507,12 @@ const EditProfileScreen = ({ navigation }) => {
     // manage food truck name
     setFoodTruckName(FOOD_TRUCK_DATA?.name ? FOOD_TRUCK_DATA.name : "");
 
+    // manage EIN
+    setEinNumber(FOOD_TRUCK_DATA?.ein ? FOOD_TRUCK_DATA.ein : "");
+
+    // manage SNN
+    setSnnNumber(FOOD_TRUCK_DATA?.snn ? FOOD_TRUCK_DATA.snn : "");
+
     // manage social media links
     processSocialMediaResponse(
       FOOD_TRUCK_DATA?.socialMedia || [],
@@ -594,6 +615,8 @@ const EditProfileScreen = ({ navigation }) => {
     // Validate all fields
     const nameError = validateName(name);
     const foodTruckNameError = validateFoodTruckName(foodTruckName);
+    const einNumberError = validateEinNumber(einNumber);
+    const snnNumberError = validateSnnNumber(snnNumber);
     const mobileNumberError = validateMobileNumber(mobileNumber);
 
     // Additional validations
@@ -620,6 +643,8 @@ const EditProfileScreen = ({ navigation }) => {
       name: nameError,
       foodTruckName: foodTruckNameError,
       mobileNumber: mobileNumberError,
+      einNumber: einNumberError,
+      snnNumber: snnNumberError,
       email: emailError,
       logo: logoError,
       photos: photosError,
@@ -630,6 +655,8 @@ const EditProfileScreen = ({ navigation }) => {
       nameError ||
       foodTruckNameError ||
       mobileNumberError ||
+      einNumberError ||
+      snnNumberError ||
       emailError ||
       logoError ||
       photosError;
@@ -663,6 +690,8 @@ const EditProfileScreen = ({ navigation }) => {
       const foodTruckId = user?.foodTruck?._id;
       let foodTruckPayload = {
         name: foodTruckName,
+        ein: einNumber,
+        snn: snnNumber,
         infoType: infoType === "Food Truck" ? "truck" : "caterer",
         ...(createSocialMediaPayload()?.socialMedia?.length > 0 && {
           socialMedia: createSocialMediaPayload().socialMedia,
@@ -1053,6 +1082,90 @@ const EditProfileScreen = ({ navigation }) => {
               )}
             </View>
 
+            {/* EIN Number Input */}
+            <View style={[styles.section, { marginBottom: 0 }]}>
+              <Text style={styles.inputLabel}>{"EIN Number *"}</Text>
+              <TextInput
+                dense
+                value={formatEIN(einNumber)}
+                onChangeText={(text) => {
+                  // Remove non-digits and limit to 9 characters
+                  const digitsOnly = text.replace(/\D/g, "").slice(0, 9);
+                  setEinNumber(digitsOnly);
+
+                  if (validateEinNumber(digitsOnly)) {
+                    setErrors((prev) => ({
+                      ...prev,
+                      einNumber: "",
+                    }));
+                  }
+                }}
+                style={styles.input}
+                contentStyle={styles.inputText}
+                placeholder="XX-XXXXXXX"
+                placeholderTextColor={AppColor.placeholderTextColor}
+                mode="outlined"
+                error={!!errors.einNumber}
+                outlineColor={AppColor.border}
+                activeOutlineColor={AppColor.primary}
+                outlineStyle={{ borderRadius: 8 }}
+                keyboardType="number-pad"
+                maxLength={10} // XX-XXXXXXX (9 digits + 1 hyphen)
+                theme={{ colors: { onSurfaceVariant: "#777" } }}
+              />
+              {!!errors.einNumber && (
+                <HelperText
+                  type="error"
+                  visible={!!errors.einNumber}
+                  style={styles.helper}
+                >
+                  {errors.einNumber}
+                </HelperText>
+              )}
+            </View>
+
+            {/* SNN Number Input */}
+            <View style={[styles.section, { marginBottom: 0 }]}>
+              <Text style={styles.inputLabel}>{"SNN Number *"}</Text>
+              <TextInput
+                dense
+                value={formatSSN(snnNumber)}
+                onChangeText={(text) => {
+                  // Remove non-digits and limit to 9 characters
+                  const digitsOnly = text.replace(/\D/g, "").slice(0, 9);
+                  setSnnNumber(digitsOnly);
+
+                  if (validateSnnNumber(digitsOnly)) {
+                    setErrors((prev) => ({
+                      ...prev,
+                      snnNumber: "",
+                    }));
+                  }
+                }}
+                style={styles.input}
+                contentStyle={styles.inputText}
+                placeholder="XXX-XX-XXXX"
+                placeholderTextColor={AppColor.placeholderTextColor}
+                mode="outlined"
+                error={!!errors.snnNumber}
+                outlineColor={AppColor.border}
+                activeOutlineColor={AppColor.primary}
+                outlineStyle={{ borderRadius: 8 }}
+                keyboardType="number-pad"
+                maxLength={11} // XXX-XX-XXXX (9 digits + 2 hyphens)
+                theme={{ colors: { onSurfaceVariant: "#777" } }}
+              />
+              {!!errors.snnNumber && (
+                <HelperText
+                  type="error"
+                  visible={!!errors.snnNumber}
+                  style={styles.helper}
+                >
+                  {errors.snnNumber}
+                </HelperText>
+              )}
+            </View>
+
             {/* Social Media */}
             <View style={[styles.section, { gap: 10 }]}>
               {/* media link 1 */}
@@ -1414,7 +1527,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     paddingLeft: 0,
     paddingTop: 0,
-    fontFamily: Mulish400
+    fontFamily: Mulish400,
   },
 
   //   country code input

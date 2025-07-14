@@ -2,6 +2,7 @@ import Config from "react-native-config";
 import {
   ADD_FOOD_CATEGORY,
   ADD_FOOD_ITEM,
+  ADD_REVIEW,
   CUISINE,
   GET_DIET_LIST,
   GET_FOODTRUCK_DETAILS,
@@ -10,6 +11,8 @@ import {
   GET_ORDER_BY_ID,
   GET_ORDER_LIST,
   GET_PLANS_DATA,
+  GET_REVIEW_BY_FOODTRUCK_ID,
+  GET_REVIEW_STATS_BY_FOODTRUCK_ID,
   GET_USER_DETAILS,
   MEDIA_UPLOAD,
   REMOVE_FCM_TOKEN,
@@ -23,6 +26,7 @@ import {
   UPDATE_FOOD_CATEGORY,
   UPDATE_FOOD_ITEM,
   UPDATE_ORDER_STATUS,
+  UPDATE_REVIEW_BY_ID,
   UPDATE_USER_DETAILS,
 } from "./apiEndPoint";
 import apiClient from "./apiClient";
@@ -265,13 +269,21 @@ export const getOrderList_API = async ({
   advance = undefined,
 } = {}) => {
   try {
-    let URL = `${GET_ORDER_LIST}?page=${page}&limit=${limit}`;
+    let URL = `${GET_ORDER_LIST}`;
+
+    // Build query string with required and optional parameters
+    const queryParams = [`page=${page}`, `limit=${limit}`];
+
+    // Add optional parameters if they exist
     if (status) {
-      URL = `${URL}&orderStatus=${status}`;
+      queryParams.push(`orderStatus=${status}`);
     }
     if (advance !== undefined) {
-      URL = `${URL}&advance=${advance}`;
+      queryParams.push(`advance=${advance}`);
     }
+
+    URL += `?${queryParams.join("&")}`;
+
     const response = await apiClient.get(URL, { skipToken: false });
     return response?.data;
   } catch (error) {
@@ -328,6 +340,61 @@ export const removeFcmToken_API = async (device_id) => {
   try {
     const URL = REMOVE_FCM_TOKEN(device_id);
     const response = await apiClient.delete(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+// Add review & reating
+export const addReviewRating_API = async (payload) => {
+  try {
+    const URL = `${ADD_REVIEW}`;
+    const response = await apiClient.post(URL, payload, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+// Update review & reating
+export const updateReviewRating_API = async ({ review_id, payload }) => {
+  try {
+    const URL = UPDATE_REVIEW_BY_ID(review_id);
+    const response = await apiClient.put(URL, payload, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+// get review & reating stats of food-truck
+export const getReviewRatingStats_API = async (foodTruck_id) => {
+  try {
+    const URL = GET_REVIEW_STATS_BY_FOODTRUCK_ID(foodTruck_id);
+    const response = await apiClient.get(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+// get review & reating of food-truck
+export const getReviewRating_API = async (params = {}) => {
+  try {
+    const { foodTruck_id, page = 1, limit = 10 } = params;
+    let URL = `${GET_REVIEW_BY_FOODTRUCK_ID}`;
+
+    // Build query string with required and optional parameters
+    const queryParams = [
+      `foodTruckId=${foodTruck_id}`,
+      `page=${page}`,
+      `limit=${limit}`,
+    ];
+
+    URL += `?${queryParams.join("&")}`;
+
+    const response = await apiClient.get(URL, { skipToken: false });
     return response?.data;
   } catch (error) {
     throw error?.response?.data;

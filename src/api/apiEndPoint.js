@@ -54,6 +54,15 @@ export const UPDATE_FCM_TOKEN = (device_id) =>
 export const REMOVE_FCM_TOKEN = (device_id) =>
   `/user/remove-fcm-token/${device_id}`;
 
+// Ratings and Review
+export const ADD_REVIEW = "/review";
+export const UPDATE_REVIEW_BY_ID = (review_id) => `/review/${review_id}`;
+export const GET_REVIEW_BY_FOODTRUCK_ID = "/review";
+export const GET_REVIEW_STATS_BY_FOODTRUCK_ID = (foodTruck_id) =>
+  `/review/stats?foodTruckId=${foodTruck_id}`;
+export const GET_A_REVIEW_BY_ID = (review_id) => `/review/${review_id}`;
+export const REMOVE_A_REVIEW_BY_ID = (review_id) => `/review/${review_id}`;
+
 // Get Location Name from Lat Long
 export const REVERSE_LOCATION =
   "https://maps.googleapis.com/maps/api/geocode/json?latlng=";

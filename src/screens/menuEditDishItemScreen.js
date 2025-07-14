@@ -45,14 +45,15 @@ import {
 
 const validateItemName = (value) => {
   if (!value.trim()) {
-    return "Item name is required";
+    return "Dish/Item name is required";
   }
   return "";
 };
 
 const validateItemDescription = (value) => {
   if (!value.trim()) {
-    return "Description is required";
+    // return "Description is required";
+    return "Cuisine is required";
   }
   return "";
 };
@@ -143,8 +144,8 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
   const [itemPrice, setItemPrice] = useState("");
   const [itemDiscount, setItemDiscount] = useState("0");
   const [minQt, setMinQt] = useState("1");
-  const [maxQt, setMaxQt] = useState("1");
-  const [prepTime, setPrepTime] = useState("0");
+  const [maxQt, setMaxQt] = useState("10");
+  const [prepTime, setPrepTime] = useState("10");
   const [selectedPhotos, setSelectedPhotos] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [dietList, setDietList] = useState([]);
@@ -540,10 +541,10 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                 <Divider />
               </View>
 
-              {/* Item Name */}
+              {/* Dish/Item Name */}
               <View style={styles.section}>
                 <Text style={[styles.inputLabel, { marginTop: 10 }]}>
-                  {"Item Name *"}
+                  {"Dish/Item Name *"}
                 </Text>
                 <TextInput
                   dense
@@ -669,9 +670,9 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                 )}
               </View>
 
-              {/* Description */}
+              {/* Description  / Cuisine */}
               <View style={styles.section}>
-                <Text style={styles.inputLabel}>{"Description *"}</Text>
+                <Text style={styles.inputLabel}>{"Cuisine *"}</Text>
                 <TextInput
                   dense
                   value={itemDescription}
