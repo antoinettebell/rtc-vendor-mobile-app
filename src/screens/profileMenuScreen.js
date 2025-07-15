@@ -34,6 +34,7 @@ import { showSnackbar } from "../redux/slices/snackbarSlice";
 import { checkInstallationId } from "../helpers/notification.helper";
 import { removeFcmToken_API } from "../api/appAPI";
 import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlice";
+import AppImage from "../components/AppImage";
 
 const ItemComponent = ({ imageUri, label, rightIcon, isRed, onPress }) => (
   <TouchableOpacity
@@ -527,31 +528,10 @@ const ProfileMenuScreen = ({ navigation }) => {
               marginTop: -52,
             }}
           >
-            {user?.foodTruck?.logo ? (
-              <FastImage
-                source={{ uri: user?.foodTruck?.logo, priority: "normal" }}
-                style={{ height: 104, width: 104, borderRadius: 52 }}
-                resizeMode="cover"
-              />
-            ) : (
-              <View
-                style={{
-                  height: 104,
-                  width: 104,
-                  borderRadius: 52,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: AppColor.primary,
-                  overflow: "hidden",
-                }}
-              >
-                <FontAwesome6
-                  name="truck-fast"
-                  color={AppColor.white}
-                  size={50}
-                />
-              </View>
-            )}
+            <AppImage
+              uri={user?.foodTruck?.logo}
+              style={{ height: 104, width: 104, borderRadius: 52 }}
+            />
           </View>
           {/* Food Truck Name */}
           <Text

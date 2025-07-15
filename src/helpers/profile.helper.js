@@ -1,4 +1,4 @@
-export const formatEIN = (text) => {
+export const formatEIN = (text = "") => {
   // Remove all non-digit characters
   const cleaned = text.replace(/\D/g, "");
 
@@ -9,7 +9,7 @@ export const formatEIN = (text) => {
   return `${cleaned.slice(0, 2)}-${cleaned.slice(2, 9)}`;
 };
 
-export const formatSSN = (text) => {
+export const formatSSN = (text = "") => {
   // Remove all non-digit characters
   const cleaned = text.replace(/\D/g, "");
 
