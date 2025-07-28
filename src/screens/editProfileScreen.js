@@ -89,6 +89,56 @@ const MediaLinksComponent = ({
   socialMediaLink,
   setSocialMediaLink,
 }) => {
+  // Handle onChange for website links
+  const handleTextChange = (txt) => {
+    if (selectedSocialMedia?.type === "web") {
+      // If user is entering a website URL
+      if (txt === "") {
+        // If user clears the field, reset to https://
+        setSocialMediaLink("https://");
+      } else if (
+        socialMediaLink === "https://" &&
+        !txt.startsWith("https://")
+      ) {
+        // If current value is just https:// and new text doesn't start with it, don't allow clearing it
+        setSocialMediaLink("https://");
+      } else if (txt.startsWith("https://https://")) {
+        // Fix for duplicate https:// prefix
+        setSocialMediaLink("https://" + txt.substring(16));
+      } else if (txt.startsWith("https://http://")) {
+        // Fix for malformed duplicate prefix
+        setSocialMediaLink("https://" + txt.substring(15));
+      } else if (txt.startsWith("https://")) {
+        // If text already has https://, use it as is
+        setSocialMediaLink(txt);
+      } else if (txt.startsWith("http://")) {
+        // If text has http://, convert to https://
+        setSocialMediaLink("https://" + txt.substring(7));
+      } else {
+        // If text doesn't have any protocol, prepend https://
+        setSocialMediaLink("https://" + txt);
+      }
+    } else {
+      // For non-website links, just set the value as is
+      setSocialMediaLink(txt);
+    }
+  };
+
+  // Initialize website fields with https://
+  React.useEffect(() => {
+    if (selectedSocialMedia?.type === "web" && !socialMediaLink) {
+      setSocialMediaLink("https://");
+    }
+  }, [selectedSocialMedia]);
+
+  // For website type, prepopulate with https:// in placeholder
+  const getPlaceholder = () => {
+    if (selectedSocialMedia?.type === "web") {
+      return `Enter ${selectedSocialMedia?.label} Link (https://...)`;
+    }
+    return `Enter ${selectedSocialMedia?.label} Link`;
+  };
+
   return (
     <View
       style={{
@@ -123,6 +173,12 @@ const MediaLinksComponent = ({
           value={selectedSocialMedia}
           onChange={(item) => {
             setSelectedSocialMedia(item);
+            // Initialize with https:// for website type, otherwise clear
+            if (item.type === "web") {
+              setSocialMediaLink("https://");
+            } else {
+              setSocialMediaLink("");
+            }
           }}
           placeholder=""
           style={styles.dropdownForMedia}
@@ -162,13 +218,22 @@ const MediaLinksComponent = ({
 
       <NativeTextInput
         value={socialMediaLink}
-        onChangeText={(txt) => {
-          setSocialMediaLink(txt);
-        }}
+        onChangeText={handleTextChange}
         style={styles.inputForMedia}
-        placeholder={`Enter ${selectedSocialMedia?.label} Link`}
+        placeholder={getPlaceholder()}
         placeholderTextColor={AppColor.placeholderTextColor}
         autoCapitalize="none"
+        onKeyPress={({ nativeEvent }) => {
+          // Prevent deleting or modifying the https:// prefix for website type
+          if (
+            selectedSocialMedia?.type === "web" &&
+            (socialMediaLink === "https://" || socialMediaLink.length <= 8) &&
+            nativeEvent.key === "Backspace"
+          ) {
+            // Prevent default behavior - don't allow deleting the https:// prefix
+            return;
+          }
+        }}
       />
     </View>
   );
@@ -227,8 +292,8 @@ const EditProfileScreen = ({ navigation }) => {
   const [selectedType4, setSelectedType4] = useState(dropdownData[3]);
   const [mediaLink1, setMediaLink1] = useState("");
   const [mediaLink2, setMediaLink2] = useState("");
-  const [mediaLink3, setMediaLink3] = useState("");
-  const [mediaLink4, setMediaLink4] = useState("");
+  const [mediaLink3, setMediaLink3] = useState("https://"); // Initialize with https:// since it's a website type
+  const [mediaLink4, setMediaLink4] = useState("https://"); // Initialize with https:// since it's a website type
   const [snackbar, setSnackbar] = useState({
     visible: false,
     message: "",
@@ -589,33 +654,63 @@ const EditProfileScreen = ({ navigation }) => {
       }
     };
 
-    // Check each media link and add to payload if not empty
+    // Helper function to ensure website URLs have https:// and return null if only https:// is present
+    const formatWebsiteUrl = (url, type) => {
+      if (type.toLowerCase() === "website" || type.toUpperCase() === "WEB") {
+        // If URL is just https:// with nothing after it, return null
+        if (url === "https://" || url.trim() === "https://") {
+          return null;
+        }
+        // If URL doesn't start with http:// or https://, add https://
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+          return `https://${url}`;
+        } else if (url.startsWith("http://")) {
+          // Convert http:// to https://
+          return `https://${url.substring(7)}`;
+        }
+      }
+      return url; // Return unchanged for non-website URLs
+    };
+
+    // Check each media link and add to payload if not empty and not just https://
     if (mediaLink1) {
-      socialMedia.push({
-        mediaType: convertMediaType(selectedType1.value),
-        mediaUrl: mediaLink1,
-      });
+      const formattedUrl = formatWebsiteUrl(mediaLink1, selectedType1.value);
+      if (formattedUrl) {
+        socialMedia.push({
+          mediaType: convertMediaType(selectedType1.value),
+          mediaUrl: formattedUrl,
+        });
+      }
     }
 
     if (mediaLink2 && !isBasicPlan) {
-      socialMedia.push({
-        mediaType: convertMediaType(selectedType2.value),
-        mediaUrl: mediaLink2,
-      });
+      const formattedUrl = formatWebsiteUrl(mediaLink2, selectedType2.value);
+      if (formattedUrl) {
+        socialMedia.push({
+          mediaType: convertMediaType(selectedType2.value),
+          mediaUrl: formattedUrl,
+        });
+      }
     }
 
     if (mediaLink3) {
-      socialMedia.push({
-        mediaType: convertMediaType(selectedType3.value),
-        mediaUrl: mediaLink3,
-      });
+      const formattedUrl = formatWebsiteUrl(mediaLink3, selectedType3.value);
+      if (formattedUrl) {
+        socialMedia.push({
+          mediaType: convertMediaType(selectedType3.value),
+          mediaUrl: formattedUrl,
+        });
+      }
     }
 
     if (mediaLink4 && !isBasicPlan) {
-      socialMedia.push({
-        mediaType: convertMediaType(selectedType4.value),
-        mediaUrl: mediaLink4,
-      });
+      const formattedUrl = formatWebsiteUrl(mediaLink4, selectedType4.value);
+      if (formattedUrl) {
+        socialMedia.push({
+          mediaType: convertMediaType(selectedType4.value),
+          mediaUrl: formattedUrl,
+        });
+      }
     }
 
     return socialMedia?.length > 0 ? { socialMedia } : {};

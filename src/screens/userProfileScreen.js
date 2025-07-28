@@ -192,8 +192,8 @@ const UserProfileScreen = ({ navigation }) => {
               </View>
               <Text style={styles.itemText}>
                 {user?.foodTruck?.ein
-                  ? `EIN: ${formatEIN(user?.foodTruck?.ein) || "N/A"}`
-                  : `SSN: ${formatSSN(user?.foodTruck?.ssn) || "N/A"}`}
+                  ? `EIN: ${formatEIN(user?.foodTruck?.ein || "") || "N/A"}`
+                  : `SSN: ${formatSSN(user?.foodTruck?.ssn || "") || "N/A"}`}
               </Text>
             </View>
             <Divider />
