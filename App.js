@@ -57,6 +57,9 @@ import UserProfileScreen from "./src/screens/userProfileScreen";
 import OrderDetailsScreen from "./src/screens/orderDetailsScreen";
 import PreviousOrderScreen from "./src/screens/previousOrderScreen";
 import RateReviewScreen from "./src/screens/rateReviewScreen";
+import ProfileSubscriptionScreen from "./src/screens/profileSubscriptionScreen";
+import AuthFoodTruckBankDetailScreen from "./src/screens/authFoodTruckBankDetailScreen";
+import EditBankDetailScreen from "./src/screens/editBankDetailScreen";
 
 const Stack = createNativeStackNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -115,6 +118,10 @@ const FinalSignupStepsNavigator = () => (
     <Stack.Screen
       name="authAvailabilityScreen"
       component={AuthAvailabilityScreen}
+    />
+    <Stack.Screen
+      name="authFoodTruckBankDetailScreen"
+      component={AuthFoodTruckBankDetailScreen}
     />
     <Stack.Screen
       name="authUnderReviewNoteScreen"
@@ -247,10 +254,21 @@ const MainAppNavigator = ({ insets }) => (
       component={AppTermsOfServiceScreen}
     />
     <Stack.Screen name="userProfileScreen" component={UserProfileScreen} />
+    <Stack.Screen
+      name="editBankDetailScreen"
+      component={EditBankDetailScreen}
+    />
     <Stack.Screen name="orderDetailsScreen" component={OrderDetailsScreen} />
     <Stack.Screen name="previousOrderScreen" component={PreviousOrderScreen} />
     <Stack.Screen name="rateReviewScreen" component={RateReviewScreen} />
-    {/* <Stack.Screen name="deleteOtpVerification" component={OtpVerificationScreen} /> */}
+    <Stack.Screen
+      name="profileSubscriptionScreen"
+      component={ProfileSubscriptionScreen}
+    />
+    <Stack.Screen
+      name="deleteOtpVerification"
+      component={OtpVerificationScreen}
+    />
   </Stack.Navigator>
 );
 

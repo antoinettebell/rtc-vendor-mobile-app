@@ -341,6 +341,7 @@ const SignUpScreen = ({ navigation }) => {
                 outlineStyle={{ borderRadius: 8 }}
                 autoCapitalize="none"
                 keyboardType="email-address"
+                textContentType="username"
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
                 onBlur={() =>
                   setErrors((prev) => ({
@@ -378,6 +379,7 @@ const SignUpScreen = ({ navigation }) => {
                 activeOutlineColor={AppColor.primary}
                 outlineStyle={{ borderRadius: 8 }}
                 autoCapitalize="none"
+                textContentType="password"
                 right={
                   <TextInput.Icon
                     icon={passwordVisible ? "eye-off" : "eye"}

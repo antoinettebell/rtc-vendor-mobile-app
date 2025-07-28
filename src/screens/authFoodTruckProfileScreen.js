@@ -39,6 +39,8 @@ import MediaPickerDialog from "../components/MediaPickerDialog";
 import StatusBarManager from "../components/StatusBarManager";
 import { useFocusEffect } from "@react-navigation/native";
 import { formatEIN, formatSSN } from "../helpers/profile.helper";
+import { empNumberList } from "../utils/constants";
+import AppImage from "../components/AppImage";
 
 const dropdownData = [
   {
@@ -82,7 +84,7 @@ const validateEinNumber = (text) => {
   return digitsOnly.length === 9;
 };
 
-const validateSnnNumber = (text) => {
+const validateSsnNumber = (text) => {
   const digitsOnly = text.replace(/\D/g, "");
   return digitsOnly.length === 9;
 };
@@ -217,8 +219,8 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
   const [selectedMediaType, setSelectedMediaType] = useState(null);
   const [selectedLogo, setSelectedLogo] = useState(null);
   const [selectedPhotos, setSelectedPhotos] = useState([]);
-  const [einNumber, setEinNumber] = useState("");
-  const [snnNumber, setSnnNumber] = useState("");
+  const [selectedEmpNumberType, setSelectedEmpNumberType] = useState("ein");
+  const [selectedEmpNumberText, setSelectedEmpNumberText] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedType1, setSelectedType1] = useState(dropdownData[0]);
   const [selectedType2, setSelectedType2] = useState(dropdownData[0]);
@@ -231,8 +233,7 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
   const [errors, setErrors] = useState({
     logo: "",
     photos: "",
-    einNumber: "",
-    snnNumber: "",
+    empNumber: "",
     cuisine: "",
     location: "",
   });
@@ -452,12 +453,14 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
     const newErrors = {
       logo: selectedLogo ? "" : "Logo is required",
       photos: selectedPhotos.length > 0 ? "" : "At least one image is required",
-      einNumber: validateEinNumber(einNumber)
-        ? ""
-        : "Please enter a valid 9-digit EIN",
-      snnNumber: validateSnnNumber(snnNumber)
-        ? ""
-        : "Please enter a valid 9-digit SSN",
+      empNumber:
+        selectedEmpNumberType === "ein"
+          ? validateEinNumber(selectedEmpNumberText)
+            ? ""
+            : "Please enter a valid 9-digit EIN"
+          : validateSsnNumber(selectedEmpNumberText)
+            ? ""
+            : "Please enter a valid 9-digit SSN",
       cuisine:
         selectedCuisine.length > 0 ? "" : "At least one Cuisine is required",
       location:
@@ -524,11 +527,16 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
         ...(createSocialMediaPayload()?.socialMedia?.length > 0 && {
           socialMedia: createSocialMediaPayload().socialMedia,
         }),
-        ein: einNumber,
-        snn: snnNumber,
         infoType: infoType === "Food Truck" ? "truck" : "caterer",
         planId: selectedPlan?._id,
       };
+      if (selectedEmpNumberType === "ein") {
+        payload.ein = selectedEmpNumberText;
+        // payload.ssn = null;
+      } else {
+        // payload.ein = null;
+        payload.ssn = selectedEmpNumberText;
+      }
       if (logoResult) {
         payload.logo = logoResult.serverResponse;
       }
@@ -628,11 +636,19 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
               <View style={styles.line} />
               <View style={styles.stepSubContainer}>
                 <View style={styles.filledCircle}>
-                  <FontAwesome6 name="check" color={AppColor.white} size={18} />
+                  <FontAwesome6
+                    name="person-walking"
+                    color={AppColor.white}
+                    size={18}
+                  />
                 </View>
               </View>
               <View style={styles.line} />
-              <View style={styles.stepContainer}>
+              <View style={styles.stepSubContainer}>
+                <View style={styles.emptyCircle} />
+              </View>
+              <View style={styles.line} />
+              <View style={styles.stepSubContainer}>
                 <View style={styles.emptyCircle} />
               </View>
             </View>
@@ -645,7 +661,7 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Food truck info</Text>
                 <Text style={styles.sectionSubtitle}>
-                  Tell your customer about your food truck!!
+                  {"Tell your customer about your food truck!!"}
                 </Text>
               </View>
 
@@ -657,9 +673,9 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
                 <View style={styles.logoContainer}>
                   {selectedLogo?.uri ? (
                     <View style={styles.logoImageWrapper}>
-                      <Image
-                        source={{ uri: selectedLogo?.uri }}
-                        style={styles.logoImage}
+                      <AppImage
+                        uri={selectedLogo?.uri}
+                        containerStyle={styles.logoImage}
                       />
                     </View>
                   ) : (
@@ -754,9 +770,9 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
                       contentContainerStyle={{ marginTop: 10 }}
                       renderItem={({ item, index }) => (
                         <View style={{ marginRight: 15 }}>
-                          <Image
-                            source={{ uri: item.uri }}
-                            style={styles.thumbnail}
+                          <AppImage
+                            uri={item.uri}
+                            containerStyle={styles.thumbnail}
                           />
                           <TouchableOpacity
                             hitSlop={5}
@@ -797,86 +813,136 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
                 )}
               </View>
 
-              {/* EIN Number*/}
+              {/* EIN/SSN Number */}
               <View style={styles.section}>
-                <Text style={styles.paperInputLabel}>{"EIN Number"}</Text>
-                <TextInput
-                  dense
-                  value={formatEIN(einNumber)}
-                  onChangeText={(text) => {
-                    // Remove non-digits and limit to 9 characters
-                    const digitsOnly = text.replace(/\D/g, "").slice(0, 9);
-                    setEinNumber(digitsOnly);
-
-                    if (validateEinNumber(digitsOnly)) {
-                      setErrors((prev) => ({
-                        ...prev,
-                        einNumber: "",
-                      }));
-                    }
+                <Text style={styles.paperInputLabel}>{"EIN/SSN Number"}</Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    borderWidth: 1,
+                    borderColor: AppColor.border,
+                    borderRadius: 8,
                   }}
-                  style={styles.paperInput}
-                  contentStyle={styles.paperInputText}
-                  placeholder="XX-XXXXXXX"
-                  placeholderTextColor={AppColor.placeholderTextColor}
-                  mode="outlined"
-                  error={!!errors.einNumber}
-                  outlineColor={AppColor.border}
-                  activeOutlineColor={AppColor.primary}
-                  outlineStyle={{ borderRadius: 8 }}
-                  keyboardType="number-pad"
-                  maxLength={10} // XX-XXXXXXX (9 digits + 1 hyphen)
-                  theme={{ colors: { onSurfaceVariant: "#777" } }}
-                />
-                {!!errors.einNumber && (
+                >
+                  <View style={{ width: 80 }}>
+                    <Dropdown
+                      data={empNumberList}
+                      labelField="label"
+                      valueField="type"
+                      value={selectedEmpNumberType}
+                      onChange={(item) => {
+                        setSelectedEmpNumberType(item.type);
+                        if (!selectedEmpNumberText?.trim()?.length) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            empNumber: "",
+                          }));
+                          return;
+                        }
+                        if (item.type === "ein") {
+                          setErrors((prev) => ({
+                            ...prev,
+                            empNumber: validateEinNumber(selectedEmpNumberText)
+                              ? ""
+                              : "Please enter a valid 9-digit EIN",
+                          }));
+                        } else {
+                          setErrors((prev) => ({
+                            ...prev,
+                            empNumber: validateSsnNumber(selectedEmpNumberText)
+                              ? ""
+                              : "Please enter a valid 9-digit SSN",
+                          }));
+                        }
+                      }}
+                      placeholder={""}
+                      style={{
+                        height: 46,
+                        paddingHorizontal: 12,
+                      }}
+                      containerStyle={{ width: width - 50 }}
+                      placeholderStyle={{
+                        fontFamily: Mulish400,
+                        color: AppColor.textHighlighter,
+                        position: "absolute",
+                      }}
+                      itemTextStyle={{ fontFamily: Mulish400 }}
+                      selectedTextStyle={{ fontFamily: Mulish400 }}
+                      renderItem={(item) => (
+                        <View
+                          style={{
+                            paddingVertical: 10,
+                            paddingHorizontal: 16,
+                          }}
+                        >
+                          <Text
+                            style={[styles.dropdownText, { marginLeft: 0 }]}
+                          >
+                            {`${item.label} Number`}
+                          </Text>
+                        </View>
+                      )}
+                    />
+                  </View>
+
+                  <View
+                    style={{
+                      width: 1,
+                      height: "100%",
+                      backgroundColor: AppColor.border,
+                    }}
+                  />
+
+                  <NativeTextInput
+                    value={
+                      selectedEmpNumberType === "ein"
+                        ? formatEIN(selectedEmpNumberText)
+                        : formatSSN(selectedEmpNumberText)
+                    }
+                    onChangeText={(txt) => {
+                      if (selectedEmpNumberType === "ein") {
+                        // Remove non-digits and limit to 9 characters
+                        const digitsOnly = txt.replace(/\D/g, "").slice(0, 9);
+                        setSelectedEmpNumberText(digitsOnly);
+
+                        if (validateEinNumber(digitsOnly)) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            empNumber: "",
+                          }));
+                        }
+                      } else {
+                        // Remove non-digits and limit to 9 characters
+                        const digitsOnly = txt.replace(/\D/g, "").slice(0, 9);
+                        setSelectedEmpNumberText(digitsOnly);
+
+                        if (validateSsnNumber(digitsOnly)) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            empNumber: "",
+                          }));
+                        }
+                      }
+                    }}
+                    style={styles.input}
+                    placeholder={
+                      selectedEmpNumberType === "ein"
+                        ? "XX-XXXXXXX"
+                        : "XXX-XX-XXXX"
+                    }
+                    placeholderTextColor={AppColor.placeholderTextColor}
+                    keyboardType="number-pad"
+                    maxLength={11}
+                  />
+                </View>
+                {!!errors.empNumber && (
                   <HelperText
                     type="error"
-                    visible={!!errors.einNumber}
-                    style={styles.helper}
+                    visible={!!errors.empNumber}
+                    style={[styles.helper, { marginBottom: 0 }]}
                   >
-                    {errors.einNumber}
-                  </HelperText>
-                )}
-              </View>
-
-              {/* SNN Number*/}
-              <View style={[styles.section, { marginTop: 0 }]}>
-                <Text style={styles.paperInputLabel}>{"SNN Number"}</Text>
-                <TextInput
-                  dense
-                  value={formatSSN(snnNumber)}
-                  onChangeText={(text) => {
-                    // Remove non-digits and limit to 9 characters
-                    const digitsOnly = text.replace(/\D/g, "").slice(0, 9);
-                    setSnnNumber(digitsOnly);
-
-                    if (validateSnnNumber(digitsOnly)) {
-                      setErrors((prev) => ({
-                        ...prev,
-                        snnNumber: "",
-                      }));
-                    }
-                  }}
-                  style={styles.paperInput}
-                  contentStyle={styles.paperInputText}
-                  placeholder="XXX-XX-XXXX"
-                  placeholderTextColor={AppColor.placeholderTextColor}
-                  mode="outlined"
-                  error={!!errors.snnNumber}
-                  outlineColor={AppColor.border}
-                  activeOutlineColor={AppColor.primary}
-                  outlineStyle={{ borderRadius: 8 }}
-                  keyboardType="number-pad"
-                  maxLength={11} // XXX-XX-XXXX (9 digits + 2 hyphens)
-                  theme={{ colors: { onSurfaceVariant: "#777" } }}
-                />
-                {!!errors.snnNumber && (
-                  <HelperText
-                    type="error"
-                    visible={!!errors.snnNumber}
-                    style={styles.helper}
-                  >
-                    {errors.snnNumber}
+                    {errors.empNumber}
                   </HelperText>
                 )}
               </View>
@@ -1123,7 +1189,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginVertical: 10,
+    marginVertical: 16,
   },
   stepSubContainer: {
     alignItems: "center",
@@ -1144,7 +1210,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: AppColor.primary,
   },
-  line: { width: "18%", height: 2, backgroundColor: AppColor.primary },
+  line: { width: "10%", height: 2, backgroundColor: AppColor.primary },
 
   // Content
   content: { flex: 1, backgroundColor: AppColor.white },

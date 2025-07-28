@@ -7,6 +7,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ActivityIndicator as NativeIndicator,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import FastImage from "@d11/react-native-fast-image";
@@ -32,7 +33,7 @@ import {
 import { updatePassword_API } from "../api/authAPI";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
 import { checkInstallationId } from "../helpers/notification.helper";
-import { removeFcmToken_API } from "../api/appAPI";
+import { deleteAccount_API, removeFcmToken_API } from "../api/appAPI";
 import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlice";
 import AppImage from "../components/AppImage";
 
@@ -396,6 +397,7 @@ const ProfileMenuScreen = ({ navigation }) => {
 
   const [signoutModalVisible, setSignoutModalVisible] = useState(false);
   const [signoutModalLoading, setSignoutModalLoading] = useState(false);
+  const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
   const [changePWDModalVisible, setChangePWDModalVisible] = useState(false);
   const [snackbarPWD, setSnackbarPWD] = useState({
     visible: false,
@@ -458,7 +460,24 @@ const ProfileMenuScreen = ({ navigation }) => {
         {
           text: "Delete",
           style: "destructive",
-          // onPress: () => navigation.navigate('deleteOtpVerification'),
+          onPress: async () => {
+            setDeleteAccountLoading(true);
+            try {
+              const response = await deleteAccount_API();
+              console.log("response => ", response);
+              if (response?.success && response?.data) {
+                navigation.navigate("deleteOtpVerification", {
+                  verificationFor: "delete-account",
+                  data: { ...response.data, user: { email: user?.email } },
+                  nextScreen: "",
+                });
+              }
+            } catch (error) {
+              console.log("error => ", error);
+            } finally {
+              setDeleteAccountLoading(false);
+            }
+          },
         },
       ]
     );
@@ -476,8 +495,10 @@ const ProfileMenuScreen = ({ navigation }) => {
           justifyContent: "center",
           paddingTop: insets.top + 10,
           paddingBottom: 10,
-          backgroundColor: AppColor.white,
           paddingHorizontal: 16,
+          borderBottomWidth: 1,
+          borderColor: AppColor.border,
+          backgroundColor: AppColor.white,
         }}
       >
         <Text
@@ -506,10 +527,9 @@ const ProfileMenuScreen = ({ navigation }) => {
         >
           {/* Cover Image */}
           {user?.foodTruck?.photos[0] ? (
-            <FastImage
-              source={{ uri: user?.foodTruck?.photos[0], priority: "normal" }}
-              style={{ height: 143, width: "100%" }}
-              resizeMode="cover"
+            <AppImage
+              uri={user?.foodTruck?.photos[0]}
+              containerStyle={{ height: 143, width: "100%" }}
             />
           ) : (
             <View
@@ -530,7 +550,7 @@ const ProfileMenuScreen = ({ navigation }) => {
           >
             <AppImage
               uri={user?.foodTruck?.logo}
-              style={{ height: 104, width: 104, borderRadius: 52 }}
+              containerStyle={{ height: 104, width: 104, borderRadius: 52 }}
             />
           </View>
           {/* Food Truck Name */}
@@ -658,7 +678,6 @@ const ProfileMenuScreen = ({ navigation }) => {
             label="Your Profile"
             imageUri={PROFILE_MENU_IMAGES.yourProfile}
             onPress={() => navigation.navigate("userProfileScreen")}
-            // onPress={() => navigation.navigate("editProfileScreen")}
           />
           <HR />
           <ItemComponent
@@ -680,6 +699,20 @@ const ProfileMenuScreen = ({ navigation }) => {
             label="Manage Availability"
             imageUri={PROFILE_MENU_IMAGES.manageAvailability}
             onPress={() => navigation.navigate("profileAvailabilityScreen")}
+          />
+          <HR />
+          <ItemComponent
+            rightIcon
+            label="Bank Detail"
+            imageUri={PROFILE_MENU_IMAGES.bankDetail}
+            onPress={() => navigation.navigate("editBankDetailScreen")}
+          />
+          <HR />
+          <ItemComponent
+            rightIcon
+            label="Subscription"
+            imageUri={PROFILE_MENU_IMAGES.subscription}
+            onPress={() => navigation.navigate("profileSubscriptionScreen")}
           />
           <HR />
           <ItemComponent
@@ -716,6 +749,23 @@ const ProfileMenuScreen = ({ navigation }) => {
           />
         </View>
       </ScrollView>
+
+      <Modal
+        isVisible={deleteAccountLoading}
+        backdropOpacity={0.5}
+        animationIn="fadeIn"
+        animationOut="fadeOut"
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <NativeIndicator size="large" color={AppColor.white} />
+        </View>
+      </Modal>
 
       {/* Modals */}
       <SignoutModal

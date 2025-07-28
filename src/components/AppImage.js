@@ -8,9 +8,12 @@ const placeholderImage = require("../assets/images/placeholderImage.png");
 
 const AppImage = ({
   uri = null,
-  style = {},
+  containerStyle = {},
+  imageStyle = {},
   placeholderImageSource = placeholderImage,
   resizeMode = "cover",
+  priority = FastImage.priority.normal,
+  cache = FastImage.cacheControl.immutable,
   ...props
 }) => {
   const [loading, setLoading] = useState(true);
@@ -20,7 +23,7 @@ const AppImage = ({
     <View
       style={[
         styles.container,
-        style,
+        containerStyle,
         (error || !uri) && { justifyContent: "center", alignItems: "center" },
       ]}
     >
@@ -35,12 +38,13 @@ const AppImage = ({
       <FastImage
         style={[
           styles.image,
+          imageStyle,
           (error || !uri) && { height: "60%", width: "60%" },
         ]}
         source={
           error || !uri
             ? placeholderImageSource // local placeholder
-            : { uri }
+            : { uri, priority, cache }
         }
         resizeMode={resizeMode}
         onLoadStart={() => setLoading(true)}

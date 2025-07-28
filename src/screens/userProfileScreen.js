@@ -111,6 +111,8 @@ const UserProfileScreen = ({ navigation }) => {
           justifyContent: "space-between",
           paddingTop: insets.top,
           backgroundColor: AppColor.white,
+          borderBottomWidth: 1,
+          borderBlockColor: AppColor.border,
         }}
       >
         <IconButton
@@ -128,13 +130,12 @@ const UserProfileScreen = ({ navigation }) => {
         >
           {"Your Profile"}
         </Text>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={{ width: "10%" }}
+        <IconButton
+          icon="pencil"
+          iconColor={AppColor.black}
+          size={24}
           onPress={() => navigation.navigate("editProfileScreen")}
-        >
-          <MaterialIcons name="edit" size={24} color={AppColor.black} />
-        </TouchableOpacity>
+        />
       </View>
 
       {/* Main Container */}
@@ -176,28 +177,23 @@ const UserProfileScreen = ({ navigation }) => {
             </View>
             <Divider />
 
-            {/* EIN Number */}
+            {/* EIN/SSN Number */}
             <View style={styles.itemContainer}>
               <View style={styles.itemIconContiner}>
-                <AntDesign name="idcard" size={24} color={"#8E8E93"} />
+                {user?.foodTruck?.ein ? (
+                  <AntDesign name="idcard" size={24} color={"#8E8E93"} />
+                ) : (
+                  <Ionicons
+                    name="shield-checkmark-outline"
+                    size={24}
+                    color={"#8E8E93"}
+                  />
+                )}
               </View>
               <Text style={styles.itemText}>
-                {`EIN: ${formatEIN(user?.foodTruck?.ein) || "N/A"}`}
-              </Text>
-            </View>
-            <Divider />
-
-            {/* SNN Number */}
-            <View style={styles.itemContainer}>
-              <View style={styles.itemIconContiner}>
-                <Ionicons
-                  name="shield-checkmark-outline"
-                  size={24}
-                  color={"#8E8E93"}
-                />
-              </View>
-              <Text style={styles.itemText}>
-                {`SNN: ${formatSSN(user?.foodTruck?.snn) || "N/A"}`}
+                {user?.foodTruck?.ein
+                  ? `EIN: ${formatEIN(user?.foodTruck?.ein) || "N/A"}`
+                  : `SSN: ${formatSSN(user?.foodTruck?.ssn) || "N/A"}`}
               </Text>
             </View>
             <Divider />
@@ -281,5 +277,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: Mulish400,
     color: AppColor.black,
+    marginRight: 40, // padding of container + image width
   },
 });

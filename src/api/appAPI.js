@@ -1,13 +1,16 @@
 import Config from "react-native-config";
 import {
+  ADD_BANK_DETAIL,
   ADD_FOOD_CATEGORY,
   ADD_FOOD_ITEM,
   ADD_REVIEW,
   CUISINE,
+  GET_BANK_DETAIL,
   GET_DIET_LIST,
   GET_FOODTRUCK_DETAILS,
   GET_FOOD_CATEGORY,
   GET_FOOD_ITEM,
+  GET_MEAT_LIST,
   GET_ORDER_BY_ID,
   GET_ORDER_LIST,
   GET_PLANS_DATA,
@@ -15,6 +18,7 @@ import {
   GET_REVIEW_STATS_BY_FOODTRUCK_ID,
   GET_USER_DETAILS,
   MEDIA_UPLOAD,
+  REMOVE_ACCOUNT,
   REMOVE_FCM_TOKEN,
   REMOVE_FOOD_CATEGORY,
   REMOVE_FOOD_ITEM,
@@ -27,6 +31,7 @@ import {
   UPDATE_FOOD_ITEM,
   UPDATE_ORDER_STATUS,
   UPDATE_REVIEW_BY_ID,
+  UPDATE_SUBSCRIPTION_PLAN,
   UPDATE_USER_DETAILS,
 } from "./apiEndPoint";
 import apiClient from "./apiClient";
@@ -199,6 +204,17 @@ export const getAllFoodItemsByCatID_API = async (category_id) => {
 export const getFoodItemByID_API = async (fooditem_id) => {
   try {
     const URL = `${GET_FOOD_ITEM}/${fooditem_id}`;
+    const response = await apiClient.get(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+// Get all food item
+export const getAllFoodItem_API = async () => {
+  try {
+    const URL = `${GET_FOOD_ITEM}?limit=1000`;
     const response = await apiClient.get(URL, { skipToken: false });
     return response?.data;
   } catch (error) {
@@ -395,6 +411,61 @@ export const getReviewRating_API = async (params = {}) => {
     URL += `?${queryParams.join("&")}`;
 
     const response = await apiClient.get(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+// update foodtruck subscription
+export const updateFoodtruckSubscription_API = async (payload) => {
+  try {
+    const URL = `${UPDATE_SUBSCRIPTION_PLAN}`;
+    const response = await apiClient.put(URL, payload, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+// add bank details
+export const addBankDetail_API = async (payload) => {
+  try {
+    const URL = `${ADD_BANK_DETAIL}`;
+    const response = await apiClient.post(URL, payload, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+// get bank details
+export const getBankDetail_API = async () => {
+  try {
+    const URL = `${GET_BANK_DETAIL}`;
+    const response = await apiClient.get(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+// get meat list
+export const getMeatList_API = async () => {
+  try {
+    const URL = `${GET_MEAT_LIST}`;
+    const response = await apiClient.get(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+// delete account
+export const deleteAccount_API = async () => {
+  try {
+    const URL = `${REMOVE_ACCOUNT}`;
+    const response = await apiClient.delete(URL, { skipToken: false });
     return response?.data;
   } catch (error) {
     throw error?.response?.data;

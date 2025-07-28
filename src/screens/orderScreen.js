@@ -32,6 +32,7 @@ import {
   getDisabledStatuses,
 } from "../helpers/order.helper";
 import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
+import AppImage from "../components/AppImage";
 
 const OrderScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -53,11 +54,11 @@ const OrderScreen = ({ navigation }) => {
 
   // render order component
   const renderOrderComponent = ({ item, index }) => {
-    const disabledStatuses = getDisabledStatuses(item.orderStatus);
+    const disabledStatuses = getDisabledStatuses(item?.orderStatus);
     const hideActionBtns =
-      item.orderStatus === orderStatusStrings.rejected ||
-      item.orderStatus === orderStatusStrings.completed ||
-      item.orderStatus === orderStatusStrings.cancel ||
+      item?.orderStatus === orderStatusStrings.rejected ||
+      item?.orderStatus === orderStatusStrings.completed ||
+      item?.orderStatus === orderStatusStrings.cancel ||
       false;
     const locationData = extractAdvanceOrderLocationAndTime(item);
 
@@ -68,7 +69,7 @@ const OrderScreen = ({ navigation }) => {
         style={styles.orderDetailsContainer}
         onPress={() =>
           navigation.navigate("orderDetailsScreen", {
-            orderId: item._id,
+            orderId: item?._id,
           })
         }
       >
@@ -88,7 +89,7 @@ const OrderScreen = ({ navigation }) => {
                 onPress={() => handleMenuVisibility({ menuIndex: index })}
               >
                 <Text style={styles.menuAnchorText}>
-                  {orderCurrentStatusNames[item.orderStatus]}
+                  {orderCurrentStatusNames[item?.orderStatus]}
                 </Text>
                 <Feather
                   name="chevron-down"
@@ -201,23 +202,23 @@ const OrderScreen = ({ navigation }) => {
         {/* Order User Details */}
         <View style={styles.orderHeader}>
           <View style={styles.orderUserImageContainer}>
-            <FastImage
-              source={{ uri: item.user.profilePic || PROFILE_AVATAR }}
-              style={styles.orderUserImage}
+            <AppImage
+              uri={item?.user?.profilePic || PROFILE_AVATAR}
+              containerStyle={styles.orderUserImage}
             />
           </View>
           <View style={styles.orderUserInfo}>
             <Text
               numberOfLines={1}
               style={styles.orderUserName}
-            >{`${item.user.firstName} ${item.user.lastName}`}</Text>
+            >{`${item?.user?.firstName} ${item?.user?.lastName}`}</Text>
             <Text
               style={styles.orderItemCount}
-            >{`${item.items.length} Items`}</Text>
+            >{`${item?.items?.length} Items`}</Text>
           </View>
           <View>
             <Text style={styles.orderDate}>
-              {moment(item.createdAt).format("DD MMM, YYYY")}
+              {moment(item?.createdAt).format("DD MMM, YYYY")}
             </Text>
             <View style={styles.orderTimeContainer}>
               <MaterialCommunityIcons
@@ -226,7 +227,7 @@ const OrderScreen = ({ navigation }) => {
                 color="#6F6F6F"
               />
               <Text style={styles.orderTime}>
-                {moment(item.createdAt).format("hh:mm A")}
+                {moment(item?.createdAt).format("hh:mm A")}
               </Text>
             </View>
           </View>
@@ -237,7 +238,7 @@ const OrderScreen = ({ navigation }) => {
         <View style={styles.orderTotalContainer}>
           <Text
             style={styles.orderTotalText}
-          >{`$${item.total.toFixed(2)}`}</Text>
+          >{`$${(item?.total || 0).toFixed(2)}`}</Text>
           {!hideActionBtns ? (
             <View style={styles.orderActionButtons}>
               <TouchableOpacity
@@ -338,7 +339,7 @@ const OrderScreen = ({ navigation }) => {
       handleRejectOrderPress(item);
     } else {
       updateOrderStatusAPI({
-        order_id: item._id,
+        order_id: item?._id,
         status: status,
       });
     }
@@ -384,7 +385,7 @@ const OrderScreen = ({ navigation }) => {
               console.log("response => ", response);
               if (response?.success && response?.data) {
                 const tempOrderData = orderData.map((item) => {
-                  if (item._id === order?._id) {
+                  if (item?._id === order?._id) {
                     return {
                       ...item,
                       orderStatus: response.data.order.orderStatus,
@@ -459,7 +460,7 @@ const OrderScreen = ({ navigation }) => {
       console.log("response => ", response);
       if (response?.success && response?.data) {
         const tempOrderData = orderData.map((item) => {
-          if (item._id === timeModal?.orderData?._id) {
+          if (item?._id === timeModal?.orderData?._id) {
             return {
               ...item,
               orderStatus: response.data.order.orderStatus,
@@ -520,7 +521,7 @@ const OrderScreen = ({ navigation }) => {
       console.log("response => ", response);
       if (response?.success && response?.data) {
         const tempOrderData = orderData.map((item) => {
-          if (item._id === order_id) {
+          if (item?._id === order_id) {
             return {
               ...item,
               orderStatus: status,
@@ -601,16 +602,27 @@ const OrderScreen = ({ navigation }) => {
       <StatusBarManager />
 
       {/* Header */}
-      <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
+      <View
+        style={[
+          styles.headerContainer,
+          { paddingTop: insets.top },
+          profileStatus !== vendorProfileStatus.approved && {
+            paddingTop: insets.top + 10,
+            paddingBottom: 10,
+          },
+        ]}
+      >
         <View style={{ width: "20%" }} />
         <Text style={styles.headerTitle}>{"Orders"}</Text>
         <View style={{ width: "20%", alignItems: "flex-end" }}>
-          <IconButton
-            icon="history"
-            iconColor={AppColor.black}
-            size={24}
-            onPress={() => navigation.navigate("previousOrderScreen")}
-          />
+          {profileStatus === vendorProfileStatus.approved ? (
+            <IconButton
+              icon="history"
+              iconColor={AppColor.black}
+              size={24}
+              onPress={() => navigation.navigate("previousOrderScreen")}
+            />
+          ) : null}
         </View>
       </View>
 
@@ -665,7 +677,7 @@ const OrderScreen = ({ navigation }) => {
             <FlatList
               data={orderData}
               extraData={orderData}
-              keyExtractor={(item) => item._id.toString()}
+              keyExtractor={(item) => item?._id.toString()}
               renderItem={renderOrderComponent}
               contentContainerStyle={styles.flatListContent}
               onEndReached={handleLoadMore}

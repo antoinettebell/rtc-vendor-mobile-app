@@ -213,6 +213,7 @@ const SignInScreen = () => {
                 outlineStyle={{ borderRadius: 8 }}
                 autoCapitalize="none"
                 keyboardType="email-address"
+                textContentType="username"
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
               />
               {!!emailError && (
@@ -257,6 +258,7 @@ const SignInScreen = () => {
                     forceTextInputFocus={false}
                   />
                 }
+                textContentType="password"
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
               />
               {!!passwordError && (

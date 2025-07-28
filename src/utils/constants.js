@@ -9,6 +9,8 @@ export const PROFILE_MENU_IMAGES = {
   cuisine: require("../assets/images/cuiniesIcon.png"),
   manageAvailability: require("../assets/images/manageAvailabilityIcon.png"),
   changePassword: require("../assets/images/changePasswordIcon.png"),
+  bankDetail: require("../assets/images/profileBankIcon.png"),
+  subscription: require("../assets/images/subscriptionIcon.png"),
   helpSupportTC: require("../assets/images/helpSupportTCIcon.png"),
   logout: require("../assets/images/logoutIcon.png"),
   deleteAccount: require("../assets/images/dltAccountIcon.png"),
@@ -71,3 +73,26 @@ export const fullDayNames = {
   Sat: "Saturday",
   Sun: "Sunday",
 };
+
+export const foodTypeList = [
+  { label: "Individual", type: "INDIVIDUAL" },
+  { label: "Combo", type: "COMBO" },
+];
+
+export const foodTypeStrings = {
+  individual: "INDIVIDUAL",
+  combo: "COMBO",
+};
+
+// This plans can allow to flag a dish to "NEW"
+export const dishNewFlagAllowPlanArray = ["SUB_PLATINUM", "SUB_ELITE"];
+
+export const bankAccountTypeList = [
+  { label: "Checking", type: "CHECKING" },
+  { label: "Savings", type: "SAVINGS" },
+];
+
+export const empNumberList = [
+  { label: "EIN", type: "ein" },
+  { label: "SSN", type: "ssn" },
+];

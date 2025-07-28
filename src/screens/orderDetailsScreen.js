@@ -32,6 +32,7 @@ import {
   getDisabledStatuses,
   getNextOrderStatus,
 } from "../helpers/order.helper";
+import AppImage from "../components/AppImage";
 
 const OrderDetailsScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -450,24 +451,22 @@ const OrderDetailsScreen = ({ navigation, route }) => {
             </View>
             <View style={styles.orderHeader}>
               <View style={styles.orderUserImageContainer}>
-                <FastImage
-                  source={{
-                    uri: orderData.user.profilePic || PROFILE_AVATAR,
-                  }}
-                  style={styles.orderUserImage}
+                <AppImage
+                  uri={orderData?.user?.profilePic || PROFILE_AVATAR}
+                  containerStyle={styles.orderUserImage}
                 />
               </View>
               <View style={styles.orderUserInfo}>
                 <Text
                   style={styles.orderUserName}
-                >{`${orderData.user.firstName} ${orderData.user.lastName}`}</Text>
+                >{`${orderData?.user?.firstName} ${orderData?.user?.lastName}`}</Text>
                 <Text
                   style={styles.orderItemCount}
-                >{`${orderData.items.length} Items`}</Text>
+                >{`${orderData?.items?.length} Items`}</Text>
               </View>
               <View>
                 <Text style={styles.orderDate}>
-                  {moment(orderData.createdAt).format("DD MMM, YYYY")}
+                  {moment(orderData?.createdAt).format("DD MMM, YYYY")}
                 </Text>
                 <View style={styles.orderTimeContainer}>
                   <MaterialCommunityIcons
@@ -476,14 +475,14 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     color="#6F6F6F"
                   />
                   <Text style={styles.orderTime}>
-                    {moment(orderData.createdAt).format("hh:mm A")}
+                    {moment(orderData?.createdAt).format("hh:mm A")}
                   </Text>
                 </View>
               </View>
             </View>
             <Divider style={styles.orderDivider} />
             {/* Item Details */}
-            {orderData.items.map((item, index) => (
+            {orderData?.items?.map((item, index) => (
               <View style={styles.orderItemContainer} key={index}>
                 <View style={styles.orderItemDetails}>
                   <Text
@@ -515,7 +514,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
             <View style={styles.orderTotalContainer}>
               <Text
                 style={styles.orderTotalText}
-              >{`$${orderData.subTotal.toFixed(2)}`}</Text>
+              >{`$${(orderData?.subTotal || 0).toFixed(2)}`}</Text>
             </View>
           </View>
 
@@ -554,7 +553,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   color: AppColor.black,
                 }}
               >
-                {`$${orderData.subTotal.toFixed(2)}`}
+                {`$${(orderData?.subTotal || 0).toFixed(2)}`}
               </Text>
             </View>
             <Divider style={{ marginTop: 16 }} />
@@ -583,7 +582,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     color: AppColor.black,
                   }}
                 >
-                  {"0%"}
+                  {`$${(orderData?.taxAmount || 0).toFixed(2)}`}
                 </Text>
               </View>
               <View
@@ -601,7 +600,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     color: AppColor.black,
                   }}
                 >
-                  {"Discount"}
+                  {"Coupon Discount"}
                 </Text>
                 <Text
                   style={{
@@ -610,7 +609,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     color: AppColor.black,
                   }}
                 >
-                  {`$${orderData.discount.toFixed(2)}`}
+                  {`$${(orderData?.discount || 0).toFixed(2)}`}
                 </Text>
               </View>
               <View
@@ -637,7 +636,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     color: AppColor.black,
                   }}
                 >
-                  {`$0.00`}
+                  {`$${(orderData?.totalAfterDiscount || 0).toFixed(2)}`}
                 </Text>
               </View>
               <View
@@ -664,7 +663,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     color: AppColor.black,
                   }}
                 >
-                  {"$0.00"}
+                  {`$${(orderData?.paymentProcessingFee || 0).toFixed(2)}`}
                 </Text>
               </View>
             </View>
@@ -702,7 +701,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   color: AppColor.black,
                 }}
               >
-                {`$${orderData.total.toFixed(2)}`}
+                {`$${orderData?.total?.toFixed(2) || 0}`}
               </Text>
             </View>
             {nextOrderStatus ? (

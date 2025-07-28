@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator as NativeIndicator,
+  Pressable,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
@@ -17,23 +18,27 @@ import {
   Divider,
   HelperText,
   IconButton,
+  Switch,
   TextInput,
 } from "react-native-paper";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import AntDesign from "react-native-vector-icons/AntDesign";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import StatusBarManager from "../components/StatusBarManager";
-import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400, Mulish600 } from "../utils/theme";
 import MediaPickerDialog from "../components/MediaPickerDialog";
 import ImagePicker from "react-native-image-crop-picker";
 import FastImage from "@d11/react-native-fast-image";
 import usePermission from "../hooks/usePermission";
 import { permission } from "../helpers/permission.helper";
 import { RESULTS } from "react-native-permissions";
-import { MultiSelect } from "react-native-element-dropdown";
+import { Dropdown, MultiSelect } from "react-native-element-dropdown";
+import ActionSheet from "react-native-actions-sheet";
 import {
+  getAllFoodItem_API,
   getDietList_API,
   getFoodItemByID_API,
+  getMeatList_API,
   updateFooditemByID_API,
   uploadImage_API,
 } from "../api/appAPI";
@@ -42,6 +47,12 @@ import {
   setSelectedFoodCategory,
   setSelectedFoodItems,
 } from "../redux/slices/foodTruckProfileSlice";
+import {
+  dishNewFlagAllowPlanArray,
+  foodTypeList,
+  foodTypeStrings,
+} from "../utils/constants";
+import AppImage from "../components/AppImage";
 
 const validateItemName = (value) => {
   if (!value.trim()) {
@@ -52,8 +63,8 @@ const validateItemName = (value) => {
 
 const validateItemDescription = (value) => {
   if (!value.trim()) {
-    // return "Description is required";
-    return "Cuisine is required";
+    return "Description is required";
+    // return "Cuisine is required";
   }
   return "";
 };
@@ -124,11 +135,13 @@ const validatePrepTime = (value) => {
 const MenuEditDishItemScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
+  const actionSheetRef = useRef(null);
+  const Params = route.params;
+
   const { selectedFoodItems, selectedFoodCategory } = useSelector(
     (state) => state.foodTruckProfileReducer
   );
-
-  const Params = route.params;
+  const { selectedPlan } = useSelector((state) => state.userReducer);
 
   const { checkAndRequestPermission: photosPermissionStatus } = usePermission(
     permission.photos
@@ -142,7 +155,9 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
   const [itemName, setItemName] = useState("");
   const [itemDescription, setItemDescription] = useState("");
   const [itemPrice, setItemPrice] = useState("");
+  const [discountEnabled, setDiscountEnabled] = useState(false);
   const [itemDiscount, setItemDiscount] = useState("0");
+  const [newDishItemEnabled, setNewDishItemEnabled] = useState(false);
   const [minQt, setMinQt] = useState("1");
   const [maxQt, setMaxQt] = useState("10");
   const [prepTime, setPrepTime] = useState("10");
@@ -150,7 +165,15 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [dietList, setDietList] = useState([]);
   const [selectedDiet, setSelectedDiet] = useState([]);
+  const [selectedFoodType, setSelectedFoodType] = useState("");
+  const [subItemList, setSubItemList] = useState([]);
+  const [menuList, setMenuList] = useState([]);
+  const [selectedMenus, setSelectedMenus] = useState([]);
+  const [expandedCategories, setExpandedCategories] = useState({});
   const [customization, setCustomization] = useState(false);
+  const [meatList, setMeatList] = useState([]);
+  const [selectedMeat, setSelectedMeat] = useState("");
+  const [meatWellness, setMeatWellness] = useState("");
   const [errors, setErrors] = useState({
     itemName: "",
     itemPhotos: "",
@@ -159,6 +182,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
     qtMin: "",
     qtMax: "",
     prepTime: "",
+    comboItem: "",
   });
 
   const onPressUploadPhotos = () => {
@@ -348,7 +372,25 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
       itemPhotos:
         selectedPhotos.length === 0 ? "At least one image is required" : "",
       prepTime: validatePrepTime(prepTime),
+      comboItem:
+        foodTypeStrings.combo === selectedFoodType
+          ? selectedMenus?.length === 0
+            ? "At least one dish is required"
+            : ""
+          : "",
     };
+
+    // Only validate discount if toggle is enabled
+    if (discountEnabled) {
+      const discountError = validateItemDiscount(itemDiscount);
+      if (discountError) {
+        newErrors.itemDiscount = discountError;
+      } else if (parseFloat(itemDiscount || 0) <= 0) {
+        newErrors.itemDiscount = "Discount must be greater than 0";
+      }
+    } else {
+      newErrors.itemDiscount = ""; // Clear discount error if toggle is off
+    }
 
     setErrors(newErrors);
 
@@ -370,9 +412,24 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
         maxQty: parseInt(maxQt, 10),
         preparationTime: parseInt(prepTime || 0, 10),
         allowCustomize: customization,
-        discount: parseFloat(parseFloat(itemDiscount || 0).toFixed(2)),
+        discount: discountEnabled
+          ? parseFloat(parseFloat(itemDiscount || 0).toFixed(2))
+          : 0,
         diet: selectedDiet?.length > 0 ? selectedDiet : [],
+        newDish: newDishItemEnabled,
       };
+
+      if (selectedMeat?.trim()?.length > 0) {
+        payload.meatId = selectedMeat;
+        payload.meatWellness = meatWellness;
+      }
+
+      if (selectedFoodType === foodTypeStrings.combo) {
+        payload.subItem = selectedMenus?.map((item) => ({
+          menuItem: item._id,
+          qty: item.quantity,
+        }));
+      }
 
       // manage photos image upload
       const imageResult = [];
@@ -430,6 +487,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
   };
 
   const transformApiDataToState = (item) => {
+    console.log("API Data => ", item);
     // Transform images array
     const transformedPhotos = item.imgUrls.map((uri) => ({
       uri,
@@ -447,13 +505,78 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
     setItemName(item.name);
     setItemDescription(item.description);
     setItemPrice(priceString);
-    setItemDiscount(discountString);
+    setDiscountEnabled(item.discount > 0);
+    setItemDiscount(item.discount > 0 ? discountString : "0");
+    setNewDishItemEnabled(item?.newDish || false);
+    setSelectedMeat(item.meatId || "");
+    setMeatWellness(item.meatWellness || "");
     setMinQt(minQtString);
     setMaxQt(maxQtString);
     setPrepTime(prepTimeString);
     setSelectedPhotos(transformedPhotos);
     setCustomization(item.allowCustomize);
     setSelectedDiet(item.diet.map((diet) => diet._id));
+    setSelectedFoodType(item.itemType);
+  };
+
+  // Group menus by their category
+  const groupMenusByCategory = () => {
+    const grouped = {};
+    menuList.forEach((menu) => {
+      if (!grouped[menu.category._id]) {
+        grouped[menu.category._id] = {
+          categoryName: menu.category.name,
+          items: [],
+        };
+      }
+      grouped[menu.category._id].items.push(menu);
+    });
+    return grouped;
+  };
+
+  // Toggle category expansion
+  const toggleCategory = (categoryId) => {
+    setExpandedCategories((prev) => ({
+      ...prev,
+      [categoryId]: !prev[categoryId],
+    }));
+  };
+
+  // Handle item selection
+  const handleItemSelect = (item) => {
+    setSelectedMenus((prev) => {
+      const isSelected = prev.some((selected) => selected._id === item._id);
+      if (isSelected) {
+        return prev.filter((selected) => selected._id !== item._id);
+      } else {
+        // Add item with default quantity of 1
+        setErrors((prev) => ({
+          ...prev,
+          comboItem: "",
+        }));
+        return [...prev, { ...item, quantity: 1 }];
+      }
+    });
+  };
+
+  const handleIncreaseQuantity = (itemId) => {
+    setSelectedMenus((prev) =>
+      prev.map((item) =>
+        item._id === itemId && item.quantity < 10
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      )
+    );
+  };
+
+  const handleDecreaseQuantity = (itemId) => {
+    setSelectedMenus((prev) =>
+      prev.map((item) =>
+        item._id === itemId && item.quantity > 1
+          ? { ...item, quantity: item.quantity - 1 }
+          : item
+      )
+    );
   };
 
   const getDataFromAPI = async () => {
@@ -461,14 +584,15 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
     try {
       const fooditem_id = Params?.foodItem?._id;
       const response = await getFoodItemByID_API(fooditem_id);
+      console.log("response => ", response);
       if (response?.success && response?.data) {
-        console.log("response => ", response);
         transformApiDataToState(response.data.menu);
+        setSubItemList(response.data.menu.subItem);
       }
 
       const dietResponse = await getDietList_API();
-      if (dietResponse.success && dietResponse.data) {
-        console.log("dietResponse => ", dietResponse);
+      console.log("dietResponse => ", dietResponse);
+      if (dietResponse?.success && dietResponse?.data) {
         setDietList(dietResponse.data.dietList);
       }
     } catch (error) {
@@ -485,9 +609,62 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
     }
   };
 
+  const getMenuListFromAPI = async () => {
+    try {
+      const response = await getAllFoodItem_API();
+      console.log("response => ", response);
+      if (response?.success && response?.data) {
+        const tempAllMenu = response.data?.menuList || [];
+        const tempFilteredMenu = tempAllMenu.filter(
+          (item) =>
+            item?.itemType === foodTypeStrings.individual &&
+            item?.available === true // Only include available items
+        );
+        setMenuList(tempFilteredMenu); // only individual menu are considered
+      }
+    } catch (error) {
+      console.log("error => ", error);
+    }
+  };
+
+  const getMeatListFromAPI = async () => {
+    try {
+      const response = await getMeatList_API();
+      console.log("response => ", response);
+      if (response?.success && response?.data) {
+        setMeatList(response.data.meatList);
+      }
+    } catch (error) {
+      console.log("error => ", error);
+    }
+  };
+
   useEffect(() => {
     getDataFromAPI();
+    getMenuListFromAPI();
+    getMeatListFromAPI();
   }, []);
+
+  useEffect(() => {
+    if (!subItemList?.length || !menuList?.length) return;
+
+    const matchedMenus = menuList.reduce((acc, menuItem) => {
+      const matchingSubItem = subItemList.find(
+        (subItem) => subItem.menuItem._id === menuItem._id
+      );
+
+      if (matchingSubItem) {
+        acc.push({
+          ...menuItem,
+          quantity: matchingSubItem.qty || 0,
+        });
+      }
+
+      return acc;
+    }, []);
+
+    setSelectedMenus(matchedMenus);
+  }, [subItemList, menuList]);
 
   return (
     <View style={styles.container}>
@@ -502,7 +679,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
           onPress={() => navigation.goBack()}
         />
         <Text style={styles.headerTitle}>{Params?.category?.name || ""}</Text>
-        <View style={styles.headerIconContainer}></View>
+        <View style={styles.headerIconContainer} />
       </View>
 
       {/* Content */}
@@ -627,9 +804,9 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                       contentContainerStyle={{ marginTop: 10 }}
                       renderItem={({ item, index }) => (
                         <View style={{ marginRight: 15 }}>
-                          <FastImage
-                            source={{ uri: item.uri }}
-                            style={styles.thumbnail}
+                          <AppImage
+                            uri={item.uri}
+                            containerStyle={styles.thumbnail}
                           />
                           <TouchableOpacity
                             hitSlop={5}
@@ -670,9 +847,9 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                 )}
               </View>
 
-              {/* Description  / Cuisine */}
+              {/* Description / Cuisine */}
               <View style={styles.section}>
-                <Text style={styles.inputLabel}>{"Cuisine *"}</Text>
+                <Text style={styles.inputLabel}>{"Description *"}</Text>
                 <TextInput
                   dense
                   value={itemDescription}
@@ -701,38 +878,19 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                 )}
               </View>
 
-              {/* Customization */}
-              <View style={styles.section}>
-                <View style={styles.customizationContainer}>
-                  <TouchableOpacity
-                    hitSlop={5}
-                    onPress={() => setCustomization(!customization)}
-                  >
-                    <Ionicons
-                      name={customization ? "checkbox" : "square-outline"}
-                      size={22}
-                      color={AppColor.primary}
-                    />
-                  </TouchableOpacity>
-
-                  <Text style={styles.customizationText}>
-                    {"Allow Customization"}
-                  </Text>
-                </View>
-              </View>
-
               {/* Diet Prefrences */}
-              <View style={[styles.section, { marginBottom: 10 }]}>
+              <View style={styles.section}>
                 <Text style={styles.inputLabel}>{"Diet Prefrences"}</Text>
                 <MultiSelect
                   // mode="modal"
+                  inside={true}
                   data={dietList}
                   labelField="name"
                   valueField="_id"
                   value={selectedDiet}
                   onChange={(selected) => setSelectedDiet(selected)}
                   placeholder="Select Diet"
-                  style={styles.dropdown}
+                  style={[styles.dropdown, { paddingVertical: 8 }]}
                   placeholderStyle={{
                     fontFamily: Mulish400,
                     color: AppColor.textHighlighter,
@@ -771,91 +929,159 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                 />
               </View>
 
-              {/* Price and Discount */}
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "baseline",
-                  gap: 16,
-                }}
-              >
-                {/* Price Textinput */}
+              {/* Price Textinput */}
+              <View style={styles.section}>
+                <Text style={styles.inputLabel}>{"Item Price *"}</Text>
+                <TextInput
+                  dense
+                  value={itemPrice}
+                  onChangeText={handleItemPriceChange}
+                  style={styles.input}
+                  contentStyle={styles.inputText}
+                  placeholder=""
+                  placeholderTextColor={AppColor.placeholderTextColor}
+                  mode="outlined"
+                  keyboardType="numeric"
+                  error={!!errors.itemPrice}
+                  outlineColor={AppColor.border}
+                  activeOutlineColor={AppColor.primary}
+                  outlineStyle={{ borderRadius: 8 }}
+                  autoCapitalize="none"
+                  left={
+                    <TextInput.Icon
+                      icon={"currency-usd"}
+                      color={AppColor.textHighlighter}
+                      size={20}
+                    />
+                  }
+                  theme={{ colors: { onSurfaceVariant: "#777" } }}
+                />
+                {!!errors.itemPrice && (
+                  <HelperText
+                    type="error"
+                    visible={!!errors.itemPrice}
+                    style={styles.helper}
+                  >
+                    {errors.itemPrice}
+                  </HelperText>
+                )}
+              </View>
+
+              {/* Discount Container */}
+              <View style={styles.section}>
                 <View
-                  style={[styles.section, { flex: 1 / 2, paddingRight: 0 }]}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
                 >
-                  <Text style={styles.inputLabel}>{"Item Price *"}</Text>
-                  <TextInput
-                    dense
-                    value={itemPrice}
-                    onChangeText={handleItemPriceChange}
-                    style={styles.input}
-                    contentStyle={styles.inputText}
-                    placeholder=""
-                    placeholderTextColor={AppColor.placeholderTextColor}
-                    mode="outlined"
-                    keyboardType="numeric"
-                    error={!!errors.itemPrice}
-                    outlineColor={AppColor.border}
-                    activeOutlineColor={AppColor.primary}
-                    outlineStyle={{ borderRadius: 8 }}
-                    autoCapitalize="none"
-                    left={
-                      <TextInput.Icon
-                        icon={"currency-usd"}
-                        color={AppColor.textHighlighter}
-                        size={20}
-                      />
-                    }
-                    theme={{ colors: { onSurfaceVariant: "#777" } }}
-                  />
-                  {!!errors.itemPrice && (
-                    <HelperText
-                      type="error"
-                      visible={!!errors.itemPrice}
-                      style={styles.helper}
-                    >
-                      {errors.itemPrice}
-                    </HelperText>
-                  )}
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.inputLabel, { marginBottom: 0 }]}
+                  >
+                    {"Discount"}
+                  </Text>
+                  <View>
+                    <Switch
+                      color={AppColor.primary}
+                      value={discountEnabled}
+                      onValueChange={(value) => setDiscountEnabled(value)}
+                    />
+                  </View>
                 </View>
+
                 {/* Discount Textinput */}
-                <View style={[styles.section, { flex: 1 / 2, paddingLeft: 0 }]}>
-                  <Text style={styles.inputLabel}>{"Discount"}</Text>
-                  <TextInput
-                    dense
-                    value={itemDiscount}
-                    onChangeText={handleItemDiscountChange}
-                    style={styles.input}
-                    contentStyle={styles.inputText}
-                    placeholder=""
-                    placeholderTextColor={AppColor.placeholderTextColor}
-                    mode="outlined"
-                    keyboardType="numeric"
-                    error={!!errors.itemDiscount}
-                    outlineColor={AppColor.border}
-                    activeOutlineColor={AppColor.primary}
-                    outlineStyle={{ borderRadius: 8 }}
-                    autoCapitalize="none"
-                    left={
-                      <TextInput.Icon
-                        icon={"currency-usd"}
-                        color={AppColor.textHighlighter}
-                        size={20}
-                      />
-                    }
-                    theme={{ colors: { onSurfaceVariant: "#777" } }}
-                  />
-                  {!!errors.itemDiscount && (
-                    <HelperText
-                      type="error"
-                      visible={!!errors.itemDiscount}
-                      style={styles.helper}
-                    >
-                      {errors.itemDiscount}
-                    </HelperText>
-                  )}
+                {discountEnabled ? (
+                  <>
+                    <TextInput
+                      dense
+                      value={itemDiscount}
+                      onChangeText={handleItemDiscountChange}
+                      style={[styles.input, { marginTop: 8 }]}
+                      contentStyle={styles.inputText}
+                      placeholder=""
+                      placeholderTextColor={AppColor.placeholderTextColor}
+                      mode="outlined"
+                      keyboardType="numeric"
+                      error={!!errors.itemDiscount}
+                      outlineColor={AppColor.border}
+                      activeOutlineColor={AppColor.primary}
+                      outlineStyle={{ borderRadius: 8 }}
+                      autoCapitalize="none"
+                      left={
+                        <TextInput.Icon
+                          icon={"currency-usd"}
+                          color={AppColor.textHighlighter}
+                          size={20}
+                        />
+                      }
+                      theme={{ colors: { onSurfaceVariant: "#777" } }}
+                    />
+                    {!!errors.itemDiscount && (
+                      <HelperText
+                        type="error"
+                        visible={!!errors.itemDiscount}
+                        style={styles.helper}
+                      >
+                        {errors.itemDiscount}
+                      </HelperText>
+                    )}
+                  </>
+                ) : null}
+              </View>
+
+              {/* Customisation Container */}
+              <View style={styles.section}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.inputLabel, { marginBottom: 0 }]}
+                  >
+                    {"Allow Customization"}
+                  </Text>
+                  <View>
+                    <Switch
+                      color={AppColor.primary}
+                      value={customization}
+                      onValueChange={(value) => setCustomization(value)}
+                    />
+                  </View>
                 </View>
               </View>
+
+              {/* New Item Container */}
+              {dishNewFlagAllowPlanArray.includes(selectedPlan.slug) ? (
+                <View style={styles.section}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Text
+                      numberOfLines={1}
+                      style={[styles.inputLabel, { marginBottom: 0 }]}
+                    >
+                      {"New Dish/Item"}
+                    </Text>
+                    <View>
+                      <Switch
+                        color={AppColor.primary}
+                        value={newDishItemEnabled}
+                        onValueChange={(value) => setNewDishItemEnabled(value)}
+                      />
+                    </View>
+                  </View>
+                </View>
+              ) : null}
 
               {/* Min-Max quantity */}
               <View
@@ -984,6 +1210,266 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
                 )}
               </View>
 
+              {/* Meat Type Container */}
+              <View style={styles.section}>
+                <Text style={styles.inputLabel}>{"Meat"}</Text>
+                <Dropdown
+                  data={meatList}
+                  labelField="name"
+                  valueField="_id"
+                  value={selectedMeat}
+                  onChange={(selected) => setSelectedMeat(selected._id)}
+                  placeholder="Select Meat"
+                  style={styles.dropdown}
+                  placeholderStyle={{
+                    fontFamily: Mulish400,
+                    color: AppColor.textHighlighter,
+                  }}
+                  itemTextStyle={{ fontFamily: Mulish400 }}
+                  selectedTextStyle={{ fontFamily: Mulish400 }}
+                />
+              </View>
+
+              {/* Meat Wellness */}
+              {selectedMeat?.trim()?.length > 0 ? (
+                <View style={styles.section}>
+                  <Text style={styles.inputLabel}>{"Meat Wellness"}</Text>
+                  <TextInput
+                    dense
+                    value={meatWellness}
+                    onChangeText={setMeatWellness}
+                    style={styles.input}
+                    contentStyle={styles.inputText}
+                    placeholder=""
+                    placeholderTextColor={AppColor.placeholderTextColor}
+                    mode="outlined"
+                    outlineColor={AppColor.border}
+                    activeOutlineColor={AppColor.primary}
+                    outlineStyle={{ borderRadius: 8 }}
+                    autoCapitalize="sentences"
+                    theme={{ colors: { onSurfaceVariant: "#777" } }}
+                  />
+                </View>
+              ) : null}
+
+              {/* Food Type Container */}
+              <View style={styles.section}>
+                <Text style={styles.inputLabel}>
+                  {"Food Type"}
+                  <Text style={{ fontSize: 12 }}>{" (*can not change)"}</Text>
+                </Text>
+                <Dropdown
+                  disable={true}
+                  data={foodTypeList}
+                  labelField="label"
+                  valueField="type"
+                  value={selectedFoodType}
+                  onChange={(selected) => setSelectedFoodType(selected.type)}
+                  placeholder="Select Food Type"
+                  style={styles.dropdown}
+                  placeholderStyle={{
+                    fontFamily: Mulish400,
+                    color: AppColor.textHighlighter,
+                  }}
+                  itemTextStyle={{ fontFamily: Mulish400 }}
+                  selectedTextStyle={{ fontFamily: Mulish400 }}
+                />
+              </View>
+
+              {/* Item Selection Container for COMBO */}
+              {selectedFoodType === foodTypeStrings.combo ? (
+                <View>
+                  {/* Label for selection */}
+                  <Pressable
+                    onPress={() => {
+                      setExpandedCategories({});
+                      actionSheetRef.current?.show();
+                    }}
+                    style={[
+                      styles.section,
+                      {
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      },
+                    ]}
+                  >
+                    <Text style={styles.inputLabel}>
+                      {"Select Dish/Item for Combo"}
+                    </Text>
+                    <AntDesign
+                      name="plussquareo"
+                      size={20}
+                      color={AppColor.primary}
+                    />
+                  </Pressable>
+                  {!!errors.comboItem && (
+                    <HelperText
+                      type="error"
+                      visible={!!errors.comboItem}
+                      style={[styles.helper, { marginHorizontal: 16 }]}
+                    >
+                      {errors.comboItem}
+                    </HelperText>
+                  )}
+                  {/* Item list goes here */}
+                  {selectedMenus.length > 0 && (
+                    <View style={[styles.section, { marginTop: 0 }]}>
+                      {selectedMenus.map((item, index) => (
+                        <View key={item._id}>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              paddingVertical: 12,
+                            }}
+                          >
+                            <AppImage
+                              uri={item.imgUrls?.[0]}
+                              containerStyle={{
+                                width: 50,
+                                height: 50,
+                                borderRadius: 8,
+                              }}
+                            />
+
+                            <View style={{ flex: 1, marginLeft: 12 }}>
+                              <Text
+                                style={{
+                                  fontFamily: Mulish600,
+                                  fontSize: 14,
+                                  color: AppColor.text,
+                                }}
+                                numberOfLines={1}
+                              >
+                                {item.name}
+                              </Text>
+                              <Text
+                                style={{
+                                  fontFamily: Mulish400,
+                                  fontSize: 12,
+                                  color: AppColor.textHighlighter,
+                                  marginTop: 4,
+                                }}
+                                numberOfLines={2}
+                              >
+                                {item.description}
+                              </Text>
+                              <Text
+                                style={{
+                                  fontFamily: Mulish600,
+                                  fontSize: 14,
+                                  color: AppColor.primary,
+                                  marginTop: 4,
+                                }}
+                              >
+                                ${(item.price * item.quantity).toFixed(2)} (
+                                {item.quantity} x ${item.price.toFixed(2)})
+                              </Text>
+                            </View>
+
+                            <View
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                              }}
+                            >
+                              <TouchableOpacity
+                                onPress={() => handleDecreaseQuantity(item._id)}
+                                disabled={item.quantity <= 1}
+                                style={{
+                                  width: 28,
+                                  height: 28,
+                                  borderRadius: 14,
+                                  backgroundColor:
+                                    item.quantity <= 1
+                                      ? AppColor.border
+                                      : AppColor.primary,
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                }}
+                              >
+                                <AntDesign
+                                  name="minus"
+                                  size={16}
+                                  color={
+                                    item.quantity <= 1
+                                      ? AppColor.textHighlighter
+                                      : AppColor.white
+                                  }
+                                />
+                              </TouchableOpacity>
+
+                              <Text
+                                style={{
+                                  fontFamily: Mulish600,
+                                  fontSize: 16,
+                                  marginHorizontal: 8,
+                                  minWidth: 20,
+                                  textAlign: "center",
+                                }}
+                              >
+                                {item.quantity}
+                              </Text>
+
+                              <TouchableOpacity
+                                onPress={() => handleIncreaseQuantity(item._id)}
+                                disabled={item.quantity >= 10}
+                                style={{
+                                  width: 28,
+                                  height: 28,
+                                  borderRadius: 14,
+                                  backgroundColor:
+                                    item.quantity >= 10
+                                      ? AppColor.border
+                                      : AppColor.primary,
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                }}
+                              >
+                                <AntDesign
+                                  name="plus"
+                                  size={16}
+                                  color={
+                                    item.quantity >= 10
+                                      ? AppColor.textHighlighter
+                                      : AppColor.white
+                                  }
+                                />
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                onPress={() => handleItemSelect(item)}
+                                style={{
+                                  marginLeft: 12,
+                                  padding: 4,
+                                }}
+                                hitSlop={{
+                                  top: 10,
+                                  bottom: 10,
+                                  left: 10,
+                                  right: 10,
+                                }}
+                              >
+                                <AntDesign
+                                  name="closecircle"
+                                  size={20}
+                                  color={AppColor.red}
+                                />
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+
+                          {selectedMenus?.length - 1 != index ? (
+                            <Divider style={{ marginVertical: 2 }} />
+                          ) : null}
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ) : null}
+
               {/* save btn */}
               <View style={styles.section}>
                 <TouchableOpacity
@@ -1003,6 +1489,312 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
           </ScrollView>
         </KeyboardAvoidingView>
       )}
+
+      {/* Action Sheet */}
+      <ActionSheet
+        ref={actionSheetRef}
+        headerAlwaysVisible={true}
+        gestureEnabled={true}
+        containerStyle={{
+          backgroundColor: AppColor.white,
+          height: "90%",
+        }}
+      >
+        <View
+          style={{
+            padding: 16,
+            paddingBottom: 0,
+            height: "100%",
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 16,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 20,
+                fontFamily: Mulish700,
+                color: AppColor.text,
+              }}
+            >
+              Select Items for Combo
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => actionSheetRef.current?.hide()}
+            >
+              <AntDesign name="close" size={24} color={AppColor.text} />
+            </TouchableOpacity>
+          </View>
+
+          {selectedMenus.length > 0 && (
+            <View
+              style={{
+                backgroundColor: AppColor.primary + "20",
+                borderRadius: 8,
+                padding: 12,
+                marginBottom: 16,
+              }}
+            >
+              <Text
+                style={{
+                  fontFamily: Mulish600,
+                  color: AppColor.primary,
+                  marginBottom: 8,
+                }}
+              >
+                Selected Items ({selectedMenus.length})
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {selectedMenus.map((item) => (
+                  <View
+                    key={item._id}
+                    style={{
+                      backgroundColor: AppColor.white,
+                      borderRadius: 8,
+                      padding: 8,
+                      marginRight: 8,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <AppImage
+                      uri={item.imgUrls?.[0]}
+                      containerStyle={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 4,
+                      }}
+                    />
+                    <Text
+                      style={{
+                        fontFamily: Mulish400,
+                        fontSize: 12,
+                        maxWidth: 100,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {item.name}
+                    </Text>
+                    <TouchableOpacity
+                      hitSlop={5}
+                      activeOpacity={0.7}
+                      style={{
+                        backgroundColor: AppColor.primary,
+                        borderRadius: 12,
+                        padding: 4,
+                      }}
+                      onPress={() => handleItemSelect(item)}
+                    >
+                      <AntDesign
+                        name="close"
+                        size={12}
+                        color={AppColor.white}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {menuList.length === 0 ? (
+            <View
+              style={{
+                alignItems: "center",
+                justifyContent: "center",
+                paddingVertical: 40,
+                flex: 1,
+              }}
+            >
+              <Ionicons
+                name="fast-food-outline"
+                size={48}
+                color={AppColor.border}
+                style={{ marginBottom: 16 }}
+              />
+              <Text
+                style={{
+                  fontFamily: Mulish400,
+                  color: AppColor.textHighlighter,
+                  textAlign: "center",
+                }}
+              >
+                No menu items available to add to combo
+              </Text>
+            </View>
+          ) : (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {Object.entries(groupMenusByCategory()).map(
+                ([categoryId, categoryData]) => (
+                  <View key={categoryId} style={{ marginBottom: 16 }}>
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => toggleCategory(categoryId)}
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        paddingVertical: 12,
+                        borderBottomWidth: 1,
+                        borderBottomColor: AppColor.border,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontFamily: Mulish700,
+                          fontSize: 16,
+                          color: AppColor.text,
+                        }}
+                      >
+                        {categoryData.categoryName}
+                      </Text>
+                      <Ionicons
+                        name={
+                          expandedCategories[categoryId]
+                            ? "chevron-up"
+                            : "chevron-down"
+                        }
+                        size={20}
+                        color={AppColor.text}
+                      />
+                    </TouchableOpacity>
+
+                    {expandedCategories[categoryId] && (
+                      <View style={{ marginTop: 8 }}>
+                        {categoryData.items.map((item) => (
+                          <TouchableOpacity
+                            activeOpacity={0.7}
+                            key={item._id}
+                            onPress={() => handleItemSelect(item)}
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              paddingVertical: 12,
+                              borderBottomWidth: 1,
+                              borderBottomColor: AppColor.border + "50",
+                            }}
+                          >
+                            <AppImage
+                              uri={item.imgUrls?.[0]}
+                              containerStyle={{
+                                width: 50,
+                                height: 50,
+                                borderRadius: 8,
+                              }}
+                            />
+                            <View style={{ flex: 1, marginLeft: 12 }}>
+                              <Text
+                                style={{
+                                  fontFamily: Mulish600,
+                                  fontSize: 14,
+                                  color: AppColor.text,
+                                }}
+                                numberOfLines={1}
+                              >
+                                {item.name}
+                              </Text>
+                              <Text
+                                style={{
+                                  fontFamily: Mulish400,
+                                  fontSize: 12,
+                                  color: AppColor.textHighlighter,
+                                  marginTop: 4,
+                                }}
+                                numberOfLines={2}
+                              >
+                                {item.description}
+                              </Text>
+                              <Text
+                                style={{
+                                  fontFamily: Mulish600,
+                                  fontSize: 14,
+                                  color: AppColor.primary,
+                                  marginTop: 4,
+                                }}
+                              >
+                                ${item.price.toFixed(2)}
+                              </Text>
+                            </View>
+                            <View
+                              style={{
+                                width: 24,
+                                height: 24,
+                                borderRadius: 12,
+                                borderWidth: 1,
+                                borderColor: selectedMenus.some(
+                                  (selected) => selected._id === item._id
+                                )
+                                  ? AppColor.primary
+                                  : AppColor.border,
+                                backgroundColor: selectedMenus.some(
+                                  (selected) => selected._id === item._id
+                                )
+                                  ? AppColor.primary
+                                  : "transparent",
+                                justifyContent: "center",
+                                alignItems: "center",
+                              }}
+                            >
+                              {selectedMenus.some(
+                                (selected) => selected._id === item._id
+                              ) ? (
+                                <AntDesign
+                                  name="check"
+                                  size={16}
+                                  color={AppColor.white}
+                                />
+                              ) : (
+                                <AntDesign
+                                  name="plus"
+                                  size={16}
+                                  color={AppColor.border}
+                                />
+                              )}
+                            </View>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                )
+              )}
+            </ScrollView>
+          )}
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              // Handle the selected items here
+              console.log("Selected items:", selectedMenus);
+              actionSheetRef.current?.hide();
+            }}
+            style={{
+              backgroundColor: AppColor.primary,
+              borderRadius: 8,
+              padding: 16,
+              alignItems: "center",
+              marginTop: 16,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: Mulish700,
+                fontSize: 16,
+                color: AppColor.white,
+              }}
+            >
+              Done
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ActionSheet>
 
       {/* Media Picker Modal */}
       <MediaPickerDialog
@@ -1093,7 +1885,7 @@ const styles = StyleSheet.create({
 
   // input
   inputLabel: {
-    fontFamily: Mulish400,
+    fontFamily: Mulish600,
     fontSize: 15,
     color: AppColor.text,
     marginBottom: 8,

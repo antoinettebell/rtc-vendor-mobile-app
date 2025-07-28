@@ -93,7 +93,7 @@ export default function AuthUnderReviewNoteScreen() {
         onPress={handleContinueBtnPress}
       >
         {loading ? (
-          <ActivityIndicator color={AppColor.primary} />
+          <ActivityIndicator color={AppColor.white} />
         ) : (
           <Text style={styles.continueButtonText}>{"Continue"}</Text>
         )}

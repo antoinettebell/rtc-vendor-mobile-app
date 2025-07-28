@@ -29,6 +29,7 @@ import {
   getDisabledStatuses,
   getNextOrderStatus,
 } from "../helpers/order.helper";
+import AppImage from "./AppImage";
 
 const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
   const [mounted, setMounted] = useState(false);
@@ -383,7 +384,7 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
               ]}
               onPress={onCloseCurrentOrder}
             >
-              {`#${orderData?.orderNumber || orderData._id}`}
+              {`#${orderData?.orderNumber || orderData?._id}`}
             </Text>
             <Text
               style={[
@@ -398,24 +399,22 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
           {/* User Info */}
           <View style={styles.userInfoContainer}>
             <View style={styles.userImageContainer}>
-              <FastImage
-                source={{
-                  uri: orderData.user.profilePic || PROFILE_AVATAR,
-                }}
-                style={styles.userImage}
+              <AppImage
+                uri={orderData?.user?.profilePic || PROFILE_AVATAR}
+                containerStyle={styles.userImage}
               />
             </View>
             <View style={styles.userInfo}>
               <Text
                 style={styles.userName}
-              >{`${orderData.user.firstName} ${orderData.user.lastName}`}</Text>
+              >{`${orderData?.user?.firstName} ${orderData?.user?.lastName}`}</Text>
               <Text
                 style={styles.itemCount}
-              >{`${orderData.items.length} Items`}</Text>
+              >{`${orderData?.items?.length} Items`}</Text>
             </View>
             <View>
               <Text style={styles.orderDate}>
-                {moment(orderData.createdAt).format("DD MMM, YYYY")}
+                {moment(orderData?.createdAt).format("DD MMM, YYYY")}
               </Text>
               <View style={styles.timeContainer}>
                 <MaterialCommunityIcons
@@ -424,7 +423,7 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
                   color="#6F6F6F"
                 />
                 <Text style={styles.orderTime}>
-                  {moment(orderData.createdAt).format("hh:mm A")}
+                  {moment(orderData?.createdAt).format("hh:mm A")}
                 </Text>
               </View>
             </View>
@@ -435,7 +434,7 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
           {/* Items */}
           <View style={styles.itemsListContainer}>
             <FlatList
-              data={orderData.items}
+              data={orderData?.items || []}
               keyExtractor={(_, index) => index.toString()}
               renderItem={({ item }) => (
                 <View style={styles.itemContainer}>
@@ -460,9 +459,9 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
 
           {/* Total */}
           <View style={styles.totalContainer}>
-            <Text style={styles.totalText}>{`Total: $${orderData.total.toFixed(
-              2
-            )}`}</Text>
+            <Text
+              style={styles.totalText}
+            >{`Total: $${(orderData?.total || 0).toFixed(2)}`}</Text>
           </View>
 
           {/* Action Buttons or Status */}

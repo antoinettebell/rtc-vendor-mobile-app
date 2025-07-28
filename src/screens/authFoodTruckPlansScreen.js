@@ -319,15 +319,19 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
             <View style={styles.stepContainer}>
               <View style={styles.stepSubContainer}>
                 <View style={styles.filledCircle}>
-                  <FontAwesome6 name="check" color={AppColor.white} size={18} />
+                  <FontAwesome6 name="person-walking" color={AppColor.white} size={18} />
                 </View>
               </View>
               <View style={styles.line} />
-              <View style={styles.stepContainer}>
+              <View style={styles.stepSubContainer}>
                 <View style={styles.emptyCircle} />
               </View>
               <View style={styles.line} />
-              <View style={styles.stepContainer}>
+              <View style={styles.stepSubContainer}>
+                <View style={styles.emptyCircle} />
+              </View>
+              <View style={styles.line} />
+              <View style={styles.stepSubContainer}>
                 <View style={styles.emptyCircle} />
               </View>
             </View>
@@ -420,7 +424,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginVertical: 10,
+    marginVertical: 16,
   },
   stepSubContainer: {
     alignItems: "center",
@@ -441,7 +445,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: AppColor.primary,
   },
-  line: { width: "18%", height: 2, backgroundColor: AppColor.primary },
+  line: { width: "10%", height: 2, backgroundColor: AppColor.primary },
   content: { flex: 1 },
   section: { marginVertical: 16, paddingHorizontal: 24 },
   sectionTitle: { fontSize: 18, fontFamily: Mulish700, color: AppColor.text },

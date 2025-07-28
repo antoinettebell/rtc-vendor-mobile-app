@@ -5,12 +5,20 @@ export const FORGOT_PASSWORD = "/auth/forgot-password";
 export const CHANGE_PASSWORD = "/auth/change-password";
 export const REGISTER_VENDOR = "auth/register/vendor";
 export const RESEND_OTP = "/auth/resend-otp";
+export const REMOVE_ACCOUNT = "/user";
 
 // Food Truck
 export const CUISINE = "/cuisine";
 export const MEDIA_UPLOAD = "/file";
 export const UPDATE_FOODTRUCK = "/food-truck";
 export const GET_FOODTRUCK_DETAILS = "/food-truck";
+
+// Subscription
+export const UPDATE_SUBSCRIPTION_PLAN = "/food-truck/change-plan";
+
+// Bank Detail
+export const ADD_BANK_DETAIL = "/user/bank-detail";
+export const GET_BANK_DETAIL = "/user/bank-detail";
 
 // User Profile
 export const GET_USER_DETAILS = "/user";
@@ -29,6 +37,9 @@ export const GET_FOOD_CATEGORY = "/category";
 export const ADD_FOOD_CATEGORY = "/category";
 export const UPDATE_FOOD_CATEGORY = "/category";
 export const REMOVE_FOOD_CATEGORY = "/category";
+
+// Meat
+export const GET_MEAT_LIST = "/meat";
 
 // Food Item (Dish)
 export const ADD_FOOD_ITEM = "/menu";

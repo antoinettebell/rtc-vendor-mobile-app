@@ -50,6 +50,7 @@ import {
   getDisabledStatuses,
 } from "../helpers/order.helper";
 import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
+import AppImage from "../components/AppImage";
 
 const QuickStatsComponent = ({ title, subTitle, icon, onPress }) => (
   <Pressable style={styles.quickStatsContainer} onPress={onPress}>
@@ -392,9 +393,9 @@ const HomeScreen = ({ navigation }) => {
       >
         <View style={styles.headerLeftContainer}>
           {user?.foodTruck?.logo ? (
-            <FastImage
-              source={{ uri: user?.foodTruck?.logo }}
-              style={styles.headerLogo}
+            <AppImage
+              uri={user?.foodTruck?.logo}
+              containerStyle={styles.headerLogo}
             />
           ) : (
             <View
@@ -517,7 +518,7 @@ const HomeScreen = ({ navigation }) => {
                     style={styles.orderDetailsContainer}
                     onPress={() =>
                       navigation.navigate("orderDetailsScreen", {
-                        orderId: newOrderData._id,
+                        orderId: newOrderData?._id,
                       })
                     }
                   >
@@ -655,24 +656,22 @@ const HomeScreen = ({ navigation }) => {
                     </View>
                     <View style={styles.orderHeader}>
                       <View style={styles.orderUserImageContainer}>
-                        <FastImage
-                          source={{
-                            uri: newOrderData.user.profilePic || PROFILE_AVATAR,
-                          }}
-                          style={styles.orderUserImage}
+                        <AppImage
+                          uri={newOrderData?.user?.profilePic || PROFILE_AVATAR}
+                          containerStyle={styles.orderUserImage}
                         />
                       </View>
                       <View style={styles.orderUserInfo}>
                         <Text
                           style={styles.orderUserName}
-                        >{`${newOrderData.user.firstName} ${newOrderData.user.lastName}`}</Text>
+                        >{`${newOrderData?.user?.firstName} ${newOrderData?.user?.lastName}`}</Text>
                         <Text
                           style={styles.orderItemCount}
-                        >{`${newOrderData.items.length} Items`}</Text>
+                        >{`${newOrderData?.items?.length} Items`}</Text>
                       </View>
                       <View>
                         <Text style={styles.orderDate}>
-                          {moment(newOrderData.createdAt).format(
+                          {moment(newOrderData?.createdAt).format(
                             "DD MMM, YYYY"
                           )}
                         </Text>
@@ -683,14 +682,14 @@ const HomeScreen = ({ navigation }) => {
                             color="#6F6F6F"
                           />
                           <Text style={styles.orderTime}>
-                            {moment(newOrderData.createdAt).format("hh:mm A")}
+                            {moment(newOrderData?.createdAt).format("hh:mm A")}
                           </Text>
                         </View>
                       </View>
                     </View>
                     <Divider style={styles.orderDivider} />
                     {/* Item Details */}
-                    {newOrderData.items.map((item, index) => (
+                    {newOrderData?.items?.map((item, index) => (
                       <View style={styles.orderItemContainer} key={index}>
                         <View style={styles.orderItemDetails}>
                           <Text
@@ -724,7 +723,7 @@ const HomeScreen = ({ navigation }) => {
                     <View style={styles.orderTotalContainer}>
                       <Text
                         style={styles.orderTotalText}
-                      >{`$${newOrderData.total.toFixed(2)}`}</Text>
+                      >{`$${(newOrderData?.total||0).toFixed(2)}`}</Text>
                       <View style={styles.orderActionButtons}>
                         <TouchableOpacity
                           style={styles.rejectOrderBtn}

@@ -9,11 +9,15 @@
 /* Begin PBXBuildFile section */
 		0EF67E9D8A554DCFACF7CE58 /* Inter-Black.otf in Resources */ = {isa = PBXBuildFile; fileRef = 4E2BAF0103C341FE807F7EB1 /* Inter-Black.otf */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		1A3B3CFC364C4C308BCC7CD7 /* Mulish-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DCBDD748EB024458A0F0EC3D /* Mulish-Bold.ttf */; };
 		1DB882D6F1054B1EBF32AB10 /* P22 Arts And Crafts Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 49D3964E54F24AED8BD3A713 /* P22 Arts And Crafts Regular.ttf */; };
 		2523C55B16474D73B60BD9A8 /* Inter-Thin-BETA.otf in Resources */ = {isa = PBXBuildFile; fileRef = E6855CBFFC834D678BB8798D /* Inter-Thin-BETA.otf */; };
 		25D00FB7445145108D5E5425 /* Inter-ExtraLight-BETA.otf in Resources */ = {isa = PBXBuildFile; fileRef = DC9D9D39F0FD4C6A908CC0E6 /* Inter-ExtraLight-BETA.otf */; };
+		2CD1AA84F2AE47DCA18F6316 /* Mulish-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 099E8C561E1C4A318113D883 /* Mulish-SemiBold.ttf */; };
+		4385B26063FB4E6482D82527 /* Mulish-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 11FCF2D8270845EDB3273AA8 /* Mulish-Light.ttf */; };
 		515A37282E06757B00EFA41C /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 515A37272E06757B00EFA41C /* GoogleService-Info.plist */; };
 		5D0C1D186C10E51B21286BFE /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
+		72BFF268B0924071B4853B27 /* Mulish-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = E2F9D1A5E9B24E048EBD0B25 /* Mulish-ExtraBold.ttf */; };
 		74AD18CCB9EB4E898495D7ED /* IMFellEnglish-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 899C85C7676A4EC78F325C0F /* IMFellEnglish-Regular.ttf */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		7EA6688B72864ED9AF8BF1AE /* Inter-Light-BETA.otf in Resources */ = {isa = PBXBuildFile; fileRef = C2BA5A4BE34D4A75ACE1D2F6 /* Inter-Light-BETA.otf */; };
@@ -21,55 +25,51 @@
 		8DBFD917BC034E009D64535F /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7054D7892E36422A8989DFBB /* Colors.xcassets */; };
 		92301BFAC6E1439E9D89ED59 /* Inter-SemiBold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 15E4D8E3180B41CA935185A2 /* Inter-SemiBold.otf */; };
 		92CF3350E7A2463F8B77D19E /* BootSplash.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = B7EED414BCE54D7BB62646AD /* BootSplash.storyboard */; };
+		A68EA1D5DB4345D3808C7D38 /* Mulish-ExtraLight.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 4D36C2C02FC74CBDBF52A3FB /* Mulish-ExtraLight.ttf */; };
 		AF265C8625964C70B63BD9B2 /* Inter-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 3BD21A265C58424795535F47 /* Inter-Bold.otf */; };
+		BB786A10F7374AD8B0688018 /* Mulish-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 179128F3A88A42A2886F0655 /* Mulish-Regular.ttf */; };
 		C426FA58432F4698AB2E020E /* Inter-Medium.otf in Resources */ = {isa = PBXBuildFile; fileRef = 95C1DA858A63407A84644FFC /* Inter-Medium.otf */; };
+		C7ED8081882B479F8B517CD8 /* Mulish-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C6B483D0745444A684BAC78A /* Mulish-Medium.ttf */; };
+		C97DB4A894E249B38B560AA6 /* Mulish-Black.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ED9E60918B33444B80D17A4D /* Mulish-Black.ttf */; };
 		CF8383DDD326468F98C5F403 /* Inter-ExtraBold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 9D588BDEED564795A70B94C2 /* Inter-ExtraBold.otf */; };
 		D772FDBBB69E4C4E87F61C8A /* Inter-Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = 38462FC961854BA78D9ADBCB /* Inter-Regular.otf */; };
 		FD2E70A4D9E5EF1248F67A5E /* Pods_FoodtruckVendor.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 144FC78D3AAC47EDDCE642B2 /* Pods_FoodtruckVendor.framework */; };
-		C97DB4A894E249B38B560AA6 /* Mulish-Black.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ED9E60918B33444B80D17A4D /* Mulish-Black.ttf */; };
-		1A3B3CFC364C4C308BCC7CD7 /* Mulish-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DCBDD748EB024458A0F0EC3D /* Mulish-Bold.ttf */; };
-		72BFF268B0924071B4853B27 /* Mulish-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = E2F9D1A5E9B24E048EBD0B25 /* Mulish-ExtraBold.ttf */; };
-		A68EA1D5DB4345D3808C7D38 /* Mulish-ExtraLight.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 4D36C2C02FC74CBDBF52A3FB /* Mulish-ExtraLight.ttf */; };
-		4385B26063FB4E6482D82527 /* Mulish-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 11FCF2D8270845EDB3273AA8 /* Mulish-Light.ttf */; };
-		C7ED8081882B479F8B517CD8 /* Mulish-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C6B483D0745444A684BAC78A /* Mulish-Medium.ttf */; };
-		BB786A10F7374AD8B0688018 /* Mulish-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 179128F3A88A42A2886F0655 /* Mulish-Regular.ttf */; };
-		2CD1AA84F2AE47DCA18F6316 /* Mulish-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 099E8C561E1C4A318113D883 /* Mulish-SemiBold.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		099E8C561E1C4A318113D883 /* Mulish-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Mulish-SemiBold.ttf"; path = "../src/assets/fonts/Mulish-SemiBold.ttf"; sourceTree = "<group>"; };
+		11FCF2D8270845EDB3273AA8 /* Mulish-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Mulish-Light.ttf"; path = "../src/assets/fonts/Mulish-Light.ttf"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* FoodtruckVendor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FoodtruckVendor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = FoodtruckVendor/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = FoodtruckVendor/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = FoodtruckVendor/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		144FC78D3AAC47EDDCE642B2 /* Pods_FoodtruckVendor.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_FoodtruckVendor.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		15E4D8E3180B41CA935185A2 /* Inter-SemiBold.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-SemiBold.otf"; path = "../src/assets/fonts/Inter-SemiBold.otf"; sourceTree = "<group>"; };
-		38462FC961854BA78D9ADBCB /* Inter-Regular.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Regular.otf"; path = "../src/assets/fonts/Inter-Regular.otf"; sourceTree = "<group>"; };
-		3BD21A265C58424795535F47 /* Inter-Bold.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Bold.otf"; path = "../src/assets/fonts/Inter-Bold.otf"; sourceTree = "<group>"; };
+		15E4D8E3180B41CA935185A2 /* Inter-SemiBold.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-SemiBold.otf"; path = "../src/assets/fonts/Inter-SemiBold.otf"; sourceTree = "<group>"; };
+		179128F3A88A42A2886F0655 /* Mulish-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Mulish-Regular.ttf"; path = "../src/assets/fonts/Mulish-Regular.ttf"; sourceTree = "<group>"; };
+		38462FC961854BA78D9ADBCB /* Inter-Regular.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Regular.otf"; path = "../src/assets/fonts/Inter-Regular.otf"; sourceTree = "<group>"; };
+		3BD21A265C58424795535F47 /* Inter-Bold.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Bold.otf"; path = "../src/assets/fonts/Inter-Bold.otf"; sourceTree = "<group>"; };
 		49D3964E54F24AED8BD3A713 /* P22 Arts And Crafts Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "P22 Arts And Crafts Regular.ttf"; path = "../src/assets/fonts/P22 Arts And Crafts Regular.ttf"; sourceTree = "<group>"; };
-		4E2BAF0103C341FE807F7EB1 /* Inter-Black.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Black.otf"; path = "../src/assets/fonts/Inter-Black.otf"; sourceTree = "<group>"; };
+		4D36C2C02FC74CBDBF52A3FB /* Mulish-ExtraLight.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Mulish-ExtraLight.ttf"; path = "../src/assets/fonts/Mulish-ExtraLight.ttf"; sourceTree = "<group>"; };
+		4E2BAF0103C341FE807F7EB1 /* Inter-Black.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Black.otf"; path = "../src/assets/fonts/Inter-Black.otf"; sourceTree = "<group>"; };
 		514148872E05D11E005B48F3 /* FoodtruckVendor.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = FoodtruckVendor.entitlements; path = FoodtruckVendor/FoodtruckVendor.entitlements; sourceTree = "<group>"; };
 		515A37272E06757B00EFA41C /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		7054D7892E36422A8989DFBB /* Colors.xcassets */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = folder.assetcatalog; name = Colors.xcassets; path = FoodtruckVendor/Colors.xcassets; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = FoodtruckVendor/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = FoodtruckVendor/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		899C85C7676A4EC78F325C0F /* IMFellEnglish-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "IMFellEnglish-Regular.ttf"; path = "../src/assets/fonts/IMFellEnglish-Regular.ttf"; sourceTree = "<group>"; };
-		95C1DA858A63407A84644FFC /* Inter-Medium.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Medium.otf"; path = "../src/assets/fonts/Inter-Medium.otf"; sourceTree = "<group>"; };
-		9D588BDEED564795A70B94C2 /* Inter-ExtraBold.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-ExtraBold.otf"; path = "../src/assets/fonts/Inter-ExtraBold.otf"; sourceTree = "<group>"; };
+		95C1DA858A63407A84644FFC /* Inter-Medium.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Medium.otf"; path = "../src/assets/fonts/Inter-Medium.otf"; sourceTree = "<group>"; };
+		9D588BDEED564795A70B94C2 /* Inter-ExtraBold.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-ExtraBold.otf"; path = "../src/assets/fonts/Inter-ExtraBold.otf"; sourceTree = "<group>"; };
 		B7EED414BCE54D7BB62646AD /* BootSplash.storyboard */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = BootSplash.storyboard; path = FoodtruckVendor/BootSplash.storyboard; sourceTree = "<group>"; };
-		C2BA5A4BE34D4A75ACE1D2F6 /* Inter-Light-BETA.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Light-BETA.otf"; path = "../src/assets/fonts/Inter-Light-BETA.otf"; sourceTree = "<group>"; };
-		DC9D9D39F0FD4C6A908CC0E6 /* Inter-ExtraLight-BETA.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-ExtraLight-BETA.otf"; path = "../src/assets/fonts/Inter-ExtraLight-BETA.otf"; sourceTree = "<group>"; };
-		E6855CBFFC834D678BB8798D /* Inter-Thin-BETA.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Thin-BETA.otf"; path = "../src/assets/fonts/Inter-Thin-BETA.otf"; sourceTree = "<group>"; };
+		C2BA5A4BE34D4A75ACE1D2F6 /* Inter-Light-BETA.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Light-BETA.otf"; path = "../src/assets/fonts/Inter-Light-BETA.otf"; sourceTree = "<group>"; };
+		C6B483D0745444A684BAC78A /* Mulish-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Mulish-Medium.ttf"; path = "../src/assets/fonts/Mulish-Medium.ttf"; sourceTree = "<group>"; };
+		DC9D9D39F0FD4C6A908CC0E6 /* Inter-ExtraLight-BETA.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-ExtraLight-BETA.otf"; path = "../src/assets/fonts/Inter-ExtraLight-BETA.otf"; sourceTree = "<group>"; };
+		DCBDD748EB024458A0F0EC3D /* Mulish-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Mulish-Bold.ttf"; path = "../src/assets/fonts/Mulish-Bold.ttf"; sourceTree = "<group>"; };
+		E2F9D1A5E9B24E048EBD0B25 /* Mulish-ExtraBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Mulish-ExtraBold.ttf"; path = "../src/assets/fonts/Mulish-ExtraBold.ttf"; sourceTree = "<group>"; };
+		E6855CBFFC834D678BB8798D /* Inter-Thin-BETA.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Thin-BETA.otf"; path = "../src/assets/fonts/Inter-Thin-BETA.otf"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		ED9E60918B33444B80D17A4D /* Mulish-Black.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Mulish-Black.ttf"; path = "../src/assets/fonts/Mulish-Black.ttf"; sourceTree = "<group>"; };
 		F05AAF538B43B045EE755D13 /* Pods-FoodtruckVendor.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FoodtruckVendor.debug.xcconfig"; path = "Target Support Files/Pods-FoodtruckVendor/Pods-FoodtruckVendor.debug.xcconfig"; sourceTree = "<group>"; };
 		FBFB7417ADBDC2256DE88E29 /* Pods-FoodtruckVendor.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FoodtruckVendor.release.xcconfig"; path = "Target Support Files/Pods-FoodtruckVendor/Pods-FoodtruckVendor.release.xcconfig"; sourceTree = "<group>"; };
-		ED9E60918B33444B80D17A4D /* Mulish-Black.ttf */ = {isa = PBXFileReference; name = "Mulish-Black.ttf"; path = "../src/assets/fonts/Mulish-Black.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		DCBDD748EB024458A0F0EC3D /* Mulish-Bold.ttf */ = {isa = PBXFileReference; name = "Mulish-Bold.ttf"; path = "../src/assets/fonts/Mulish-Bold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		E2F9D1A5E9B24E048EBD0B25 /* Mulish-ExtraBold.ttf */ = {isa = PBXFileReference; name = "Mulish-ExtraBold.ttf"; path = "../src/assets/fonts/Mulish-ExtraBold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		4D36C2C02FC74CBDBF52A3FB /* Mulish-ExtraLight.ttf */ = {isa = PBXFileReference; name = "Mulish-ExtraLight.ttf"; path = "../src/assets/fonts/Mulish-ExtraLight.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		11FCF2D8270845EDB3273AA8 /* Mulish-Light.ttf */ = {isa = PBXFileReference; name = "Mulish-Light.ttf"; path = "../src/assets/fonts/Mulish-Light.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		C6B483D0745444A684BAC78A /* Mulish-Medium.ttf */ = {isa = PBXFileReference; name = "Mulish-Medium.ttf"; path = "../src/assets/fonts/Mulish-Medium.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		179128F3A88A42A2886F0655 /* Mulish-Regular.ttf */ = {isa = PBXFileReference; name = "Mulish-Regular.ttf"; path = "../src/assets/fonts/Mulish-Regular.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		099E8C561E1C4A318113D883 /* Mulish-SemiBold.ttf */ = {isa = PBXFileReference; name = "Mulish-SemiBold.ttf"; path = "../src/assets/fonts/Mulish-SemiBold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -381,7 +381,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -415,7 +415,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -513,10 +513,7 @@
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
 				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					" ",
-				);
+				OTHER_LDFLAGS = "$(inherited)  ";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
@@ -596,10 +593,7 @@
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
 				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					" ",
-				);
+				OTHER_LDFLAGS = "$(inherited)  ";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				USE_HERMES = true;

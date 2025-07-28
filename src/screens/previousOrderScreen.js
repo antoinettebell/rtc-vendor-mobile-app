@@ -31,6 +31,7 @@ import {
   getDisabledStatuses,
 } from "../helpers/order.helper";
 import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
+import AppImage from "../components/AppImage";
 
 const PreviousOrderScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -56,7 +57,7 @@ const PreviousOrderScreen = ({ navigation }) => {
         style={styles.orderDetailsContainer}
         onPress={() =>
           navigation.navigate("orderDetailsScreen", {
-            orderId: item._id,
+            orderId: item?._id,
           })
         }
       >
@@ -66,14 +67,14 @@ const PreviousOrderScreen = ({ navigation }) => {
             {"Order Status"}
           </Text>
           <Text style={styles.menuAnchorText}>
-            {orderCurrentStatusNames[item.orderStatus]}
+            {orderCurrentStatusNames[item?.orderStatus]}
           </Text>
         </View>
         {/* Order ID and Location */}
         <View style={styles.orderIdLocationContainer}>
           <View style={{ width: "75%", paddingRight: 8 }}>
             <Text numberOfLines={1} style={styles.orderIdText}>
-              {"Order #" + (item.orderNumber || item._id)}
+              {"Order #" + (item?.orderNumber || item?._id)}
             </Text>
           </View>
           <View style={styles.locationContainer}>
@@ -90,23 +91,23 @@ const PreviousOrderScreen = ({ navigation }) => {
         {/* Order User Details */}
         <View style={styles.orderHeader}>
           <View style={styles.orderUserImageContainer}>
-            <FastImage
-              source={{ uri: item.user.profilePic || PROFILE_AVATAR }}
-              style={styles.orderUserImage}
+            <AppImage
+              uri={item?.user?.profilePic || PROFILE_AVATAR}
+              containerStyle={styles.orderUserImage}
             />
           </View>
           <View style={styles.orderUserInfo}>
             <Text
               numberOfLines={1}
               style={styles.orderUserName}
-            >{`${item.user.firstName} ${item.user.lastName}`}</Text>
+            >{`${item?.user?.firstName} ${item?.user?.lastName}`}</Text>
             <Text
               style={styles.orderItemCount}
-            >{`${item.items.length} Items`}</Text>
+            >{`${item?.items?.length} Items`}</Text>
           </View>
           <View>
             <Text style={styles.orderDate}>
-              {moment(item.createdAt).format("DD MMM, YYYY")}
+              {moment(item?.createdAt).format("DD MMM, YYYY")}
             </Text>
             <View style={styles.orderTimeContainer}>
               <MaterialCommunityIcons
@@ -115,7 +116,7 @@ const PreviousOrderScreen = ({ navigation }) => {
                 color="#6F6F6F"
               />
               <Text style={styles.orderTime}>
-                {moment(item.createdAt).format("hh:mm A")}
+                {moment(item?.createdAt).format("hh:mm A")}
               </Text>
             </View>
           </View>
@@ -126,7 +127,7 @@ const PreviousOrderScreen = ({ navigation }) => {
         <View style={styles.orderTotalContainer}>
           <Text
             style={styles.orderTotalText}
-          >{`$${item.total.toFixed(2)}`}</Text>
+          >{`$${(item?.total || 0).toFixed(2)}`}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -240,7 +241,7 @@ const PreviousOrderScreen = ({ navigation }) => {
         <FlatList
           data={orderData}
           extraData={orderData}
-          keyExtractor={(item) => item._id.toString()}
+          keyExtractor={(item) => item?._id.toString()}
           renderItem={renderOrderComponent}
           contentContainerStyle={styles.flatListContent}
           onEndReached={handleLoadMore}

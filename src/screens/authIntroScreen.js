@@ -19,16 +19,33 @@ import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
 
 import Screen1Svg from "../assets/images/intro1.svg";
+import Screen2Svg from "../assets/images/intro2.svg";
+import Screen3Svg from "../assets/images/intro3.svg";
 
 const { width, height } = Dimensions.get("window");
 
 const slides = [
   {
     Svg: Screen1Svg,
-    title: "Round the Corner ",
-    subTitle: "– Your Street Food Buddy!",
+    title: "Welcome to ",
+    subTitle1: "Round the Corner",
+    subTitle2: " – Grow Your Food Truck Business",
     description:
-      "Discover the best food trucks around you and order your favorite bites in just a few taps.",
+      "Showcase your delicious menu to nearby food lovers and boost your visibility in just a few taps.",
+  },
+  {
+    Svg: Screen2Svg,
+    title: "Manage Orders ",
+    subTitle: "Seamlessly",
+    description:
+      "Receive, prepare and fulfill orders in real-time with a simple and intuitive dashboard designed just for vendors.",
+  },
+  {
+    Svg: Screen3Svg,
+    title: "Track Your Sales & ",
+    subTitle: "Grow Faster",
+    description:
+      "Get detailed insights on your daily sales, manage availability and receive payments securely-directly to your account. ",
   },
 ];
 
@@ -58,16 +75,21 @@ const AuthIntroScreen = ({ navigation }) => {
             <item.Svg width={width} height={height * 0.5} />
 
             <View>
-              {index !== 2 ? (
+              {index == 0 ? (
+                <Text style={styles.title}>
+                  {item.title}
+                  <Text style={styles.subTitle1}>{item.subTitle1}</Text>
+                  <Text style={styles.subTitle2}>{item.subTitle2}</Text>
+                </Text>
+              ) : index == 1 ? (
                 <Text style={styles.title}>
                   {item.title}
                   <Text style={styles.subTitle}>{item.subTitle}</Text>
                 </Text>
               ) : (
-                <Text style={[styles.title, styles.titleLastSlide]}>
+                <Text style={styles.title}>
                   {item.title}
-                  <Text style={styles.subTitlePrimary}>{item.subTitle1}</Text>
-                  <Text style={styles.subTitle}>{item.subTitle2}</Text>
+                  <Text style={styles.subTitle}>{item.subTitle}</Text>
                 </Text>
               )}
               <Text style={styles.description}>{item.description}</Text>
@@ -75,6 +97,28 @@ const AuthIntroScreen = ({ navigation }) => {
           </View>
         ))}
       </PagerView>
+
+      <View style={styles.dotsContainer}>
+        {slides.map((_, i) => {
+          const animatedDotStyle = useAnimatedStyle(() => {
+            return {
+              width: withTiming(
+                activeIndex.value === i ? ACTIVE_DOT_SIZE : DOT_SIZE,
+                {
+                  duration: 200,
+                }
+              ),
+              opacity: withTiming(activeIndex.value === i ? 1 : 0.5),
+              backgroundColor:
+                activeIndex.value === i ? AppColor.primary : AppColor.border,
+            };
+          });
+
+          return (
+            <Animated.View key={i} style={[styles.dot, animatedDotStyle]} />
+          );
+        })}
+      </View>
 
       <View style={styles.buttonRow}>
         <TouchableOpacity
@@ -134,17 +178,17 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: Mulish700,
     fontSize: 26,
-    color: AppColor.primary,
     textAlign: "center",
-  },
-  titleLastSlide: {
-    color: AppColor.black,
+    color: AppColor.text,
   },
   subTitle: {
-    color: AppColor.black,
-  },
-  subTitlePrimary: {
     color: AppColor.primary,
+  },
+  subTitle1: {
+    color: AppColor.primary,
+  },
+  subTitle2: {
+    color: AppColor.black,
   },
   description: {
     fontFamily: Mulish400,

@@ -277,11 +277,7 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
           foodTruck: response.data.foodtruck,
         };
         dispatch(setUser(tempUser));
-        dispatch(onUnderReview(true));
-        navigation.reset({
-          index: 0,
-          routes: [{ name: "authUnderReviewNoteScreen" }],
-        });
+        navigation.navigate("authFoodTruckBankDetailScreen");
       }
     } catch (error) {
       console.error("error =>", error);
@@ -292,18 +288,21 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBarManager />
+      <StatusBarManager barStyle="light-content" />
+
       {/* Header Container */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <IconButton
           icon="arrow-left"
-          iconColor={AppColor.black}
+          iconColor={AppColor.white}
           size={24}
           onPress={() => navigation.goBack()}
         />
         <Text style={styles.headerTitle}>Set Availability</Text>
         <View style={{ width: 48 }} />
       </View>
+
+      {/* Content Container */}
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
         bounces={false}
@@ -327,8 +326,12 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
             <View style={styles.line} />
             <View style={styles.stepSubContainer}>
               <View style={styles.filledCircle}>
-                <FontAwesome6 name="check" color={AppColor.white} size={18} />
+                <FontAwesome6 name="person-walking" color={AppColor.white} size={18} />
               </View>
+            </View>
+            <View style={styles.line} />
+            <View style={styles.stepSubContainer}>
+              <View style={styles.emptyCircle} />
             </View>
           </View>
 
@@ -528,26 +531,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F9FAFB",
   },
+
+  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: AppColor.white,
+    backgroundColor: AppColor.primary,
     paddingHorizontal: 8,
-    paddingBottom: 5,
-    borderBottomWidth: 1,
-    borderColor: "#E5E5EA",
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
   },
   headerTitle: {
-    color: AppColor.black,
+    color: AppColor.white,
     fontSize: 20,
     fontFamily: Mulish700,
   },
+
+  // Step Indicator
   stepContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginVertical: 10,
+    marginVertical: 16,
   },
   stepSubContainer: {
     alignItems: "center",
@@ -561,11 +567,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  emptyCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: AppColor.primary,
+  },
   line: {
-    width: "18%",
+    width: "10%",
     height: 2,
     backgroundColor: AppColor.primary,
   },
+
+  // Content
   dayContainer: {
     marginBottom: 16,
     padding: 16,

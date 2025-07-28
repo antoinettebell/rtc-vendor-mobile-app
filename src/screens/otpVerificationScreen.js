@@ -23,9 +23,16 @@ import Octicons from "react-native-vector-icons/Octicons";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { resendOTP_API, verifyOTP_API } from "../api/authAPI";
 import { useDispatch } from "react-redux";
-import { onOnBoard } from "../redux/slices/authSlice";
-import { setAuthToken, setUser } from "../redux/slices/userSlice";
+import { onOnBoard, onSignOut } from "../redux/slices/authSlice";
+import {
+  clearUserSlice,
+  setAuthToken,
+  setUser,
+} from "../redux/slices/userSlice";
 import StatusBarManager from "../components/StatusBarManager";
+import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlice";
+import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlice";
+import { showSnackbar } from "../redux/slices/snackbarSlice";
 
 const RESEND_CODE_TIME = 120;
 
@@ -101,6 +108,15 @@ const OtpVerificationScreen = ({ route }) => {
           navigation.navigate("resetPassword", {
             data: { ...response.data },
           });
+        } else if (params?.verificationFor === "delete-account") {
+          console.log("response.data => ", response.data);
+          dispatch(
+            showSnackbar({ message: response.message, type: "success" })
+          );
+          dispatch(clearUserSlice());
+          dispatch(clearFoodTruckProfileSlice());
+          dispatch(onSignOut());
+          dispatch(clearPushNotificationRedux());
         }
       }
     } catch (error) {

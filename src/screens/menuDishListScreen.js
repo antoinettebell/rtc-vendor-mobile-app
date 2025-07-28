@@ -12,12 +12,19 @@ import AntDesign from "react-native-vector-icons/AntDesign";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
+import {
+  AppColor,
+  Mulish700,
+  Mulish400,
+  Mulish500,
+  Mulish600,
+} from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
 import { useDispatch, useSelector } from "react-redux";
 import { IconButton, Switch } from "react-native-paper";
 import {
   getAllFoodItemsByCatID_API,
+  getFoodtruckDetail_API,
   updateFooditemByID_API,
 } from "../api/appAPI";
 import {
@@ -25,6 +32,8 @@ import {
   setSelectedFoodItems,
 } from "../redux/slices/foodTruckProfileSlice";
 import FastImage from "@d11/react-native-fast-image";
+import { setSelectedPlan } from "../redux/slices/userSlice";
+import AppImage from "../components/AppImage";
 
 const dishLocalImage = require("../assets/images/cutlery.png");
 
@@ -35,6 +44,7 @@ const MenuDishListScreen = ({ navigation, route }) => {
   const { selectedFoodItems, selectedFoodCategory } = useSelector(
     (state) => state.foodTruckProfileReducer
   );
+  const { user } = useSelector((state) => state.userReducer);
 
   const Params = route.params;
 
@@ -93,10 +103,27 @@ const MenuDishListScreen = ({ navigation, route }) => {
     }
   };
 
+  const getFoodTruckDetailFromAPI = async () => {
+    try {
+      const foodtruck_id = user?.foodTruck?._id;
+      const response = await getFoodtruckDetail_API(foodtruck_id);
+      console.log("response => ", response);
+      if (response?.success && response?.data) {
+        if (response?.data?.foodtruck?.plan) {
+          dispatch(setSelectedPlan(response?.data?.foodtruck?.plan));
+        }
+      }
+    } catch (error) {
+      console.log("error => ", error);
+    } finally {
+    }
+  };
+
   useEffect(() => {
     if (Params?.category) {
       setCategory(Params.category);
       getDataFromAPI(Params.category._id);
+      getFoodTruckDetailFromAPI();
     }
   }, [Params?.category]);
 
@@ -180,16 +207,30 @@ const MenuDishListScreen = ({ navigation, route }) => {
                   gap: 10,
                 }}
               >
-                <FastImage
-                  source={
-                    item.imgUrls[0] ? { uri: item.imgUrls[0] } : dishLocalImage
-                  }
-                  style={{
-                    height: 83,
-                    width: 83,
-                    borderRadius: 10,
-                  }}
-                />
+                <View>
+                  <AppImage
+                    uri={item.imgUrls[0]}
+                    containerStyle={{
+                      height: 83,
+                      width: 83,
+                      borderRadius: 10,
+                    }}
+                    placeholderImageSource={dishLocalImage}
+                  />
+                  {item?.newDish ? (
+                    <FastImage
+                      source={require("../assets/images/new.png")}
+                      style={{
+                        height: 32,
+                        width: 32,
+                        position: "absolute",
+                        top: -10,
+                        left: -10,
+                        transform: [{ rotate: "-20deg" }],
+                      }}
+                    />
+                  ) : null}
+                </View>
                 <View style={{ flex: 1 }}>
                   <Text
                     numberOfLines={1}
@@ -212,14 +253,33 @@ const MenuDishListScreen = ({ navigation, route }) => {
                   >
                     {item.description}
                   </Text>
-                  <Text
+                  <View
                     style={{
-                      fontFamily: Mulish400,
-                      fontSize: 12,
-                      color: AppColor.text,
-                      marginTop: 5,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 5,
                     }}
-                  >{`$ ${item.price || 0}`}</Text>
+                  >
+                    {item?.discount > 0 && (
+                      <Text
+                        style={{
+                          fontFamily: Mulish400,
+                          fontSize: 12,
+                          color: AppColor.text,
+                          marginTop: 5,
+                          textDecorationLine: "line-through",
+                        }}
+                      >{`$${(item.price || 0).toFixed(2)}`}</Text>
+                    )}
+                    <Text
+                      style={{
+                        fontFamily: Mulish600,
+                        fontSize: 12,
+                        color: AppColor.text,
+                        marginTop: 5,
+                      }}
+                    >{`$${(item.price - item.discount || 0).toFixed(2)}`}</Text>
+                  </View>
                 </View>
                 <View>
                   <Switch

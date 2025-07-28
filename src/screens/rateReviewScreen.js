@@ -21,6 +21,7 @@ import { IconButton } from "react-native-paper";
 import { getReviewRating_API, getReviewRatingStats_API } from "../api/appAPI";
 import FastImage from "@d11/react-native-fast-image";
 import { PROFILE_AVATAR } from "../utils/constants";
+import AppImage from "../components/AppImage";
 
 const LIMIT = 20;
 
@@ -54,9 +55,9 @@ const RateReviewScreen = ({ navigation }) => {
   const renderReviewComponent = ({ item }) => {
     return (
       <View style={styles.reviewItem} key={item?._id}>
-        <FastImage
-          source={{ uri: item?.user?.profilePic || PROFILE_AVATAR }}
-          style={styles.reviewAvatar}
+        <AppImage
+          uri={item?.user?.profilePic || PROFILE_AVATAR}
+          containerStyle={styles.reviewAvatar}
         />
         <View style={{ flex: 1, marginLeft: 16, gap: 5 }}>
           <Text style={styles.userName}>
@@ -66,16 +67,15 @@ const RateReviewScreen = ({ navigation }) => {
             {renderStatsStars(item.rate)}
           </View>
           <Text style={styles.reviewText}>{item.review}</Text>
-          <View style={{ flexDirection: "row" }}>
+          <View style={{ flexDirection: "row", gap: 8 }}>
             {item?.images?.map((i) => (
-              <FastImage
+              <AppImage
                 key={i}
-                source={{ uri: i }}
-                style={{
+                uri={i}
+                containerStyle={{
                   width: 50,
                   height: 50,
                   borderRadius: 4,
-                  marginRight: 8,
                 }}
               />
             ))}
