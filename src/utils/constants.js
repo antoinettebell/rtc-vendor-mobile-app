@@ -96,3 +96,8 @@ export const empNumberList = [
   { label: "EIN", type: "ein" },
   { label: "SSN", type: "ssn" },
 ];
+
+export const discountTypeList = [
+  { label: "Percentage", type: "PERCENTAGE", txt: "" },
+  { label: "Fixed", type: "FIXED", txt: "" },
+];

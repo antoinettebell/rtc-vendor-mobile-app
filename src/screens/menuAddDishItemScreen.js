@@ -9,6 +9,8 @@ import {
   TouchableOpacity,
   FlatList,
   Pressable,
+  Dimensions,
+  TextInput as NativeTextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
@@ -46,11 +48,15 @@ import {
   setSelectedFoodItems,
 } from "../redux/slices/foodTruckProfileSlice";
 import {
+  discountTypeList,
   dishNewFlagAllowPlanArray,
   foodTypeList,
   foodTypeStrings,
 } from "../utils/constants";
 import AppImage from "../components/AppImage";
+import { getDiscountedPrice } from "../helpers/menu.helper";
+
+const width = Dimensions.get("window").width;
 
 const validateItemName = (value) => {
   if (!value.trim()) {
@@ -159,8 +165,10 @@ const MenuAddDishItemScreen = ({ navigation, route }) => {
   const [itemDescription, setItemDescription] = useState("");
   const [itemPrice, setItemPrice] = useState("");
   const [discountEnabled, setDiscountEnabled] = useState(false);
+  const [selectedDiscountType, setSelectedDiscountType] = useState("FIXED");
   const [itemDiscount, setItemDiscount] = useState("0");
   const [newDishItemEnabled, setNewDishItemEnabled] = useState(false);
+  const [popularDishItemEnabled, setPopularDishItemEnabled] = useState(false);
   const [minQt, setMinQt] = useState("1");
   const [maxQt, setMaxQt] = useState("10");
   const [prepTime, setPrepTime] = useState("10");
@@ -368,6 +376,13 @@ const MenuAddDishItemScreen = ({ navigation, route }) => {
 
   // Add Food Item API Call
   const handleSaveBtnPress = async () => {
+    // Calculate discounted price
+    const discountedPrice = getDiscountedPrice(
+      parseFloat(itemPrice), // actual price
+      selectedDiscountType, // discount type
+      parseFloat(itemDiscount) // discount value
+    );
+
     // Validate all fields
     const newErrors = {
       itemName: validateItemName(itemName),
@@ -393,6 +408,8 @@ const MenuAddDishItemScreen = ({ navigation, route }) => {
         newErrors.itemDiscount = discountError;
       } else if (parseFloat(itemDiscount || 0) <= 0) {
         newErrors.itemDiscount = "Discount must be greater than 0";
+      } else if (discountedPrice?.isPriceIncreased) {
+        newErrors.itemDiscount = "Discount must be less than actual price";
       }
     } else {
       newErrors.itemDiscount = ""; // Clear discount error if toggle is off
@@ -419,12 +436,19 @@ const MenuAddDishItemScreen = ({ navigation, route }) => {
         categoryId: Params?.category?._id,
         allowCustomize: customization,
         preparationTime: parseInt(prepTime || 0, 10),
-        discount: discountEnabled
-          ? parseFloat(parseFloat(itemDiscount || 0).toFixed(2))
-          : 0,
         diet: selectedDiet?.length > 0 ? selectedDiet : [],
         newDish: newDishItemEnabled,
+        popularDish: popularDishItemEnabled,
       };
+
+      if (discountEnabled) {
+        payload.discount = discountEnabled
+          ? parseFloat(parseFloat(itemDiscount || 0).toFixed(2))
+          : 0;
+        payload.discountType = selectedDiscountType;
+        payload.strikePrice = parseFloat(parseFloat(itemPrice).toFixed(2));
+        payload.price = discountedPrice?.afterdiscountprice;
+      }
 
       if (selectedMeat?.trim()?.length > 0) {
         payload.meatId = selectedMeat;
@@ -855,6 +879,73 @@ const MenuAddDishItemScreen = ({ navigation, route }) => {
               />
             </View>
 
+            {/* Meat Type Container */}
+            <View style={styles.section}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                }}
+              >
+                <Text style={[styles.inputLabel, { marginBottom: 0 }]}>
+                  {"Meat"}
+                </Text>
+                {selectedMeat ? (
+                  <Pressable
+                    hitSlop={5}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      setSelectedMeat("");
+                      setMeatWellness("");
+                    }}
+                  >
+                    <Text style={{ color: AppColor.textHighlighter }}>
+                      {"Clear"}
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+              <Dropdown
+                data={meatList}
+                labelField="name"
+                valueField="_id"
+                value={selectedMeat}
+                onChange={(selected) => setSelectedMeat(selected._id)}
+                placeholder="Select Meat"
+                style={styles.dropdown}
+                placeholderStyle={{
+                  fontFamily: Mulish400,
+                  color: AppColor.textHighlighter,
+                }}
+                itemTextStyle={{ fontFamily: Mulish400 }}
+                selectedTextStyle={{ fontFamily: Mulish400 }}
+              />
+            </View>
+
+            {/* Meat Wellness */}
+            {selectedMeat?.trim()?.length > 0 ? (
+              <View style={styles.section}>
+                <Text style={styles.inputLabel}>{"Meat Wellness"}</Text>
+                <TextInput
+                  dense
+                  value={meatWellness}
+                  onChangeText={setMeatWellness}
+                  style={styles.input}
+                  contentStyle={styles.inputText}
+                  placeholder=""
+                  placeholderTextColor={AppColor.placeholderTextColor}
+                  mode="outlined"
+                  outlineColor={AppColor.border}
+                  activeOutlineColor={AppColor.primary}
+                  outlineStyle={{ borderRadius: 8 }}
+                  autoCapitalize="sentences"
+                  theme={{ colors: { onSurfaceVariant: "#777" } }}
+                />
+              </View>
+            ) : null}
+
             {/* Price Textinput */}
             <View style={styles.section}>
               <Text style={styles.inputLabel}>{"Item Price *"}</Text>
@@ -919,7 +1010,113 @@ const MenuAddDishItemScreen = ({ navigation, route }) => {
               {/* Discount Textinput */}
               {discountEnabled ? (
                 <>
-                  <TextInput
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      borderWidth: 1,
+                      borderColor: AppColor.border,
+                      borderRadius: 8,
+                      marginTop: 8,
+                    }}
+                  >
+                    <View style={{ width: 80 }}>
+                      <View
+                        style={{
+                          justifyContent: "center",
+                          paddingLeft: 16,
+                          height: 46,
+                        }}
+                      >
+                        <FontAwesome6
+                          name={
+                            selectedDiscountType === "FIXED"
+                              ? "dollar-sign"
+                              : "percent"
+                          }
+                          size={18}
+                          color={AppColor.textHighlighter}
+                        />
+                      </View>
+                      <Dropdown
+                        data={discountTypeList}
+                        labelField="txt"
+                        valueField="type"
+                        value={selectedDiscountType}
+                        onChange={(item) => {
+                          setSelectedDiscountType(item.type);
+                        }}
+                        placeholder={""}
+                        style={{
+                          position: "absolute",
+                          height: 46,
+                          paddingHorizontal: 12,
+                          paddingVertical: 14,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          marginBottom: 5,
+                        }}
+                        containerStyle={{ width: width - 34 }}
+                        placeholderStyle={{
+                          fontFamily: Mulish400,
+                          color: AppColor.textHighlighter,
+                          position: "absolute",
+                        }}
+                        itemTextStyle={{ fontFamily: Mulish400 }}
+                        selectedTextStyle={{ fontFamily: Mulish400 }}
+                        renderItem={(item) => (
+                          <View
+                            style={{
+                              flex: 1,
+                              height: 46,
+                              paddingHorizontal: 16,
+                              justifyContent: "center",
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 16,
+                                fontFamily: Mulish400,
+                                color: AppColor.text,
+                              }}
+                            >
+                              {item.label}
+                            </Text>
+                          </View>
+                        )}
+                      />
+                    </View>
+
+                    <View
+                      style={{
+                        width: 1,
+                        height: "100%",
+                        backgroundColor: AppColor.border,
+                      }}
+                    />
+
+                    <NativeTextInput
+                      value={itemDiscount}
+                      onChangeText={handleItemDiscountChange}
+                      style={{
+                        flex: 1,
+                        height: 46,
+                        fontSize: 15,
+                        fontFamily: Mulish400,
+                        backgroundColor: AppColor.white,
+                        paddingHorizontal: 16,
+                        paddingVertical: 10,
+                        borderRadius: 8,
+                      }}
+                      placeholder={
+                        selectedDiscountType === "FIXED" ? "0.00" : "0%"
+                      }
+                      placeholderTextColor={AppColor.placeholderTextColor}
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                  {/* <TextInput
                     dense
                     value={itemDiscount}
                     onChangeText={handleItemDiscountChange}
@@ -942,7 +1139,7 @@ const MenuAddDishItemScreen = ({ navigation, route }) => {
                       />
                     }
                     theme={{ colors: { onSurfaceVariant: "#777" } }}
-                  />
+                  /> */}
                   {!!errors.itemDiscount && (
                     <HelperText
                       type="error"
@@ -1007,6 +1204,31 @@ const MenuAddDishItemScreen = ({ navigation, route }) => {
                 </View>
               </View>
             ) : null}
+
+            {/* Popular Item Container */}
+            <View style={styles.section}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Text
+                  numberOfLines={1}
+                  style={[styles.inputLabel, { marginBottom: 0 }]}
+                >
+                  {"Popular Dish/Item"}
+                </Text>
+                <View>
+                  <Switch
+                    color={AppColor.primary}
+                    value={popularDishItemEnabled}
+                    onValueChange={(value) => setPopularDishItemEnabled(value)}
+                  />
+                </View>
+              </View>
+            </View>
 
             {/* Min-Max quantity */}
             <View
@@ -1132,48 +1354,6 @@ const MenuAddDishItemScreen = ({ navigation, route }) => {
                 </HelperText>
               )}
             </View>
-
-            {/* Meat Type Container */}
-            <View style={styles.section}>
-              <Text style={styles.inputLabel}>{"Meat"}</Text>
-              <Dropdown
-                data={meatList}
-                labelField="name"
-                valueField="_id"
-                value={selectedMeat}
-                onChange={(selected) => setSelectedMeat(selected._id)}
-                placeholder="Select Meat"
-                style={styles.dropdown}
-                placeholderStyle={{
-                  fontFamily: Mulish400,
-                  color: AppColor.textHighlighter,
-                }}
-                itemTextStyle={{ fontFamily: Mulish400 }}
-                selectedTextStyle={{ fontFamily: Mulish400 }}
-              />
-            </View>
-
-            {/* Meat Wellness */}
-            {selectedMeat?.trim()?.length > 0 ? (
-              <View style={styles.section}>
-                <Text style={styles.inputLabel}>{"Meat Wellness"}</Text>
-                <TextInput
-                  dense
-                  value={meatWellness}
-                  onChangeText={setMeatWellness}
-                  style={styles.input}
-                  contentStyle={styles.inputText}
-                  placeholder=""
-                  placeholderTextColor={AppColor.placeholderTextColor}
-                  mode="outlined"
-                  outlineColor={AppColor.border}
-                  activeOutlineColor={AppColor.primary}
-                  outlineStyle={{ borderRadius: 8 }}
-                  autoCapitalize="sentences"
-                  theme={{ colors: { onSurfaceVariant: "#777" } }}
-                />
-              </View>
-            ) : null}
 
             {/* Food Type Container */}
             <View style={styles.section}>

@@ -258,27 +258,47 @@ const MenuDishListScreen = ({ navigation, route }) => {
                       flexDirection: "row",
                       alignItems: "center",
                       gap: 5,
+                      marginTop: 5,
                     }}
                   >
-                    {item?.discount > 0 && (
-                      <Text
-                        style={{
-                          fontFamily: Mulish400,
-                          fontSize: 12,
-                          color: AppColor.text,
-                          marginTop: 5,
-                          textDecorationLine: "line-through",
-                        }}
-                      >{`$${(item.price || 0).toFixed(2)}`}</Text>
-                    )}
                     <Text
                       style={{
                         fontFamily: Mulish600,
                         fontSize: 12,
                         color: AppColor.text,
-                        marginTop: 5,
                       }}
-                    >{`$${(item.price - item.discount || 0).toFixed(2)}`}</Text>
+                    >{`$${(item?.price || 0).toFixed(2)}`}</Text>
+                    {item?.strikePrice > 0 && (
+                      <Text
+                        style={{
+                          fontFamily: Mulish400,
+                          fontSize: 12,
+                          color: AppColor.text,
+                          textDecorationLine: "line-through",
+                        }}
+                      >{`$${(item?.strikePrice || 0).toFixed(2)}`}</Text>
+                    )}
+                    {item?.popularDish ? (
+                      <View
+                        style={{
+                          borderRadius: 20,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: AppColor.primary,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontFamily: Mulish400,
+                            color: AppColor.white,
+                            paddingHorizontal: 8,
+                          }}
+                        >
+                          {"Popular"}
+                        </Text>
+                      </View>
+                    ) : null}
                   </View>
                 </View>
                 <View>
