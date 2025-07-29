@@ -190,7 +190,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
         if (!endTime.isAfter(startTime)) {
           Alert.alert(
             "Invalid Time Slot",
-            `On ${fullCurrentDayName}, the **Close Time** (${endTime.format("h:mm A")}) for '${loc.locationTitle || "an unnamed location slot"}' must be after its **Open Time** (${startTime.format("h:mm A")}). Please adjust.`
+            `On ${fullCurrentDayName}, the Close Time (${endTime.format("h:mm A")}) for '${loc.locationTitle || "an unnamed location slot"}' must be after its Open Time (${startTime.format("h:mm A")}). Please adjust.`
           );
           console.log("Here I'm stopped!!! Invalid Open/Close Time detected.");
           return; // Stop execution if an invalid individual time slot is found
@@ -238,7 +238,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
 
             Alert.alert(
               "Time Slot Overlap Detected",
-              `On ${fullCurrentDayName}, the time slot for '${loc1Name}' (**Open Time**: ${moment(loc1.openTime).format("h:mm A")} - **Close Time**: ${moment(loc1.closeTime).format("h:mm A")}) overlaps with the time slot for '${loc2Name}' (**Open Time**: ${moment(loc2.openTime).format("h:mm A")} - **Close Time**: ${moment(loc2.closeTime).format("h:mm A")}). Please adjust your times.`,
+              `On ${fullCurrentDayName}, the time slot for '${loc1Name}' (Open Time: ${moment(loc1.openTime).format("h:mm A")} - Close Time: ${moment(loc1.closeTime).format("h:mm A")}) overlaps with the time slot for '${loc2Name}' (Open Time: ${moment(loc2.openTime).format("h:mm A")} - Close Time: ${moment(loc2.closeTime).format("h:mm A")}). Please adjust your times.`,
               [{ text: "OK" }]
             );
             console.log("Here I'm stopped!!! Overlap detected!");

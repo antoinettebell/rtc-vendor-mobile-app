@@ -89,9 +89,14 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
     setAvailability(updated);
   };
 
-  const updateLocation = (dayIndex, locIndex, value) => {
+  const updateLocation = (dayIndex, locIndex, selectedItem) => {
     const updated = [...availability];
-    updated[dayIndex].locations[locIndex].value = value;
+    updated[dayIndex].locations[locIndex] = {
+      ...updated[dayIndex].locations[locIndex],
+      value: selectedItem._id,
+      locationTitle: selectedItem.title,
+      locationAddress: selectedItem.address,
+    };
     setAvailability(updated);
   };
 
@@ -182,6 +187,8 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
         const startTime = moment(loc.openTime);
         const endTime = moment(loc.closeTime);
 
+        console.log("loc => ", currentDay);
+
         console.log(
           `    Checking Open Time vs Close Time for '${loc.locationTitle || "Unnamed Location"}' on ${fullCurrentDayName}: ${startTime.format("HH:mm")} - ${endTime.format("HH:mm")}`
         );
@@ -189,7 +196,7 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
         if (!endTime.isAfter(startTime)) {
           Alert.alert(
             "Invalid Time Slot",
-            `On ${fullCurrentDayName}, the **Close Time** (${endTime.format("h:mm A")}) for '${loc.locationTitle || "an unnamed location slot"}' must be after its **Open Time** (${startTime.format("h:mm A")}). Please adjust.`
+            `On ${fullCurrentDayName}, the Close Time (${endTime.format("h:mm A")}) for '${loc.locationTitle || "an unnamed location slot"}' must be after its Open Time (${startTime.format("h:mm A")}). Please adjust.`
           );
           console.log("Here I'm stopped!!! Invalid Open/Close Time detected.");
           return; // Stop execution if an invalid individual time slot is found
@@ -237,7 +244,7 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
 
             Alert.alert(
               "Time Slot Overlap Detected",
-              `On ${fullCurrentDayName}, the time slot for '${loc1Name}' (**Open Time**: ${moment(loc1.openTime).format("h:mm A")} - **Close Time**: ${moment(loc1.closeTime).format("h:mm A")}) overlaps with the time slot for '${loc2Name}' (**Open Time**: ${moment(loc2.openTime).format("h:mm A")} - **Close Time**: ${moment(loc2.closeTime).format("h:mm A")}). Please adjust your times.`,
+              `On ${fullCurrentDayName}, the time slot for '${loc1Name}' (Open Time: ${moment(loc1.openTime).format("h:mm A")} - Close Time: ${moment(loc1.closeTime).format("h:mm A")}) overlaps with the time slot for '${loc2Name}' (Open Time: ${moment(loc2.openTime).format("h:mm A")} - Close Time: ${moment(loc2.closeTime).format("h:mm A")}). Please adjust your times.`,
               [{ text: "OK" }]
             );
             console.log("Here I'm stopped!!! Overlap detected!");
@@ -326,7 +333,11 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
             <View style={styles.line} />
             <View style={styles.stepSubContainer}>
               <View style={styles.filledCircle}>
-                <FontAwesome6 name="person-walking" color={AppColor.white} size={18} />
+                <FontAwesome6
+                  name="person-walking"
+                  color={AppColor.white}
+                  size={18}
+                />
               </View>
             </View>
             <View style={styles.line} />
@@ -431,8 +442,8 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
                         labelField="title"
                         valueField="_id"
                         value={loc._id}
-                        onChange={(selected) =>
-                          updateLocation(index, locIndex, selected._id)
+                        onChange={(selectedItem) =>
+                          updateLocation(index, locIndex, selectedItem)
                         }
                         placeholder="Select Location"
                         style={styles.dropdown}

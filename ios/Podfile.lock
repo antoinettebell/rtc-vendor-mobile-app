@@ -1816,6 +1816,8 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - RNDeviceInfo (14.0.4):
+    - React-Core
   - RNFastImage (8.9.2):
     - DoubleConversion
     - glog
@@ -2231,6 +2233,7 @@ DEPENDENCIES:
   - RNBootSplash (from `../node_modules/react-native-bootsplash`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - "RNDateTimePicker (from `../node_modules/@react-native-community/datetimepicker`)"
+  - RNDeviceInfo (from `../node_modules/react-native-device-info`)
   - "RNFastImage (from `../node_modules/@d11/react-native-fast-image`)"
   - "RNFBApp (from `../node_modules/@react-native-firebase/app`)"
   - "RNFBInstallations (from `../node_modules/@react-native-firebase/installations`)"
@@ -2422,6 +2425,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-async-storage/async-storage"
   RNDateTimePicker:
     :path: "../node_modules/@react-native-community/datetimepicker"
+  RNDeviceInfo:
+    :path: "../node_modules/react-native-device-info"
   RNFastImage:
     :path: "../node_modules/@d11/react-native-fast-image"
   RNFBApp:
@@ -2541,6 +2546,7 @@ SPEC CHECKSUMS:
   RNBootSplash: 386d66d72f761533d37524dad8a22688a09c81d1
   RNCAsyncStorage: 320c8b9217695928a64d8ae993653425c8605368
   RNDateTimePicker: 0037a03f1099b7745f0a37d994b029204405dff3
+  RNDeviceInfo: feea80a690d2bde1fe51461cf548039258bd03f2
   RNFastImage: 3bb64d1e5ec0e087d3a17b2adc7e53b18c3c70bb
   RNFBApp: df5caad9f64b6bc87f8a0b110e6bc411fb00a12b
   RNFBInstallations: bf3fabe3946877569671461936b4b4d505050799

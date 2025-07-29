@@ -17,6 +17,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getVersion, getBuildNumber } from "react-native-device-info";
 import Modal from "react-native-modal";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { onSignOut } from "../redux/slices/authSlice";
@@ -756,6 +757,16 @@ const ProfileMenuScreen = ({ navigation }) => {
             imageUri={PROFILE_MENU_IMAGES.deleteAccount}
             onPress={handleDeleteAccountPress}
           />
+        </View>
+
+        <View
+          style={{
+            marginBottom: 20,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Text>{`v${getVersion()} (${getBuildNumber()})`}</Text>
         </View>
       </ScrollView>
 
