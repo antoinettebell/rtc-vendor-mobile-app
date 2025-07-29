@@ -26,6 +26,7 @@ import {
   setSelectedLocations,
 } from "../redux/slices/foodTruckProfileSlice";
 import { formatEIN, formatSSN } from "../helpers/profile.helper";
+import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
 
 const MEDIA_IMAGE_TYPE = {
   INSTAGRAM: require("../assets/images/instagram.png"),
@@ -81,6 +82,17 @@ const UserProfileScreen = ({ navigation }) => {
 
         dispatch(setUser(USER_DATA));
         updateStateOnDataFetch(USER_DATA, FOOD_TRUCK_DATA); // update local states
+
+        dispatch(
+          addOrUpdateUser({
+            emailid: USER_DATA.email,
+            userData: {
+              emailid: USER_DATA.email,
+              username: FOOD_TRUCK_DATA?.name || "",
+              imageUrl: FOOD_TRUCK_DATA.logo || null,
+            },
+          })
+        );
       }
     } catch (error) {
       console.log("error => ", error);

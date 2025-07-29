@@ -33,6 +33,7 @@ import StatusBarManager from "../components/StatusBarManager";
 import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlice";
 import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlice";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
+import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
 
 const RESEND_CODE_TIME = 120;
 
@@ -103,6 +104,18 @@ const OtpVerificationScreen = ({ route }) => {
 
           dispatch(setUser(response.data.user));
           dispatch(setAuthToken(response.data.authToken));
+
+          dispatch(
+            addOrUpdateUser({
+              emailid: response.data.user.email,
+              userData: {
+                emailid: response.data.user.email,
+                password: params?.data?.localPassword,
+                username: response?.data?.user?.foodTruck?.name || "",
+                imageUrl: response?.data?.user?.foodTruck.logo || null,
+              },
+            })
+          );
         } else if (params?.verificationFor === "forget-password") {
           console.log("response.data => ", response.data);
           navigation.navigate("resetPassword", {

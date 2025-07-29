@@ -36,6 +36,7 @@ import { checkInstallationId } from "../helpers/notification.helper";
 import { deleteAccount_API, removeFcmToken_API } from "../api/appAPI";
 import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlice";
 import AppImage from "../components/AppImage";
+import { updateUserKey } from "../redux/slices/userInfoSlice";
 
 const ItemComponent = ({ imageUri, label, rightIcon, isRed, onPress }) => (
   <TouchableOpacity
@@ -435,6 +436,14 @@ const ProfileMenuScreen = ({ navigation }) => {
       if (response?.success) {
         setChangePWDModalVisible(false);
         dispatch(showSnackbar({ message: response.message, type: "success" }));
+
+        dispatch(
+          updateUserKey({
+            emailid: user.email,
+            keyName: "password",
+            keyValue: payload.newPassword,
+          })
+        );
       }
     } catch (error) {
       console.log("Error => ", error);

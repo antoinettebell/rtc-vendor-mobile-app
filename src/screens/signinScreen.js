@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -42,10 +42,10 @@ import {
   checkInstallationId,
 } from "../helpers/notification.helper";
 import { setFcmToken_API } from "../api/appAPI";
+import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
 
-const SignInScreen = () => {
+const SignInScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
   const dispatch = useDispatch();
 
   const [email, setEmail] = useState("");
@@ -72,17 +72,20 @@ const SignInScreen = () => {
     return passwordRegex?.test(password);
   };
 
-  const handleSignIn = async () => {
+  const handleSignIn = async (passedEmail, passedPassword) => {
+    const currentEmail = passedEmail || email;
+    const currentPassword = passedPassword || password;
+
     let isValid = true;
 
-    if (!validateEmail(email)) {
+    if (!validateEmail(currentEmail)) {
       setEmailError("Enter a valid email!");
       isValid = false;
     } else {
       setEmailError("");
     }
 
-    if (!validatePassword(password)) {
+    if (!validatePassword(currentPassword)) {
       setPasswordError(
         "Password must be 8–15 chars with 1 uppercase, 1 lowercase, 1 number, and 1 special char."
       );
@@ -92,11 +95,14 @@ const SignInScreen = () => {
     }
 
     if (isValid) {
-      console.log("✨ Logging in with:", email);
+      console.log("✨ Logging in with:", currentEmail);
       // Trigger login logic here
       setLoading(true);
       try {
-        const response = await login_API({ email, password });
+        const response = await login_API({
+          email: currentEmail,
+          password: currentPassword,
+        });
         console.log("response ====> ", response);
         if (response?.success && response?.data) {
           dispatch(setUser(response.data.user));
@@ -108,6 +114,18 @@ const SignInScreen = () => {
           );
           dispatch(setAuthToken(response.data.authToken));
           dispatch(onSignin(true));
+
+          dispatch(
+            addOrUpdateUser({
+              emailid: currentEmail,
+              userData: {
+                emailid: currentEmail,
+                password: currentPassword,
+                username: response?.data?.user?.foodTruck?.name || "",
+                imageUrl: response?.data?.user?.foodTruck.logo || null,
+              },
+            })
+          );
 
           // set FCM Token & DeviceId after 1.5 sec
           setTimeout(async () => {
@@ -142,6 +160,18 @@ const SignInScreen = () => {
   const handleForgetPWD = () => {
     navigation.navigate("forgetPassword");
   };
+
+  useEffect(() => {
+    if (route?.params?.savedUser) {
+      setEmail(route?.params?.savedUser?.emailid);
+      setPassword(route?.params?.savedUser?.password);
+
+      handleSignIn(
+        route?.params?.savedUser?.emailid,
+        route?.params?.savedUser?.password
+      );
+    }
+  }, [route]);
 
   return (
     <View style={styles.container}>
@@ -284,7 +314,7 @@ const SignInScreen = () => {
 
               {/* Signin Btn */}
               <TouchableOpacity
-                onPress={handleSignIn}
+                onPress={() => handleSignIn(email, password)}
                 activeOpacity={0.7}
                 style={styles.signInButton}
                 disabled={loading}

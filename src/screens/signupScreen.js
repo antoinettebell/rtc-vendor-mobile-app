@@ -25,9 +25,12 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { emailRegex, passwordRegex } from "../utils/constants";
 import { registerVendor_API } from "../api/authAPI";
 import StatusBarManager from "../components/StatusBarManager";
+import { useSelector } from "react-redux";
 
 const SignUpScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
+
+  const { allSigninUsers } = useSelector((state) => state.userInfoReducer);
 
   const [name, setName] = useState("");
   const [foodTruckName, setFoodTruckName] = useState("");
@@ -133,7 +136,7 @@ const SignUpScreen = ({ navigation }) => {
       if (response?.success && response?.data) {
         navigation.navigate("otpVerification", {
           verificationFor: "sign-up",
-          data: response.data,
+          data: { ...response.data, localPassword: password },
           nextScreen: "",
         });
       }
@@ -482,7 +485,13 @@ const SignUpScreen = ({ navigation }) => {
                   {"Already have an account? "}{" "}
                 </Text>
                 <TouchableOpacity
-                  onPress={() => navigation.navigate("signin")}
+                  onPress={() => {
+                    if (allSigninUsers?.length > 0) {
+                      navigation.navigate("oneTapSignin");
+                    } else {
+                      navigation.navigate("signin");
+                    }
+                  }}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.signInLink}>{"Sign In"}</Text>

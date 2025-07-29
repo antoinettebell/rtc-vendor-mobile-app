@@ -21,6 +21,7 @@ import StatusBarManager from "../components/StatusBarManager";
 import Screen1Svg from "../assets/images/intro1.svg";
 import Screen2Svg from "../assets/images/intro2.svg";
 import Screen3Svg from "../assets/images/intro3.svg";
+import { useSelector } from "react-redux";
 
 const { width, height } = Dimensions.get("window");
 
@@ -56,8 +57,18 @@ const AuthIntroScreen = ({ navigation }) => {
   const pagerRef = useRef(null);
   const activeIndex = useSharedValue(0);
 
+  const { allSigninUsers } = useSelector((state) => state.userInfoReducer);
+
   const onPageSelected = (e) => {
     activeIndex.value = e.nativeEvent.position;
+  };
+
+  const handleSigninPress = () => {
+    if (allSigninUsers?.length > 0) {
+      navigation.navigate("oneTapSignin");
+    } else {
+      navigation.navigate("signin");
+    }
   };
 
   return (
@@ -122,7 +133,7 @@ const AuthIntroScreen = ({ navigation }) => {
 
       <View style={styles.buttonRow}>
         <TouchableOpacity
-          onPress={() => navigation.navigate("signin")}
+          onPress={handleSigninPress}
           activeOpacity={0.7}
           style={styles.signInButton}
         >

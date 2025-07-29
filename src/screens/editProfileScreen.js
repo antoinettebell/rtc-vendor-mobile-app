@@ -44,6 +44,7 @@ import { setUser, updateFoodTruck } from "../redux/slices/userSlice";
 import { Dropdown } from "react-native-element-dropdown";
 import { formatEIN, formatSSN } from "../helpers/profile.helper";
 import AppImage from "../components/AppImage";
+import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
 
 const dropdownData = [
   {
@@ -862,6 +863,16 @@ const EditProfileScreen = ({ navigation }) => {
       if (foodTruckResponse.success && foodTruckResponse.data) {
         console.log("foodTruckResponse => ", foodTruckResponse.data);
         dispatch(updateFoodTruck(foodTruckResponse.data.foodtruck));
+        dispatch(
+          addOrUpdateUser({
+            emailid: user.email,
+            userData: {
+              emailid: user.email,
+              username: foodTruckResponse?.data?.foodtruck?.name || "",
+              imageUrl: foodTruckResponse?.data?.foodtruck.logo || null,
+            },
+          })
+        );
       }
 
       setSnackbar({

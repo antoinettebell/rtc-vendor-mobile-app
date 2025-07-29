@@ -60,6 +60,7 @@ import RateReviewScreen from "./src/screens/rateReviewScreen";
 import ProfileSubscriptionScreen from "./src/screens/profileSubscriptionScreen";
 import AuthFoodTruckBankDetailScreen from "./src/screens/authFoodTruckBankDetailScreen";
 import EditBankDetailScreen from "./src/screens/editBankDetailScreen";
+import OneTapSignInScreen from "./src/screens/oneTapSigninScreen";
 
 const Stack = createNativeStackNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -84,6 +85,7 @@ const AuthNavigator = () => (
     <Stack.Screen name="authIntro" component={AuthIntroScreen} />
     <Stack.Screen name="signin" component={SigninScreen} />
     <Stack.Screen name="signup" component={SignupScreen} />
+    <Stack.Screen name="oneTapSignin" component={OneTapSignInScreen} />
     <Stack.Screen name="otpVerification" component={OtpVerificationScreen} />
     <Stack.Screen name="resetPassword" component={ResetPasswordScreen} />
     <Stack.Screen name="forgetPassword" component={ForgetPasswordScreen} />
