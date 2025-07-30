@@ -7,6 +7,7 @@ export const PROFILE_MENU_IMAGES = {
   yourProfile: require("../assets/images/yourProfileIcon.png"),
   servingLocations: require("../assets/images/servingLocationIcon.png"),
   cuisine: require("../assets/images/cuiniesIcon.png"),
+  manageBusinessHours: require("../assets/images/openSign.png"),
   manageAvailability: require("../assets/images/manageAvailabilityIcon.png"),
   changePassword: require("../assets/images/changePasswordIcon.png"),
   bankDetail: require("../assets/images/profileBankIcon.png"),

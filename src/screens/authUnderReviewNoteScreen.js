@@ -10,24 +10,33 @@ import { Text, IconButton, ActivityIndicator } from "react-native-paper";
 import Octicons from "react-native-vector-icons/Octicons";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { onSignin } from "../redux/slices/authSlice";
 import StatusBarManager from "../components/StatusBarManager";
 import {
   checkFcmToken,
   checkInstallationId,
 } from "../helpers/notification.helper";
-import { setFcmToken_API } from "../api/appAPI";
+import { getUserDetail_API, setFcmToken_API } from "../api/appAPI";
+import { setUser } from "../redux/slices/userSlice";
 
 export default function AuthUnderReviewNoteScreen() {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.userReducer);
 
   const [loading, setLoading] = useState(false);
 
   const handleContinueBtnPress = async () => {
     setLoading(true);
     try {
+      const user_id = user?._id;
+      const response = await getUserDetail_API(user_id);
+      console.log("response => ", response);
+      if (response?.success && response?.data) {
+        dispatch(setUser(response.data.user));
+      }
+
       const deviceId = await checkInstallationId();
       const fcmToken = await checkFcmToken();
       if (deviceId && fcmToken) {

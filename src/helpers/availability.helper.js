@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 export const transformLocationsForAPI = (data) => {
   return data.flatMap((dayItem) =>
     dayItem.locations
-      .filter((location) => location.value)
+      .filter((location) => location.value) // keep only that items, which have location
       .map((location) => {
         return {
           ...(location?._id && { _id: location._id }), // Keep existing ID if available
@@ -16,6 +16,20 @@ export const transformLocationsForAPI = (data) => {
         };
       })
   );
+};
+
+export const transformBusinessHoursForAPI = (data) => {
+  return data
+    .filter((location) => location.value) // keep only that items, which have location
+    .map((location) => {
+      return {
+        ...(location?._id && { _id: location._id }), // Keep existing ID if available
+        locationId: location.value,
+        startTime: moment(location.openTime).format("HH:mm"),
+        endTime: moment(location.closeTime).format("HH:mm"),
+        available: location.enabled,
+      };
+    });
 };
 
 export const hasTimeOverlap = (startTime1, endTime1, startTime2, endTime2) => {
@@ -57,48 +71,86 @@ export const hasTimeOverlap = (startTime1, endTime1, startTime2, endTime2) => {
 
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-// Function to transform API data to component format
-export const transformApiDataToState = (apiData, locationData = []) => {
-  return days.map((day) => {
-    const dayLower = day.toLowerCase();
-    const dayEntries = apiData.filter((item) => item.day === dayLower);
+/**
+ * Formats API data to the component state format
+ * @param {Array} apiAvailability - The availability data from API
+ * @param {Array} apiLocations - The locations data from API
+ * @returns {Array} - Formatted data for component state
+ */
+export const formatApiDataToComponentState = (
+  apiAvailability,
+  apiLocations
+) => {
+  // Create a map to track which days have enabled slots
+  const daysWithEnabledSlots = {};
 
-    // If no entries for this day, return default
-    if (dayEntries.length === 0) {
-      return {
-        day,
-        locations: [
-          {
-            uniqueId: uuidv4(),
-            value: null,
-            locationTitle: "",
-            openTime: moment().startOf("day").toDate(),
-            closeTime: moment().startOf("day").toDate(),
-            enabled: false,
-          },
-        ],
-      };
+  // Initialize the state structure with default values for all days
+  const formattedData = days.map((day) => ({
+    day,
+    dayEnabled: false,
+    locations: [
+      {
+        uniqueId: uuidv4(),
+        value: null,
+        openTime: moment().startOf("day").toDate(),
+        closeTime: moment().startOf("day").toDate(),
+        enabled: false,
+      },
+    ],
+  }));
+
+  // Group availability entries by day
+  const availabilityByDay = {};
+
+  apiAvailability.forEach((item) => {
+    // Convert day format from 'mon' to 'Mon'
+    const dayKey = item.day.charAt(0).toUpperCase() + item.day.slice(1, 3);
+    if (!availabilityByDay[dayKey]) {
+      availabilityByDay[dayKey] = [];
     }
+    availabilityByDay[dayKey].push(item);
 
-    // Transform each location entry for this day
-    return {
-      day,
-      locations: dayEntries.map((entry) => {
-        // Find the matching location from locationData
-        const location = locationData.find(
+    // Mark this day as having at least one enabled slot if available is true
+    if (item.available) {
+      daysWithEnabledSlots[dayKey] = true;
+    }
+  });
+
+  // Process each day
+  days.forEach((day, index) => {
+    const dayEntries = availabilityByDay[day] || [];
+
+    // If we have entries for this day
+    if (dayEntries.length > 0) {
+      // Set dayEnabled to true if any slot is enabled
+      formattedData[index].dayEnabled = !!daysWithEnabledSlots[day];
+
+      // Map the entries to the correct format
+      const mappedLocations = dayEntries.map((entry) => {
+        // Find the corresponding location data
+        const locationData = apiLocations.find(
           (loc) => loc._id === entry.locationId
         );
 
         return {
           uniqueId: uuidv4(),
           value: entry.locationId,
-          locationTitle: location?.title || "",
           openTime: moment(entry.startTime, "HH:mm").toDate(),
           closeTime: moment(entry.endTime, "HH:mm").toDate(),
           enabled: entry.available,
-          _id: entry._id,
+          _id: entry._id, // Keep the original ID for updates
+          locationTitle: locationData?.title || "",
+          locationAddress: locationData?.address || "",
         };
-      }),
-    };
+      });
+
+      // Replace the default location with our mapped locations
+      if (mappedLocations.length > 0) {
+        formattedData[index].locations = mappedLocations;
+      }
+    }
   });
+
+  console.log("Formatted Data for Component:", formattedData);
+  return formattedData;
 };

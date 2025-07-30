@@ -5,6 +5,8 @@ const initialState = {
   selectedLocations: [],
   selectedFoodCategory: [],
   selectedFoodItems: [],
+  selectedBusinessHrs: [],
+  selectedPreOrderAvailability: [],
 };
 
 const foodTruckProfileSlice = createSlice({
@@ -23,6 +25,12 @@ const foodTruckProfileSlice = createSlice({
     setSelectedFoodItems: (state, { payload }) => {
       state.selectedFoodItems = payload;
     },
+    setSelectedBusinessHours: (state, { payload }) => {
+      state.selectedBusinessHrs = payload;
+    },
+    setPreOrderAvailability: (state, { payload }) => {
+      state.selectedPreOrderAvailability = payload;
+    },
     clearFoodTruckProfileSlice: () => initialState,
   },
 });
@@ -33,5 +41,7 @@ export const {
   setSelectedFoodCategory,
   setSelectedFoodItems,
   clearFoodTruckProfileSlice,
+  setSelectedBusinessHours,
+  setPreOrderAvailability,
 } = foodTruckProfileSlice.actions;
 export default foodTruckProfileSlice.reducer;

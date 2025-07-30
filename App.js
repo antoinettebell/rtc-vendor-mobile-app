@@ -61,6 +61,8 @@ import ProfileSubscriptionScreen from "./src/screens/profileSubscriptionScreen";
 import AuthFoodTruckBankDetailScreen from "./src/screens/authFoodTruckBankDetailScreen";
 import EditBankDetailScreen from "./src/screens/editBankDetailScreen";
 import OneTapSignInScreen from "./src/screens/oneTapSigninScreen";
+import AuthSetBusinessHrsScreen from "./src/screens/authSetBusinessHrsScreen";
+import ProfileSetBusinessHrsScreen from "./src/screens/profileSetBusinessHrsScreen";
 
 const Stack = createNativeStackNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -117,6 +119,10 @@ const FinalSignupStepsNavigator = () => (
       component={AuthServingLocationScreen}
     />
     <Stack.Screen name="authMapScreen" component={AuthMapScreen} />
+    <Stack.Screen
+      name="authSetBusinessHrsScreen"
+      component={AuthSetBusinessHrsScreen}
+    />
     <Stack.Screen
       name="authAvailabilityScreen"
       component={AuthAvailabilityScreen}
@@ -237,6 +243,10 @@ const MainAppNavigator = ({ insets }) => (
     <Stack.Screen
       name="profileSelectCuisineScreen"
       component={ProfileSelectCuisineScreen}
+    />
+    <Stack.Screen
+      name="profileSetBusinessHoursScreen"
+      component={ProfileSetBusinessHrsScreen}
     />
     <Stack.Screen
       name="profileAvailabilityScreen"

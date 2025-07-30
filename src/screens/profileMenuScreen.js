@@ -706,7 +706,14 @@ const ProfileMenuScreen = ({ navigation }) => {
           <HR />
           <ItemComponent
             rightIcon
-            label="Manage Availability"
+            label="Business Hours"
+            imageUri={PROFILE_MENU_IMAGES.manageBusinessHours}
+            onPress={() => navigation.navigate("profileSetBusinessHoursScreen")}
+          />
+          <HR />
+          <ItemComponent
+            rightIcon
+            label="Pre-Order Availability"
             imageUri={PROFILE_MENU_IMAGES.manageAvailability}
             onPress={() => navigation.navigate("profileAvailabilityScreen")}
           />

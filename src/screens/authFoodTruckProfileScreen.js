@@ -659,7 +659,8 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
           foodTruck: response.data.foodtruck,
         });
         dispatch(setUser({ ...user, foodTruck: response.data.foodtruck }));
-        navigation.navigate("authAvailabilityScreen");
+        navigation.navigate("authSetBusinessHrsScreen");
+        // navigation.navigate("authAvailabilityScreen");
       }
     } catch (error) {
       console.error("error => ", error);
@@ -734,6 +735,10 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
                     size={18}
                   />
                 </View>
+              </View>
+              <View style={styles.line} />
+              <View style={styles.stepSubContainer}>
+                <View style={styles.emptyCircle} />
               </View>
               <View style={styles.line} />
               <View style={styles.stepSubContainer}>

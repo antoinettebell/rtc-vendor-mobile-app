@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   ScrollView,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Platform,
   Alert,
+  Animated,
 } from "react-native";
 import {
   Text,
@@ -19,16 +20,18 @@ import { Dropdown } from "react-native-element-dropdown";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import Octicons from "react-native-vector-icons/Octicons";
 import moment from "moment";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { updateFoodTruckProfile_API } from "../api/appAPI";
-import { setUser } from "../redux/slices/userSlice";
+import { setUser, updateFoodTruck } from "../redux/slices/userSlice";
+import { setPreOrderAvailability } from "../redux/slices/foodTruckProfileSlice";
 import StatusBarManager from "../components/StatusBarManager";
-import { onUnderReview } from "../redux/slices/authSlice";
 import {
   hasTimeOverlap,
+  transformBusinessHoursForAPI,
   transformLocationsForAPI,
 } from "../helpers/availability.helper";
 import { fullDayNames } from "../utils/constants";
@@ -39,14 +42,17 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
 
-  const { selectedLocations } = useSelector(
-    (state) => state.foodTruckProfileReducer
-  );
+  const {
+    selectedLocations,
+    selectedPreOrderAvailability,
+    selectedBusinessHrs,
+  } = useSelector((state) => state.foodTruckProfileReducer);
   const { user } = useSelector((state) => state.userReducer);
 
   const [availability, setAvailability] = useState(
     days.map((day) => ({
       day,
+      dayEnabled: false, // New property for the main day switch
       locations: [
         {
           uniqueId: uuidv4(),
@@ -58,6 +64,25 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
       ],
     }))
   );
+
+  useEffect(() => {
+    if (
+      selectedPreOrderAvailability &&
+      selectedPreOrderAvailability.length > 0
+    ) {
+      const deepCopiedAvailability = selectedPreOrderAvailability.map(
+        (dayItem) => ({
+          ...dayItem,
+          locations: dayItem.locations.map((locItem) => ({
+            ...locItem,
+            openTime: new Date(locItem.openTime), // Create new Date object
+            closeTime: new Date(locItem.closeTime), // Create new Date object
+          })),
+        })
+      );
+      setAvailability(deepCopiedAvailability);
+    }
+  }, [selectedPreOrderAvailability]);
 
   const [loading, setLoading] = useState(false);
   const [activeDayIndex, setActiveDayIndex] = useState(null);
@@ -82,10 +107,22 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
     setPickerVisible(false);
   };
 
-  const toggleSwitch = (dayIndex, locIndex) => {
+  const toggleLocationSwitch = (dayIndex, locIndex) => {
     const updated = [...availability];
     updated[dayIndex].locations[locIndex].enabled =
       !updated[dayIndex].locations[locIndex].enabled;
+    setAvailability(updated);
+  };
+
+  const toggleDaySwitch = (dayIndex) => {
+    const updated = [...availability];
+    const newDayEnabledStatus = !updated[dayIndex].dayEnabled;
+    updated[dayIndex].dayEnabled = newDayEnabledStatus;
+    // Set all locations for the day to the new dayEnabled state
+    updated[dayIndex].locations = updated[dayIndex].locations.map((loc) => ({
+      ...loc,
+      enabled: newDayEnabledStatus,
+    }));
     setAvailability(updated);
   };
 
@@ -102,12 +139,13 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
 
   const addLocation = (dayIndex) => {
     const updated = [...availability];
+    const dayEnabledStatus = updated[dayIndex].dayEnabled; // Get the day's enabled status
     updated[dayIndex].locations.push({
       uniqueId: uuidv4(),
       value: null,
       openTime: moment().startOf("day").toDate(), // 00:00
       closeTime: moment().startOf("day").toDate(), // 00:00
-      enabled: false,
+      enabled: dayEnabledStatus, // Set enabled based on day's status
     });
     setAvailability(updated);
   };
@@ -131,14 +169,14 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
             dayToUpdate.locations.splice(locIndex, 1);
 
             // If, after removal, there are no more locations for this day,
-            // add a default, disabled one.
+            // add a default one, inheriting the day's enabled status.
             if (dayToUpdate.locations.length === 0) {
               dayToUpdate.locations.push({
                 uniqueId: uuidv4(),
                 value: null,
                 openTime: moment().startOf("day").toDate(), // 00:00
                 closeTime: moment().startOf("day").toDate(), // 00:00
-                enabled: false,
+                enabled: dayToUpdate.dayEnabled, // Inherit day's enabled status
               });
             }
             setAvailability(updatedAvailability);
@@ -154,83 +192,55 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
 
     // --- Validation: Check for missing location ---
     for (let day of availability) {
-      for (let loc of day.locations) {
-        if (loc.enabled && !loc.value) {
-          Alert.alert(
-            "Missing Location",
-            `Please select a location for ${fullDayNames[day.day] || day.day} before continuing.`
-          );
-          return;
+      // Only validate if the day is enabled
+      if (day.dayEnabled) {
+        for (let loc of day.locations) {
+          if (!loc.value) {
+            Alert.alert(
+              "Missing Location",
+              `Please select a location for ${fullDayNames[day.day] || day.day} before continuing.`
+            );
+            return;
+          }
         }
       }
     }
 
     // --- COMBINED VALIDATION: End Time strictly after Start Time & Time Slot Overlaps for the same day ---
-    console.log("Starting combined time slot validations...");
     for (let i = 0; i < availability.length; i++) {
       const currentDay = availability[i];
       const fullCurrentDayName = fullDayNames[currentDay.day] || currentDay.day; // Get full day name
-      console.log(`Checking availability for day: ${fullCurrentDayName}`);
 
-      // Filter only enabled slots that have a location selected
-      const enabledAndSelectedLocations = currentDay.locations.filter(
-        (loc) => loc.enabled && loc.value
-      );
-      console.log(
-        `  Enabled and selected locations for ${fullCurrentDayName}:`,
-        enabledAndSelectedLocations.length
-      );
+      // Filter only enabled slots that have a location selected, and only if the day is enabled
+      const enabledAndSelectedLocations = currentDay.dayEnabled
+        ? currentDay.locations.filter((loc) => loc.enabled && loc.value)
+        : [];
 
       // FIRST: Validate each individual slot's StartTime vs EndTime
       for (let j = 0; j < enabledAndSelectedLocations.length; j++) {
         const loc = enabledAndSelectedLocations[j];
         const startTime = moment(loc.openTime);
         const endTime = moment(loc.closeTime);
-
-        console.log("loc => ", currentDay);
-
-        console.log(
-          `    Checking Open Time vs Close Time for '${loc.locationTitle || "Unnamed Location"}' on ${fullCurrentDayName}: ${startTime.format("HH:mm")} - ${endTime.format("HH:mm")}`
-        );
-
         if (!endTime.isAfter(startTime)) {
           Alert.alert(
             "Invalid Time Slot",
             `On ${fullCurrentDayName}, the Close Time (${endTime.format("h:mm A")}) for '${loc.locationTitle || "an unnamed location slot"}' must be after its Open Time (${startTime.format("h:mm A")}). Please adjust.`
           );
-          console.log("Here I'm stopped!!! Invalid Open/Close Time detected.");
           return; // Stop execution if an invalid individual time slot is found
         }
       }
 
       // If there's 0 or 1 enabled slot, no overlap is possible for this day, so continue to the next day
       if (enabledAndSelectedLocations.length < 2) {
-        console.log(
-          `  Not enough enabled slots on ${fullCurrentDayName} to check for overlap.`
-        );
         continue;
       }
 
       // SECOND: Check for overlaps between pairs of time slots on the same day
       for (let j = 0; j < enabledAndSelectedLocations.length; j++) {
         const loc1 = enabledAndSelectedLocations[j];
-        console.log(`    Comparing loc1 (index ${j}):`, {
-          day: fullCurrentDayName,
-          location: loc1.locationTitle,
-          open: moment(loc1.openTime).format("HH:mm"),
-          close: moment(loc1.closeTime).format("HH:mm"),
-        });
-
         // Start inner loop from j + 1 to avoid comparing a slot with itself and to avoid duplicate checks
         for (let k = j + 1; k < enabledAndSelectedLocations.length; k++) {
           const loc2 = enabledAndSelectedLocations[k];
-          console.log(`      Comparing with loc2 (index ${k}):`, {
-            day: fullCurrentDayName,
-            location: loc2.locationTitle,
-            open: moment(loc2.openTime).format("HH:mm"),
-            close: moment(loc2.closeTime).format("HH:mm"),
-          });
-
           if (
             hasTimeOverlap(
               loc1.openTime,
@@ -247,12 +257,6 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
               `On ${fullCurrentDayName}, the time slot for '${loc1Name}' (Open Time: ${moment(loc1.openTime).format("h:mm A")} - Close Time: ${moment(loc1.closeTime).format("h:mm A")}) overlaps with the time slot for '${loc2Name}' (Open Time: ${moment(loc2.openTime).format("h:mm A")} - Close Time: ${moment(loc2.closeTime).format("h:mm A")}). Please adjust your times.`,
               [{ text: "OK" }]
             );
-            console.log("Here I'm stopped!!! Overlap detected!");
-            console.log(`    Overlap details:
-            Day: ${fullCurrentDayName}
-            Slot 1: ${loc1Name} (Open Time: ${moment(loc1.openTime).format("HH:mm")} - Close Time: ${moment(loc1.closeTime).format("HH:mm")})
-            Slot 2: ${loc2Name} (Open Time: ${moment(loc2.openTime).format("HH:mm")} - Close Time: ${moment(loc2.closeTime).format("HH:mm")})
-          `);
             return; // Stop execution if an overlap is found
           } else {
             console.log(
@@ -262,28 +266,28 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
         }
       }
     }
-    console.log("All combined time slot validations completed with no issues.");
     // --- END COMBINED VALIDATION ---
 
-    const finalResult = transformLocationsForAPI(availability);
-    console.log("finalResult => ", finalResult);
+    const preOrderData = transformLocationsForAPI(availability);
+    console.log("preOrderData => ", preOrderData);
+
+    const businessHoursData = transformBusinessHoursForAPI(selectedBusinessHrs);
+    console.log("businessHoursData => ", businessHoursData);
 
     setLoading(true);
     try {
       const payload = {
-        availability: finalResult,
+        availability: preOrderData,
+        businessHours: businessHoursData,
       };
       const response = await updateFoodTruckProfile_API({
         payload,
         foodTruckId: user?.foodTruck?._id,
       });
+      console.log("response => ", response);
       if (response?.success && response?.data) {
-        console.log("response => ", response);
-        const tempUser = {
-          ...user,
-          foodTruck: response.data.foodtruck,
-        };
-        dispatch(setUser(tempUser));
+        dispatch(setPreOrderAvailability(availability));
+        dispatch(updateFoodTruck(response.data.foodtruck));
         navigation.navigate("authFoodTruckBankDetailScreen");
       }
     } catch (error) {
@@ -305,13 +309,13 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
           size={24}
           onPress={() => navigation.goBack()}
         />
-        <Text style={styles.headerTitle}>Set Availability</Text>
+        <Text style={styles.headerTitle}>{"Pre-Order Availability"}</Text>
         <View style={{ width: 48 }} />
       </View>
 
       {/* Content Container */}
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
+        contentContainerStyle={styles.scrollViewContentContainer}
         bounces={false}
         showsVerticalScrollIndicator={false}
         pointerEvents={loading ? "none" : "auto"}
@@ -319,6 +323,12 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
         <View style={{ flex: 1 }}>
           {/* Step Container */}
           <View style={styles.stepContainer}>
+            <View style={styles.stepSubContainer}>
+              <View style={styles.filledCircle}>
+                <FontAwesome6 name="check" color={AppColor.white} size={18} />
+              </View>
+            </View>
+            <View style={styles.line} />
             <View style={styles.stepSubContainer}>
               <View style={styles.filledCircle}>
                 <FontAwesome6 name="check" color={AppColor.white} size={18} />
@@ -347,163 +357,186 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
           </View>
 
           {/* Content Header Continer */}
-          <View
-            style={{
-              backgroundColor: AppColor.white,
-              paddingHorizontal: 16,
-              paddingVertical: 30,
-            }}
-          >
-            <Text
-              style={{
-                marginBottom: 12,
-                color: AppColor.black,
-                fontSize: 24,
-                fontFamily: Mulish700,
-              }}
-            >
-              Availability
+          <View style={styles.contentHeaderContainer}>
+            <Text style={styles.contentHeaderTitle}>
+              {"Set Pre-Order Availability"}
             </Text>
-            <Text
-              style={{
-                color: "#606268",
-                fontSize: 14,
-                fontFamily: Mulish400,
-              }}
-            >
-              Set open & close time of your food-truck
+            <Text style={styles.contentHeaderDescription}>
+              {
+                "Set a time for customers to place orders to pickup at a scheduled time."
+              }
             </Text>
           </View>
 
           {/* TimeSlots Container */}
-          <View style={{ padding: 16 }}>
-            {availability.map((item, index) => (
-              <View key={index} style={styles.dayContainer}>
-                {item.locations.map((loc, locIndex) => (
-                  <View key={loc.uniqueId} style={{ marginBottom: 16 }}>
-                    <View style={styles.timeRow}>
-                      <View style={styles.dayCircle}>
-                        <Text
-                          style={{
-                            color: "#fff",
-                            fontSize: 16,
-                            fontFamily: Mulish700,
-                          }}
-                        >
-                          {item.day}
-                        </Text>
-                      </View>
+          <View style={styles.timeSlotsContainer}>
+            {availability.map((item, index) => {
+              const animatedOpacity = useRef(
+                new Animated.Value(item.dayEnabled ? 1 : 0)
+              ).current;
 
-                      <TouchableOpacity
-                        onPress={() =>
-                          showTimePicker(index, locIndex, "openTime")
-                        }
-                      >
-                        <Text style={styles.timeLabel}>
-                          {loc.openTime.toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </Text>
-                        <Text style={styles.timeSubLabel}>Open</Text>
-                      </TouchableOpacity>
+              useEffect(() => {
+                Animated.timing(animatedOpacity, {
+                  toValue: item.dayEnabled ? 1 : 0,
+                  duration: 500,
+                  useNativeDriver: true,
+                }).start();
+              }, [item.dayEnabled]);
 
-                      <TouchableOpacity
-                        onPress={() =>
-                          showTimePicker(index, locIndex, "closeTime")
-                        }
-                      >
-                        <Text style={styles.timeLabel}>
-                          {loc.closeTime.toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </Text>
-                        <Text style={styles.timeSubLabel}>Close</Text>
-                      </TouchableOpacity>
-
-                      <Switch
-                        color={AppColor.primary}
-                        value={loc.enabled}
-                        onValueChange={() => toggleSwitch(index, locIndex)}
-                      />
+              return (
+                <View key={index} style={styles.dayContainer}>
+                  {/* Day Header with Switch */}
+                  <View
+                    style={[
+                      styles.timeRow,
+                      item.dayEnabled && { marginBottom: 16 },
+                    ]}
+                  >
+                    <View style={styles.dayCircle}>
+                      <Text style={styles.dayCircleText}>{item.day}</Text>
                     </View>
-
-                    <View
-                      style={{
-                        flex: 1,
-                        flexDirection: "row",
-                        alignItems: "center",
-                        marginTop: 12,
-                      }}
-                    >
-                      <Dropdown
-                        data={selectedLocations}
-                        labelField="title"
-                        valueField="_id"
-                        value={loc._id}
-                        onChange={(selectedItem) =>
-                          updateLocation(index, locIndex, selectedItem)
-                        }
-                        placeholder="Select Location"
-                        style={styles.dropdown}
-                        placeholderStyle={{ fontFamily: Mulish400 }}
-                        itemTextStyle={{ fontFamily: Mulish400 }}
-                        selectedTextStyle={{ fontFamily: Mulish400 }}
-                      />
-                      <TouchableOpacity
-                        activeOpacity={0.7}
-                        style={{
-                          alignItems: "flex-end",
-                          justifyContent: "center",
-                          height: 40,
-                          width: "16%",
-                        }}
-                        onPress={() => removeLocation(index, locIndex)}
-                      >
-                        <MaterialCommunityIcons
-                          name="trash-can"
-                          color={AppColor.red}
-                          size={32}
-                        />
-                      </TouchableOpacity>
-                    </View>
-
-                    {locIndex !== item?.locations?.length - 1 && (
-                      <View
-                        style={{
-                          borderBottomColor: "#E5E5EA",
-                          borderBottomWidth: 1,
-                          marginTop: 16,
-                        }}
-                      />
-                    )}
+                    <Text style={styles.dayNameText}>
+                      {fullDayNames[item.day]}
+                    </Text>
+                    <Switch
+                      color={AppColor.primary}
+                      value={item.dayEnabled}
+                      onValueChange={() => toggleDaySwitch(index)}
+                    />
                   </View>
-                ))}
 
-                <Button
-                  icon="plus"
-                  mode="outlined"
-                  onPress={() => addLocation(index)}
-                  style={styles.addButton}
-                  labelStyle={{ fontFamily: Mulish400 }}
-                >
-                  Add Location
-                </Button>
-              </View>
-            ))}
+                  {/* Conditionally render location details if day is enabled */}
+                  <Animated.View style={{ opacity: animatedOpacity }}>
+                    {item.dayEnabled && (
+                      <View>
+                        {item.locations.map((loc, locIndex) => (
+                          <View key={loc.uniqueId}>
+                            <View style={styles.timeSlotRow}>
+                              <View style={styles.timeInputContainer}>
+                                <Text style={styles.timeInputLabel}>
+                                  {"Open"}
+                                </Text>
+                                <TouchableOpacity
+                                  activeOpacity={0.7}
+                                  style={styles.timeInputButton}
+                                  onPress={() =>
+                                    showTimePicker(index, locIndex, "openTime")
+                                  }
+                                >
+                                  <Text style={styles.timeLabel}>
+                                    {loc.openTime.toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                  </Text>
+                                  <Octicons
+                                    name="clock"
+                                    size={20}
+                                    color={AppColor.textHighlighter}
+                                  />
+                                </TouchableOpacity>
+                              </View>
+
+                              <View style={styles.timeInputContainer}>
+                                <Text style={styles.timeInputLabel}>
+                                  {"Close"}
+                                </Text>
+                                <TouchableOpacity
+                                  activeOpacity={0.7}
+                                  style={styles.timeInputButton}
+                                  onPress={() =>
+                                    showTimePicker(index, locIndex, "closeTime")
+                                  }
+                                >
+                                  <Text style={styles.timeLabel}>
+                                    {loc.closeTime.toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                  </Text>
+                                  <Octicons
+                                    name="clock"
+                                    size={20}
+                                    color={AppColor.textHighlighter}
+                                  />
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+
+                            <View style={styles.locationInputContainer}>
+                              <Text style={styles.locationInputLabel}>
+                                {"Location"}
+                              </Text>
+                              <View style={styles.locationDropdownWrapper}>
+                                <Dropdown
+                                  data={selectedLocations}
+                                  labelField="title"
+                                  valueField="_id"
+                                  value={loc.value}
+                                  onChange={(selectedItem) =>
+                                    updateLocation(
+                                      index,
+                                      locIndex,
+                                      selectedItem
+                                    )
+                                  }
+                                  placeholder="Select Location"
+                                  style={styles.dropdown}
+                                  placeholderStyle={{ fontFamily: Mulish400 }}
+                                  itemTextStyle={{ fontFamily: Mulish400 }}
+                                  selectedTextStyle={{ fontFamily: Mulish400 }}
+                                />
+                                <TouchableOpacity
+                                  activeOpacity={0.7}
+                                  style={styles.removeLocationButton}
+                                  onPress={() =>
+                                    removeLocation(index, locIndex)
+                                  }
+                                >
+                                  <MaterialCommunityIcons
+                                    name="trash-can"
+                                    color={AppColor.red}
+                                    size={32}
+                                  />
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+
+                            {locIndex !== item?.locations?.length - 1 && (
+                              <View style={styles.divider} />
+                            )}
+                          </View>
+                        ))}
+
+                        {item.dayEnabled && (
+                          <Button
+                            icon="plus-circle-outline"
+                            mode="outlined"
+                            onPress={() => addLocation(index)}
+                            style={styles.addButton}
+                            textColor={AppColor.primary}
+                            theme={styles.addButtonTheme}
+                            labelStyle={{ fontFamily: Mulish400 }}
+                          >
+                            Add Location
+                          </Button>
+                        )}
+                      </View>
+                    )}
+                  </Animated.View>
+                </View>
+              );
+            })}
           </View>
         </View>
       </ScrollView>
 
       {/* Continue Button */}
       <View
-        style={{
-          paddingBottom: insets.bottom,
-          borderTopWidth: 1,
-          borderColor: AppColor.border,
-          backgroundColor: AppColor.white,
-        }}
+        style={[
+          styles.continueButtonContainer,
+          { paddingBottom: insets.bottom },
+        ]}
       >
         <TouchableOpacity
           style={styles.continueButton}
@@ -612,6 +645,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 8,
   },
   timeLabel: {
     fontSize: 14,
@@ -619,12 +653,7 @@ const styles = StyleSheet.create({
     color: AppColor.black,
     textAlign: "center",
   },
-  timeSubLabel: {
-    fontSize: 12,
-    color: "#888",
-    textAlign: "center",
-    fontFamily: Mulish400,
-  },
+
   dropdown: {
     height: 40,
     width: "84%",
@@ -634,8 +663,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   addButton: {
-    marginBottom: 16,
+    marginTop: 16,
     borderRadius: 6,
+    alignSelf: "flex-start",
+  },
+  addButtonTheme: {
+    colors: { outline: AppColor.primary },
   },
 
   continueButton: {
@@ -665,5 +698,99 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.white,
+  },
+
+  // Content Header
+  contentHeaderContainer: {
+    backgroundColor: AppColor.white,
+    paddingHorizontal: 16,
+    paddingVertical: 30,
+  },
+  contentHeaderTitle: {
+    marginBottom: 12,
+    color: AppColor.black,
+    fontSize: 24,
+    fontFamily: Mulish700,
+  },
+  contentHeaderDescription: {
+    color: "#606268",
+    fontSize: 14,
+    fontFamily: Mulish400,
+  },
+
+  // Time Slots
+  timeSlotsContainer: {
+    padding: 16,
+  },
+  dayCircleText: {
+    color: "#fff",
+    fontSize: 16,
+    fontFamily: Mulish700,
+  },
+  dayNameText: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: Mulish700,
+    color: AppColor.black,
+  },
+  timeSlotRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 16,
+    marginBottom: 16,
+  },
+  timeInputContainer: {
+    flex: 1 / 2,
+    gap: 5,
+  },
+  timeInputLabel: {
+    fontSize: 14,
+    fontFamily: Mulish400,
+    color: AppColor.text,
+  },
+  timeInputButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 5,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: AppColor.border,
+  },
+  locationInputContainer: {
+    gap: 5,
+  },
+  locationInputLabel: {
+    fontSize: 14,
+    fontFamily: Mulish400,
+    color: AppColor.text,
+  },
+  locationDropdownWrapper: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  removeLocationButton: {
+    alignItems: "flex-end",
+    justifyContent: "center",
+    height: 40,
+    width: "16%",
+  },
+  divider: {
+    borderBottomColor: "#E5E5EA",
+    borderBottomWidth: 1,
+    marginVertical: 24,
+  },
+
+  // Continue Button
+  continueButtonContainer: {
+    borderTopWidth: 1,
+    borderColor: AppColor.border,
+    backgroundColor: AppColor.white,
+  },
+
+  scrollViewContentContainer: {
+    flexGrow: 1,
   },
 });

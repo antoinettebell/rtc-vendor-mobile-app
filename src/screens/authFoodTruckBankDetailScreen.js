@@ -166,6 +166,12 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
               <View style={styles.line} />
               <View style={styles.stepSubContainer}>
                 <View style={styles.filledCircle}>
+                  <FontAwesome6 name="check" color={AppColor.white} size={18} />
+                </View>
+              </View>
+              <View style={styles.line} />
+              <View style={styles.stepSubContainer}>
+                <View style={styles.filledCircle}>
                   <FontAwesome6
                     name="person-walking"
                     color={AppColor.white}
