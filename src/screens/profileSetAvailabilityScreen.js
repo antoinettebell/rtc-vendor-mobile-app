@@ -7,7 +7,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator as NativeIndicator,
-  Animated,
+  Pressable,
 } from "react-native";
 import {
   Text,
@@ -20,11 +20,13 @@ import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { Dropdown } from "react-native-element-dropdown";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import Octicons from "react-native-vector-icons/Octicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import moment from "moment";
 import { v4 as uuidv4 } from "uuid";
 import { useDispatch, useSelector } from "react-redux";
+import Tooltip from "react-native-walkthrough-tooltip";
 import {
   getFoodtruckDetail_API,
   updateFoodTruckProfile_API,
@@ -75,6 +77,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
   const [activeLocIndex, setActiveLocIndex] = useState(null);
   const [pickerField, setPickerField] = useState(null);
   const [isPickerVisible, setPickerVisible] = useState(false);
+  const [toolTipVisible, setToolTipVisible] = useState(false);
 
   const getDataFromAPI = async () => {
     setDataLoading(true);
@@ -316,14 +319,16 @@ export default function ProfileAvailabilityScreen({ navigation }) {
 
       {/* Header Container */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
-        <IconButton
-          icon="arrow-left"
-          iconColor={AppColor.black}
-          size={24}
-          onPress={() => navigation.goBack()}
-        />
-        <Text style={styles.headerTitle}>{"Manage Availability"}</Text>
-        <View style={{ width: 48 }} />
+        <View style={{ width: "20%" }}>
+          <IconButton
+            icon="arrow-left"
+            iconColor={AppColor.black}
+            size={24}
+            onPress={() => navigation.goBack()}
+          />
+        </View>
+        <Text style={styles.headerTitle}>{"Pre-Order Availability"}</Text>
+        <View style={{ width: "20%" }} />
       </View>
 
       {/* Content Container */}
@@ -344,9 +349,57 @@ export default function ProfileAvailabilityScreen({ navigation }) {
             <View style={{ flex: 1 }}>
               {/* Content Header Continer */}
               <View style={styles.contentHeaderContainer}>
-                <Text style={styles.contentHeaderTitle}>
-                  {"Set Pre-Order Availability"}
-                </Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginBottom: 12,
+                    gap: 8,
+                  }}
+                >
+                  <Text style={styles.contentHeaderTitle}>
+                    {"Set Pre-Order Availability"}
+                  </Text>
+                  <Tooltip
+                    animated={true}
+                    disableShadow={true}
+                    placement="bottom"
+                    isVisible={toolTipVisible}
+                    backgroundColor="rgba(0,0,0,0)"
+                    arrowSize={{ width: 16, height: 8, color: AppColor.text }}
+                    contentStyle={{
+                      padding: 18,
+                      borderRadius: 8,
+                      backgroundColor: AppColor.text,
+                    }}
+                    content={
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          fontFamily: Mulish400,
+                          color: AppColor.white,
+                        }}
+                      >
+                        {
+                          "This feature is for vendors who want to allot time for customers to schedule pick up and delivery during peek hours."
+                        }
+                      </Text>
+                    }
+                    onClose={() => setToolTipVisible(false)}
+                  >
+                    <Pressable
+                      hitSlop={5}
+                      style={{ marginBottom: -3 }}
+                      onPress={() => setToolTipVisible(true)}
+                    >
+                      <MaterialIcons
+                        name="info"
+                        color={AppColor.textHighlighter}
+                        size={22}
+                      />
+                    </Pressable>
+                  </Tooltip>
+                </View>
                 <Text style={styles.contentHeaderDescription}>
                   {
                     "Set a time for customers to place orders to pickup at a scheduled time."
@@ -651,10 +704,9 @@ const styles = StyleSheet.create({
     paddingVertical: 30,
   },
   contentHeaderTitle: {
-    marginBottom: 12,
-    color: AppColor.black,
     fontSize: 24,
     fontFamily: Mulish700,
+    color: AppColor.black,
   },
   contentHeaderDescription: {
     color: "#606268",

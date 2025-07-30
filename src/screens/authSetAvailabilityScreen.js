@@ -7,6 +7,7 @@ import {
   Platform,
   Alert,
   Animated,
+  Pressable,
 } from "react-native";
 import {
   Text,
@@ -20,10 +21,12 @@ import { Dropdown } from "react-native-element-dropdown";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import Octicons from "react-native-vector-icons/Octicons";
 import moment from "moment";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
+import Tooltip from "react-native-walkthrough-tooltip";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { updateFoodTruckProfile_API } from "../api/appAPI";
 import { setUser, updateFoodTruck } from "../redux/slices/userSlice";
@@ -89,6 +92,7 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
   const [activeLocIndex, setActiveLocIndex] = useState(null);
   const [pickerField, setPickerField] = useState(null);
   const [isPickerVisible, setPickerVisible] = useState(false);
+  const [toolTipVisible, setToolTipVisible] = useState(false);
 
   const showTimePicker = (dayIndex, locIndex, field) => {
     setActiveDayIndex(dayIndex);
@@ -303,14 +307,16 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
 
       {/* Header Container */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
-        <IconButton
-          icon="arrow-left"
-          iconColor={AppColor.white}
-          size={24}
-          onPress={() => navigation.goBack()}
-        />
+        <View style={{ width: "20%" }}>
+          <IconButton
+            icon="arrow-left"
+            iconColor={AppColor.white}
+            size={24}
+            onPress={() => navigation.goBack()}
+          />
+        </View>
         <Text style={styles.headerTitle}>{"Pre-Order Availability"}</Text>
-        <View style={{ width: 48 }} />
+        <View style={{ width: "20%" }} />
       </View>
 
       {/* Content Container */}
@@ -358,9 +364,57 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
 
           {/* Content Header Continer */}
           <View style={styles.contentHeaderContainer}>
-            <Text style={styles.contentHeaderTitle}>
-              {"Set Pre-Order Availability"}
-            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                marginBottom: 12,
+                gap: 8,
+              }}
+            >
+              <Text style={styles.contentHeaderTitle}>
+                {"Set Pre-Order Availability"}
+              </Text>
+              <Tooltip
+                animated={true}
+                disableShadow={true}
+                placement="bottom"
+                isVisible={toolTipVisible}
+                backgroundColor="rgba(0,0,0,0)"
+                arrowSize={{ width: 16, height: 8, color: AppColor.text }}
+                contentStyle={{
+                  padding: 18,
+                  borderRadius: 8,
+                  backgroundColor: AppColor.text,
+                }}
+                content={
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontFamily: Mulish400,
+                      color: AppColor.white,
+                    }}
+                  >
+                    {
+                      "This feature is for vendors who want to allot time for customers to schedule pick up and delivery during peek hours."
+                    }
+                  </Text>
+                }
+                onClose={() => setToolTipVisible(false)}
+              >
+                <Pressable
+                  hitSlop={5}
+                  style={{ marginBottom: -3 }}
+                  onPress={() => setToolTipVisible(true)}
+                >
+                  <MaterialIcons
+                    name="info"
+                    color={AppColor.textHighlighter}
+                    size={22}
+                  />
+                </Pressable>
+              </Tooltip>
+            </View>
             <Text style={styles.contentHeaderDescription}>
               {
                 "Set a time for customers to place orders to pickup at a scheduled time."
@@ -707,7 +761,6 @@ const styles = StyleSheet.create({
     paddingVertical: 30,
   },
   contentHeaderTitle: {
-    marginBottom: 12,
     color: AppColor.black,
     fontSize: 24,
     fontFamily: Mulish700,

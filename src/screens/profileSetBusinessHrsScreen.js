@@ -7,6 +7,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator as NativeIndicator,
+  Pressable,
 } from "react-native";
 import {
   Text,
@@ -20,9 +21,11 @@ import { Dropdown } from "react-native-element-dropdown";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Octicons from "react-native-vector-icons/Octicons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import moment from "moment";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
+import Tooltip from "react-native-walkthrough-tooltip";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
 import { setSelectedLocations } from "../redux/slices/foodTruckProfileSlice";
@@ -47,6 +50,7 @@ const ProfileSetBusinessHrsScreen = ({ navigation }) => {
   const [activeLocIndex, setActiveLocIndex] = useState(null);
   const [pickerField, setPickerField] = useState(null);
   const [isPickerVisible, setPickerVisible] = useState(false);
+  const [toolTipVisible, setToolTipVisible] = useState(false);
   const [selectedBusinessHrs, setSelectedBusinessHrs] = useState([
     {
       uniqueId: uuidv4(),
@@ -285,7 +289,55 @@ const ProfileSetBusinessHrsScreen = ({ navigation }) => {
             <View style={{ flex: 1 }}>
               {/* Content Header Continer */}
               <View style={styles.contentHeaderContainer}>
-                <Text style={styles.screenTitle}>{"Set Business Hours"}</Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginBottom: 12,
+                    gap: 8,
+                  }}
+                >
+                  <Text style={styles.screenTitle}>{"Set Business Hours"}</Text>
+                  <Tooltip
+                    animated={true}
+                    disableShadow={true}
+                    placement="bottom"
+                    isVisible={toolTipVisible}
+                    backgroundColor="rgba(0,0,0,0)"
+                    arrowSize={{ width: 16, height: 8, color: AppColor.text }}
+                    contentStyle={{
+                      padding: 18,
+                      borderRadius: 8,
+                      backgroundColor: AppColor.text,
+                    }}
+                    content={
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          fontFamily: Mulish400,
+                          color: AppColor.white,
+                        }}
+                      >
+                        {
+                          "This allows customers to know normal business hours for immediately pickup/deliver."
+                        }
+                      </Text>
+                    }
+                    onClose={() => setToolTipVisible(false)}
+                  >
+                    <Pressable
+                      hitSlop={5}
+                      style={{ marginBottom: -3 }}
+                      onPress={() => setToolTipVisible(true)}
+                    >
+                      <MaterialIcons
+                        name="info"
+                        color={AppColor.textHighlighter}
+                        size={22}
+                      />
+                    </Pressable>
+                  </Tooltip>
+                </View>
                 <Text style={styles.screenSubtitle}>
                   {"Set normal business hours of your food truck."}
                 </Text>
@@ -456,8 +508,6 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
   },
 
-
-
   // Content Header
   contentHeaderContainer: {
     backgroundColor: AppColor.white,
@@ -465,7 +515,6 @@ const styles = StyleSheet.create({
     paddingVertical: 30,
   },
   screenTitle: {
-    marginBottom: 12,
     color: AppColor.black,
     fontSize: 24,
     fontFamily: Mulish700,

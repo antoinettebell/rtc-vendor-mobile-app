@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Platform,
   Alert,
+  Pressable,
 } from "react-native";
 import {
   Text,
@@ -20,6 +21,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import Octicons from "react-native-vector-icons/Octicons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import Tooltip from "react-native-walkthrough-tooltip";
 import moment from "moment";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
@@ -52,8 +55,12 @@ const AuthSetBusinessHrsScreen = ({ navigation }) => {
     if (selectedBusinessHrs && selectedBusinessHrs.length > 0) {
       const formattedBusinessHrs = selectedBusinessHrs.map((item) => ({
         ...item,
-        openTime: item.openTime ? moment(item.openTime).toDate() : moment().startOf("day").toDate(),
-        closeTime: item.closeTime ? moment(item.closeTime).toDate() : moment().startOf("day").toDate(),
+        openTime: item.openTime
+          ? moment(item.openTime).toDate()
+          : moment().startOf("day").toDate(),
+        closeTime: item.closeTime
+          ? moment(item.closeTime).toDate()
+          : moment().startOf("day").toDate(),
       }));
       setLocations(formattedBusinessHrs);
     }
@@ -63,6 +70,7 @@ const AuthSetBusinessHrsScreen = ({ navigation }) => {
   const [activeLocIndex, setActiveLocIndex] = useState(null);
   const [pickerField, setPickerField] = useState(null);
   const [isPickerVisible, setPickerVisible] = useState(false);
+  const [toolTipVisible, setToolTipVisible] = useState(false);
 
   const showTimePicker = (locIndex, field) => {
     setActiveLocIndex(locIndex);
@@ -174,14 +182,16 @@ const AuthSetBusinessHrsScreen = ({ navigation }) => {
 
       {/* Header Container */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
-        <IconButton
-          icon="arrow-left"
-          iconColor={AppColor.white}
-          size={24}
-          onPress={() => navigation.goBack()}
-        />
+        <View style={{ width: "20%" }}>
+          <IconButton
+            icon="arrow-left"
+            iconColor={AppColor.white}
+            size={24}
+            onPress={() => navigation.goBack()}
+          />
+        </View>
         <Text style={styles.headerTitle}>{"Business Hours"}</Text>
-        <View style={{ width: 48 }} />
+        <View style={{ width: "20%" }} />
       </View>
 
       {/* Content Container */}
@@ -227,7 +237,55 @@ const AuthSetBusinessHrsScreen = ({ navigation }) => {
 
           {/* Content Header Continer */}
           <View style={styles.contentHeaderContainer}>
-            <Text style={styles.screenTitle}>{"Set Business Hours"}</Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                marginBottom: 12,
+                gap: 8,
+              }}
+            >
+              <Text style={styles.screenTitle}>{"Set Business Hours"}</Text>
+              <Tooltip
+                animated={true}
+                disableShadow={true}
+                placement="bottom"
+                isVisible={toolTipVisible}
+                backgroundColor="rgba(0,0,0,0)"
+                arrowSize={{ width: 16, height: 8, color: AppColor.text }}
+                contentStyle={{
+                  padding: 18,
+                  borderRadius: 8,
+                  backgroundColor: AppColor.text,
+                }}
+                content={
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontFamily: Mulish400,
+                      color: AppColor.white,
+                    }}
+                  >
+                    {
+                      "This allows customers to know normal business hours for immediately pickup/deliver."
+                    }
+                  </Text>
+                }
+                onClose={() => setToolTipVisible(false)}
+              >
+                <Pressable
+                  hitSlop={5}
+                  style={{ marginBottom: -3 }}
+                  onPress={() => setToolTipVisible(true)}
+                >
+                  <MaterialIcons
+                    name="info"
+                    color={AppColor.textHighlighter}
+                    size={22}
+                  />
+                </Pressable>
+              </Tooltip>
+            </View>
             <Text style={styles.screenSubtitle}>
               {"Set normal business hours of your food truck."}
             </Text>
@@ -435,7 +493,6 @@ const styles = StyleSheet.create({
     paddingVertical: 30,
   },
   screenTitle: {
-    marginBottom: 12,
     color: AppColor.black,
     fontSize: 24,
     fontFamily: Mulish700,
