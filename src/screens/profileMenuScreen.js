@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -493,6 +494,26 @@ const ProfileMenuScreen = ({ navigation }) => {
     );
   };
 
+  const handleHelpSupportPress = async () => {
+    const supportEmail = "support@roundthecorner.com";
+    const subject = "RTC - Vendor";
+    const body = `Hello,\n\nCan you please help me?\n\n\n\n\n\nBest regards,\n${user?.firstName}\n${user?.email}`;
+
+    const url = `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert("Error", "Could not open email app");
+      }
+    } catch (error) {
+      console.log("Error opening email app:", error);
+      Alert.alert("Error", "Failed to open email app");
+    }
+  };
+
   return (
     <View style={styles.container}>
       <StatusBarManager />
@@ -743,6 +764,7 @@ const ProfileMenuScreen = ({ navigation }) => {
             rightIcon
             label="Help & Support"
             imageUri={PROFILE_MENU_IMAGES.helpSupportTC}
+            onPress={handleHelpSupportPress}
           />
           <HR />
           <ItemComponent
