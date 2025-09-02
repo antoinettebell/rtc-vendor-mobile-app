@@ -22,7 +22,7 @@ import { Dropdown } from "react-native-element-dropdown";
 import { AppColor, Mulish400, Mulish700 } from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
 import { bankAccountTypeList } from "../utils/constants";
-import { addBankDetail_API } from "../api/appAPI";
+import { addBankDetail_API, registerComplete_API } from "../api/appAPI";
 import { onUnderReview } from "../redux/slices/authSlice";
 
 const validateAccountHolderName = (text) => {
@@ -101,11 +101,15 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
       const response = await addBankDetail_API(payload);
       console.log("response => ", response);
       if (response?.success && response?.data) {
-        dispatch(onUnderReview(true));
-        navigation.reset({
-          index: 0,
-          routes: [{ name: "authUnderReviewNoteScreen" }],
-        });
+        const response1 = await registerComplete_API();
+        console.log("response1 => ", response1);
+        if (response1?.success) {
+          dispatch(onUnderReview(true));
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "authUnderReviewNoteScreen" }],
+          });
+        }
       }
     } catch (error) {
       console.log("error => ", error);

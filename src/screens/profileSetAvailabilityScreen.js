@@ -225,69 +225,77 @@ export default function ProfileAvailabilityScreen({ navigation }) {
     }
 
     // --- COMBINED VALIDATION: End Time strictly after Start Time & Time Slot Overlaps for the same day ---
-    for (let i = 0; i < availability.length; i++) {
-      const currentDay = availability[i];
-      const fullCurrentDayName = fullDayNames[currentDay.day] || currentDay.day; // Get full day name
+    // for (let i = 0; i < availability.length; i++) {
+    //   const currentDay = availability[i];
+    //   const fullCurrentDayName = fullDayNames[currentDay.day] || currentDay.day; // Get full day name
 
-      // Filter only enabled slots that have a location selected, and only if the day is enabled
-      const enabledAndSelectedLocations = currentDay.dayEnabled
-        ? currentDay.locations.filter((loc) => loc.enabled && loc.value)
-        : [];
+    //   // Filter only enabled slots that have a location selected, and only if the day is enabled
+    //   const enabledAndSelectedLocations = currentDay.dayEnabled
+    //     ? currentDay.locations.filter((loc) => loc.enabled && loc.value)
+    //     : [];
 
-      // FIRST: Validate each individual slot's StartTime vs EndTime
-      for (let j = 0; j < enabledAndSelectedLocations.length; j++) {
-        const loc = enabledAndSelectedLocations[j];
-        const startTime = moment(loc.openTime);
-        const endTime = moment(loc.closeTime);
-        if (!endTime.isAfter(startTime)) {
-          Alert.alert(
-            "Invalid Time Slot",
-            `On ${fullCurrentDayName}, the Close Time (${endTime.format("h:mm A")}) for '${loc.locationTitle || "an unnamed location slot"}' must be after its Open Time (${startTime.format("h:mm A")}). Please adjust.`
-          );
-          return; // Stop execution if an invalid individual time slot is found
-        }
-      }
+    //   // FIRST: Validate each individual slot's StartTime vs EndTime
+    //   for (let j = 0; j < enabledAndSelectedLocations.length; j++) {
+    //     const loc = enabledAndSelectedLocations[j];
+    //     const startTime = moment(loc.openTime);
+    //     const endTime = moment(loc.closeTime);
+    //     if (!endTime.isAfter(startTime)) {
+    //       Alert.alert(
+    //         "Invalid Time Slot",
+    //         `On ${fullCurrentDayName}, the Close Time (${endTime.format("h:mm A")}) for '${loc.locationTitle || "an unnamed location slot"}' must be after its Open Time (${startTime.format("h:mm A")}). Please adjust.`
+    //       );
+    //       return; // Stop execution if an invalid individual time slot is found
+    //     }
+    //   }
 
-      // If there's 0 or 1 enabled slot, no overlap is possible for this day, so continue to the next day
-      if (enabledAndSelectedLocations.length < 2) {
-        continue;
-      }
+    //   // If there's 0 or 1 enabled slot, no overlap is possible for this day, so continue to the next day
+    //   if (enabledAndSelectedLocations.length < 2) {
+    //     continue;
+    //   }
 
-      // SECOND: Check for overlaps between pairs of time slots on the same day
-      for (let j = 0; j < enabledAndSelectedLocations.length; j++) {
-        const loc1 = enabledAndSelectedLocations[j];
-        // Start inner loop from j + 1 to avoid comparing a slot with itself and to avoid duplicate checks
-        for (let k = j + 1; k < enabledAndSelectedLocations.length; k++) {
-          const loc2 = enabledAndSelectedLocations[k];
-          if (
-            hasTimeOverlap(
-              loc1.openTime,
-              loc1.closeTime,
-              loc2.openTime,
-              loc2.closeTime
-            )
-          ) {
-            const loc1Name = loc1.locationTitle || "an unnamed location slot";
-            const loc2Name = loc2.locationTitle || "an unnamed location slot";
+    //   // SECOND: Check for overlaps between pairs of time slots on the same day
+    //   for (let j = 0; j < enabledAndSelectedLocations.length; j++) {
+    //     const loc1 = enabledAndSelectedLocations[j];
+    //     // Start inner loop from j + 1 to avoid comparing a slot with itself and to avoid duplicate checks
+    //     for (let k = j + 1; k < enabledAndSelectedLocations.length; k++) {
+    //       const loc2 = enabledAndSelectedLocations[k];
+    //       if (
+    //         hasTimeOverlap(
+    //           loc1.openTime,
+    //           loc1.closeTime,
+    //           loc2.openTime,
+    //           loc2.closeTime
+    //         )
+    //       ) {
+    //         const loc1Name = loc1.locationTitle || "an unnamed location slot";
+    //         const loc2Name = loc2.locationTitle || "an unnamed location slot";
 
-            Alert.alert(
-              "Time Slot Overlap Detected",
-              `On ${fullCurrentDayName}, the time slot for '${loc1Name}' (Open Time: ${moment(loc1.openTime).format("h:mm A")} - Close Time: ${moment(loc1.closeTime).format("h:mm A")}) overlaps with the time slot for '${loc2Name}' (Open Time: ${moment(loc2.openTime).format("h:mm A")} - Close Time: ${moment(loc2.closeTime).format("h:mm A")}). Please adjust your times.`,
-              [{ text: "OK" }]
-            );
-            return; // Stop execution if an overlap is found
-          } else {
-            console.log(
-              `No overlap between ${loc1.locationTitle} and ${loc2.locationTitle}`
-            );
-          }
-        }
-      }
-    }
+    //         Alert.alert(
+    //           "Time Slot Overlap Detected",
+    //           `On ${fullCurrentDayName}, the time slot for '${loc1Name}' (Open Time: ${moment(loc1.openTime).format("h:mm A")} - Close Time: ${moment(loc1.closeTime).format("h:mm A")}) overlaps with the time slot for '${loc2Name}' (Open Time: ${moment(loc2.openTime).format("h:mm A")} - Close Time: ${moment(loc2.closeTime).format("h:mm A")}). Please adjust your times.`,
+    //           [{ text: "OK" }]
+    //         );
+    //         return; // Stop execution if an overlap is found
+    //       } else {
+    //         console.log(
+    //           `No overlap between ${loc1.locationTitle} and ${loc2.locationTitle}`
+    //         );
+    //       }
+    //     }
+    //   }
+    // }
     // --- END COMBINED VALIDATION ---
 
     const finalResult = transformLocationsForAPI(availability);
     console.log("finalResult => ", finalResult);
+
+    if (finalResult?.length < 1) {
+      Alert.alert(
+        "Availability Required",
+        "Please provide at least one availability."
+      );
+      return;
+    }
 
     setLoading(true);
     try {

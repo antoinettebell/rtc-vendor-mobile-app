@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   Portal,
   Snackbar,
+  Divider,
 } from "react-native-paper";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -40,6 +41,12 @@ const SignUpScreen = ({ navigation }) => {
   const [countryPickerVisible, setCountryPickerVisible] = useState(false);
   const [countryCode, setCountryCode] = useState("+1");
   const [mobileNumber, setMobileNumber] = useState("");
+  const [mailingAddress, setMailingAddress] = useState("");
+  const [mailingCity, setMailingCity] = useState("");
+  const [mailingState, setMailingState] = useState("");
+  const [mailingCountry, setMailingCountry] = useState("");
+  const [mailingZipCode, setMailingZipCode] = useState("");
+  const [countryPickerType, setCountryPickerType] = useState(null);
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({
@@ -51,6 +58,11 @@ const SignUpScreen = ({ navigation }) => {
   const [errors, setErrors] = useState({
     name: "",
     foodTruckName: "",
+    mailingAddress: "",
+    mailingCity: "",
+    mailingState: "",
+    mailingCountry: "",
+    mailingZipCode: "",
     mobileNumber: "",
     email: "",
     password: "",
@@ -90,6 +102,31 @@ const SignUpScreen = ({ navigation }) => {
     return "";
   };
 
+  const validateMailingAddress = (value) => {
+    if (!value.trim()) return "Address is required";
+    return "";
+  };
+
+  const validateMailingCity = (value) => {
+    if (!value.trim()) return "City is required";
+    return "";
+  };
+
+  const validateMailingState = (value) => {
+    if (!value.trim()) return "State is required";
+    return "";
+  };
+
+  const validateMailingCountry = (value) => {
+    if (!value.trim()) return "Country is required";
+    return "";
+  };
+
+  const validateMailingZipcode = (value) => {
+    if (!value.trim()) return "Zipcode is required";
+    return "";
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
@@ -107,6 +144,21 @@ const SignUpScreen = ({ navigation }) => {
 
     const passwordError = validatePassword(password);
     if (passwordError) newErrors.password = passwordError;
+
+    const mailingAddressError = validateMailingAddress(mailingAddress);
+    if (mailingAddressError) newErrors.mailingAddress = mailingAddressError;
+
+    const mailingCityError = validateMailingCity(mailingCity);
+    if (mailingCityError) newErrors.mailingCity = mailingCityError;
+
+    const mailingStateError = validateMailingState(mailingState);
+    if (mailingStateError) newErrors.mailingState = mailingStateError;
+
+    const mailingCountryError = validateMailingCountry(mailingCountry);
+    if (mailingCountryError) newErrors.mailingCountry = mailingCountryError;
+
+    const mailingZipcodeError = validateMailingZipcode(mailingZipCode);
+    if (mailingZipcodeError) newErrors.mailingZipCode = mailingZipcodeError;
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -126,6 +178,13 @@ const SignUpScreen = ({ navigation }) => {
       password,
       countryCode,
       mobileNumber,
+      mailing: {
+        address: mailingAddress,
+        city: mailingCity,
+        state: mailingState,
+        country: mailingCountry,
+        zipcode: mailingZipCode,
+      },
     };
 
     console.log("Payload:", payload);
@@ -270,6 +329,223 @@ const SignUpScreen = ({ navigation }) => {
                 </HelperText>
               )}
 
+              {/* Mailing Information */}
+              <View style={styles.sectionHeaderContainer}>
+                <Divider style={{ flex: 1 }} />
+                <Text
+                  style={{
+                    marginHorizontal: 16,
+                    fontSize: 18,
+                    fontFamily: Mulish700,
+                    color: AppColor.gray,
+                  }}
+                >
+                  {"Mailing Information"}
+                </Text>
+                <Divider style={{ flex: 1 }} />
+              </View>
+
+              {/* Address */}
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+                {"Address *"}
+              </Text>
+              <TextInput
+                dense
+                value={mailingAddress}
+                onChangeText={setMailingAddress}
+                style={styles.input}
+                contentStyle={styles.inputText}
+                placeholder="Enter Address"
+                placeholderTextColor={AppColor.placeholderTextColor}
+                mode="outlined"
+                error={!!errors.mailingAddress}
+                outlineColor={AppColor.border}
+                activeOutlineColor={AppColor.primary}
+                outlineStyle={{ borderRadius: 8 }}
+                autoCapitalize="sentences"
+                theme={{ colors: { onSurfaceVariant: "#777" } }}
+                onBlur={() =>
+                  setErrors((prev) => ({
+                    ...prev,
+                    mailingAddress: validateMailingAddress(mailingAddress),
+                  }))
+                }
+              />
+              {!!errors.mailingAddress && (
+                <HelperText
+                  type="error"
+                  visible={!!errors.mailingAddress}
+                  style={styles.helper}
+                >
+                  {errors.mailingAddress}
+                </HelperText>
+              )}
+
+              {/* City */}
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+                {"City *"}
+              </Text>
+              <TextInput
+                dense
+                value={mailingCity}
+                onChangeText={setMailingCity}
+                style={styles.input}
+                contentStyle={styles.inputText}
+                placeholder="Enter City"
+                placeholderTextColor={AppColor.placeholderTextColor}
+                mode="outlined"
+                error={!!errors.mailingCity}
+                outlineColor={AppColor.border}
+                activeOutlineColor={AppColor.primary}
+                outlineStyle={{ borderRadius: 8 }}
+                autoCapitalize="sentences"
+                theme={{ colors: { onSurfaceVariant: "#777" } }}
+                onBlur={() =>
+                  setErrors((prev) => ({
+                    ...prev,
+                    mailingCity: validateMailingCity(mailingCity),
+                  }))
+                }
+              />
+              {!!errors.mailingCity && (
+                <HelperText
+                  type="error"
+                  visible={!!errors.mailingCity}
+                  style={styles.helper}
+                >
+                  {errors.mailingCity}
+                </HelperText>
+              )}
+
+              {/* State */}
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+                {"State *"}
+              </Text>
+              <TextInput
+                dense
+                value={mailingState}
+                onChangeText={setMailingState}
+                style={styles.input}
+                contentStyle={styles.inputText}
+                placeholder="Enter State"
+                placeholderTextColor={AppColor.placeholderTextColor}
+                mode="outlined"
+                error={!!errors.mailingState}
+                outlineColor={AppColor.border}
+                activeOutlineColor={AppColor.primary}
+                outlineStyle={{ borderRadius: 8 }}
+                autoCapitalize="sentences"
+                theme={{ colors: { onSurfaceVariant: "#777" } }}
+                onBlur={() =>
+                  setErrors((prev) => ({
+                    ...prev,
+                    mailingState: validateMailingState(mailingState),
+                  }))
+                }
+              />
+              {!!errors.mailingState && (
+                <HelperText
+                  type="error"
+                  visible={!!errors.mailingState}
+                  style={styles.helper}
+                >
+                  {errors.mailingState}
+                </HelperText>
+              )}
+
+              {/* Country */}
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+                {"Country *"}
+              </Text>
+              <View>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    setCountryPickerVisible(true);
+                    setCountryPickerType("address");
+                  }}
+                  style={[styles.countryInput, !!errors.mailingCountry && styles.errorBorder]}
+                >
+                  <Text
+                    style={[
+                      styles.countryCodeText,
+                      !mailingCountry && {
+                        color: AppColor.placeholderTextColor,
+                      },
+                    ]}
+                  >
+                    {mailingCountry || "Select Country"}
+                  </Text>
+                  <AntDesign
+                    name="caretdown"
+                    color={AppColor.textHighlighter}
+                    size={14}
+                  />
+                </TouchableOpacity>
+              </View>
+              {!!errors.mailingCountry && (
+                <HelperText
+                  type="error"
+                  visible={!!errors.mailingCountry}
+                  style={styles.helper}
+                >
+                  {errors.mailingCountry}
+                </HelperText>
+              )}
+
+              {/* Zipcode */}
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+                {"Zipcode *"}
+              </Text>
+              <TextInput
+                dense
+                value={mailingZipCode}
+                onChangeText={setMailingZipCode}
+                style={styles.input}
+                contentStyle={styles.inputText}
+                placeholder="Enter Zipcode"
+                placeholderTextColor={AppColor.placeholderTextColor}
+                mode="outlined"
+                error={!!errors.mailingZipCode}
+                outlineColor={AppColor.border}
+                activeOutlineColor={AppColor.primary}
+                outlineStyle={{ borderRadius: 8 }}
+                autoCapitalize="sentences"
+                maxLength={6}
+                theme={{ colors: { onSurfaceVariant: "#777" } }}
+                onBlur={() =>
+                  setErrors((prev) => ({
+                    ...prev,
+                    mailingZipCode: validateMailingZipcode(mailingZipCode),
+                  }))
+                }
+              />
+              {!!errors.mailingZipCode && (
+                <HelperText
+                  type="error"
+                  visible={!!errors.mailingZipCode}
+                  style={styles.helper}
+                >
+                  {errors.mailingZipCode}
+                </HelperText>
+              )}
+
+              {/* Contact Information */}
+              <View style={styles.sectionHeaderContainer}>
+                <Divider style={{ flex: 1 }} />
+                <Text
+                  style={{
+                    marginHorizontal: 16,
+                    fontSize: 18,
+                    fontFamily: Mulish700,
+                    color: AppColor.gray,
+                  }}
+                >
+                  {"Contact Information"}
+                </Text>
+                <Divider style={{ flex: 1 }} />
+              </View>
+
               {/* Mobile No */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
                 {"Enter mobile no. *"}
@@ -279,7 +555,10 @@ const SignUpScreen = ({ navigation }) => {
               >
                 <TouchableOpacity
                   activeOpacity={0.7}
-                  onPress={() => setCountryPickerVisible(true)}
+                  onPress={() => {
+                    setCountryPickerVisible(true);
+                    setCountryPickerType("phone");
+                  }}
                   style={styles.countryPickerButton}
                 >
                   <Text style={styles.countryCodeText}>{countryCode}</Text>
@@ -430,8 +709,17 @@ const SignUpScreen = ({ navigation }) => {
                   countryName: {},
                 }}
                 pickerButtonOnPress={(item) => {
-                  setCountryCode(item.dial_code);
+                  if (countryPickerType === "phone") {
+                    setCountryCode(item.dial_code);
+                  } else if (countryPickerType === "address") {
+                    setMailingCountry(`${item.name.en}, ${item.code}`);
+                    setErrors((prev) => ({
+                      ...prev,
+                      mailingCountry: "",
+                    }));
+                  }
                   setCountryPickerVisible(false);
+                  setCountryPickerType(null);
                 }}
                 onBackdropPress={() => setCountryPickerVisible(false)}
               />
@@ -671,6 +959,27 @@ const styles = StyleSheet.create({
   iconBox: {
     padding: 4,
     marginRight: 6,
+  },
+  sectionHeaderContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 24,
+  },
+  countryInput: {
+    height: 48,
+    backgroundColor: AppColor.white,
+    borderWidth: 1,
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    gap: 5,
+  },
+  errorBorder: {
+    borderColor: "#b3261e",
+    borderWidth: 2,
   },
 });
 

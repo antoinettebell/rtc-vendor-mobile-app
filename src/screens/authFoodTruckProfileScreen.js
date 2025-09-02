@@ -243,7 +243,7 @@ const MediaLinksComponent = ({
   );
 };
 
-const AuthFoodTruckProfileScreen = ({ navigation }) => {
+const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
 
@@ -642,6 +642,10 @@ const AuthFoodTruckProfileScreen = ({ navigation }) => {
       if (selectedCuisine?.length > 0) {
         const tempIDs = selectedCuisine.map((item) => item._id);
         payload.cuisine = tempIDs;
+      }
+
+      if (route?.params?.addOns?.length > 0) {
+        payload.addOns = route?.params?.addOns;
       }
 
       console.log("payload ===> ", payload);

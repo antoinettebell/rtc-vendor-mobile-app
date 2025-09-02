@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  Dimensions,
   Platform,
   SafeAreaView,
   StyleSheet,
@@ -145,13 +146,14 @@ const BottomTabNavigator = ({ insets }) => (
       tabBarHideOnKeyboard: true,
       headerShown: false,
       tabBarStyle: {
-        height: Platform.OS === "ios" ? insets.bottom + 60 : 60,
+        height: insets.bottom + 60,
+        // height: Platform.OS === "ios" ? insets.bottom + 60 : 60,
       },
       tabBarLabelStyle: {
         // fontFamily: Secondary400,
         fontSize: 12,
         fontWeight: "500",
-        bottom: 5,
+        bottom: Dimensions.get("window").width > 768 ? 0 : 5,
       },
       tabBarActiveTintColor: AppColor.primary,
       tabBarInactiveTintColor: AppColor.gray,

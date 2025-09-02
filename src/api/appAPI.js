@@ -5,6 +5,7 @@ import {
   ADD_FOOD_ITEM,
   ADD_REVIEW,
   CUISINE,
+  GET_ADD_ONS,
   GET_BANK_DETAIL,
   GET_DIET_LIST,
   GET_FOODTRUCK_DETAILS,
@@ -18,6 +19,7 @@ import {
   GET_REVIEW_STATS_BY_FOODTRUCK_ID,
   GET_USER_DETAILS,
   MEDIA_UPLOAD,
+  REGISTER_COMPLETE,
   REMOVE_ACCOUNT,
   REMOVE_FCM_TOKEN,
   REMOVE_FOOD_CATEGORY,
@@ -466,6 +468,30 @@ export const deleteAccount_API = async () => {
   try {
     const URL = `${REMOVE_ACCOUNT}`;
     const response = await apiClient.delete(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+// registration complete
+export const registerComplete_API = async () => {
+  try {
+    const URL = `${REGISTER_COMPLETE}`;
+    const response = await apiClient.patch(URL, undefined, {
+      skipToken: false,
+    });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+// add-ons for subscription
+export const getAddOnsPlans_API = async () => {
+  try {
+    const URL = `${GET_ADD_ONS}?limit=100`;
+    const response = await apiClient.get(URL, { skipToken: false });
     return response?.data;
   } catch (error) {
     throw error?.response?.data;

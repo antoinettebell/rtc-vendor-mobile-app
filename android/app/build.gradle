@@ -78,13 +78,13 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.foodtruckvendor"
+    namespace "com.ea.rtcvendor"
     defaultConfig {
-        applicationId "com.foodtruckvendor"
+        applicationId "com.ea.rtcvendor"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
         vectorDrawables.useSupportLibrary = true
     }
     signingConfigs {
@@ -94,17 +94,23 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            storeFile file(getProperty("MYAPP_UPLOAD_STORE_FILE"))
+            storePassword getProperty("MYAPP_UPLOAD_STORE_PASSWORD")
+            keyAlias getProperty("MYAPP_UPLOAD_KEY_ALIAS")
+            keyPassword getProperty("MYAPP_UPLOAD_KEY_PASSWORD")
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
-            resValue "string", "build_config_package", "com.foodtruckvendor"
+            resValue "string", "build_config_package", "com.ea.rtcvendor"
         }
         release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
-            resValue "string", "build_config_package", "com.foodtruckvendor"
-            signingConfig signingConfigs.debug
+            resValue "string", "build_config_package", "com.ea.rtcvendor"
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }

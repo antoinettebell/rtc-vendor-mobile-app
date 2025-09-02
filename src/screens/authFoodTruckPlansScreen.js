@@ -10,7 +10,7 @@ import {
   Alert,
   ActivityIndicator as NativeIndicator,
 } from "react-native";
-import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400, Mulish600 } from "../utils/theme";
 import { ActivityIndicator, IconButton } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
@@ -18,7 +18,7 @@ import Feather from "react-native-vector-icons/Feather";
 import Octicons from "react-native-vector-icons/Octicons";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
-import { getPlansData_API } from "../api/appAPI";
+import { getAddOnsPlans_API, getPlansData_API } from "../api/appAPI";
 import { clearUserSlice, setSelectedPlan } from "../redux/slices/userSlice";
 import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlice";
 import { onSignOut } from "../redux/slices/authSlice";
@@ -35,9 +35,11 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
   const [plansData, setPlansData] = useState([]);
+  const [addOnsData, setAddOnsData] = useState([]);
   const [selectedPlanId, setSelectedPlanId] = useState(null);
   const [expandedPlanId, setExpandedPlanId] = useState(null);
   const [agreed, setAgreed] = useState(false);
+  const [selectedAddOns, setSelectedAddOns] = useState([]);
 
   const handleContinueBtnPress = async () => {
     setLoading(true);
@@ -45,9 +47,13 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
       if (!selectedPlanId || !agreed) {
         return;
       }
+      // You can now use selectedAddOns in your logic here
+      console.log("Selected Add-Ons:", selectedAddOns);
       const temp_plan = plansData.find((plan) => plan._id === selectedPlanId);
       dispatch(setSelectedPlan(temp_plan));
-      navigation.navigate("authFoodTruckProfileScreen");
+      navigation.navigate("authFoodTruckProfileScreen", {
+        addOns: selectedAddOns,
+      });
     } catch (error) {
       console.error("error => ", error);
     } finally {
@@ -77,6 +83,37 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
   const onSelectePlan = (item) => {
     setSelectedPlanId(item._id);
     setExpandedPlanId(item._id);
+  };
+
+  const handleAddOnSelection = (id) => {
+    setSelectedAddOns((prevSelectedAddOns) => {
+      if (prevSelectedAddOns.includes(id)) {
+        return prevSelectedAddOns.filter((addOnId) => addOnId !== id);
+      } else {
+        return [...prevSelectedAddOns, id];
+      }
+    });
+  };
+
+  const renderAddOnCard = ({ item }) => {
+    const isSelected = selectedAddOns.includes(item._id);
+
+    return (
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={() => handleAddOnSelection(item._id)}
+        style={styles.addOnCard}
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={styles.addOnCardName}>{item.name}</Text>
+        </View>
+        <Ionicons
+          name={"checkmark-circle"}
+          size={22}
+          color={isSelected ? AppColor.primary : AppColor.border}
+        />
+      </TouchableOpacity>
+    );
   };
 
   const renderPlanCard = ({ item }) => {
@@ -237,30 +274,12 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
           setSelectedPlanId(response.data.planList[0]._id);
           setExpandedPlanId(response.data.planList[0]._id);
         }
-        // Object of plans data
-        //   {
-        //     "_id": "68372520e6a656bba70b6e1c",
-        //     "name": "Basic",
-        //     "titleColor": "#FC7B03",
-        //     "slug": "SUB_BASIC",
-        //     "rate": 3.5,
-        //     "rateType": "/per-sale fee",
-        //     "isPopular": true,
-        //     "details": [
-        //         "Menu and business listing",
-        //         "Monthly sales report",
-        //         "1 media link and 1 social/website link",
-        //         "No dish highlights",
-        //         "POS services provided (no external POS needed)",
-        //         "Daily payouts",
-        //         "Accept cash on pickup only",
-        //         "Eligible to offer delivery (not to exceed $5.00 fee)"
-        //     ],
-        //     "deletedAt": null,
-        //     "createdAt": "2025-05-28T15:00:48.600Z",
-        //     "updatedAt": "2025-05-28T15:00:48.600Z",
-        //     "__v": 0
-        // }
+      }
+
+      const response1 = await getAddOnsPlans_API();
+      console.log("response1 => ", response1);
+      if (response1?.success && response1?.data) {
+        setAddOnsData(response1.data.addonsList);
       }
     } catch (error) {
       console.error("error => ", error);
@@ -319,7 +338,11 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
             <View style={styles.stepContainer}>
               <View style={styles.stepSubContainer}>
                 <View style={styles.filledCircle}>
-                  <FontAwesome6 name="person-walking" color={AppColor.white} size={18} />
+                  <FontAwesome6
+                    name="person-walking"
+                    color={AppColor.white}
+                    size={18}
+                  />
                 </View>
               </View>
               <View style={styles.line} />
@@ -349,12 +372,32 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
 
               <View style={{ flex: 1 }}>
                 <FlatList
+                  bounces={false}
                   data={plansData}
                   renderItem={renderPlanCard}
                   keyExtractor={(item) => item._id}
                   contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24 }}
                 />
               </View>
+
+              {addOnsData?.length ? (
+                <View>
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Select Add-Ons</Text>
+                  </View>
+
+                  <FlatList
+                    bounces={false}
+                    data={addOnsData}
+                    renderItem={renderAddOnCard}
+                    keyExtractor={(item) => item._id}
+                    contentContainerStyle={{
+                      flexGrow: 1,
+                      paddingHorizontal: 24,
+                    }}
+                  />
+                </View>
+              ) : null}
 
               {/* T&C */}
               <View style={styles.termsContainer}>
@@ -589,12 +632,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: AppColor.white,
   },
+
   termsContainer: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 16,
     marginBottom: 4,
     marginHorizontal: 24,
+  },
+  addOnCard: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 10,
+    marginVertical: 8,
+    padding: 16,
+    gap: 8,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    borderColor: AppColor.border,
+    backgroundColor: AppColor.white,
+  },
+  addOnCardName: {
+    fontSize: 15,
+    fontFamily: Mulish600,
+    color: AppColor.text,
+    flexWrap: "wrap",
   },
   termsText: {
     flex: 1,

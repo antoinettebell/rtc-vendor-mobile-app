@@ -7,6 +7,7 @@ import {
   Platform,
   FlatList,
   Alert,
+  Pressable,
 } from "react-native";
 import { IconButton } from "react-native-paper";
 import { useDispatch, useSelector } from "react-redux";
@@ -45,7 +46,10 @@ const OneTapSignInScreen = ({ navigation }) => {
   };
 
   const renderUserComponent = ({ item }) => (
-    <View style={styles.userItemContainer}>
+    <Pressable
+      style={styles.userItemContainer}
+      onPress={() => navigation.navigate("signin", { savedUser: item })}
+    >
       <AppImage uri={item?.imageUrl} containerStyle={styles.userImage} />
       <View style={styles.userInfoContainer}>
         <Text style={styles.userNameText} numberOfLines={1}>
@@ -69,7 +73,7 @@ const OneTapSignInScreen = ({ navigation }) => {
         onPress={() => navigation.navigate("signin", { savedUser: item })}
         style={{ margin: 0 }}
       />
-    </View>
+    </Pressable>
   );
 
   const renderItemSeparatorComponent = () => (

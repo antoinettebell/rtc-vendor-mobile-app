@@ -12,9 +12,13 @@ export const CUISINE = "/cuisine";
 export const MEDIA_UPLOAD = "/file";
 export const UPDATE_FOODTRUCK = "/food-truck";
 export const GET_FOODTRUCK_DETAILS = "/food-truck";
+export const REGISTER_COMPLETE = "/food-truck/complete";
 
 // Subscription
 export const UPDATE_SUBSCRIPTION_PLAN = "/food-truck/change-plan";
+
+// Add-ons
+export const GET_ADD_ONS = "/public/add-ons";
 
 // Bank Detail
 export const ADD_BANK_DETAIL = "/user/bank-detail";

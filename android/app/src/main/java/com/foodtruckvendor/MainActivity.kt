@@ -1,4 +1,4 @@
-package com.foodtruckvendor
+package com.ea.rtcvendor
 
 import android.graphics.Color
 import android.os.Bundle

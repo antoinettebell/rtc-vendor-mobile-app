@@ -31,7 +31,7 @@ import { emailRegex, passwordRegex } from "../utils/constants";
 import { login_API } from "../api/authAPI";
 import { useDispatch } from "react-redux";
 import { setAuthToken, setUser } from "../redux/slices/userSlice";
-import { onSignin } from "../redux/slices/authSlice";
+import { onOnBoard, onSignin } from "../redux/slices/authSlice";
 import StatusBarManager from "../components/StatusBarManager";
 import {
   setSelectedCuisine,
@@ -106,14 +106,7 @@ const SignInScreen = ({ navigation, route }) => {
         console.log("response ====> ", response);
         if (response?.success && response?.data) {
           dispatch(setUser(response.data.user));
-          dispatch(
-            setSelectedCuisine(response.data.user.foodTruck.cuisine || [])
-          );
-          dispatch(
-            setSelectedLocations(response.data.user.foodTruck.locations || [])
-          );
           dispatch(setAuthToken(response.data.authToken));
-          dispatch(onSignin(true));
 
           dispatch(
             addOrUpdateUser({
@@ -127,22 +120,34 @@ const SignInScreen = ({ navigation, route }) => {
             })
           );
 
-          // set FCM Token & DeviceId after 1.5 sec
-          setTimeout(async () => {
-            try {
-              const deviceId = await checkInstallationId();
-              const fcmToken = await checkFcmToken();
-              if (deviceId && fcmToken) {
-                const response1 = await setFcmToken_API({
-                  token: fcmToken,
-                  deviceId: deviceId,
-                });
-                console.log("response => ", response1);
+          if (response?.data?.user?.foodTruck?.completed) {
+            dispatch(
+              setSelectedCuisine(response.data.user.foodTruck.cuisine || [])
+            );
+            dispatch(
+              setSelectedLocations(response.data.user.foodTruck.locations || [])
+            );
+            dispatch(onSignin(true));
+            
+            // set FCM Token & DeviceId after 1.5 sec
+            setTimeout(async () => {
+              try {
+                const deviceId = await checkInstallationId();
+                const fcmToken = await checkFcmToken();
+                if (deviceId && fcmToken) {
+                  const response1 = await setFcmToken_API({
+                    token: fcmToken,
+                    deviceId: deviceId,
+                  });
+                  console.log("response => ", response1);
+                }
+              } catch (error) {
+                console.log("error => ", error);
               }
-            } catch (error) {
-              console.log("error => ", error);
-            }
-          }, 1500);
+            }, 1500);
+          } else {
+            dispatch(onOnBoard(true));
+          }
         }
       } catch (error) {
         console.log("Error => ", error);

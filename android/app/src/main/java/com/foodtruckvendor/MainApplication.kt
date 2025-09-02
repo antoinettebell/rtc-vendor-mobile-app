@@ -1,4 +1,4 @@
-package com.foodtruckvendor
+package com.ea.rtcvendor
 
 import android.app.Application
 import com.facebook.react.PackageList
