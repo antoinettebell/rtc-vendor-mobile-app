@@ -4,7 +4,7 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "com.foodtruckvendor",
+  "applicationId": "com.ea.rtcvendor",
   "variantName": "release",
   "elements": [
     {

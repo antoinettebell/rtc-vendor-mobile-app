@@ -457,9 +457,10 @@ const MenuScreen = ({ navigation }) => {
       <Modal
         isVisible={modalVisible}
         backdropOpacity={0.5}
-        animationIn="zoomIn"
-        animationOut="zoomOut"
-        backdropTransitionOutTiming={0.5}
+        useNativeDriverForBackdrop={true}
+        useNativeDriver={true}
+        hideModalContentWhileAnimating={true}
+        statusBarTranslucent={true}
       >
         <View style={styles.modalContainer}>
           <TouchableOpacity
@@ -563,9 +564,10 @@ const MenuScreen = ({ navigation }) => {
       <Modal
         isVisible={updateModalVisible?.isVisible || false}
         backdropOpacity={0.5}
-        animationIn="zoomIn"
-        animationOut="zoomOut"
-        backdropTransitionOutTiming={0.5}
+        useNativeDriverForBackdrop={true}
+        useNativeDriver={true}
+        hideModalContentWhileAnimating={true}
+        statusBarTranslucent={true}
       >
         <View style={styles.modalContainer}>
           <TouchableOpacity

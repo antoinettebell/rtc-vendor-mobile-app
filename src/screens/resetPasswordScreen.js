@@ -135,8 +135,10 @@ const ResetPasswordScreen = ({ route }) => {
       <Modal
         isVisible={isModalVisible}
         backdropOpacity={0.5}
-        animationIn="zoomIn"
-        animationOut="zoomOut"
+        useNativeDriverForBackdrop={true}
+        useNativeDriver={true}
+        hideModalContentWhileAnimating={true}
+        statusBarTranslucent={true}
       >
         <View style={styles.modalContainer}>
           <Octicons
@@ -377,7 +379,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingLeft: 0,
     paddingTop: 0,
-    fontFamily: Mulish400
+    fontFamily: Mulish400,
   },
 
   //   Modal

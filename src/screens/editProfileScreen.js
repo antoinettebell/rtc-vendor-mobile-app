@@ -17,8 +17,6 @@ import {
   ActivityIndicator,
   HelperText,
   IconButton,
-  Portal,
-  Snackbar,
   TextInput,
 } from "react-native-paper";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
@@ -45,6 +43,7 @@ import { Dropdown } from "react-native-element-dropdown";
 import { formatEIN, formatSSN } from "../helpers/profile.helper";
 import AppImage from "../components/AppImage";
 import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
+import { showSnackbar } from "../redux/slices/snackbarSlice";
 
 const dropdownData = [
   {
@@ -277,8 +276,6 @@ const EditProfileScreen = ({ navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [name, setName] = useState("");
   const [foodTruckName, setFoodTruckName] = useState("");
-  const [einNumber, setEinNumber] = useState("");
-  const [snnNumber, setSnnNumber] = useState("");
   const [selectedEmpNumberType, setSelectedEmpNumberType] = useState("ein");
   const [selectedEmpNumberText, setSelectedEmpNumberText] = useState("");
   const [email, setEmail] = useState("");
@@ -289,17 +286,13 @@ const EditProfileScreen = ({ navigation }) => {
   const [getDataLoading, setGetDataLoading] = useState(false);
   const [selectedType1, setSelectedType1] = useState(dropdownData[0]);
   const [selectedType2, setSelectedType2] = useState(dropdownData[0]);
-  const [selectedType3, setSelectedType3] = useState(dropdownData[3]);
-  const [selectedType4, setSelectedType4] = useState(dropdownData[3]);
+  const [selectedType3, setSelectedType3] = useState(dropdownData[0]);
+  const [selectedType4, setSelectedType4] = useState(dropdownData[0]);
   const [mediaLink1, setMediaLink1] = useState("");
   const [mediaLink2, setMediaLink2] = useState("");
-  const [mediaLink3, setMediaLink3] = useState("https://"); // Initialize with https:// since it's a website type
-  const [mediaLink4, setMediaLink4] = useState("https://"); // Initialize with https:// since it's a website type
-  const [snackbar, setSnackbar] = useState({
-    visible: false,
-    message: "",
-    type: "info",
-  });
+  const [mediaLink3, setMediaLink3] = useState("");
+  const [mediaLink4, setMediaLink4] = useState("");
+
   const [errors, setErrors] = useState({
     name: "",
     foodTruckName: "",
@@ -486,71 +479,31 @@ const EditProfileScreen = ({ navigation }) => {
   };
 
   const processSocialMediaResponse = (response, plan) => {
-    // For elite plan, we might need to handle more flexible combinations
-    if (plan === "elite") {
-      // Elite plan can have any combination, so we just map in order
-      response.forEach((item, index) => {
-        const mediaType = item.mediaType.toLowerCase();
-        const url = item.mediaUrl;
-        const dropdownItem =
-          dropdownData.find((d) => d.value === mediaType) ||
-          (mediaType === "web" ? dropdownData[3] : dropdownData[0]);
+    if (!plan) return;
+    console.log("response => ", response);
+    console.log("plan => ", plan);
 
-        if (index === 0) {
-          setSelectedType1(dropdownItem);
-          setMediaLink1(url);
-        } else if (index === 1) {
-          setSelectedType2(dropdownItem);
-          setMediaLink2(url);
-        } else if (index === 2) {
-          setSelectedType3(dropdownItem);
-          setMediaLink3(url);
-        } else if (index === 3) {
-          setSelectedType4(dropdownItem);
-          setMediaLink4(url);
-        }
-      });
-    } else {
-      // Initialize counters for social and web types
-      let socialCount = 0;
-      let webCount = 0;
+    response.forEach((item, index) => {
+      const mediaType = item.mediaType.toLowerCase();
+      const url = item.mediaUrl;
+      const dropdownItem =
+        dropdownData.find((d) => d.value === mediaType) ||
+        (mediaType === "web" ? dropdownData[3] : dropdownData[0]);
 
-      // Process each item in the response
-      response.forEach((item) => {
-        const mediaType = item.mediaType.toLowerCase();
-        const url = item.mediaUrl;
-
-        if (
-          mediaType === "facebook" ||
-          mediaType === "instagram" ||
-          mediaType === "twitter"
-        ) {
-          // It's a social media
-          socialCount++;
-          if (socialCount === 1) {
-            setSelectedType1(
-              dropdownData.find((d) => d.value === mediaType) || dropdownData[0]
-            );
-            setMediaLink1(url);
-          } else if (socialCount === 2) {
-            setSelectedType2(
-              dropdownData.find((d) => d.value === mediaType) || dropdownData[0]
-            );
-            setMediaLink2(url);
-          }
-        } else if (mediaType === "web") {
-          // It's a website
-          webCount++;
-          if (webCount === 1) {
-            setSelectedType3(dropdownData[3]); // website is at index 3
-            setMediaLink3(url);
-          } else if (webCount === 2) {
-            setSelectedType4(dropdownData[3]); // website is at index 3
-            setMediaLink4(url);
-          }
-        }
-      });
-    }
+      if (index === 0) {
+        setSelectedType1(dropdownItem);
+        setMediaLink1(url);
+      } else if (index === 1 && (plan === "platinum" || plan === "elite")) {
+        setSelectedType2(dropdownItem);
+        setMediaLink2(url);
+      } else if (index === 2 && plan === "elite") {
+        setSelectedType3(dropdownItem);
+        setMediaLink3(url);
+      } else if (index === 3 && plan === "elite") {
+        setSelectedType4(dropdownItem);
+        setMediaLink4(url);
+      }
+    });
   };
 
   const updateStateOnDataFetch = (USER_DATA, FOOD_TRUCK_DATA) => {
@@ -592,7 +545,13 @@ const EditProfileScreen = ({ navigation }) => {
     // manage social media links
     processSocialMediaResponse(
       FOOD_TRUCK_DATA?.socialMedia || [],
-      isElitePlan ? "elite" : isPlatinumPlan ? "platinum" : "basic"
+      isElitePlan
+        ? "elite"
+        : isPlatinumPlan
+          ? "platinum"
+          : isBasicPlan
+            ? "basic"
+            : null
     );
 
     // manage country code
@@ -694,7 +653,7 @@ const EditProfileScreen = ({ navigation }) => {
       }
     }
 
-    if (mediaLink3) {
+    if (mediaLink3 && isElitePlan) {
       const formattedUrl = formatWebsiteUrl(mediaLink3, selectedType3.value);
       if (formattedUrl) {
         socialMedia.push({
@@ -704,7 +663,7 @@ const EditProfileScreen = ({ navigation }) => {
       }
     }
 
-    if (mediaLink4 && !isBasicPlan) {
+    if (mediaLink4 && isElitePlan) {
       const formattedUrl = formatWebsiteUrl(mediaLink4, selectedType4.value);
       if (formattedUrl) {
         socialMedia.push({
@@ -714,7 +673,7 @@ const EditProfileScreen = ({ navigation }) => {
       }
     }
 
-    return socialMedia?.length > 0 ? { socialMedia } : {};
+    return { socialMedia };
   };
 
   const handleUpdatePress = async () => {
@@ -797,9 +756,7 @@ const EditProfileScreen = ({ navigation }) => {
       let foodTruckPayload = {
         name: foodTruckName,
         infoType: infoType === "Food Truck" ? "truck" : "caterer",
-        ...(createSocialMediaPayload()?.socialMedia?.length > 0 && {
-          socialMedia: createSocialMediaPayload().socialMedia,
-        }),
+        socialMedia: createSocialMediaPayload().socialMedia,
       };
       if (selectedEmpNumberType === "ein") {
         foodTruckPayload.ein = selectedEmpNumberText;
@@ -875,18 +832,24 @@ const EditProfileScreen = ({ navigation }) => {
         );
       }
 
-      setSnackbar({
-        visible: true,
-        message: "Profile Updated!",
-        type: "success",
-      });
+      dispatch(
+        showSnackbar({
+          visible: true,
+          message: "Profile Updated!",
+          type: "success",
+        })
+      );
+
+      navigation.goBack();
     } catch (error) {
       console.log("error => ", error);
-      setSnackbar({
-        visible: true,
-        message: error.message,
-        type: "error",
-      });
+      dispatch(
+        showSnackbar({
+          visible: true,
+          message: error.message,
+          type: "error",
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -1325,13 +1288,14 @@ const EditProfileScreen = ({ navigation }) => {
             <View style={[styles.section, { gap: 10 }]}>
               {/* media link 1 */}
               <MediaLinksComponent
-                dropdownData={
-                  isElitePlan
-                    ? dropdownData
-                    : dropdownData.map((item) =>
-                        item.type === "web" ? { ...item, disable: true } : item
-                      )
-                }
+                // dropdownData={
+                //   isElitePlan
+                //     ? dropdownData
+                //     : dropdownData.map((item) =>
+                //         item.type === "web" ? { ...item, disable: true } : item
+                //       )
+                // }
+                dropdownData={dropdownData}
                 selectedSocialMedia={selectedType1}
                 setSelectedSocialMedia={setSelectedType1}
                 socialMediaLink={mediaLink1}
@@ -1341,15 +1305,16 @@ const EditProfileScreen = ({ navigation }) => {
               {/* media link 2 */}
               {!isBasicPlan ? (
                 <MediaLinksComponent
-                  dropdownData={
-                    isElitePlan
-                      ? dropdownData
-                      : dropdownData.map((item) =>
-                          item.type === "web"
-                            ? { ...item, disable: true }
-                            : item
-                        )
-                  }
+                  // dropdownData={
+                  //   isElitePlan
+                  //     ? dropdownData
+                  //     : dropdownData.map((item) =>
+                  //         item.type === "web"
+                  //           ? { ...item, disable: true }
+                  //           : item
+                  //       )
+                  // }
+                  dropdownData={dropdownData}
                   selectedSocialMedia={selectedType2}
                   setSelectedSocialMedia={setSelectedType2}
                   socialMediaLink={mediaLink2}
@@ -1358,34 +1323,38 @@ const EditProfileScreen = ({ navigation }) => {
               ) : null}
 
               {/* media link 3 */}
-              <MediaLinksComponent
-                dropdownData={
-                  isElitePlan
-                    ? dropdownData
-                    : dropdownData.map((item) =>
-                        item.type === "social"
-                          ? { ...item, disable: true }
-                          : item
-                      )
-                }
-                selectedSocialMedia={selectedType3}
-                setSelectedSocialMedia={setSelectedType3}
-                socialMediaLink={mediaLink3}
-                setSocialMediaLink={setMediaLink3}
-              />
+              {isElitePlan ? (
+                <MediaLinksComponent
+                  // dropdownData={
+                  //   isElitePlan
+                  //     ? dropdownData
+                  //     : dropdownData.map((item) =>
+                  //         item.type === "social"
+                  //           ? { ...item, disable: true }
+                  //           : item
+                  //       )
+                  // }
+                  dropdownData={dropdownData}
+                  selectedSocialMedia={selectedType3}
+                  setSelectedSocialMedia={setSelectedType3}
+                  socialMediaLink={mediaLink3}
+                  setSocialMediaLink={setMediaLink3}
+                />
+              ) : null}
 
               {/* media link 4 */}
-              {!isBasicPlan ? (
+              {isElitePlan ? (
                 <MediaLinksComponent
-                  dropdownData={
-                    isElitePlan
-                      ? dropdownData
-                      : dropdownData.map((item) =>
-                          item.type === "social"
-                            ? { ...item, disable: true }
-                            : item
-                        )
-                  }
+                  // dropdownData={
+                  //   isElitePlan
+                  //     ? dropdownData
+                  //     : dropdownData.map((item) =>
+                  //         item.type === "social"
+                  //           ? { ...item, disable: true }
+                  //           : item
+                  //       )
+                  // }
+                  dropdownData={dropdownData}
                   selectedSocialMedia={selectedType4}
                   setSelectedSocialMedia={setSelectedType4}
                   socialMediaLink={mediaLink4}
@@ -1536,25 +1505,6 @@ const EditProfileScreen = ({ navigation }) => {
         }}
         onBackdropPress={() => setCountryPickerVisible(false)}
       />
-
-      {/* SnackBar */}
-      <Portal>
-        <Snackbar
-          visible={snackbar.visible}
-          onDismiss={() => setSnackbar({ ...snackbar, visible: false })}
-          duration={4000}
-          style={{
-            backgroundColor:
-              snackbar.type === "success"
-                ? AppColor.snackbarSuccess
-                : snackbar.type === "error"
-                  ? AppColor.snackbarError
-                  : AppColor.snackbarDefault,
-          }}
-        >
-          {snackbar.message}
-        </Snackbar>
-      </Portal>
     </View>
   );
 };

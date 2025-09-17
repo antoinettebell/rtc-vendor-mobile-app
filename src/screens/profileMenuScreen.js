@@ -76,8 +76,10 @@ const SignoutModal = ({
   <Modal
     isVisible={isModalVisible}
     backdropOpacity={0.5}
-    animationIn="zoomIn"
-    animationOut="zoomOut"
+    useNativeDriverForBackdrop={true}
+    useNativeDriver={true}
+    hideModalContentWhileAnimating={true}
+    statusBarTranslucent={true}
   >
     <View style={styles.modalContainer}>
       <TouchableOpacity
@@ -207,9 +209,10 @@ const ChangePWDModal = ({
     <Modal
       isVisible={isModalVisible}
       backdropOpacity={0.5}
-      animationIn="zoomIn"
-      animationOut="zoomOut"
-      backdropTransitionOutTiming={0.5}
+      useNativeDriverForBackdrop={true}
+      useNativeDriver={true}
+      hideModalContentWhileAnimating={true}
+      statusBarTranslucent={true}
     >
       <View style={styles.modalContainer}>
         <TouchableOpacity
@@ -802,8 +805,10 @@ const ProfileMenuScreen = ({ navigation }) => {
       <Modal
         isVisible={deleteAccountLoading}
         backdropOpacity={0.5}
-        animationIn="fadeIn"
-        animationOut="fadeOut"
+        useNativeDriverForBackdrop={true}
+        useNativeDriver={true}
+        hideModalContentWhileAnimating={true}
+        statusBarTranslucent={true}
       >
         <View
           style={{

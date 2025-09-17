@@ -286,12 +286,12 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedType1, setSelectedType1] = useState(dropdownData[0]);
   const [selectedType2, setSelectedType2] = useState(dropdownData[0]);
-  const [selectedType3, setSelectedType3] = useState(dropdownData[3]);
-  const [selectedType4, setSelectedType4] = useState(dropdownData[3]);
+  const [selectedType3, setSelectedType3] = useState(dropdownData[0]);
+  const [selectedType4, setSelectedType4] = useState(dropdownData[0]);
   const [mediaLink1, setMediaLink1] = useState("");
   const [mediaLink2, setMediaLink2] = useState("");
-  const [mediaLink3, setMediaLink3] = useState("https://"); // Initialize with https:// since it's a website type
-  const [mediaLink4, setMediaLink4] = useState("https://"); // Initialize with https:// since it's a website type
+  const [mediaLink3, setMediaLink3] = useState("");
+  const [mediaLink4, setMediaLink4] = useState("");
   const [errors, setErrors] = useState({
     logo: "",
     photos: "",
@@ -517,7 +517,7 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
       }
     }
 
-    if (mediaLink3) {
+    if (mediaLink3 && isElitePlan) {
       const formattedUrl = formatWebsiteUrl(mediaLink3, selectedType3.value);
       if (formattedUrl) {
         socialMedia.push({
@@ -527,7 +527,7 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
       }
     }
 
-    if (mediaLink4 && !isBasicPlan) {
+    if (mediaLink4 && isElitePlan) {
       const formattedUrl = formatWebsiteUrl(mediaLink4, selectedType4.value);
       if (formattedUrl) {
         socialMedia.push({
@@ -537,7 +537,7 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
       }
     }
 
-    return socialMedia?.length > 0 ? { socialMedia } : {};
+    return { socialMedia };
   };
 
   const handleContinueBtnPress = async () => {
@@ -616,12 +616,12 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
       }
 
       let payload = {
-        ...(createSocialMediaPayload()?.socialMedia?.length > 0 && {
-          socialMedia: createSocialMediaPayload().socialMedia,
-        }),
+        socialMedia: createSocialMediaPayload().socialMedia,
         infoType: infoType === "Food Truck" ? "truck" : "caterer",
         planId: selectedPlan?._id,
+        locations: selectedLocations?.length ? selectedLocations : [],
       };
+
       if (selectedEmpNumberType === "ein") {
         payload.ein = selectedEmpNumberText;
         // payload.ssn = null;
@@ -629,24 +629,22 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
         // payload.ein = null;
         payload.ssn = selectedEmpNumberText;
       }
+
       if (logoResult) {
         payload.logo = logoResult.serverResponse;
       }
+
       if (imageResult?.length > 0) {
         const tempURL = imageResult.map((item) => item.serverResponse);
         payload.photos = tempURL;
       }
-      if (selectedLocations?.length > 0) {
-        payload.locations = selectedLocations;
-      }
-      if (selectedCuisine?.length > 0) {
-        const tempIDs = selectedCuisine.map((item) => item._id);
-        payload.cuisine = tempIDs;
-      }
 
-      if (route?.params?.addOns?.length > 0) {
-        payload.addOns = route?.params?.addOns;
-      }
+      const tempIDs = (selectedCuisine || []).map((item) => item._id);
+      payload.cuisine = tempIDs;
+
+      payload.addOns = route?.params?.addOns?.length
+        ? route?.params?.addOns
+        : [];
 
       console.log("payload ===> ", payload);
       console.log("foodTruckId ===> ", user?.foodTruck?._id);
@@ -1052,15 +1050,16 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
               <View style={[styles.section, { gap: 10 }]}>
                 {/* media link 1 */}
                 <MediaLinksComponent
-                  dropdownData={
-                    isElitePlan
-                      ? dropdownData
-                      : dropdownData.map((item) =>
-                          item.type === "web"
-                            ? { ...item, disable: true }
-                            : item
-                        )
-                  }
+                  // dropdownData={
+                  //   isElitePlan
+                  //     ? dropdownData
+                  //     : dropdownData.map((item) =>
+                  //         item.type === "web"
+                  //           ? { ...item, disable: true }
+                  //           : item
+                  //       )
+                  // }
+                  dropdownData={dropdownData}
                   selectedSocialMedia={selectedType1}
                   setSelectedSocialMedia={setSelectedType1}
                   socialMediaLink={mediaLink1}
@@ -1070,15 +1069,16 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
                 {/* media link 2 */}
                 {!isBasicPlan ? (
                   <MediaLinksComponent
-                    dropdownData={
-                      isElitePlan
-                        ? dropdownData
-                        : dropdownData.map((item) =>
-                            item.type === "web"
-                              ? { ...item, disable: true }
-                              : item
-                          )
-                    }
+                    // dropdownData={
+                    //   isElitePlan
+                    //     ? dropdownData
+                    //     : dropdownData.map((item) =>
+                    //         item.type === "web"
+                    //           ? { ...item, disable: true }
+                    //           : item
+                    //       )
+                    // }
+                    dropdownData={dropdownData}
                     selectedSocialMedia={selectedType2}
                     setSelectedSocialMedia={setSelectedType2}
                     socialMediaLink={mediaLink2}
@@ -1087,34 +1087,38 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
                 ) : null}
 
                 {/* media link 3 */}
-                <MediaLinksComponent
-                  dropdownData={
-                    isElitePlan
-                      ? dropdownData
-                      : dropdownData.map((item) =>
-                          item.type === "social"
-                            ? { ...item, disable: true }
-                            : item
-                        )
-                  }
-                  selectedSocialMedia={selectedType3}
-                  setSelectedSocialMedia={setSelectedType3}
-                  socialMediaLink={mediaLink3}
-                  setSocialMediaLink={setMediaLink3}
-                />
+                {isElitePlan ? (
+                  <MediaLinksComponent
+                    // dropdownData={
+                    //   isElitePlan
+                    //     ? dropdownData
+                    //     : dropdownData.map((item) =>
+                    //         item.type === "social"
+                    //           ? { ...item, disable: true }
+                    //           : item
+                    //       )
+                    // }
+                    dropdownData={dropdownData}
+                    selectedSocialMedia={selectedType3}
+                    setSelectedSocialMedia={setSelectedType3}
+                    socialMediaLink={mediaLink3}
+                    setSocialMediaLink={setMediaLink3}
+                  />
+                ) : null}
 
                 {/* media link 4 */}
-                {!isBasicPlan ? (
+                {isElitePlan ? (
                   <MediaLinksComponent
-                    dropdownData={
-                      isElitePlan
-                        ? dropdownData
-                        : dropdownData.map((item) =>
-                            item.type === "social"
-                              ? { ...item, disable: true }
-                              : item
-                          )
-                    }
+                    // dropdownData={
+                    //   isElitePlan
+                    //     ? dropdownData
+                    //     : dropdownData.map((item) =>
+                    //         item.type === "social"
+                    //           ? { ...item, disable: true }
+                    //           : item
+                    //       )
+                    // }
+                    dropdownData={dropdownData}
                     selectedSocialMedia={selectedType4}
                     setSelectedSocialMedia={setSelectedType4}
                     socialMediaLink={mediaLink4}

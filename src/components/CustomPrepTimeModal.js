@@ -28,9 +28,11 @@ const CustomPrepTimeModal = ({
     <Modal
       isVisible={timeModal?.isVisible || false}
       backdropOpacity={0.5}
-      animationIn="zoomIn"
-      animationOut="zoomOut"
-      backdropTransitionOutTiming={0.5}
+      useNativeDriverForBackdrop={true}
+      useNativeDriver={true}
+      hideModalContentWhileAnimating={true}
+      statusBarTranslucent={true}
+      style={{ margin: 0 }}
     >
       <View style={styles.modalContainer}>
         {/* Title & Subtitle */}
@@ -188,6 +190,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingLeft: 0,
     paddingTop: 0,
-    fontFamily: Mulish400
+    fontFamily: Mulish400,
   },
 });

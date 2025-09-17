@@ -110,9 +110,10 @@ const RenameLocationModal = ({
     <Modal
       isVisible={isModalVisible}
       backdropOpacity={0.5}
-      animationIn="slideInUp"
-      animationOut="slideOutDown"
-      backdropTransitionOutTiming={0.5}
+      useNativeDriverForBackdrop={true}
+      useNativeDriver={true}
+      hideModalContentWhileAnimating={true}
+      statusBarTranslucent={true}
     >
       <View style={styles.modalContainer}>
         <KeyboardAvoidingView
@@ -1072,6 +1073,6 @@ const styles = StyleSheet.create({
     // marginBottom: 8,
     paddingLeft: 0,
     // paddingTop: 0,
-    fontFamily: Mulish400
+    fontFamily: Mulish400,
   },
 });

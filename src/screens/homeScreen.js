@@ -493,6 +493,7 @@ const HomeScreen = ({ navigation }) => {
                 </Text>
               </View>
             </View>
+
             {/* Order & Stats */}
             <View style={styles.content}>
               {/* New Order */}
@@ -723,7 +724,7 @@ const HomeScreen = ({ navigation }) => {
                     <View style={styles.orderTotalContainer}>
                       <Text
                         style={styles.orderTotalText}
-                      >{`$${(newOrderData?.total||0).toFixed(2)}`}</Text>
+                      >{`$${(newOrderData?.total || 0).toFixed(2)}`}</Text>
                       <View style={styles.orderActionButtons}>
                         <TouchableOpacity
                           style={styles.rejectOrderBtn}
@@ -846,14 +847,22 @@ const HomeScreen = ({ navigation }) => {
       </ScrollView>
 
       {/* Preparation Time Modal */}
-      <CustomPrepTimeModal
-        timeModal={timeModal}
-        setTimeModal={setTimeModal}
-        prepTimeError={prepTimeError}
-        setPrepTimeError={setPrepTimeError}
-        handleSubmitPrepTime={handleSubmitPrepTime}
-        onModalCancelPress={onModalCancelPress}
-      />
+      <View
+        style={{
+          flex: 1,
+          position: "absolute",
+          inset: 0,
+        }}
+      >
+        <CustomPrepTimeModal
+          timeModal={timeModal}
+          setTimeModal={setTimeModal}
+          prepTimeError={prepTimeError}
+          setPrepTimeError={setPrepTimeError}
+          handleSubmitPrepTime={handleSubmitPrepTime}
+          onModalCancelPress={onModalCancelPress}
+        />
+      </View>
     </View>
   );
 };
