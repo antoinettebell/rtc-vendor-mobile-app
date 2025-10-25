@@ -12,7 +12,6 @@ import {
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import Feather from "react-native-vector-icons/Feather";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import FastImage from "@d11/react-native-fast-image";
 import moment from "moment";
 import StatusBarManager from "../components/StatusBarManager";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
@@ -27,11 +26,9 @@ import {
   vendorProfileStatus,
 } from "../utils/constants";
 import {
-  calculateTotalPreparationTime,
   extractAdvanceOrderLocationAndTime,
   getDisabledStatuses,
 } from "../helpers/order.helper";
-import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
 import AppImage from "../components/AppImage";
 
 const OrderScreen = ({ navigation }) => {
@@ -43,8 +40,6 @@ const OrderScreen = ({ navigation }) => {
   const [activeStage, setActiveStage] = useState("current");
   const [menuVisible, setMenuVisible] = useState(null);
   const [orderData, setOrderData] = useState([]);
-  const [timeModal, setTimeModal] = useState(null);
-  const [prepTimeError, setPrepTimeError] = useState("");
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -282,11 +277,11 @@ const OrderScreen = ({ navigation }) => {
                 onPress={() => {
                   if (disabledStatuses.includes(orderStatusStrings.accepted))
                     return;
-                  handleAcceptAndPrintPress(item);
+                  handleAcceptPress(item);
                 }}
                 // disabled={disabledStatuses.includes(orderStatusStrings.accepted)}
               >
-                <Text style={styles.orderBtnText}>{"Accept & Print"}</Text>
+                <Text style={styles.orderBtnText}>{"Accept"}</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -334,7 +329,7 @@ const OrderScreen = ({ navigation }) => {
     setMenuVisible(null);
     if (!status) return;
     if (status === orderStatusStrings.preparing) {
-      handleAcceptAndPrintPress(item);
+      handleAcceptPress(item);
     } else if (status === orderStatusStrings.rejected) {
       handleRejectOrderPress(item);
     } else {
@@ -345,20 +340,44 @@ const OrderScreen = ({ navigation }) => {
     }
   };
 
-  // Modal cancel press
-  const onModalCancelPress = () => {
-    setTimeModal(null);
-  };
-
-  // Handle "accept & print" press
-  const handleAcceptAndPrintPress = (order) => {
-    const estimatedPrepTime = calculateTotalPreparationTime(order);
-    setTimeModal({
-      orderData: order,
-      isVisible: true,
-      loading: false,
-      prepTime: `${estimatedPrepTime}`,
-    });
+  // Handle "accept" press
+  const handleAcceptPress = async (order) => {
+    try {
+      const response = await updateOrderStatusByID_API({
+        order_id: order?._id,
+        payload: {
+          orderStatus: "ACCEPTED",
+        },
+      });
+      console.log("response => ", response);
+      if (response?.success && response?.data) {
+        const tempOrderData = orderData.map((item) => {
+          if (item?._id === order?._id) {
+            return {
+              ...item,
+              orderStatus: response.data.order.orderStatus,
+            };
+          }
+          return item;
+        });
+        setOrderData(tempOrderData);
+        dispatch(
+          showSnackbar({
+            type: "success",
+            message: "Order status updated successfully",
+          })
+        );
+      }
+    } catch (error) {
+      console.log("error => ", error);
+      dispatch(
+        showSnackbar({
+          type: "error",
+          message: "Something went wrong!",
+        })
+      );
+    } finally {
+    }
   };
 
   // Handle "reject" order press
@@ -415,82 +434,6 @@ const OrderScreen = ({ navigation }) => {
         },
       ]
     );
-  };
-
-  // handle prep time submit
-  const handleSubmitPrepTime = async () => {
-    const prepTime = timeModal?.prepTime;
-
-    // Check if prepTime exists
-    if (!prepTime) {
-      setPrepTimeError("Preparation time is required");
-      return;
-    }
-
-    // Check if prepTime contains only digits
-    if (!/^\d+$/.test(prepTime)) {
-      setPrepTimeError("Preparation time must contain only numbers");
-      return;
-    }
-
-    // Convert to number for range validation
-    const prepTimeNum = Number(prepTime);
-
-    // Check if prepTime is within 0-120 range
-    if (prepTimeNum < 0 || prepTimeNum > 120) {
-      setPrepTimeError("Preparation time must be between 0 and 120 minutes");
-      return;
-    }
-
-    // Clear error if all validations pass
-    setPrepTimeError("");
-
-    setTimeModal((prev) => ({
-      ...prev,
-      loading: true,
-    }));
-    try {
-      const response = await updateOrderStatusByID_API({
-        order_id: timeModal?.orderData?._id,
-        payload: {
-          orderStatus: "PREPARING",
-          pickupTime: `${prepTimeNum}`,
-        },
-      });
-      console.log("response => ", response);
-      if (response?.success && response?.data) {
-        const tempOrderData = orderData.map((item) => {
-          if (item?._id === timeModal?.orderData?._id) {
-            return {
-              ...item,
-              orderStatus: response.data.order.orderStatus,
-              pickupTime: response.data.order.pickupTime,
-            };
-          }
-          return item;
-        });
-        setOrderData(tempOrderData);
-        dispatch(
-          showSnackbar({
-            type: "success",
-            message: "Order status updated successfully",
-          })
-        );
-        setTimeModal(null);
-      }
-    } catch (error) {
-      console.log("error => ", error);
-      dispatch(
-        showSnackbar({
-          type: "error",
-          message: "Something went wrong!",
-        })
-      );
-      setTimeModal((prev) => ({
-        ...prev,
-        loading: false,
-      }));
-    }
   };
 
   // Handle load more
@@ -647,7 +590,7 @@ const OrderScreen = ({ navigation }) => {
                     : styles.inactiveButtonText
                 }
               >
-                {"Current Orders"}
+                {"Regular Orders"}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -667,7 +610,7 @@ const OrderScreen = ({ navigation }) => {
                     : styles.inactiveButtonText
                 }
               >
-                {"Advance Orders"}
+                {"Pre-Orders"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -713,16 +656,6 @@ const OrderScreen = ({ navigation }) => {
           </Text>
         </View>
       )}
-
-      {/* Preparation Time Modal */}
-      <CustomPrepTimeModal
-        timeModal={timeModal}
-        setTimeModal={setTimeModal}
-        prepTimeError={prepTimeError}
-        setPrepTimeError={setPrepTimeError}
-        handleSubmitPrepTime={handleSubmitPrepTime}
-        onModalCancelPress={onModalCancelPress}
-      />
     </View>
   );
 };

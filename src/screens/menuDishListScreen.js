@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   FlatList,
   Platform,
@@ -25,6 +25,7 @@ import { IconButton, Switch } from "react-native-paper";
 import {
   getAllFoodItemsByCatID_API,
   getFoodtruckDetail_API,
+  updateFooditemAvailabilityByID_API,
   updateFooditemByID_API,
 } from "../api/appAPI";
 import {
@@ -34,6 +35,7 @@ import {
 import FastImage from "@d11/react-native-fast-image";
 import { setSelectedPlan } from "../redux/slices/userSlice";
 import AppImage from "../components/AppImage";
+import { useFocusEffect } from "@react-navigation/native";
 
 const dishLocalImage = require("../assets/images/cutlery.png");
 
@@ -63,7 +65,7 @@ const MenuDishListScreen = ({ navigation, route }) => {
       console.log("Value => ", value);
       console.log("Menu ID => ", menuId);
 
-      const response = await updateFooditemByID_API({
+      const response = await updateFooditemAvailabilityByID_API({
         payload: { available: value },
         fooditem_id: menuId,
       });
@@ -119,13 +121,15 @@ const MenuDishListScreen = ({ navigation, route }) => {
     }
   };
 
-  useEffect(() => {
-    if (Params?.category) {
-      setCategory(Params.category);
-      getDataFromAPI(Params.category._id);
-      getFoodTruckDetailFromAPI();
-    }
-  }, [Params?.category]);
+  useFocusEffect(
+    useCallback(() => {
+      if (Params?.category) {
+        setCategory(Params.category);
+        getDataFromAPI(Params.category._id);
+        getFoodTruckDetailFromAPI();
+      }
+    }, [Params?.category])
+  );
 
   useEffect(() => {
     setDishList(selectedFoodItems);
@@ -151,6 +155,7 @@ const MenuDishListScreen = ({ navigation, route }) => {
               onPress={() =>
                 navigation.navigate("menuAddDishItemScreen", {
                   category,
+                  type: "add",
                 })
               }
               activeOpacity={0.7}
@@ -195,8 +200,9 @@ const MenuDishListScreen = ({ navigation, route }) => {
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() =>
-                  navigation.navigate("menuEditDishItemScreen", {
+                  navigation.navigate("menuAddDishItemScreen", {
                     category,
+                    type: "edit",
                     foodItem: item,
                   })
                 }
@@ -278,27 +284,6 @@ const MenuDishListScreen = ({ navigation, route }) => {
                         }}
                       >{`$${(item?.strikePrice || 0).toFixed(2)}`}</Text>
                     )}
-                    {item?.popularDish ? (
-                      <View
-                        style={{
-                          borderRadius: 20,
-                          alignItems: "center",
-                          justifyContent: "center",
-                          backgroundColor: AppColor.primary,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            fontSize: 12,
-                            fontFamily: Mulish400,
-                            color: AppColor.white,
-                            paddingHorizontal: 8,
-                          }}
-                        >
-                          {"Popular"}
-                        </Text>
-                      </View>
-                    ) : null}
                   </View>
                 </View>
                 <View>
@@ -322,6 +307,7 @@ const MenuDishListScreen = ({ navigation, route }) => {
                   onPress={() =>
                     navigation.navigate("menuAddDishItemScreen", {
                       category,
+                      type: "add",
                     })
                   }
                   activeOpacity={0.8}

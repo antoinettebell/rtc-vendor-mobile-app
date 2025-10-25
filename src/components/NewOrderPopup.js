@@ -292,7 +292,7 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
             numberOfLines={1}
           >
             {locationTimeAdvanceData?.advanceOrder
-              ? "New Advance Order"
+              ? "New Pre-Order"
               : "New Order"}
           </Text>
 

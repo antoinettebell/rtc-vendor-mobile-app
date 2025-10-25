@@ -56,87 +56,11 @@ import {
   foodTypeStrings,
 } from "../utils/constants";
 import AppImage from "../components/AppImage";
-import { getDiscountedPrice } from "../helpers/menu.helper";
+import { getDiscountedPrice, editValidateItemName, editValidateItemDescription, editValidateItemPrice, editValidateItemDiscount, editValidateMinQt, editValidateMaxQt, editValidatePrepTime } from "../helpers/menu.helper";
 
 const width = Dimensions.get("window").width;
 
-const validateItemName = (value) => {
-  if (!value.trim()) {
-    return "Dish/Item name is required";
-  }
-  return "";
-};
 
-const validateItemDescription = (value) => {
-  if (!value.trim()) {
-    return "Description is required";
-    // return "Cuisine is required";
-  }
-  return "";
-};
-
-const validateItemPrice = (value) => {
-  if (!value.trim()) {
-    return "Price is required";
-  }
-  if (!/^\d*\.?\d*$/.test(value)) {
-    return "Only numbers and decimal point allowed";
-  }
-  return "";
-};
-
-const validateItemDiscount = (value) => {
-  if (!/^\d*\.?\d*$/.test(value)) {
-    return "Only numbers and decimal point allowed";
-  }
-  return "";
-};
-
-const validateMinQt = (value, maxQtValue) => {
-  if (!value.trim()) {
-    return "Min quantity is required";
-  }
-  if (!/^\d+$/.test(value)) {
-    return "Only whole numbers allowed";
-  }
-  const num = parseInt(value, 10);
-  if (num < 1) {
-    return "Minimum value is 1";
-  }
-  if (maxQtValue && num > parseInt(maxQtValue, 10)) {
-    return "Must be ≤ Max quantity";
-  }
-  return "";
-};
-
-const validateMaxQt = (value, minQtValue) => {
-  if (!value.trim()) {
-    return "Max quantity is required";
-  }
-  if (!/^\d+$/.test(value)) {
-    return "Only whole numbers allowed";
-  }
-  const num = parseInt(value, 10);
-  if (minQtValue && num < parseInt(minQtValue, 10)) {
-    return "Must be ≥ Min quantity";
-  }
-  return "";
-};
-
-const validatePrepTime = (value) => {
-  if (!value.trim()) {
-    // return "Preparation time is required";
-    value = 0; // Default value for logic only
-  }
-  if (!/^\d+$/.test(value)) {
-    return "Only whole numbers allowed";
-  }
-  const num = parseInt(value, 10);
-  if (num > 120) {
-    return "Maximum value is 120";
-  }
-  return "";
-};
 
 const MenuEditDishItemScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -304,7 +228,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
     setItemName(text);
     setErrors((prev) => ({
       ...prev,
-      itemName: validateItemName(text),
+      itemName: editValidateItemName(text),
     }));
   };
 
@@ -312,7 +236,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
     setItemDescription(text);
     setErrors((prev) => ({
       ...prev,
-      itemDescription: validateItemDescription(text),
+      itemDescription: editValidateItemDescription(text),
     }));
   };
 
@@ -322,7 +246,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
     setItemPrice(cleanedText);
     setErrors((prev) => ({
       ...prev,
-      itemPrice: validateItemPrice(cleanedText),
+      itemPrice: editValidateItemPrice(cleanedText),
     }));
   };
 
@@ -332,7 +256,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
     setItemDiscount(cleanedText);
     setErrors((prev) => ({
       ...prev,
-      itemDiscount: validateItemDiscount(cleanedText),
+      itemDiscount: editValidateItemDiscount(cleanedText),
     }));
   };
 
@@ -342,8 +266,8 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
     setMinQt(cleanedText);
     setErrors((prev) => ({
       ...prev,
-      qtMin: validateMinQt(cleanedText, maxQt),
-      qtMax: maxQt ? validateMaxQt(maxQt, cleanedText) : prev.qtMax,
+      qtMin: editValidateMinQt(cleanedText, maxQt),
+      qtMax: maxQt ? editValidateMaxQt(maxQt, cleanedText) : prev.qtMax,
     }));
   };
 
@@ -353,8 +277,8 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
     setMaxQt(cleanedText);
     setErrors((prev) => ({
       ...prev,
-      qtMax: validateMaxQt(cleanedText, minQt),
-      qtMin: minQt ? validateMinQt(minQt, cleanedText) : prev.qtMin,
+      qtMax: editValidateMaxQt(cleanedText, minQt),
+      qtMin: minQt ? editValidateMinQt(minQt, cleanedText) : prev.qtMin,
     }));
   };
 
@@ -364,7 +288,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
     setPrepTime(cleanedText);
     setErrors((prev) => ({
       ...prev,
-      prepTime: validatePrepTime(cleanedText),
+      prepTime: editValidatePrepTime(cleanedText),
     }));
   };
 
@@ -379,14 +303,14 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
 
     // Validate all fields
     const newErrors = {
-      itemName: validateItemName(itemName),
-      itemDescription: validateItemDescription(itemDescription),
-      itemPrice: validateItemPrice(itemPrice),
-      qtMin: validateMinQt(minQt, maxQt),
-      qtMax: validateMaxQt(maxQt, minQt),
+      itemName: editValidateItemName(itemName),
+      itemDescription: editValidateItemDescription(itemDescription),
+      itemPrice: editValidateItemPrice(itemPrice),
+      qtMin: editValidateMinQt(minQt, maxQt),
+      qtMax: editValidateMaxQt(maxQt, minQt),
       itemPhotos:
         selectedPhotos.length === 0 ? "At least one image is required" : "",
-      prepTime: validatePrepTime(prepTime),
+      prepTime: editValidatePrepTime(prepTime),
       comboItem:
         foodTypeStrings.combo === selectedFoodType
           ? selectedMenus?.length === 0
@@ -397,7 +321,7 @@ const MenuEditDishItemScreen = ({ navigation, route }) => {
 
     // Only validate discount if toggle is enabled
     if (discountEnabled) {
-      const discountError = validateItemDiscount(itemDiscount);
+      const discountError = editValidateItemDiscount(itemDiscount);
       if (discountError) {
         newErrors.itemDiscount = discountError;
       } else if (parseFloat(itemDiscount || 0) <= 0) {

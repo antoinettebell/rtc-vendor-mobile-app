@@ -1,12 +1,16 @@
 import Config from "react-native-config";
+import apiClient from "./apiClient";
 import {
   ADD_BANK_DETAIL,
   ADD_FOOD_CATEGORY,
   ADD_FOOD_ITEM,
   ADD_REVIEW,
+  CHANGE_MENU_AVAILABILITY,
   CUISINE,
   GET_ADD_ONS,
   GET_BANK_DETAIL,
+  GET_COMMON_LIST,
+  GET_DEFAULT_CATEGORY,
   GET_DIET_LIST,
   GET_FOODTRUCK_DETAILS,
   GET_FOOD_CATEGORY,
@@ -36,9 +40,18 @@ import {
   UPDATE_SUBSCRIPTION_PLAN,
   UPDATE_USER_DETAILS,
 } from "./apiEndPoint";
-import apiClient from "./apiClient";
 
-// Reverse Location for Place Detail
+/**
+ * Location-Related APIs
+ */
+
+/**
+ * Get location details from latitude and longitude
+ * @param {Object} payload - Request payload
+ * @param {number} payload.lat - Latitude coordinate
+ * @param {number} payload.long - Longitude coordinate
+ * @returns {Promise<Object>} Location data from Google Maps API
+ */
 export const getLocationDetailsFromLatLong = async (payload) => {
   try {
     const { lat, long } = payload;
@@ -56,7 +69,15 @@ export const getLocationDetailsFromLatLong = async (payload) => {
   }
 };
 
-// Upload Images
+/**
+ * Media-Related APIs
+ */
+
+/**
+ * Upload images to the server
+ * @param {FormData} payload - Form data containing images to upload
+ * @returns {Promise<Object>} Uploaded image data
+ */
 export const uploadImage_API = async (payload) => {
   try {
     const URL = `${MEDIA_UPLOAD}`;
@@ -67,29 +88,15 @@ export const uploadImage_API = async (payload) => {
   }
 };
 
-// Cuisine List API
-export const cuisineList_API = async (payload) => {
-  try {
-    const URL = `${CUISINE}?page=${payload.page}&limit=1000`;
-    const response = await apiClient.get(URL, { skipToken: false });
-    return response?.data;
-  } catch (error) {
-    throw error?.response;
-  }
-};
+/**
+ * User-Related APIs
+ */
 
-// Update Food Truck Profile
-export const updateFoodTruckProfile_API = async ({ payload, foodTruckId }) => {
-  try {
-    const URL = `${UPDATE_FOODTRUCK}/${foodTruckId}`;
-    const response = await apiClient.put(URL, payload, { skipToken: false });
-    return response?.data;
-  } catch (error) {
-    throw error?.response?.data;
-  }
-};
-
-// Get User Detail by user_id
+/**
+ * Get user details by user ID
+ * @param {string} user_id - User ID to fetch details for
+ * @returns {Promise<Object>} User details data
+ */
 export const getUserDetail_API = async (user_id) => {
   try {
     const URL = `${GET_USER_DETAILS}/${user_id}`;
@@ -100,7 +107,13 @@ export const getUserDetail_API = async (user_id) => {
   }
 };
 
-// Update User Details by user_id
+/**
+ * Update user details by user ID
+ * @param {Object} params - Request parameters
+ * @param {Object} params.payload - User data to update
+ * @param {string} params.user_id - User ID to update details for
+ * @returns {Promise<Object>} Updated user data
+ */
 export const updateUserDetail_API = async ({ payload, user_id }) => {
   try {
     const URL = `${UPDATE_USER_DETAILS}/${user_id}`;
@@ -111,7 +124,45 @@ export const updateUserDetail_API = async ({ payload, user_id }) => {
   }
 };
 
-// Get Foodtruck Detail by foodtruck_id
+/**
+ * Delete user account
+ * @returns {Promise<Object>} Account deletion confirmation
+ */
+export const deleteAccount_API = async () => {
+  try {
+    const URL = `${REMOVE_ACCOUNT}`;
+    const response = await apiClient.delete(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+/**
+ * Mark registration as complete
+ * @returns {Promise<Object>} Registration completion confirmation
+ */
+export const registerComplete_API = async () => {
+  try {
+    const URL = `${REGISTER_COMPLETE}`;
+    const response = await apiClient.patch(URL, undefined, {
+      skipToken: false,
+    });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+/**
+ * Food Truck-Related APIs
+ */
+
+/**
+ * Get food truck details by ID
+ * @param {string} foodtruck_id - Food truck ID to fetch details for
+ * @returns {Promise<Object>} Food truck details data
+ */
 export const getFoodtruckDetail_API = async (foodtruck_id) => {
   try {
     const URL = `${GET_FOODTRUCK_DETAILS}/${foodtruck_id}`;
@@ -122,7 +173,30 @@ export const getFoodtruckDetail_API = async (foodtruck_id) => {
   }
 };
 
-// Remove Foodtruck location
+/**
+ * Update food truck profile
+ * @param {Object} params - Request parameters
+ * @param {Object} params.payload - Food truck data to update
+ * @param {string} params.foodTruckId - Food truck ID to update
+ * @returns {Promise<Object>} Updated food truck data
+ */
+export const updateFoodTruckProfile_API = async ({ payload, foodTruckId }) => {
+  try {
+    const URL = `${UPDATE_FOODTRUCK}/${foodTruckId}`;
+    const response = await apiClient.put(URL, payload, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+/**
+ * Remove food truck location
+ * @param {Object} params - Request parameters
+ * @param {string} params.foodtruck_id - Food truck ID
+ * @param {string} params.location_id - Location ID to remove
+ * @returns {Promise<Object>} Location removal confirmation
+ */
 export const removeFoodtruckLocation_API = async ({
   foodtruck_id,
   location_id,
@@ -136,7 +210,28 @@ export const removeFoodtruckLocation_API = async ({
   }
 };
 
-// Get all category
+/**
+ * Category-Related APIs
+ */
+
+/**
+ * Get all default categories
+ * @returns {Promise<Object>} List of default categories
+ */
+export const getDefaultCategories_API = async () => {
+  try {
+    const URL = `${GET_DEFAULT_CATEGORY}?limit=100`;
+    const response = await apiClient.get(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+/**
+ * Get all food categories
+ * @returns {Promise<Object>} List of food categories
+ */
 export const getAllCategory_API = async () => {
   try {
     const URL = `${GET_FOOD_CATEGORY}?limit=100`;
@@ -147,7 +242,11 @@ export const getAllCategory_API = async () => {
   }
 };
 
-// Get category by ID
+/**
+ * Get category by ID
+ * @param {string} category_id - Category ID to fetch
+ * @returns {Promise<Object>} Category details
+ */
 export const getCategoryByID_API = async (category_id) => {
   try {
     const URL = `${GET_FOOD_CATEGORY}/${category_id}`;
@@ -158,7 +257,11 @@ export const getCategoryByID_API = async (category_id) => {
   }
 };
 
-// Add new category
+/**
+ * Add new food category
+ * @param {Object} payload - Category data to add
+ * @returns {Promise<Object>} Added category data
+ */
 export const addCategory_API = async (payload) => {
   try {
     const URL = `${ADD_FOOD_CATEGORY}`;
@@ -169,7 +272,13 @@ export const addCategory_API = async (payload) => {
   }
 };
 
-// Update category by ID
+/**
+ * Update category by ID
+ * @param {Object} params - Request parameters
+ * @param {Object} params.payload - Category data to update
+ * @param {string} params.category_id - Category ID to update
+ * @returns {Promise<Object>} Updated category data
+ */
 export const updateCategory_API = async ({ payload, category_id }) => {
   try {
     const URL = `${UPDATE_FOOD_CATEGORY}/${category_id}`;
@@ -180,7 +289,11 @@ export const updateCategory_API = async ({ payload, category_id }) => {
   }
 };
 
-// Remove category by ID
+/**
+ * Remove category by ID
+ * @param {string} category_id - Category ID to remove
+ * @returns {Promise<Object>} Category removal confirmation
+ */
 export const removeCategory_API = async (category_id) => {
   try {
     const URL = `${REMOVE_FOOD_CATEGORY}/${category_id}`;
@@ -191,7 +304,15 @@ export const removeCategory_API = async (category_id) => {
   }
 };
 
-// Get all food items by category_id
+/**
+ * Food Item-Related APIs
+ */
+
+/**
+ * Get all food items by category ID
+ * @param {string} category_id - Category ID to filter food items
+ * @returns {Promise<Object>} List of food items for the category
+ */
 export const getAllFoodItemsByCatID_API = async (category_id) => {
   try {
     const URL = `${GET_FOOD_ITEM}?categoryId=${category_id}&limit=100`;
@@ -202,7 +323,11 @@ export const getAllFoodItemsByCatID_API = async (category_id) => {
   }
 };
 
-// Get food item by food-item-id
+/**
+ * Get food item by ID
+ * @param {string} fooditem_id - Food item ID to fetch
+ * @returns {Promise<Object>} Food item details
+ */
 export const getFoodItemByID_API = async (fooditem_id) => {
   try {
     const URL = `${GET_FOOD_ITEM}/${fooditem_id}`;
@@ -213,7 +338,10 @@ export const getFoodItemByID_API = async (fooditem_id) => {
   }
 };
 
-// Get all food item
+/**
+ * Get all food items
+ * @returns {Promise<Object>} List of all food items
+ */
 export const getAllFoodItem_API = async () => {
   try {
     const URL = `${GET_FOOD_ITEM}?limit=1000`;
@@ -224,7 +352,11 @@ export const getAllFoodItem_API = async () => {
   }
 };
 
-// Add new food itme
+/**
+ * Add new food item
+ * @param {Object} payload - Food item data to add
+ * @returns {Promise<Object>} Added food item data
+ */
 export const addFooditem_API = async (payload) => {
   try {
     const URL = `${ADD_FOOD_ITEM}`;
@@ -235,7 +367,13 @@ export const addFooditem_API = async (payload) => {
   }
 };
 
-// Update food-item by ID
+/**
+ * Update food item by ID
+ * @param {Object} params - Request parameters
+ * @param {Object} params.payload - Food item data to update
+ * @param {string} params.fooditem_id - Food item ID to update
+ * @returns {Promise<Object>} Updated food item data
+ */
 export const updateFooditemByID_API = async ({ payload, fooditem_id }) => {
   try {
     const URL = `${UPDATE_FOOD_ITEM}/${fooditem_id}`;
@@ -246,7 +384,31 @@ export const updateFooditemByID_API = async ({ payload, fooditem_id }) => {
   }
 };
 
-// Remove food-item by ID
+/**
+ * Update food availability by ID
+ * @param {Object} params - Request parameters
+ * @param {Object} params.payload - Food item data to update
+ * @param {string} params.fooditem_id - Food item ID to update
+ * @returns {Promise<Object>} Updated food item data
+ */
+export const updateFooditemAvailabilityByID_API = async ({
+  payload,
+  fooditem_id,
+}) => {
+  try {
+    const URL = `${CHANGE_MENU_AVAILABILITY}/${fooditem_id}`;
+    const response = await apiClient.put(URL, payload, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+/**
+ * Remove food item by ID
+ * @param {string} fooditem_id - Food item ID to remove
+ * @returns {Promise<Object>} Food item removal confirmation
+ */
 export const removeFooditemByID_API = async (fooditem_id) => {
   try {
     const URL = `${REMOVE_FOOD_ITEM}/${fooditem_id}`;
@@ -257,18 +419,26 @@ export const removeFooditemByID_API = async (fooditem_id) => {
   }
 };
 
-// Get Plans Data
-export const getPlansData_API = async () => {
+/**
+ * Get cuisine list
+ * @param {Object} payload - Request payload
+ * @param {number} payload.page - Page number for pagination
+ * @returns {Promise<Object>} List of cuisines
+ */
+export const cuisineList_API = async (payload) => {
   try {
-    const URL = `${GET_PLANS_DATA}`;
+    const URL = `${CUISINE}?page=${payload.page}&limit=1000`;
     const response = await apiClient.get(URL, { skipToken: false });
     return response?.data;
   } catch (error) {
-    throw error?.response?.data;
+    throw error?.response;
   }
 };
 
-// Get Diet List
+/**
+ * Get diet list
+ * @returns {Promise<Object>} List of diets
+ */
 export const getDietList_API = async () => {
   try {
     const URL = `${GET_DIET_LIST}?limit=1000`;
@@ -279,7 +449,33 @@ export const getDietList_API = async () => {
   }
 };
 
-// Get Order List
+/**
+ * Get meat list
+ * @returns {Promise<Object>} List of meats
+ */
+export const getMeatList_API = async () => {
+  try {
+    const URL = `${GET_MEAT_LIST}`;
+    const response = await apiClient.get(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+/**
+ * Order-Related APIs
+ */
+
+/**
+ * Get order list
+ * @param {Object} params - Request parameters
+ * @param {number} params.page - Page number for pagination (default: 1)
+ * @param {number} params.limit - Number of items per page (default: 20)
+ * @param {string} params.status - Order status filter (optional)
+ * @param {boolean} params.advance - Advance order filter (optional)
+ * @returns {Promise<Object>} List of orders
+ */
 export const getOrderList_API = async ({
   page = 1,
   limit = 20,
@@ -309,7 +505,11 @@ export const getOrderList_API = async ({
   }
 };
 
-// Get Order by order id
+/**
+ * Get order by ID
+ * @param {string} order_id - Order ID to fetch
+ * @returns {Promise<Object>} Order details
+ */
 export const getOrderByID_API = async (order_id) => {
   try {
     const URL = `${GET_ORDER_BY_ID}/${order_id}`;
@@ -320,7 +520,13 @@ export const getOrderByID_API = async (order_id) => {
   }
 };
 
-// Update order status by order-id
+/**
+ * Update order status by ID
+ * @param {Object} params - Request parameters
+ * @param {string} params.order_id - Order ID to update
+ * @param {Object} params.payload - Order status data to update
+ * @returns {Promise<Object>} Updated order data
+ */
 export const updateOrderStatusByID_API = async ({ order_id, payload }) => {
   try {
     const URL = `${UPDATE_ORDER_STATUS}/${order_id}`;
@@ -331,40 +537,15 @@ export const updateOrderStatusByID_API = async ({ order_id, payload }) => {
   }
 };
 
-// Set FCM Token
-export const setFcmToken_API = async (payload) => {
-  try {
-    const URL = `${SET_FCM_TOKEN}`;
-    const response = await apiClient.post(URL, payload, { skipToken: false });
-    return response?.data;
-  } catch (error) {
-    throw error?.response?.data;
-  }
-};
+/**
+ * Review-Related APIs
+ */
 
-// Update FCM Token
-export const updateFcmToken_API = async ({ deviceId, payload }) => {
-  try {
-    const URL = UPDATE_FCM_TOKEN(deviceId);
-    const response = await apiClient.put(URL, payload, { skipToken: false });
-    return response?.data;
-  } catch (error) {
-    throw error?.response?.data;
-  }
-};
-
-// Remove FCM Token
-export const removeFcmToken_API = async (device_id) => {
-  try {
-    const URL = REMOVE_FCM_TOKEN(device_id);
-    const response = await apiClient.delete(URL, { skipToken: false });
-    return response?.data;
-  } catch (error) {
-    throw error?.response?.data;
-  }
-};
-
-// Add review & reating
+/**
+ * Add review and rating
+ * @param {Object} payload - Review and rating data
+ * @returns {Promise<Object>} Added review data
+ */
 export const addReviewRating_API = async (payload) => {
   try {
     const URL = `${ADD_REVIEW}`;
@@ -375,7 +556,13 @@ export const addReviewRating_API = async (payload) => {
   }
 };
 
-// Update review & reating
+/**
+ * Update review and rating
+ * @param {Object} params - Request parameters
+ * @param {string} params.review_id - Review ID to update
+ * @param {Object} params.payload - Review data to update
+ * @returns {Promise<Object>} Updated review data
+ */
 export const updateReviewRating_API = async ({ review_id, payload }) => {
   try {
     const URL = UPDATE_REVIEW_BY_ID(review_id);
@@ -386,7 +573,11 @@ export const updateReviewRating_API = async ({ review_id, payload }) => {
   }
 };
 
-// get review & reating stats of food-truck
+/**
+ * Get review and rating stats for a food truck
+ * @param {string} foodTruck_id - Food truck ID to get stats for
+ * @returns {Promise<Object>} Review statistics
+ */
 export const getReviewRatingStats_API = async (foodTruck_id) => {
   try {
     const URL = GET_REVIEW_STATS_BY_FOODTRUCK_ID(foodTruck_id);
@@ -397,7 +588,14 @@ export const getReviewRatingStats_API = async (foodTruck_id) => {
   }
 };
 
-// get review & reating of food-truck
+/**
+ * Get reviews and ratings for a food truck
+ * @param {Object} params - Request parameters
+ * @param {string} params.foodTruck_id - Food truck ID to get reviews for
+ * @param {number} params.page - Page number for pagination (default: 1)
+ * @param {number} params.limit - Number of items per page (default: 10)
+ * @returns {Promise<Object>} List of reviews
+ */
 export const getReviewRating_API = async (params = {}) => {
   try {
     const { foodTruck_id, page = 1, limit = 10 } = params;
@@ -419,7 +617,29 @@ export const getReviewRating_API = async (params = {}) => {
   }
 };
 
-// update foodtruck subscription
+/**
+ * Subscription/Plan-Related APIs
+ */
+
+/**
+ * Get plans data
+ * @returns {Promise<Object>} List of subscription plans
+ */
+export const getPlansData_API = async () => {
+  try {
+    const URL = `${GET_PLANS_DATA}`;
+    const response = await apiClient.get(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+/**
+ * Update food truck subscription
+ * @param {Object} payload - Subscription data to update
+ * @returns {Promise<Object>} Updated subscription data
+ */
 export const updateFoodtruckSubscription_API = async (payload) => {
   try {
     const URL = `${UPDATE_SUBSCRIPTION_PLAN}`;
@@ -430,7 +650,29 @@ export const updateFoodtruckSubscription_API = async (payload) => {
   }
 };
 
-// add bank details
+/**
+ * Get add-ons for subscription
+ * @returns {Promise<Object>} List of subscription add-ons
+ */
+export const getAddOnsPlans_API = async () => {
+  try {
+    const URL = `${GET_ADD_ONS}?limit=100`;
+    const response = await apiClient.get(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+/**
+ * Bank Detail-Related APIs
+ */
+
+/**
+ * Add bank details
+ * @param {Object} payload - Bank details data
+ * @returns {Promise<Object>} Added bank details data
+ */
 export const addBankDetail_API = async (payload) => {
   try {
     const URL = `${ADD_BANK_DETAIL}`;
@@ -441,7 +683,10 @@ export const addBankDetail_API = async (payload) => {
   }
 };
 
-// get bank details
+/**
+ * Get bank details
+ * @returns {Promise<Object>} Bank details data
+ */
 export const getBankDetail_API = async () => {
   try {
     const URL = `${GET_BANK_DETAIL}`;
@@ -452,10 +697,29 @@ export const getBankDetail_API = async () => {
   }
 };
 
-// get meat list
-export const getMeatList_API = async () => {
+/**
+ * Common List API
+ */
+
+/**
+ * Get common list data
+ * @param {string|null} type - Type of common list to fetch (default: null)
+ * @returns {Promise<Object>} Common list data
+ */
+export const getCommonList_API = async (type = null) => {
   try {
-    const URL = `${GET_MEAT_LIST}`;
+    let URL = `${GET_COMMON_LIST}`;
+
+    // Always add page=1 and limit=1000
+    const queryParams = [`page=1`, `limit=1000`];
+
+    // Add type query parameter only if it's not null
+    if (type !== null) {
+      queryParams.push(`type=${type}`);
+    }
+
+    URL += `?${queryParams.join("&")}`;
+
     const response = await apiClient.get(URL, { skipToken: false });
     return response?.data;
   } catch (error) {
@@ -463,35 +727,51 @@ export const getMeatList_API = async () => {
   }
 };
 
-// delete account
-export const deleteAccount_API = async () => {
+/**
+ * Notification-Related APIs
+ */
+
+/**
+ * Set FCM token
+ * @param {Object} payload - FCM token data
+ * @returns {Promise<Object>} FCM token set confirmation
+ */
+export const setFcmToken_API = async (payload) => {
   try {
-    const URL = `${REMOVE_ACCOUNT}`;
+    const URL = `${SET_FCM_TOKEN}`;
+    const response = await apiClient.post(URL, payload, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+/**
+ * Update FCM token
+ * @param {Object} params - Request parameters
+ * @param {string} params.deviceId - Device ID
+ * @param {Object} params.payload - FCM token data to update
+ * @returns {Promise<Object>} Updated FCM token data
+ */
+export const updateFcmToken_API = async ({ deviceId, payload }) => {
+  try {
+    const URL = UPDATE_FCM_TOKEN(deviceId);
+    const response = await apiClient.put(URL, payload, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data;
+  }
+};
+
+/**
+ * Remove FCM token
+ * @param {string} device_id - Device ID to remove FCM token for
+ * @returns {Promise<Object>} FCM token removal confirmation
+ */
+export const removeFcmToken_API = async (device_id) => {
+  try {
+    const URL = REMOVE_FCM_TOKEN(device_id);
     const response = await apiClient.delete(URL, { skipToken: false });
-    return response?.data;
-  } catch (error) {
-    throw error?.response?.data;
-  }
-};
-
-// registration complete
-export const registerComplete_API = async () => {
-  try {
-    const URL = `${REGISTER_COMPLETE}`;
-    const response = await apiClient.patch(URL, undefined, {
-      skipToken: false,
-    });
-    return response?.data;
-  } catch (error) {
-    throw error?.response?.data;
-  }
-};
-
-// add-ons for subscription
-export const getAddOnsPlans_API = async () => {
-  try {
-    const URL = `${GET_ADD_ONS}?limit=100`;
-    const response = await apiClient.get(URL, { skipToken: false });
     return response?.data;
   } catch (error) {
     throw error?.response?.data;

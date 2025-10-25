@@ -47,7 +47,8 @@ const SignUpScreen = ({ navigation }) => {
   const [mailingCountry, setMailingCountry] = useState("");
   const [mailingZipCode, setMailingZipCode] = useState("");
   const [countryPickerType, setCountryPickerType] = useState(null);
-  const [agreed, setAgreed] = useState(false);
+  const [offGrid, setOffGrid] = useState(true);
+  const [agreed, setAgreed] = useState(true);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({
     visible: false,
@@ -185,6 +186,7 @@ const SignUpScreen = ({ navigation }) => {
         country: mailingCountry,
         zipcode: mailingZipCode,
       },
+      subscribedForOffGrid: offGrid,
     };
 
     console.log("Payload:", payload);
@@ -464,7 +466,10 @@ const SignUpScreen = ({ navigation }) => {
                     setCountryPickerVisible(true);
                     setCountryPickerType("address");
                   }}
-                  style={[styles.countryInput, !!errors.mailingCountry && styles.errorBorder]}
+                  style={[
+                    styles.countryInput,
+                    !!errors.mailingCountry && styles.errorBorder,
+                  ]}
                 >
                   <Text
                     style={[
@@ -752,6 +757,27 @@ const SignUpScreen = ({ navigation }) => {
                   >
                     {"Privacy Policy."}
                   </Text>
+                </Text>
+              </View>
+
+              {/* offgrid checkbox */}
+              <View style={styles.termsContainer}>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => setOffGrid(!offGrid)}
+                  style={styles.iconBox}
+                >
+                  <Ionicons
+                    name={offGrid ? "checkbox" : "square-outline"}
+                    size={22}
+                    color={AppColor.primary}
+                  />
+                </TouchableOpacity>
+
+                <Text style={styles.termsText}>
+                  {
+                    "Would you like to join our nonprofit Underground of Wisdom Lane, an off-the-grid communication system?"
+                  }
                 </Text>
               </View>
 

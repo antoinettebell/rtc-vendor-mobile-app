@@ -37,6 +37,7 @@ export const PRIVACY_POLICY = "/public/privacy-policy";
 export const AGREEMENT = "/public/agreement";
 
 // Menu
+export const GET_DEFAULT_CATEGORY = "/categories";
 export const GET_FOOD_CATEGORY = "/category";
 export const ADD_FOOD_CATEGORY = "/category";
 export const UPDATE_FOOD_CATEGORY = "/category";
@@ -44,12 +45,14 @@ export const REMOVE_FOOD_CATEGORY = "/category";
 
 // Meat
 export const GET_MEAT_LIST = "/meat";
+export const GET_COMMON_LIST = "/public/common-list"; // type: discount | meat_wellness
 
 // Food Item (Dish)
 export const ADD_FOOD_ITEM = "/menu";
 export const UPDATE_FOOD_ITEM = "/menu";
 export const GET_FOOD_ITEM = "/menu";
 export const REMOVE_FOOD_ITEM = "/menu";
+export const CHANGE_MENU_AVAILABILITY = "/menu/change-availability";
 
 // Plans
 export const GET_PLANS_DATA = "/public/plan";

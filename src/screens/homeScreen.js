@@ -45,11 +45,9 @@ import {
 import { checkInstallationId } from "../helpers/notification.helper";
 import { getMessaging } from "@react-native-firebase/messaging";
 import {
-  calculateTotalPreparationTime,
   extractAdvanceOrderLocationAndTime,
   getDisabledStatuses,
 } from "../helpers/order.helper";
-import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
 import AppImage from "../components/AppImage";
 
 const QuickStatsComponent = ({ title, subTitle, icon, onPress }) => (
@@ -83,8 +81,6 @@ const HomeScreen = ({ navigation }) => {
   const [orderRejectBtnLoading, setOrderRejectBtnLoading] = useState(false);
   const [orderAcceptBtnLoading, setOrderAcceptBtnLoading] = useState(false);
   const [locationTimeAdvanceData, setLocationTimeAdvanceData] = useState(null);
-  const [timeModal, setTimeModal] = useState(null);
-  const [prepTimeError, setPrepTimeError] = useState("");
 
   const isOn = useSharedValue(false);
 
@@ -156,13 +152,8 @@ const HomeScreen = ({ navigation }) => {
     setSelectedLocation(selected?._id);
   };
 
-  // Modal cancel press
-  const onModalCancelPress = () => {
-    setTimeModal(null);
-  };
-
-  // Handle "accept & print" press
-  const handleAcceptAndPrintPress = (order) => {
+  // Handle "accept" press
+  const handleAcceptPress = async (order) => {
     if (
       getDisabledStatuses(newOrderData?.orderStatus).includes(
         orderStatusStrings.accepted
@@ -170,53 +161,13 @@ const HomeScreen = ({ navigation }) => {
     ) {
       return;
     }
-    const estimatedPrepTime = calculateTotalPreparationTime(order);
-    setTimeModal({
-      orderData: order,
-      isVisible: true,
-      loading: false,
-      prepTime: `${estimatedPrepTime}`,
-    });
-  };
 
-  // handle prep time submit
-  const handleSubmitPrepTime = async () => {
-    const prepTime = timeModal?.prepTime;
-
-    // Check if prepTime exists
-    if (!prepTime) {
-      setPrepTimeError("Preparation time is required");
-      return;
-    }
-
-    // Check if prepTime contains only digits
-    if (!/^\d+$/.test(prepTime)) {
-      setPrepTimeError("Preparation time must contain only numbers");
-      return;
-    }
-
-    // Convert to number for range validation
-    const prepTimeNum = Number(prepTime);
-
-    // Check if prepTime is within 0-120 range
-    if (prepTimeNum < 0 || prepTimeNum > 120) {
-      setPrepTimeError("Preparation time must be between 0 and 120 minutes");
-      return;
-    }
-
-    // Clear error if all validations pass
-    setPrepTimeError("");
-
-    setTimeModal((prev) => ({
-      ...prev,
-      loading: true,
-    }));
+    setOrderAcceptBtnLoading(true);
     try {
       const response = await updateOrderStatusByID_API({
-        order_id: timeModal?.orderData?._id,
+        order_id: order?._id,
         payload: {
-          orderStatus: "PREPARING",
-          pickupTime: `${prepTimeNum}`,
+          orderStatus: "ACCEPTED",
         },
       });
       console.log("response => ", response);
@@ -228,7 +179,6 @@ const HomeScreen = ({ navigation }) => {
           })
         );
         getOrderDataFromAPI(); // to checking for new order.
-        setTimeModal(null);
       }
     } catch (error) {
       console.log("error => ", error);
@@ -238,10 +188,8 @@ const HomeScreen = ({ navigation }) => {
           message: "Something went wrong!",
         })
       );
-      setTimeModal((prev) => ({
-        ...prev,
-        loading: false,
-      }));
+    } finally {
+      setOrderAcceptBtnLoading(false);
     }
   };
 
@@ -543,7 +491,7 @@ const HomeScreen = ({ navigation }) => {
                             alignSelf: "center",
                           }}
                         >
-                          {"Advance Order"}
+                          {"Pre-Order"}
                         </Text>
                         <Divider
                           style={{
@@ -750,16 +698,12 @@ const HomeScreen = ({ navigation }) => {
                           style={styles.acceptOrderBtn}
                           activeOpacity={0.7}
                           disabled={orderAcceptBtnLoading}
-                          onPress={() =>
-                            handleAcceptAndPrintPress(newOrderData)
-                          }
+                          onPress={() => handleAcceptPress(newOrderData)}
                         >
                           {orderAcceptBtnLoading ? (
                             <ActivityIndicator color={AppColor.primary} />
                           ) : (
-                            <Text style={styles.orderBtnText}>
-                              {"Accept & Print"}
-                            </Text>
+                            <Text style={styles.orderBtnText}>{"Accept"}</Text>
                           )}
                         </TouchableOpacity>
                       </View>
@@ -845,24 +789,6 @@ const HomeScreen = ({ navigation }) => {
           </>
         ) : null}
       </ScrollView>
-
-      {/* Preparation Time Modal */}
-      <View
-        style={{
-          flex: 1,
-          position: "absolute",
-          inset: 0,
-        }}
-      >
-        <CustomPrepTimeModal
-          timeModal={timeModal}
-          setTimeModal={setTimeModal}
-          prepTimeError={prepTimeError}
-          setPrepTimeError={setPrepTimeError}
-          handleSubmitPrepTime={handleSubmitPrepTime}
-          onModalCancelPress={onModalCancelPress}
-        />
-      </View>
     </View>
   );
 };

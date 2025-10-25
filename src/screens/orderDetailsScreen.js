@@ -325,7 +325,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   alignSelf: "center",
                 }}
               >
-                {"Advance Order"}
+                {"Pre-Order"}
               </Text>
               <Divider
                 style={{
@@ -727,6 +727,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   ) : (
                     <Text
                       style={[styles.orderBtnText, { color: AppColor.primary }]}
+                      numberOfLines={1}
                     >
                       {"Reject"}
                     </Text>
@@ -743,7 +744,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   {multiActionBtnLoading ? (
                     <ActivityIndicator color={AppColor.primary} />
                   ) : (
-                    <Text style={styles.orderBtnText}>
+                    <Text style={styles.orderBtnText} numberOfLines={1}>
                       {orderNextStatusNames[nextOrderStatus]}
                     </Text>
                   )}
@@ -752,7 +753,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
             ) : (
               <View style={{ marginVertical: 16 }}>
                 <View style={styles.orderStatusInfoView}>
-                  <Text style={styles.orderStatusInfoText}>
+                  <Text style={styles.orderStatusInfoText} numberOfLines={1}>
                     {orderCurrentStatusNames[orderData?.orderStatus]}
                   </Text>
                 </View>
