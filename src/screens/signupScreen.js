@@ -23,7 +23,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CountryPicker } from "react-native-country-codes-picker";
 import AntDesign from "react-native-vector-icons/AntDesign";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { emailRegex, passwordRegex } from "../utils/constants";
+import {
+  emailRegex,
+  passwordRegex,
+  addressRegex,
+  addressStateRegex,
+  addressCountryRegex,
+  addressPostalCodeRegex,
+  nameRegex,
+  truckNameRegex,
+} from "../utils/constants";
 import { registerVendor_API } from "../api/authAPI";
 import StatusBarManager from "../components/StatusBarManager";
 import { useSelector } from "react-redux";
@@ -33,7 +42,8 @@ const SignUpScreen = ({ navigation }) => {
 
   const { allSigninUsers } = useSelector((state) => state.userInfoReducer);
 
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [foodTruckName, setFoodTruckName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,11 +51,12 @@ const SignUpScreen = ({ navigation }) => {
   const [countryPickerVisible, setCountryPickerVisible] = useState(false);
   const [countryCode, setCountryCode] = useState("+1");
   const [mobileNumber, setMobileNumber] = useState("");
-  const [mailingAddress, setMailingAddress] = useState("");
+  const [mailingAddressLine1, setMailingAddressLine1] = useState("");
+  const [mailingAddressLine2, setMailingAddressLine2] = useState("");
   const [mailingCity, setMailingCity] = useState("");
   const [mailingState, setMailingState] = useState("");
-  const [mailingCountry, setMailingCountry] = useState("");
-  const [mailingZipCode, setMailingZipCode] = useState("");
+  const [mailingCountry, setMailingCountry] = useState("US");
+  const [mailingPostalCode, setMailingPostalCode] = useState("");
   const [countryPickerType, setCountryPickerType] = useState(null);
   const [offGrid, setOffGrid] = useState(true);
   const [agreed, setAgreed] = useState(true);
@@ -57,13 +68,15 @@ const SignUpScreen = ({ navigation }) => {
   });
 
   const [errors, setErrors] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     foodTruckName: "",
-    mailingAddress: "",
+    mailingAddressLine1: "",
+    mailingAddressLine2: "",
     mailingCity: "",
     mailingState: "",
     mailingCountry: "",
-    mailingZipCode: "",
+    mailingPostalCode: "",
     mobileNumber: "",
     email: "",
     password: "",
@@ -73,13 +86,21 @@ const SignUpScreen = ({ navigation }) => {
     setPasswordVisible(!passwordVisible);
   };
 
-  const validateName = (value) => {
-    if (!value.trim()) return "Name is required";
+  const validateFirstName = (value) => {
+    if (!value.trim()) return "First Name is required";
+    if (!nameRegex.test(value)) return "Enter a valid first name";
+    return "";
+  };
+
+  const validateLastName = (value) => {
+    if (!value.trim()) return "Last Name is required";
+    if (!nameRegex.test(value)) return "Enter a valid last name";
     return "";
   };
 
   const validateFoodTruckName = (value) => {
     if (!value.trim()) return "Food truck name is required";
+    if (!truckNameRegex.test(value)) return "Enter a valid food truck name";
     return "";
   };
 
@@ -103,36 +124,62 @@ const SignUpScreen = ({ navigation }) => {
     return "";
   };
 
-  const validateMailingAddress = (value) => {
-    if (!value.trim()) return "Address is required";
+  const validateMailingAddressLine1 = (value) => {
+    if (!value.trim()) return "Address Line 1 is required";
+    if (!addressRegex.test(value)) {
+      return "Address must contain only letters, numbers, and basic punctuation.";
+    }
+    return "";
+  };
+
+  const validateMailingAddressLine2 = (value) => {
+    if (!value.trim()) return "Address Line 2 is required";
+    if (!addressRegex.test(value)) {
+      return "Address must contain only letters, numbers, and basic punctuation.";
+    }
     return "";
   };
 
   const validateMailingCity = (value) => {
     if (!value.trim()) return "City is required";
+    if (!addressRegex.test(value)) {
+      return "City must contain only letters, numbers, and basic punctuation.";
+    }
     return "";
   };
 
   const validateMailingState = (value) => {
     if (!value.trim()) return "State is required";
+    if (!addressStateRegex.test(value)) {
+      return "State value is not valid";
+    }
     return "";
   };
 
   const validateMailingCountry = (value) => {
     if (!value.trim()) return "Country is required";
+    if (!addressCountryRegex.test(value)) {
+      return "Country value is not valid";
+    }
     return "";
   };
 
-  const validateMailingZipcode = (value) => {
-    if (!value.trim()) return "Zipcode is required";
+  const validateMailingPostalcode = (value) => {
+    if (!value.trim()) return "Postal code is required";
+    if (!addressPostalCodeRegex.test(value)) {
+      return "Postal Code is not valid";
+    }
     return "";
   };
 
   const validateForm = () => {
     const newErrors = {};
 
-    const nameError = validateName(name);
-    if (nameError) newErrors.name = nameError;
+    const firstNameError = validateFirstName(firstName);
+    if (firstNameError) newErrors.firstName = firstNameError;
+
+    const lastNameError = validateLastName(lastName);
+    if (lastNameError) newErrors.lastName = lastNameError;
 
     const foodTruckNameError = validateFoodTruckName(foodTruckName);
     if (foodTruckNameError) newErrors.foodTruckName = foodTruckNameError;
@@ -146,8 +193,15 @@ const SignUpScreen = ({ navigation }) => {
     const passwordError = validatePassword(password);
     if (passwordError) newErrors.password = passwordError;
 
-    const mailingAddressError = validateMailingAddress(mailingAddress);
-    if (mailingAddressError) newErrors.mailingAddress = mailingAddressError;
+    const mailingAddressLine1Error =
+      validateMailingAddressLine1(mailingAddressLine1);
+    if (mailingAddressLine1Error)
+      newErrors.mailingAddressLine1 = mailingAddressLine1Error;
+
+    const mailingAddressLine2Error =
+      validateMailingAddressLine2(mailingAddressLine2);
+    if (mailingAddressLine2Error)
+      newErrors.mailingAddressLine2 = mailingAddressLine2Error;
 
     const mailingCityError = validateMailingCity(mailingCity);
     if (mailingCityError) newErrors.mailingCity = mailingCityError;
@@ -158,8 +212,9 @@ const SignUpScreen = ({ navigation }) => {
     const mailingCountryError = validateMailingCountry(mailingCountry);
     if (mailingCountryError) newErrors.mailingCountry = mailingCountryError;
 
-    const mailingZipcodeError = validateMailingZipcode(mailingZipCode);
-    if (mailingZipcodeError) newErrors.mailingZipCode = mailingZipcodeError;
+    const mailingPostalcodeError = validateMailingPostalcode(mailingPostalCode);
+    if (mailingPostalcodeError)
+      newErrors.mailingPostalCode = mailingPostalcodeError;
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -170,7 +225,8 @@ const SignUpScreen = ({ navigation }) => {
     if (!isValid) return;
 
     const payload = {
-      firstName: name,
+      firstName: firstName,
+      lastName: lastName,
       foodTruck: {
         name: foodTruckName,
         infoType: "truck",
@@ -179,13 +235,19 @@ const SignUpScreen = ({ navigation }) => {
       password,
       countryCode,
       mobileNumber,
-      mailing: {
-        address: mailingAddress,
-        city: mailingCity,
-        state: mailingState,
-        country: mailingCountry,
-        zipcode: mailingZipCode,
-      },
+      // mailing: {
+      //   address: mailingAddressLine1,
+      //   city: mailingCity,
+      //   state: mailingState,
+      //   country: mailingCountry,
+      //   zipcode: mailingPostalCode,
+      // },
+      addressLine1: mailingAddressLine1,
+      addressLine2: mailingAddressLine2,
+      addressCity: mailingCity,
+      addressState: mailingState,
+      addressCountry: mailingCountry,
+      addressPostal: mailingPostalCode,
       subscribedForOffGrid: offGrid,
     };
 
@@ -262,36 +324,75 @@ const SignUpScreen = ({ navigation }) => {
             <Text style={styles.subtitle}>{"Create new vendor account!"}</Text>
 
             <View style={styles.formContainer}>
-              {/* Name */}
+              {/* First Name */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                {"Your Name *"}
+                {"Your First Name *"}
               </Text>
               <TextInput
                 dense
-                value={name}
-                onChangeText={setName}
+                value={firstName}
+                onChangeText={setFirstName}
                 style={styles.input}
                 contentStyle={styles.inputText}
-                placeholder="Enter Your Name"
+                placeholder="Enter Your First Name"
                 placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
-                error={!!errors.name}
+                error={!!errors.firstName}
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
                 outlineStyle={{ borderRadius: 8 }}
                 autoCapitalize="sentences"
                 theme={{ colors: { onSurfaceVariant: "#777" } }}
                 onBlur={() =>
-                  setErrors((prev) => ({ ...prev, name: validateName(name) }))
+                  setErrors((prev) => ({
+                    ...prev,
+                    firstName: validateFirstName(firstName),
+                  }))
                 }
               />
-              {!!errors.name && (
+              {!!errors.firstName && (
                 <HelperText
                   type="error"
-                  visible={!!errors.name}
+                  visible={!!errors.firstName}
                   style={styles.helper}
                 >
-                  {errors.name}
+                  {errors.firstName}
+                </HelperText>
+              )}
+
+              {/* Last Name */}
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+                {"Your Last Name *"}
+              </Text>
+              <TextInput
+                dense
+                value={lastName}
+                onChangeText={setLastName}
+                style={styles.input}
+                contentStyle={styles.inputText}
+                placeholder="Enter Your Last Name"
+                placeholderTextColor={AppColor.placeholderTextColor}
+                mode="outlined"
+                error={!!errors.lastName}
+                outlineColor={AppColor.border}
+                activeOutlineColor={AppColor.primary}
+                outlineStyle={{ borderRadius: 8 }}
+                autoCapitalize="sentences"
+                theme={{ colors: { onSurfaceVariant: "#777" } }}
+                onBlur={() =>
+                  setErrors((prev) => ({
+                    ...prev,
+                    lastName: validateLastName(lastName),
+                  }))
+                }
+              />
+              {!!errors.lastName && (
+                <HelperText
+                  type="error"
+                  visible={!!errors.lastName}
+                  style={styles.helper}
+                >
+                  {errors.lastName}
                 </HelperText>
               )}
 
@@ -347,20 +448,20 @@ const SignUpScreen = ({ navigation }) => {
                 <Divider style={{ flex: 1 }} />
               </View>
 
-              {/* Address */}
+              {/* Address Line 1 */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                {"Address *"}
+                {"Address Line 1 *"}
               </Text>
               <TextInput
                 dense
-                value={mailingAddress}
-                onChangeText={setMailingAddress}
+                value={mailingAddressLine1}
+                onChangeText={setMailingAddressLine1}
                 style={styles.input}
                 contentStyle={styles.inputText}
-                placeholder="Enter Address"
+                placeholder="Enter Address Line 1"
                 placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
-                error={!!errors.mailingAddress}
+                error={!!errors.mailingAddressLine1}
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
                 outlineStyle={{ borderRadius: 8 }}
@@ -369,17 +470,55 @@ const SignUpScreen = ({ navigation }) => {
                 onBlur={() =>
                   setErrors((prev) => ({
                     ...prev,
-                    mailingAddress: validateMailingAddress(mailingAddress),
+                    mailingAddressLine1:
+                      validateMailingAddressLine1(mailingAddressLine1),
                   }))
                 }
               />
-              {!!errors.mailingAddress && (
+              {!!errors.mailingAddressLine1 && (
                 <HelperText
                   type="error"
-                  visible={!!errors.mailingAddress}
+                  visible={!!errors.mailingAddressLine1}
                   style={styles.helper}
                 >
-                  {errors.mailingAddress}
+                  {errors.mailingAddressLine1}
+                </HelperText>
+              )}
+
+              {/* Address Line 2 */}
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+                {"Address Line 2 *"}
+              </Text>
+              <TextInput
+                dense
+                value={mailingAddressLine2}
+                onChangeText={setMailingAddressLine2}
+                style={styles.input}
+                contentStyle={styles.inputText}
+                placeholder="Enter Address Line 2"
+                placeholderTextColor={AppColor.placeholderTextColor}
+                mode="outlined"
+                error={!!errors.mailingAddressLine2}
+                outlineColor={AppColor.border}
+                activeOutlineColor={AppColor.primary}
+                outlineStyle={{ borderRadius: 8 }}
+                autoCapitalize="sentences"
+                theme={{ colors: { onSurfaceVariant: "#777" } }}
+                onBlur={() =>
+                  setErrors((prev) => ({
+                    ...prev,
+                    mailingAddressLine2:
+                      validateMailingAddressLine2(mailingAddressLine2),
+                  }))
+                }
+              />
+              {!!errors.mailingAddressLine2 && (
+                <HelperText
+                  type="error"
+                  visible={!!errors.mailingAddressLine2}
+                  style={styles.helper}
+                >
+                  {errors.mailingAddressLine2}
                 </HelperText>
               )}
 
@@ -470,6 +609,7 @@ const SignUpScreen = ({ navigation }) => {
                     styles.countryInput,
                     !!errors.mailingCountry && styles.errorBorder,
                   ]}
+                  disabled={true}
                 >
                   <Text
                     style={[
@@ -498,20 +638,20 @@ const SignUpScreen = ({ navigation }) => {
                 </HelperText>
               )}
 
-              {/* Zipcode */}
+              {/* Postal Code */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                {"Zipcode *"}
+                {"Postal Code *"}
               </Text>
               <TextInput
                 dense
-                value={mailingZipCode}
-                onChangeText={setMailingZipCode}
+                value={mailingPostalCode}
+                onChangeText={setMailingPostalCode}
                 style={styles.input}
                 contentStyle={styles.inputText}
-                placeholder="Enter Zipcode"
+                placeholder="Enter Postal Code"
                 placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
-                error={!!errors.mailingZipCode}
+                error={!!errors.mailingPostalCode}
                 outlineColor={AppColor.border}
                 activeOutlineColor={AppColor.primary}
                 outlineStyle={{ borderRadius: 8 }}
@@ -521,17 +661,18 @@ const SignUpScreen = ({ navigation }) => {
                 onBlur={() =>
                   setErrors((prev) => ({
                     ...prev,
-                    mailingZipCode: validateMailingZipcode(mailingZipCode),
+                    mailingPostalCode:
+                      validateMailingPostalcode(mailingPostalCode),
                   }))
                 }
               />
-              {!!errors.mailingZipCode && (
+              {!!errors.mailingPostalCode && (
                 <HelperText
                   type="error"
-                  visible={!!errors.mailingZipCode}
+                  visible={!!errors.mailingPostalCode}
                   style={styles.helper}
                 >
-                  {errors.mailingZipCode}
+                  {errors.mailingPostalCode}
                 </HelperText>
               )}
 
@@ -717,7 +858,7 @@ const SignUpScreen = ({ navigation }) => {
                   if (countryPickerType === "phone") {
                     setCountryCode(item.dial_code);
                   } else if (countryPickerType === "address") {
-                    setMailingCountry(`${item.name.en}, ${item.code}`);
+                    setMailingCountry(item.code);
                     setErrors((prev) => ({
                       ...prev,
                       mailingCountry: "",

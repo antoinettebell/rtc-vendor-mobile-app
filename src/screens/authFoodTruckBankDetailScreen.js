@@ -21,7 +21,12 @@ import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import { Dropdown } from "react-native-element-dropdown";
 import { AppColor, Mulish400, Mulish700 } from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
-import { bankAccountTypeList } from "../utils/constants";
+import {
+  bankAccountTypeList,
+  bankPaymentMethodList,
+  bankCurrencyList,
+  emailRegex,
+} from "../utils/constants";
 import { addBankDetail_API, registerComplete_API } from "../api/appAPI";
 import { onUnderReview } from "../redux/slices/authSlice";
 
@@ -51,6 +56,32 @@ const validateAccountType = (text) => {
   return "";
 };
 
+const validateRemittanceEmail = (text) => {
+  if (!text.trim()) return "Remittance email is required";
+  if (!emailRegex.test(text)) return "Invalid remittance email";
+  return "";
+};
+
+const validateCurrency = (text) => {
+  if (!text.trim()) return "Please select currency";
+  return "";
+};
+
+const validateSwiftCode = (text) => {
+  if (!text.trim()) return "SWIFT code is required";
+  return "";
+};
+
+const validateIban = (text) => {
+  if (!text.trim()) return "IBAN is required";
+  return "";
+};
+
+const validatePaymentMethod = (text) => {
+  if (!text.trim()) return "Please select payment method";
+  return "";
+};
+
 const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -61,12 +92,23 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
   const [accountNumber, setAccountNumber] = useState("");
   const [routingNumber, setRoutingNumber] = useState("");
   const [selectedAccountType, setSelectedAccountType] = useState("");
+  const [remittanceEmail, setRemittanceEmail] = useState("");
+  const [swiftCode, setSwiftCode] = useState("");
+  const [iban, setIban] = useState("");
+  const [selectedCurrency, setSelectedCurrency] = useState("");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
+
   const [errors, setErrors] = useState({
     accountHolderName: "",
     bankName: "",
     accountNumber: "",
     routingNumber: "",
     accountType: "",
+    remittanceEmail: "",
+    swiftCode: "",
+    iban: "",
+    currency: "",
+    paymentMethod: "",
   });
 
   const handleContinueBtnPress = async () => {
@@ -79,6 +121,11 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
         ? ""
         : "Routing number is required",
       accountType: validateAccountType(selectedAccountType),
+      remittanceEmail: validateRemittanceEmail(remittanceEmail),
+      swiftCode: validateSwiftCode(swiftCode),
+      iban: validateIban(iban),
+      currency: validateCurrency(selectedCurrency),
+      paymentMethod: validatePaymentMethod(selectedPaymentMethod),
     };
 
     setErrors(newErrors);
@@ -97,6 +144,11 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
         accountNumber,
         routingNumber,
         accountType: selectedAccountType,
+        remittanceEmail,
+        swiftCode,
+        iban,
+        currency: selectedCurrency,
+        paymentMethod: selectedPaymentMethod,
       };
       const response = await addBankDetail_API(payload);
       console.log("response => ", response);
@@ -387,6 +439,188 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
                     style={styles.helper}
                   >
                     {errors.accountType}
+                  </HelperText>
+                )}
+              </View>
+
+              {/* Remittance Email */}
+              <View style={styles.section}>
+                <Text style={styles.inputLabel}>{"Remittance Email"}</Text>
+                <TextInput
+                  dense
+                  value={remittanceEmail}
+                  onChangeText={(text) => {
+                    setRemittanceEmail(text);
+                    if (!validateRemittanceEmail(text)) {
+                      setErrors((prev) => ({
+                        ...prev,
+                        remittanceEmail: "",
+                      }));
+                    }
+                  }}
+                  style={styles.inputStyle}
+                  contentStyle={styles.inputText}
+                  placeholder="Enter Remittance Email"
+                  placeholderTextColor={AppColor.placeholderTextColor}
+                  mode="outlined"
+                  error={!!errors.remittanceEmail}
+                  outlineColor={AppColor.border}
+                  activeOutlineColor={AppColor.primary}
+                  outlineStyle={{ borderRadius: 8 }}
+                  theme={{ colors: { onSurfaceVariant: "#777" } }}
+                />
+                {!!errors.remittanceEmail && (
+                  <HelperText
+                    type="error"
+                    visible={!!errors.remittanceEmail}
+                    style={styles.helper}
+                  >
+                    {errors.remittanceEmail}
+                  </HelperText>
+                )}
+              </View>
+
+              {/* Currency */}
+              <View style={styles.section}>
+                <Text style={styles.inputLabel}>{"Currency"}</Text>
+                <Dropdown
+                  data={bankCurrencyList}
+                  labelField="label"
+                  valueField="type"
+                  value={selectedCurrency}
+                  onChange={(selected) => {
+                    setSelectedCurrency(selected.type);
+                    setErrors((prev) => ({
+                      ...prev,
+                      currency: "",
+                    }));
+                  }}
+                  placeholder="Select Currency"
+                  style={styles.dropdown}
+                  placeholderStyle={{
+                    fontFamily: Mulish400,
+                    color: AppColor.textHighlighter,
+                  }}
+                  itemTextStyle={{ fontFamily: Mulish400 }}
+                  selectedTextStyle={{ fontFamily: Mulish400 }}
+                />
+                {!!errors.currency && (
+                  <HelperText
+                    type="error"
+                    visible={!!errors.currency}
+                    style={styles.helper}
+                  >
+                    {errors.currency}
+                  </HelperText>
+                )}
+              </View>
+
+              {/* Swift Code */}
+              <View style={styles.section}>
+                <Text style={styles.inputLabel}>{"Swift Code"}</Text>
+                <TextInput
+                  dense
+                  value={swiftCode}
+                  onChangeText={(text) => {
+                    setSwiftCode(text);
+                    if (!validateSwiftCode(text)) {
+                      setErrors((prev) => ({
+                        ...prev,
+                        swiftCode: "",
+                      }));
+                    }
+                  }}
+                  style={styles.inputStyle}
+                  contentStyle={styles.inputText}
+                  placeholder="Enter Swift Code"
+                  placeholderTextColor={AppColor.placeholderTextColor}
+                  mode="outlined"
+                  error={!!errors.swiftCode}
+                  outlineColor={AppColor.border}
+                  activeOutlineColor={AppColor.primary}
+                  outlineStyle={{ borderRadius: 8 }}
+                  theme={{ colors: { onSurfaceVariant: "#777" } }}
+                />
+                {!!errors.swiftCode && (
+                  <HelperText
+                    type="error"
+                    visible={!!errors.swiftCode}
+                    style={styles.helper}
+                  >
+                    {errors.swiftCode}
+                  </HelperText>
+                )}
+              </View>
+
+              {/* IBAN */}
+              <View style={styles.section}>
+                <Text style={styles.inputLabel}>{"IBAN"}</Text>
+                <TextInput
+                  dense
+                  value={iban}
+                  onChangeText={(text) => {
+                    setIban(text);
+                    if (!validateIban(text)) {
+                      setErrors((prev) => ({
+                        ...prev,
+                        iban: "",
+                      }));
+                    }
+                  }}
+                  style={styles.inputStyle}
+                  contentStyle={styles.inputText}
+                  placeholder="Enter IBAN"
+                  placeholderTextColor={AppColor.placeholderTextColor}
+                  mode="outlined"
+                  error={!!errors.iban}
+                  outlineColor={AppColor.border}
+                  activeOutlineColor={AppColor.primary}
+                  outlineStyle={{ borderRadius: 8 }}
+                  theme={{ colors: { onSurfaceVariant: "#777" } }}
+                />
+                {!!errors.iban && (
+                  <HelperText
+                    type="error"
+                    visible={!!errors.iban}
+                    style={styles.helper}
+                  >
+                    {errors.iban}
+                  </HelperText>
+                )}
+              </View>
+
+              {/* Payment Method */}
+              <View style={styles.section}>
+                <Text style={styles.inputLabel}>{"Payment Method"}</Text>
+                <Dropdown
+                  data={bankPaymentMethodList}
+                  dropdownPosition="top"
+                  labelField="label"
+                  valueField="type"
+                  value={selectedPaymentMethod}
+                  onChange={(selected) => {
+                    setSelectedPaymentMethod(selected.type);
+                    setErrors((prev) => ({
+                      ...prev,
+                      paymentMethod: "",
+                    }));
+                  }}
+                  placeholder="Select Payment Method"
+                  style={styles.dropdown}
+                  placeholderStyle={{
+                    fontFamily: Mulish400,
+                    color: AppColor.textHighlighter,
+                  }}
+                  itemTextStyle={{ fontFamily: Mulish400 }}
+                  selectedTextStyle={{ fontFamily: Mulish400 }}
+                />
+                {!!errors.paymentMethod && (
+                  <HelperText
+                    type="error"
+                    visible={!!errors.paymentMethod}
+                    style={styles.helper}
+                  >
+                    {errors.paymentMethod}
                   </HelperText>
                 )}
               </View>

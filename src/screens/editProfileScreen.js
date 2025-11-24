@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
   TextInput as NativeTextInput,
+  ActivityIndicator as NativeIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -31,7 +32,12 @@ import StatusBarManager from "../components/StatusBarManager";
 import MediaPickerDialog from "../components/MediaPickerDialog";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { CountryPicker } from "react-native-country-codes-picker";
-import { emailRegex, empNumberList } from "../utils/constants";
+import {
+  emailRegex,
+  empNumberList,
+  nameRegex,
+  truckNameRegex,
+} from "../utils/constants";
 import {
   getUserDetail_API,
   updateFoodTruckProfile_API,
@@ -274,7 +280,8 @@ const EditProfileScreen = ({ navigation }) => {
   const [selectedMediaType, setSelectedMediaType] = useState(null);
   const [selectedPhotos, setSelectedPhotos] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [foodTruckName, setFoodTruckName] = useState("");
   const [selectedEmpNumberType, setSelectedEmpNumberType] = useState("ein");
   const [selectedEmpNumberText, setSelectedEmpNumberText] = useState("");
@@ -294,7 +301,7 @@ const EditProfileScreen = ({ navigation }) => {
   const [mediaLink4, setMediaLink4] = useState("");
 
   const [errors, setErrors] = useState({
-    name: "",
+    firstName: "",
     foodTruckName: "",
     mobileNumber: "",
     empNumber: "",
@@ -305,13 +312,21 @@ const EditProfileScreen = ({ navigation }) => {
     photos: "",
   });
 
-  const validateName = (value) => {
-    if (!value.trim()) return "Name is required";
+  const validateFirstName = (value) => {
+    if (!value.trim()) return "First Name is required";
+    if (!nameRegex.test(value)) return "Enter a valid first name";
+    return "";
+  };
+
+  const validateLastName = (value) => {
+    if (!value.trim()) return "Last Name is required";
+    if (!nameRegex.test(value)) return "Enter a valid last name";
     return "";
   };
 
   const validateFoodTruckName = (value) => {
     if (!value.trim()) return "Food truck name is required";
+    if (!truckNameRegex.test(value)) return "Enter a valid food truck name";
     return "";
   };
 
@@ -524,8 +539,11 @@ const EditProfileScreen = ({ navigation }) => {
       FOOD_TRUCK_DATA?.infoType === "caterer" ? "Food Caterer" : "Food Truck"
     );
 
-    // manage user name
-    setName(USER_DATA?.firstName ? USER_DATA.firstName : "");
+    // manage user f-name
+    setFirstName(USER_DATA?.firstName ? USER_DATA.firstName : "");
+
+    // manage user l-name
+    setLastName(USER_DATA?.lastName ? USER_DATA.lastName : "");
 
     // manage food truck name
     setFoodTruckName(FOOD_TRUCK_DATA?.name ? FOOD_TRUCK_DATA.name : "");
@@ -678,7 +696,8 @@ const EditProfileScreen = ({ navigation }) => {
 
   const handleUpdatePress = async () => {
     // Validate all fields
-    const nameError = validateName(name);
+    const fnameError = validateFirstName(firstName);
+    const lnameError = validateLastName(lastName);
     const foodTruckNameError = validateFoodTruckName(foodTruckName);
     const mobileNumberError = validateMobileNumber(mobileNumber);
     const empNumberError =
@@ -707,7 +726,8 @@ const EditProfileScreen = ({ navigation }) => {
 
     // Update errors state
     setErrors({
-      name: nameError,
+      firstName: fnameError,
+      lastName: lnameError,
       foodTruckName: foodTruckNameError,
       mobileNumber: mobileNumberError,
       empNumber: empNumberError,
@@ -718,7 +738,8 @@ const EditProfileScreen = ({ navigation }) => {
 
     // Check if there are any errors
     const hasErrors =
-      nameError ||
+      fnameError ||
+      lnameError ||
       foodTruckNameError ||
       mobileNumberError ||
       empNumberError ||
@@ -738,7 +759,8 @@ const EditProfileScreen = ({ navigation }) => {
       // User detail update
       const user_id = user?._id;
       const userPayload = {
-        firstName: name,
+        firstName: firstName,
+        lastName: lastName,
         countryCode: countryCode,
         mobileNumber: mobileNumber,
       };
@@ -896,520 +918,528 @@ const EditProfileScreen = ({ navigation }) => {
       </View>
 
       {/* Scrolling Container */}
-      <KeyboardAvoidingView
-        enabled={Platform.OS === "ios"}
-        behavior="padding"
-        style={{
-          flex: 1,
-          paddingBottom: insets.bottom,
-        }}
-      >
-        <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            paddingTop: 20,
+      {getDataLoading ? (
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            paddingBottom: 0,
           }}
-          bounces={false}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
         >
-          <View
-            style={{
-              paddingTop: 16,
-              backgroundColor: AppColor.white,
+          <NativeIndicator size="large" color={AppColor.primary} />
+        </View>
+      ) : (
+        <KeyboardAvoidingView
+          enabled={Platform.OS === "ios"}
+          behavior="padding"
+          style={{
+            flex: 1,
+            paddingBottom: insets.bottom,
+          }}
+        >
+          <ScrollView
+            contentContainerStyle={{
+              flexGrow: 1,
+              paddingTop: 20,
             }}
+            bounces={false}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
-            {/* Logo Upload */}
-            <View style={[styles.section, { marginTop: 10 }]}>
-              <Text style={styles.label}>{"Change Logo"}</Text>
-              <View style={styles.logoContainer}>
-                {selectedLogo?.uri ? (
-                  <View style={styles.logoImageWrapper}>
-                    <AppImage
-                      uri={selectedLogo?.uri}
-                      containerStyle={styles.logoImage}
-                    />
-                  </View>
-                ) : (
-                  <View
-                    style={{
-                      width: 140,
-                      height: 140,
-                      borderRadius: 70,
-                      marginTop: 10,
-                      backgroundColor: AppColor.primary,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
+            <View
+              style={{
+                paddingTop: 16,
+                backgroundColor: AppColor.white,
+              }}
+            >
+              {/* Logo Upload */}
+              <View style={[styles.section, { marginTop: 10 }]}>
+                <Text style={styles.label}>{"Change Logo"}</Text>
+                <View style={styles.logoContainer}>
+                  {selectedLogo?.uri ? (
+                    <View style={styles.logoImageWrapper}>
+                      <AppImage
+                        uri={selectedLogo?.uri}
+                        containerStyle={styles.logoImage}
+                      />
+                    </View>
+                  ) : (
+                    <View
+                      style={{
+                        width: 140,
+                        height: 140,
+                        borderRadius: 70,
+                        marginTop: 10,
+                        backgroundColor: AppColor.primary,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <FontAwesome6
+                        name="truck-fast"
+                        color={AppColor.white}
+                        size={50}
+                      />
+                    </View>
+                  )}
+                  <TouchableOpacity
+                    style={styles.uploadButton}
+                    onPress={onPressUploadLogo}
                   >
                     <FontAwesome6
-                      name="truck-fast"
-                      color={AppColor.white}
-                      size={50}
+                      name="upload"
+                      color={AppColor.black}
+                      size={20}
                     />
-                  </View>
+                    <Text style={styles.uploadButtonText}>Upload Photo</Text>
+                  </TouchableOpacity>
+                </View>
+                {!!errors.logo && (
+                  <HelperText
+                    type="error"
+                    visible={!!errors.logo}
+                    style={[styles.helper, { alignSelf: "center" }]}
+                  >
+                    {errors.logo}
+                  </HelperText>
                 )}
-                <TouchableOpacity
-                  style={styles.uploadButton}
-                  onPress={onPressUploadLogo}
-                >
-                  <FontAwesome6
-                    name="upload"
-                    color={AppColor.black}
-                    size={20}
-                  />
-                  <Text style={styles.uploadButtonText}>Upload Photo</Text>
-                </TouchableOpacity>
               </View>
-              {!!errors.logo && (
-                <HelperText
-                  type="error"
-                  visible={!!errors.logo}
-                  style={[styles.helper, { alignSelf: "center" }]}
-                >
-                  {errors.logo}
-                </HelperText>
-              )}
-            </View>
 
-            {/* Photos Upload */}
-            <View style={styles.section}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 8,
-                }}
-              >
-                <Text style={[styles.label, { marginBottom: 0 }]}>
-                  Change Food Truck Photos
-                </Text>
-                {selectedPhotos?.length > 0 && (
+              {/* Photos Upload */}
+              <View style={styles.section}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 8,
+                  }}
+                >
+                  <Text style={[styles.label, { marginBottom: 0 }]}>
+                    Change Food Truck Photos
+                  </Text>
+                  {selectedPhotos?.length > 0 && (
+                    <TouchableOpacity
+                      hitSlop={5}
+                      activeOpacity={0.7}
+                      onPress={onPressUploadPhotos}
+                    >
+                      <AntDesign
+                        name="plussquareo"
+                        size={20}
+                        color={AppColor.primary}
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {selectedPhotos?.length === 0 && (
                   <TouchableOpacity
-                    hitSlop={5}
-                    activeOpacity={0.7}
+                    style={[
+                      styles.photoUploadContainer,
+                      {
+                        borderColor: !!errors.photos
+                          ? AppColor.red
+                          : AppColor.gray,
+                      },
+                    ]}
                     onPress={onPressUploadPhotos}
                   >
-                    <AntDesign
-                      name="plussquareo"
+                    <FontAwesome6
+                      name="upload"
+                      color={AppColor.black}
                       size={20}
-                      color={AppColor.primary}
                     />
+                    <Text style={styles.uploadButtonText}>Upload Photos</Text>
                   </TouchableOpacity>
+                )}
+
+                {selectedPhotos?.length > 0 && (
+                  <View>
+                    <FlatList
+                      data={selectedPhotos}
+                      extraData={selectedPhotos}
+                      horizontal
+                      keyExtractor={(item) => item.uri}
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={{ marginTop: 10 }}
+                      renderItem={({ item, index }) => (
+                        <View style={{ marginRight: 15 }}>
+                          <AppImage
+                            uri={item.uri}
+                            containerStyle={styles.thumbnail}
+                          />
+                          <TouchableOpacity
+                            hitSlop={5}
+                            style={{
+                              position: "absolute",
+                              right: -8,
+                              top: -8,
+                              backgroundColor: AppColor.primary,
+                              borderRadius: 10,
+                              height: 20,
+                              width: 20,
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                            onPress={() => onPhotosRemovePress(index)}
+                            activeOpacity={0.7}
+                          >
+                            <FontAwesome6
+                              name="minus"
+                              size={14}
+                              color={AppColor.white}
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    />
+                  </View>
+                )}
+
+                {!!errors.photos && (
+                  <HelperText
+                    type="error"
+                    visible={!!errors.photos}
+                    style={[styles.helper, { alignSelf: "center" }]}
+                  >
+                    {errors.photos}
+                  </HelperText>
                 )}
               </View>
 
-              {selectedPhotos?.length === 0 && (
-                <TouchableOpacity
-                  style={[
-                    styles.photoUploadContainer,
-                    {
-                      borderColor: !!errors.photos
-                        ? AppColor.red
-                        : AppColor.gray,
-                    },
-                  ]}
-                  onPress={onPressUploadPhotos}
-                >
-                  <FontAwesome6
-                    name="upload"
-                    color={AppColor.black}
-                    size={20}
-                  />
-                  <Text style={styles.uploadButtonText}>Upload Photos</Text>
-                </TouchableOpacity>
-              )}
+              {/* Radio Buttons */}
+              <View style={styles.radioContainer}>
+                {["Food Truck", "Food Caterer"].map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={styles.radioButton}
+                    onPress={() => setInfoType(type)}
+                  >
+                    <View style={styles.radioOuterCircle}>
+                      {infoType === type && (
+                        <View style={styles.radioInnerCircle} />
+                      )}
+                    </View>
+                    <Text style={styles.radioLabel}>{type}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
 
-              {selectedPhotos?.length > 0 && (
-                <View>
-                  <FlatList
-                    data={selectedPhotos}
-                    extraData={selectedPhotos}
-                    horizontal
-                    keyExtractor={(item) => item.uri}
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ marginTop: 10 }}
-                    renderItem={({ item, index }) => (
-                      <View style={{ marginRight: 15 }}>
-                        <AppImage
-                          uri={item.uri}
-                          containerStyle={styles.thumbnail}
-                        />
-                        <TouchableOpacity
-                          hitSlop={5}
+              {/* F-Name Text Input */}
+              <View style={[styles.section, { marginBottom: 0 }]}>
+                <Text style={styles.inputLabel}>{"Your First Name *"}</Text>
+                <TextInput
+                  dense
+                  value={firstName}
+                  onChangeText={(text) => {
+                    setFirstName(text);
+                    if (!validateFirstName(text)) {
+                      setErrors((prev) => ({
+                        ...prev,
+                        firstName: "",
+                      }));
+                    }
+                  }}
+                  style={styles.input}
+                  contentStyle={styles.inputText}
+                  placeholder="Enter Your First Name"
+                  placeholderTextColor={AppColor.placeholderTextColor}
+                  mode="outlined"
+                  error={!!errors.firstName}
+                  outlineColor={AppColor.border}
+                  activeOutlineColor={AppColor.primary}
+                  outlineStyle={{ borderRadius: 8 }}
+                  autoCapitalize="sentences"
+                  theme={{ colors: { onSurfaceVariant: "#777" } }}
+                />
+                {!!errors.firstName && (
+                  <HelperText
+                    type="error"
+                    visible={!!errors.firstName}
+                    style={styles.helper}
+                  >
+                    {errors.firstName}
+                  </HelperText>
+                )}
+              </View>
+
+              {/* L-Name Text Input */}
+              <View style={[styles.section, { marginBottom: 0 }]}>
+                <Text style={styles.inputLabel}>{"Your Last Name *"}</Text>
+                <TextInput
+                  dense
+                  value={lastName}
+                  onChangeText={(text) => {
+                    setLastName(text);
+                    if (!validateLastName(text)) {
+                      setErrors((prev) => ({
+                        ...prev,
+                        lastName: "",
+                      }));
+                    }
+                  }}
+                  style={styles.input}
+                  contentStyle={styles.inputText}
+                  placeholder="Enter Your Last Name"
+                  placeholderTextColor={AppColor.placeholderTextColor}
+                  mode="outlined"
+                  error={!!errors.lastName}
+                  outlineColor={AppColor.border}
+                  activeOutlineColor={AppColor.primary}
+                  outlineStyle={{ borderRadius: 8 }}
+                  autoCapitalize="sentences"
+                  theme={{ colors: { onSurfaceVariant: "#777" } }}
+                />
+                {!!errors.lastName && (
+                  <HelperText
+                    type="error"
+                    visible={!!errors.lastName}
+                    style={styles.helper}
+                  >
+                    {errors.lastName}
+                  </HelperText>
+                )}
+              </View>
+
+              {/* Food Truck Name Text Input */}
+              <View style={[styles.section, { marginBottom: 0 }]}>
+                <Text style={styles.inputLabel}>{"Food Truck Name *"}</Text>
+                <TextInput
+                  dense
+                  value={foodTruckName}
+                  onChangeText={(text) => {
+                    setFoodTruckName(text);
+                    if (validateFoodTruckName(text)) {
+                      setErrors((prev) => ({
+                        ...prev,
+                        foodTruckName: "",
+                      }));
+                    }
+                  }}
+                  style={styles.input}
+                  contentStyle={styles.inputText}
+                  placeholder="Enter Food Truck Name"
+                  placeholderTextColor={AppColor.placeholderTextColor}
+                  mode="outlined"
+                  error={!!errors.foodTruckName}
+                  outlineColor={AppColor.border}
+                  activeOutlineColor={AppColor.primary}
+                  outlineStyle={{ borderRadius: 8 }}
+                  autoCapitalize="sentences"
+                  theme={{ colors: { onSurfaceVariant: "#777" } }}
+                />
+                {!!errors.foodTruckName && (
+                  <HelperText
+                    type="error"
+                    visible={!!errors.foodTruckName}
+                    style={styles.helper}
+                  >
+                    {errors.foodTruckName}
+                  </HelperText>
+                )}
+              </View>
+
+              {/* EIN/SSN Number */}
+              <View style={styles.section}>
+                <Text style={styles.inputLabel}>{"EIN/SSN Number *"}</Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    borderWidth: 1,
+                    borderColor: AppColor.border,
+                    borderRadius: 8,
+                  }}
+                >
+                  <View style={{ width: 80 }}>
+                    <Dropdown
+                      data={empNumberList}
+                      labelField="label"
+                      valueField="type"
+                      value={selectedEmpNumberType}
+                      onChange={(item) => {
+                        setSelectedEmpNumberType(item.type);
+                        if (!selectedEmpNumberText?.trim()?.length) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            empNumber: "",
+                          }));
+                          return;
+                        }
+                        if (item.type === "ein") {
+                          setErrors((prev) => ({
+                            ...prev,
+                            empNumber: validateEinNumber(selectedEmpNumberText),
+                          }));
+                        } else {
+                          setErrors((prev) => ({
+                            ...prev,
+                            empNumber: validateSsnNumber(selectedEmpNumberText),
+                          }));
+                        }
+                      }}
+                      placeholder={""}
+                      style={{
+                        height: 46,
+                        paddingHorizontal: 12,
+                      }}
+                      containerStyle={{ width: width - 50 }}
+                      placeholderStyle={{
+                        fontFamily: Mulish400,
+                        color: AppColor.textHighlighter,
+                        position: "absolute",
+                      }}
+                      itemTextStyle={{ fontFamily: Mulish400 }}
+                      selectedTextStyle={{ fontFamily: Mulish400 }}
+                      renderItem={(item) => (
+                        <View
                           style={{
-                            position: "absolute",
-                            right: -8,
-                            top: -8,
-                            backgroundColor: AppColor.primary,
-                            borderRadius: 10,
-                            height: 20,
-                            width: 20,
-                            alignItems: "center",
-                            justifyContent: "center",
+                            paddingVertical: 10,
+                            paddingHorizontal: 16,
                           }}
-                          onPress={() => onPhotosRemovePress(index)}
-                          activeOpacity={0.7}
                         >
-                          <FontAwesome6
-                            name="minus"
-                            size={14}
-                            color={AppColor.white}
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  />
-                </View>
-              )}
-
-              {!!errors.photos && (
-                <HelperText
-                  type="error"
-                  visible={!!errors.photos}
-                  style={[styles.helper, { alignSelf: "center" }]}
-                >
-                  {errors.photos}
-                </HelperText>
-              )}
-            </View>
-
-            {/* Radio Buttons */}
-            <View style={styles.radioContainer}>
-              {["Food Truck", "Food Caterer"].map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  style={styles.radioButton}
-                  onPress={() => setInfoType(type)}
-                >
-                  <View style={styles.radioOuterCircle}>
-                    {infoType === type && (
-                      <View style={styles.radioInnerCircle} />
-                    )}
+                          <Text
+                            style={[styles.dropdownText, { marginLeft: 0 }]}
+                          >
+                            {`${item.label} Number`}
+                          </Text>
+                        </View>
+                      )}
+                    />
                   </View>
-                  <Text style={styles.radioLabel}>{type}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
 
-            {/* Name Text Input */}
-            <View style={[styles.section, { marginBottom: 0 }]}>
-              <Text style={styles.inputLabel}>{"Your Name *"}</Text>
-              <TextInput
-                dense
-                value={name}
-                onChangeText={(text) => {
-                  setName(text);
-                  if (!validateName(text)) {
-                    setErrors((prev) => ({
-                      ...prev,
-                      name: "",
-                    }));
-                  }
-                }}
-                style={styles.input}
-                contentStyle={styles.inputText}
-                placeholder="Enter Your Name"
-                placeholderTextColor={AppColor.placeholderTextColor}
-                mode="outlined"
-                error={!!errors.name}
-                outlineColor={AppColor.border}
-                activeOutlineColor={AppColor.primary}
-                outlineStyle={{ borderRadius: 8 }}
-                autoCapitalize="sentences"
-                theme={{ colors: { onSurfaceVariant: "#777" } }}
-              />
-              {!!errors.name && (
-                <HelperText
-                  type="error"
-                  visible={!!errors.name}
-                  style={styles.helper}
-                >
-                  {errors.name}
-                </HelperText>
-              )}
-            </View>
+                  <View
+                    style={{
+                      width: 1,
+                      height: "100%",
+                      backgroundColor: AppColor.border,
+                    }}
+                  />
 
-            {/* Food Truck Name Text Input */}
-            <View style={[styles.section, { marginBottom: 0 }]}>
-              <Text style={styles.inputLabel}>{"Food Truck Name *"}</Text>
-              <TextInput
-                dense
-                value={foodTruckName}
-                onChangeText={(text) => {
-                  setFoodTruckName(text);
-                  if (validateFoodTruckName(text)) {
-                    setErrors((prev) => ({
-                      ...prev,
-                      foodTruckName: "",
-                    }));
-                  }
-                }}
-                style={styles.input}
-                contentStyle={styles.inputText}
-                placeholder="Enter Food Truck Name"
-                placeholderTextColor={AppColor.placeholderTextColor}
-                mode="outlined"
-                error={!!errors.foodTruckName}
-                outlineColor={AppColor.border}
-                activeOutlineColor={AppColor.primary}
-                outlineStyle={{ borderRadius: 8 }}
-                autoCapitalize="sentences"
-                theme={{ colors: { onSurfaceVariant: "#777" } }}
-              />
-              {!!errors.foodTruckName && (
-                <HelperText
-                  type="error"
-                  visible={!!errors.foodTruckName}
-                  style={styles.helper}
-                >
-                  {errors.foodTruckName}
-                </HelperText>
-              )}
-            </View>
+                  <NativeTextInput
+                    value={
+                      selectedEmpNumberType === "ein"
+                        ? formatEIN(selectedEmpNumberText)
+                        : formatSSN(selectedEmpNumberText)
+                    }
+                    onChangeText={(txt) => {
+                      // Remove non-digits and limit to 9 characters
+                      const digitsOnly = txt.replace(/\D/g, "").slice(0, 9);
+                      setSelectedEmpNumberText(digitsOnly);
 
-            {/* EIN/SSN Number */}
-            <View style={styles.section}>
-              <Text style={styles.inputLabel}>{"EIN/SSN Number *"}</Text>
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  borderWidth: 1,
-                  borderColor: AppColor.border,
-                  borderRadius: 8,
-                }}
-              >
-                <View style={{ width: 80 }}>
-                  <Dropdown
-                    data={empNumberList}
-                    labelField="label"
-                    valueField="type"
-                    value={selectedEmpNumberType}
-                    onChange={(item) => {
-                      setSelectedEmpNumberType(item.type);
-                      if (!selectedEmpNumberText?.trim()?.length) {
+                      if (digitsOnly.length === 9) {
                         setErrors((prev) => ({
                           ...prev,
                           empNumber: "",
                         }));
-                        return;
-                      }
-                      if (item.type === "ein") {
-                        setErrors((prev) => ({
-                          ...prev,
-                          empNumber: validateEinNumber(selectedEmpNumberText),
-                        }));
-                      } else {
-                        setErrors((prev) => ({
-                          ...prev,
-                          empNumber: validateSsnNumber(selectedEmpNumberText),
-                        }));
                       }
                     }}
-                    placeholder={""}
-                    style={{
-                      height: 46,
-                      paddingHorizontal: 12,
-                    }}
-                    containerStyle={{ width: width - 50 }}
-                    placeholderStyle={{
-                      fontFamily: Mulish400,
-                      color: AppColor.textHighlighter,
-                      position: "absolute",
-                    }}
-                    itemTextStyle={{ fontFamily: Mulish400 }}
-                    selectedTextStyle={{ fontFamily: Mulish400 }}
-                    renderItem={(item) => (
-                      <View
-                        style={{
-                          paddingVertical: 10,
-                          paddingHorizontal: 16,
-                        }}
-                      >
-                        <Text style={[styles.dropdownText, { marginLeft: 0 }]}>
-                          {`${item.label} Number`}
-                        </Text>
-                      </View>
-                    )}
+                    style={styles.inputForMedia}
+                    placeholder={
+                      selectedEmpNumberType === "ein"
+                        ? "XX-XXXXXXX"
+                        : "XXX-XX-XXXX"
+                    }
+                    placeholderTextColor={AppColor.placeholderTextColor}
+                    keyboardType="number-pad"
+                    maxLength={11}
                   />
                 </View>
-
-                <View
-                  style={{
-                    width: 1,
-                    height: "100%",
-                    backgroundColor: AppColor.border,
-                  }}
-                />
-
-                <NativeTextInput
-                  value={
-                    selectedEmpNumberType === "ein"
-                      ? formatEIN(selectedEmpNumberText)
-                      : formatSSN(selectedEmpNumberText)
-                  }
-                  onChangeText={(txt) => {
-                    // Remove non-digits and limit to 9 characters
-                    const digitsOnly = txt.replace(/\D/g, "").slice(0, 9);
-                    setSelectedEmpNumberText(digitsOnly);
-
-                    if (digitsOnly.length === 9) {
-                      setErrors((prev) => ({
-                        ...prev,
-                        empNumber: "",
-                      }));
-                    }
-                  }}
-                  style={styles.inputForMedia}
-                  placeholder={
-                    selectedEmpNumberType === "ein"
-                      ? "XX-XXXXXXX"
-                      : "XXX-XX-XXXX"
-                  }
-                  placeholderTextColor={AppColor.placeholderTextColor}
-                  keyboardType="number-pad"
-                  maxLength={11}
-                />
+                {!!errors.empNumber && (
+                  <HelperText
+                    type="error"
+                    visible={!!errors.empNumber}
+                    style={[styles.helper, { marginBottom: 0 }]}
+                  >
+                    {errors.empNumber}
+                  </HelperText>
+                )}
               </View>
-              {!!errors.empNumber && (
-                <HelperText
-                  type="error"
-                  visible={!!errors.empNumber}
-                  style={[styles.helper, { marginBottom: 0 }]}
-                >
-                  {errors.empNumber}
-                </HelperText>
-              )}
-            </View>
 
-            {/* Social Media */}
-            <View style={[styles.section, { gap: 10 }]}>
-              {/* media link 1 */}
-              <MediaLinksComponent
-                // dropdownData={
-                //   isElitePlan
-                //     ? dropdownData
-                //     : dropdownData.map((item) =>
-                //         item.type === "web" ? { ...item, disable: true } : item
-                //       )
-                // }
-                dropdownData={dropdownData}
-                selectedSocialMedia={selectedType1}
-                setSelectedSocialMedia={setSelectedType1}
-                socialMediaLink={mediaLink1}
-                setSocialMediaLink={setMediaLink1}
-              />
-
-              {/* media link 2 */}
-              {!isBasicPlan ? (
+              {/* Social Media */}
+              <View style={[styles.section, { gap: 10 }]}>
+                {/* media link 1 */}
                 <MediaLinksComponent
                   // dropdownData={
                   //   isElitePlan
                   //     ? dropdownData
                   //     : dropdownData.map((item) =>
-                  //         item.type === "web"
-                  //           ? { ...item, disable: true }
-                  //           : item
+                  //         item.type === "web" ? { ...item, disable: true } : item
                   //       )
                   // }
                   dropdownData={dropdownData}
-                  selectedSocialMedia={selectedType2}
-                  setSelectedSocialMedia={setSelectedType2}
-                  socialMediaLink={mediaLink2}
-                  setSocialMediaLink={setMediaLink2}
+                  selectedSocialMedia={selectedType1}
+                  setSelectedSocialMedia={setSelectedType1}
+                  socialMediaLink={mediaLink1}
+                  setSocialMediaLink={setMediaLink1}
                 />
-              ) : null}
 
-              {/* media link 3 */}
-              {isElitePlan ? (
-                <MediaLinksComponent
-                  // dropdownData={
-                  //   isElitePlan
-                  //     ? dropdownData
-                  //     : dropdownData.map((item) =>
-                  //         item.type === "social"
-                  //           ? { ...item, disable: true }
-                  //           : item
-                  //       )
-                  // }
-                  dropdownData={dropdownData}
-                  selectedSocialMedia={selectedType3}
-                  setSelectedSocialMedia={setSelectedType3}
-                  socialMediaLink={mediaLink3}
-                  setSocialMediaLink={setMediaLink3}
-                />
-              ) : null}
-
-              {/* media link 4 */}
-              {isElitePlan ? (
-                <MediaLinksComponent
-                  // dropdownData={
-                  //   isElitePlan
-                  //     ? dropdownData
-                  //     : dropdownData.map((item) =>
-                  //         item.type === "social"
-                  //           ? { ...item, disable: true }
-                  //           : item
-                  //       )
-                  // }
-                  dropdownData={dropdownData}
-                  selectedSocialMedia={selectedType4}
-                  setSelectedSocialMedia={setSelectedType4}
-                  socialMediaLink={mediaLink4}
-                  setSocialMediaLink={setMediaLink4}
-                />
-              ) : null}
-            </View>
-
-            {/* Mobile Number Input */}
-            <View style={[styles.section, { marginBottom: 0 }]}>
-              <Text style={styles.inputLabel}>{"Enter mobile no. *"}</Text>
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
-              >
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => setCountryPickerVisible(true)}
-                  style={styles.countryPickerButton}
-                >
-                  <Text style={styles.countryCodeText}>{countryCode}</Text>
-                  <AntDesign
-                    name="caretdown"
-                    color={AppColor.textHighlighter}
-                    size={14}
+                {/* media link 2 */}
+                {!isBasicPlan ? (
+                  <MediaLinksComponent
+                    // dropdownData={
+                    //   isElitePlan
+                    //     ? dropdownData
+                    //     : dropdownData.map((item) =>
+                    //         item.type === "web"
+                    //           ? { ...item, disable: true }
+                    //           : item
+                    //       )
+                    // }
+                    dropdownData={dropdownData}
+                    selectedSocialMedia={selectedType2}
+                    setSelectedSocialMedia={setSelectedType2}
+                    socialMediaLink={mediaLink2}
+                    setSocialMediaLink={setMediaLink2}
                   />
-                </TouchableOpacity>
+                ) : null}
 
-                <TextInput
-                  dense
-                  value={mobileNumber}
-                  onChangeText={(text) => {
-                    setMobileNumber(text);
-                    if (!validateMobileNumber(text)) {
-                      setErrors((prev) => ({
-                        ...prev,
-                        mobileNumber: "",
-                      }));
-                    }
-                  }}
-                  style={[styles.input, { flex: 1 }]}
-                  contentStyle={styles.inputText}
-                  placeholder="Enter Mobile No."
-                  placeholderTextColor={AppColor.placeholderTextColor}
-                  mode="outlined"
-                  error={!!errors.mobileNumber}
-                  maxLength={10}
-                  outlineColor={AppColor.border}
-                  activeOutlineColor={AppColor.primary}
-                  outlineStyle={{ borderRadius: 8 }}
-                  keyboardType="phone-pad"
-                  autoCapitalize="none"
-                  theme={{ colors: { onSurfaceVariant: "#777" } }}
-                />
+                {/* media link 3 */}
+                {isElitePlan ? (
+                  <MediaLinksComponent
+                    // dropdownData={
+                    //   isElitePlan
+                    //     ? dropdownData
+                    //     : dropdownData.map((item) =>
+                    //         item.type === "social"
+                    //           ? { ...item, disable: true }
+                    //           : item
+                    //       )
+                    // }
+                    dropdownData={dropdownData}
+                    selectedSocialMedia={selectedType3}
+                    setSelectedSocialMedia={setSelectedType3}
+                    socialMediaLink={mediaLink3}
+                    setSocialMediaLink={setMediaLink3}
+                  />
+                ) : null}
+
+                {/* media link 4 */}
+                {isElitePlan ? (
+                  <MediaLinksComponent
+                    // dropdownData={
+                    //   isElitePlan
+                    //     ? dropdownData
+                    //     : dropdownData.map((item) =>
+                    //         item.type === "social"
+                    //           ? { ...item, disable: true }
+                    //           : item
+                    //       )
+                    // }
+                    dropdownData={dropdownData}
+                    selectedSocialMedia={selectedType4}
+                    setSelectedSocialMedia={setSelectedType4}
+                    socialMediaLink={mediaLink4}
+                    setSocialMediaLink={setMediaLink4}
+                  />
+                ) : null}
               </View>
-              {!!errors.mobileNumber && (
+
+              {/* Mobile Number Input */}
+              <View style={[styles.section, { marginBottom: 0 }]}>
+                <Text style={styles.inputLabel}>{"Enter mobile no. *"}</Text>
                 <View
                   style={{
                     flexDirection: "row",
@@ -1417,63 +1447,112 @@ const EditProfileScreen = ({ navigation }) => {
                     gap: 12,
                   }}
                 >
-                  <View style={{ width: "25%" }} />
-                  <HelperText
-                    type="error"
-                    visible={!!errors.mobileNumber}
-                    style={styles.helper}
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => setCountryPickerVisible(true)}
+                    style={styles.countryPickerButton}
                   >
-                    {errors.mobileNumber}
-                  </HelperText>
+                    <Text style={styles.countryCodeText}>{countryCode}</Text>
+                    <AntDesign
+                      name="caretdown"
+                      color={AppColor.textHighlighter}
+                      size={14}
+                    />
+                  </TouchableOpacity>
+
+                  <TextInput
+                    dense
+                    value={mobileNumber}
+                    onChangeText={(text) => {
+                      setMobileNumber(text);
+                      if (!validateMobileNumber(text)) {
+                        setErrors((prev) => ({
+                          ...prev,
+                          mobileNumber: "",
+                        }));
+                      }
+                    }}
+                    style={[styles.input, { flex: 1 }]}
+                    contentStyle={styles.inputText}
+                    placeholder="Enter Mobile No."
+                    placeholderTextColor={AppColor.placeholderTextColor}
+                    mode="outlined"
+                    error={!!errors.mobileNumber}
+                    maxLength={10}
+                    outlineColor={AppColor.border}
+                    activeOutlineColor={AppColor.primary}
+                    outlineStyle={{ borderRadius: 8 }}
+                    keyboardType="phone-pad"
+                    autoCapitalize="none"
+                    theme={{ colors: { onSurfaceVariant: "#777" } }}
+                  />
                 </View>
-              )}
-            </View>
-
-            {/* Email id Input */}
-            <View style={[styles.section, { marginBottom: 20 }]}>
-              <Text style={styles.inputLabel}>{"Email ID"}</Text>
-              <TextInput
-                dense
-                value={email}
-                editable={false}
-                style={styles.input}
-                contentStyle={styles.inputText}
-                placeholder="Email ID"
-                placeholderTextColor={AppColor.placeholderTextColor}
-                mode="outlined"
-                outlineColor={AppColor.border}
-                activeOutlineColor={AppColor.primary}
-                outlineStyle={{ borderRadius: 8 }}
-                autoCapitalize="none"
-                theme={{ colors: { onSurfaceVariant: "#777" } }}
-              />
-            </View>
-
-            {/* Update Button */}
-            <View
-              style={{
-                paddingHorizontal: 16,
-                paddingTop: 20,
-                paddingBottom: 16 + insets.bottom,
-                backgroundColor: "#F9FAFB",
-              }}
-            >
-              <TouchableOpacity
-                onPress={handleUpdatePress}
-                activeOpacity={0.7}
-                disabled={loading}
-                style={styles.updateButton}
-              >
-                {loading ? (
-                  <ActivityIndicator color={AppColor.white} />
-                ) : (
-                  <Text style={styles.buttonLabel}>{"Update"}</Text>
+                {!!errors.mobileNumber && (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 12,
+                    }}
+                  >
+                    <View style={{ width: "25%" }} />
+                    <HelperText
+                      type="error"
+                      visible={!!errors.mobileNumber}
+                      style={styles.helper}
+                    >
+                      {errors.mobileNumber}
+                    </HelperText>
+                  </View>
                 )}
-              </TouchableOpacity>
+              </View>
+
+              {/* Email id Input */}
+              <View style={[styles.section, { marginBottom: 20 }]}>
+                <Text style={styles.inputLabel}>{"Email ID"}</Text>
+                <TextInput
+                  dense
+                  value={email}
+                  editable={false}
+                  style={styles.input}
+                  contentStyle={styles.inputText}
+                  placeholder="Email ID"
+                  placeholderTextColor={AppColor.placeholderTextColor}
+                  mode="outlined"
+                  outlineColor={AppColor.border}
+                  activeOutlineColor={AppColor.primary}
+                  outlineStyle={{ borderRadius: 8 }}
+                  autoCapitalize="none"
+                  theme={{ colors: { onSurfaceVariant: "#777" } }}
+                />
+              </View>
+
+              {/* Update Button */}
+              <View
+                style={{
+                  paddingHorizontal: 16,
+                  paddingTop: 20,
+                  paddingBottom: 16 + insets.bottom,
+                  backgroundColor: "#F9FAFB",
+                }}
+              >
+                <TouchableOpacity
+                  onPress={handleUpdatePress}
+                  activeOpacity={0.7}
+                  disabled={loading}
+                  style={styles.updateButton}
+                >
+                  {loading ? (
+                    <ActivityIndicator color={AppColor.white} />
+                  ) : (
+                    <Text style={styles.buttonLabel}>{"Update"}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      )}
 
       {/* Media Picker Modal */}
       <MediaPickerDialog

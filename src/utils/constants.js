@@ -3,6 +3,18 @@ export const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const passwordRegex =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,15}$/;
 
+export const addressRegex = /^[a-zA-Z0-9\s,.-]*$/;
+
+export const addressStateRegex = /^[A-Z]{2,3}$/;
+
+export const addressCountryRegex = /^[A-Z]{2,3}$/;
+
+export const addressPostalCodeRegex = /^[a-zA-Z0-9\s-]{3,10}$/;
+
+export const nameRegex = /^[a-zA-ZÀ-ÿ\s'-]{1,20}$/;
+
+export const truckNameRegex = /^[a-zA-Z0-9\s-]{1,50}$/;
+
 export const PROFILE_MENU_IMAGES = {
   yourProfile: require("../assets/images/yourProfileIcon.png"),
   servingLocations: require("../assets/images/servingLocationIcon.png"),
@@ -91,6 +103,20 @@ export const dishNewFlagAllowPlanArray = ["SUB_PLATINUM", "SUB_ELITE"];
 export const bankAccountTypeList = [
   { label: "Checking", type: "CHECKING" },
   { label: "Savings", type: "SAVINGS" },
+];
+
+export const bankPaymentMethodList = [
+  { label: "ACH", type: "ACH" },
+  { label: "CHECK", type: "CHECK" },
+  { label: "ECHECK", type: "ECHECK" },
+  { label: "PAYPAL", type: "PAYPAL" },
+  { label: "WIRE", type: "WIRE" },
+];
+
+export const bankCurrencyList = [
+  { label: "USD", type: "USD" },
+  // { label: "AED", type: "AED" },
+  // { label: "FJD", type: "FJD" },
 ];
 
 export const empNumberList = [

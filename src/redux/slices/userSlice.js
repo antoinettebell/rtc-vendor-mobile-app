@@ -29,6 +29,9 @@ const userSlice = createSlice({
       state.profileStatus = payload;
     },
     clearUserSlice: () => initialState,
+    updateUser: (state, { payload }) => {
+      state.user = { ...state.user, ...payload };
+    },
   },
 });
 
@@ -39,5 +42,6 @@ export const {
   setSelectedPlan,
   setProfileStatus,
   clearUserSlice,
+  updateUser,
 } = userSlice.actions;
 export default userSlice.reducer;

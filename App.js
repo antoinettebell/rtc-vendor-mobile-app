@@ -64,6 +64,7 @@ import EditBankDetailScreen from "./src/screens/editBankDetailScreen";
 import OneTapSignInScreen from "./src/screens/oneTapSigninScreen";
 import AuthSetBusinessHrsScreen from "./src/screens/authSetBusinessHrsScreen";
 import ProfileSetBusinessHrsScreen from "./src/screens/profileSetBusinessHrsScreen";
+import EditMailingAddressScreen from "./src/screens/editMailingAddressScreen";
 
 const Stack = createNativeStackNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -237,6 +238,7 @@ const MainAppNavigator = ({ insets }) => (
       {() => <BottomTabNavigator insets={insets} />}
     </Stack.Screen>
     <Stack.Screen name="editProfileScreen" component={EditProfileScreen} />
+    <Stack.Screen name="editMailingAddressScreen" component={EditMailingAddressScreen} />
     <Stack.Screen
       name="profileServingLocationScreen"
       component={ProfileServingLocationScreen}

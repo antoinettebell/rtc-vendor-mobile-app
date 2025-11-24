@@ -27,6 +27,7 @@ import {
 } from "../redux/slices/foodTruckProfileSlice";
 import { formatEIN, formatSSN } from "../helpers/profile.helper";
 import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
+import AppImage from "../components/AppImage";
 
 const MEDIA_IMAGE_TYPE = {
   INSTAGRAM: require("../assets/images/instagram.png"),
@@ -127,12 +128,14 @@ const UserProfileScreen = ({ navigation }) => {
           borderBlockColor: AppColor.border,
         }}
       >
-        <IconButton
-          icon="arrow-left"
-          iconColor={AppColor.black}
-          size={24}
-          onPress={() => navigation.goBack()}
-        />
+        <View style={{ width: "20%" }}>
+          <IconButton
+            icon="arrow-left"
+            iconColor={AppColor.black}
+            size={24}
+            onPress={() => navigation.goBack()}
+          />
+        </View>
         <Text
           style={{
             fontSize: 19.78,
@@ -142,12 +145,7 @@ const UserProfileScreen = ({ navigation }) => {
         >
           {"Your Profile"}
         </Text>
-        <IconButton
-          icon="pencil"
-          iconColor={AppColor.black}
-          size={24}
-          onPress={() => navigation.navigate("editProfileScreen")}
-        />
+        <View style={{ width: "20%" }} />
       </View>
 
       {/* Main Container */}
@@ -157,7 +155,7 @@ const UserProfileScreen = ({ navigation }) => {
             flex: 1,
             justifyContent: "center",
             alignItems: "center",
-            paddingBottom: insets.bottom,
+            paddingBottom: 0,
           }}
         >
           <ActivityIndicator size="large" color={AppColor.primary} />
@@ -168,20 +166,47 @@ const UserProfileScreen = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ flexGrow: 1 }}
         >
+          {/* User Profile Data */}
           <View style={styles.contentContainer}>
-            {/* Name */}
-            <View style={styles.itemContainer}>
-              <View style={styles.itemIconContiner}>
-                <FontAwesome name="user-o" size={24} color={"#8E8E93"} />
+            {/* Profile Picture and Name */}
+            <View style={styles.profileHeaderContainer}>
+              <AppImage
+                uri={user?.foodTruck?.logo}
+                containerStyle={styles.profileImage}
+              />
+              <View style={styles.profileInfoContainer}>
+                <Text style={styles.profileName} numberOfLines={1}>
+                  {user?.foodTruck?.name}
+                </Text>
+                <Text style={styles.profileEmail} numberOfLines={1}>
+                  {user?.firstName} {user?.lastName}
+                </Text>
+                <Text style={styles.profileEmail} numberOfLines={1}>
+                  {user?.email}
+                </Text>
               </View>
-              <Text style={styles.itemText}>{user?.firstName}</Text>
             </View>
+
+            {/* Edit Button */}
+            <IconButton
+              icon="pencil"
+              iconColor={AppColor.black}
+              size={24}
+              onPress={() => navigation.navigate("editProfileScreen")}
+              style={{
+                position: "absolute",
+                right: 0,
+                top: -8,
+                overflow: "hidden",
+              }}
+            />
+
             <Divider />
 
             {/* Mobile Number */}
             <View style={styles.itemContainer}>
               <View style={styles.itemIconContiner}>
-                <Ionicons name="call-outline" size={24} color={"#8E8E93"} />
+                <Ionicons name="call-outline" size={24} color={AppColor.gray} />
               </View>
               <Text style={styles.itemText}>
                 {user?.countryCode} {user?.mobileNumber}
@@ -193,12 +218,12 @@ const UserProfileScreen = ({ navigation }) => {
             <View style={styles.itemContainer}>
               <View style={styles.itemIconContiner}>
                 {user?.foodTruck?.ein ? (
-                  <AntDesign name="idcard" size={24} color={"#8E8E93"} />
+                  <AntDesign name="idcard" size={24} color={AppColor.gray} />
                 ) : (
                   <Ionicons
                     name="shield-checkmark-outline"
                     size={24}
-                    color={"#8E8E93"}
+                    color={AppColor.gray}
                   />
                 )}
               </View>
@@ -210,46 +235,87 @@ const UserProfileScreen = ({ navigation }) => {
             </View>
             <Divider />
 
-            {/* Email */}
-            <View style={styles.itemContainer}>
-              <View style={styles.itemIconContiner}>
-                <Ionicons name="mail-outline" size={24} color={"#8E8E93"} />
-              </View>
-              <Text style={styles.itemText} numberOfLines={1}>
-                {user?.email}
-              </Text>
-            </View>
+            {/* Email - Removed as it's now in the profile header */}
 
             {socialMedia?.length > 0 && <Divider />}
 
             {/* Social Media */}
-            {socialMedia?.map((item, index) => (
-              <View key={index}>
-                <View style={styles.itemContainer}>
-                  <View style={styles.itemIconContiner}>
-                    <FastImage
-                      source={MEDIA_IMAGE_TYPE[item.mediaType]}
-                      style={{
-                        height: 24,
-                        width: 24,
-                      }}
-                    />
-                  </View>
+            {socialMedia?.length > 0 && (
+              <View style={styles.socialMediaContainer}>
+                <Text style={styles.socialMediaTitle}>Social Media</Text>
+                {socialMedia?.map((item, index) => (
                   <TouchableOpacity
+                    key={index}
                     activeOpacity={0.7}
                     onPress={() => onSocialLinkPress(item.mediaUrl)}
+                    style={styles.socialMediaItem}
                   >
-                    <Text
-                      style={[styles.itemText, { color: "#0066cc" }]}
-                      numberOfLines={1}
-                    >
+                    <FastImage
+                      source={MEDIA_IMAGE_TYPE[item.mediaType]}
+                      style={styles.socialMediaIcon}
+                    />
+                    <Text style={styles.socialMediaText} numberOfLines={1}>
                       {item.mediaUrl}
                     </Text>
                   </TouchableOpacity>
-                </View>
-                {index !== socialMedia?.length - 1 && <Divider />}
+                ))}
               </View>
-            ))}
+            )}
+
+            <Divider />
+            <View style={styles.socialMediaContainer}>
+              <Text style={styles.socialMediaTitle}>Mailing Address</Text>
+
+              <View style={[styles.itemContainer, { paddingVertical: 0 }]}>
+                <View style={styles.itemIconContiner}>
+                  <MaterialIcons
+                    name="location-on"
+                    size={24}
+                    color={AppColor.gray}
+                  />
+                </View>
+                <Text style={styles.itemText}>{user?.addressLine1}</Text>
+              </View>
+
+              <View style={[styles.itemContainer, { paddingVertical: 0 }]}>
+                <View style={styles.itemIconContiner} />
+                <Text style={styles.itemText}>{user?.addressLine2}</Text>
+              </View>
+
+              <View style={[styles.itemContainer, { paddingVertical: 0 }]}>
+                <View style={styles.itemIconContiner} />
+                <Text style={styles.itemText}>{user?.addressCity}</Text>
+              </View>
+
+              <View style={[styles.itemContainer, { paddingVertical: 0 }]}>
+                <View style={styles.itemIconContiner} />
+                <Text style={styles.itemText}>{user?.addressState}</Text>
+              </View>
+
+              <View style={[styles.itemContainer, { paddingVertical: 0 }]}>
+                <View style={styles.itemIconContiner} />
+                <Text style={styles.itemText}>{user?.addressPostal}</Text>
+              </View>
+
+              <View style={[styles.itemContainer, { paddingVertical: 0 }]}>
+                <View style={styles.itemIconContiner} />
+                <Text style={styles.itemText}>{user?.addressCountry}</Text>
+              </View>
+
+              {/* Edit Button */}
+              <IconButton
+                icon="pencil"
+                iconColor={AppColor.black}
+                size={24}
+                onPress={() => navigation.navigate("editMailingAddressScreen")}
+                style={{
+                  position: "absolute",
+                  right: -16,
+                  top: 0,
+                  overflow: "hidden",
+                }}
+              />
+            </View>
           </View>
         </ScrollView>
       )}
@@ -290,5 +356,68 @@ const styles = StyleSheet.create({
     fontFamily: Mulish400,
     color: AppColor.black,
     marginRight: 40, // padding of container + image width
+  },
+
+  profileHeaderContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+  },
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginRight: 16,
+    backgroundColor: AppColor.border,
+  },
+  profileInfoContainer: {
+    flex: 1,
+  },
+  profileName: {
+    fontSize: 22,
+    fontFamily: Mulish700,
+    color: AppColor.black,
+    marginBottom: 4,
+    width: "90%",
+  },
+  profileEmail: {
+    fontSize: 16,
+    fontFamily: Mulish400,
+    color: AppColor.subText,
+  },
+
+  socialMediaContainer: {
+    paddingVertical: 16,
+  },
+  socialMediaTitle: {
+    fontSize: 18,
+    fontFamily: Mulish700,
+    color: AppColor.black,
+    marginBottom: 10,
+  },
+  socialMediaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  socialMediaIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 10,
+  },
+  socialMediaText: {
+    fontSize: 16,
+    fontFamily: Mulish400,
+    color: "#0066cc",
+    flex: 1,
+  },
+
+  addressContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    margin: 16,
+    borderWidth: 1,
+    borderRadius: 10,
+    borderColor: AppColor.border,
   },
 });

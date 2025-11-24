@@ -500,7 +500,7 @@ const ProfileMenuScreen = ({ navigation }) => {
   const handleHelpSupportPress = async () => {
     const supportEmail = "support@roundthecorner.com";
     const subject = "RTC - Vendor";
-    const body = `Hello,\n\nCan you please help me?\n\n\n\n\n\nBest regards,\n${user?.firstName}\n${user?.email}`;
+    const body = `Hello,\n\nCan you please help me?\n\n\n\n\n\nBest regards,\n${user?.firstName} ${user?.lastName}\n${user?.email}`;
 
     const url = `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
@@ -563,7 +563,7 @@ const ProfileMenuScreen = ({ navigation }) => {
           {user?.foodTruck?.photos[0] ? (
             <AppImage
               uri={user?.foodTruck?.photos[0]}
-              containerStyle={{ height: 143, width: "100%" }}
+              containerStyle={{ height: 143, width: "100%", borderRadius: 0 }}
             />
           ) : (
             <View
