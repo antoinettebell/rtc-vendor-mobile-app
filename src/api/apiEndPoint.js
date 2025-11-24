@@ -3,7 +3,7 @@ export const LOGIN = "/auth/vendor-login";
 export const VERIFY_OTP = "/auth/verify-otp";
 export const FORGOT_PASSWORD = "/auth/forgot-password";
 export const CHANGE_PASSWORD = "/auth/change-password";
-export const REGISTER_VENDOR = "auth/register/vendor";
+export const REGISTER_VENDOR = "/auth/register/vendor";
 export const RESEND_OTP = "/auth/resend-otp";
 export const REMOVE_ACCOUNT = "/user";
 
