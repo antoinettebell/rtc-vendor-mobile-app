@@ -9,7 +9,6 @@ import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlic
 
 const API_URL = Config.API_URL;
 const API_PREFIX = Config.API_PREFIX;
-const APP_ENV = Config.APP_ENV;
 
 // Axios instance
 const apiClient = axios.create({
