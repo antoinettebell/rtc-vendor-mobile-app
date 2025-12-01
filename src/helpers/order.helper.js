@@ -199,3 +199,11 @@ export const getNextOrderStatus = (currentStatus) => {
   // Return null if the current status is the last one or not found
   return null;
 };
+
+export const formatMoney = (value) => {
+  if (typeof value !== 'number') {
+    return '0';
+  }
+  return Math.floor(value).toLocaleString('en-US');
+};
+

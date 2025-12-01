@@ -81,6 +81,9 @@ export const GET_REVIEW_STATS_BY_FOODTRUCK_ID = (foodTruck_id) =>
 export const GET_A_REVIEW_BY_ID = (review_id) => `/review/${review_id}`;
 export const REMOVE_A_REVIEW_BY_ID = (review_id) => `/review/${review_id}`;
 
+// earning
+export const GET_EARNINGS = "/order/vendor/earnings";
+
 // Get Location Name from Lat Long
 export const REVERSE_LOCATION =
   "https://maps.googleapis.com/maps/api/geocode/json?latlng=";

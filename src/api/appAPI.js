@@ -12,6 +12,7 @@ import {
   GET_COMMON_LIST,
   GET_DEFAULT_CATEGORY,
   GET_DIET_LIST,
+  GET_EARNINGS,
   GET_FOODTRUCK_DETAILS,
   GET_FOOD_CATEGORY,
   GET_FOOD_ITEM,
@@ -531,6 +532,21 @@ export const updateOrderStatusByID_API = async ({ order_id, payload }) => {
   try {
     const URL = `${UPDATE_ORDER_STATUS}/${order_id}`;
     const response = await apiClient.put(URL, payload, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+/**
+ * Get earning by food truck ID
+ * @param {string} foodTruck_id - Food truck ID to fetch
+ * @returns {Promise<Object>} Earning details
+ */
+export const getEarningByFoodTruckID_API = async ({ foodTruck_id }) => {
+  try {
+    const URL = `${GET_EARNINGS}?foodTruckId=${foodTruck_id}`;
+    const response = await apiClient.get(URL, { skipToken: false });
     return response?.data;
   } catch (error) {
     throw error?.response?.data || error;
