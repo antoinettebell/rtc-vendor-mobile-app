@@ -83,6 +83,8 @@ export const REMOVE_A_REVIEW_BY_ID = (review_id) => `/review/${review_id}`;
 
 // earning
 export const GET_EARNINGS = "/order/vendor/earnings";
+export const GET_EARNING_LIST = "/order/vendor/earning_list";
+export const GET_EARNINGS_HOMESCREEN = "/order/vendor/dashboard";
 
 // Get Location Name from Lat Long
 export const REVERSE_LOCATION =

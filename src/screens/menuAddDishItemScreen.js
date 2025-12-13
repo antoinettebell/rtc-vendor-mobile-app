@@ -342,7 +342,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     if (selectedItems.length === 0) {
       setErrors((prev) => ({
         ...prev,
-        predefinedDiscount: "Please select BOGO items",
+        predefinedDiscount: "Please select BOGO/BOGOHO items",
       }));
     } else {
       setErrors((prev) => ({
@@ -399,9 +399,14 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
       } else if (discountSource === "predefined") {
         if (!selectedPredefinedDiscount) {
           newErrors.predefinedDiscount = "Please select a predefined discount";
-        } else if (selectedPredefinedDiscount?.key === "BOGO") {
+        } else if (
+          ["BOGO", "BOGOHO"].includes(selectedPredefinedDiscount?.key)
+        ) {
           if (bogoItems.length === 0) {
-            newErrors.predefinedDiscount = "Please select BOGO items";
+            newErrors.predefinedDiscount =
+              selectedPredefinedDiscount?.key === "BOGO"
+                ? "Please select BOGO items"
+                : "Please select BOGOHO items";
           }
         }
       }
@@ -491,7 +496,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 
     if (item.discountMode === "PREDEFINED") {
       setSelectedPredefinedDiscount(item.predefinedDiscount || null);
-      if (item.predefinedDiscount?.key === "BOGO") {
+      if (["BOGO", "BOGOHO"].includes(item.predefinedDiscount?.key)) {
         const temp_data = item.bogoItems.map((obj) => obj.itemId);
         setBogoItems(temp_data || []);
       }
@@ -567,8 +572,10 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
             // only add this param, when discount is visual
             discountParams.strikePrice =
               parseFloat(parseFloat(itemPrice).toFixed(2)) || 0;
-          } else if (selectedPredefinedDiscount?.key === "BOGO") {
-            // only add this param, when discount is BOGO
+          } else if (
+            ["BOGO", "BOGOHO"].includes(selectedPredefinedDiscount?.key)
+          ) {
+            // only add this param, when discount is BOGO/BOGOHO
             discountParams.bogoItems = [
               {
                 itemId: bogoItems?.[0]?._id || "",
@@ -1586,7 +1593,9 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                                       predefinedDiscount: "",
                                     }));
                                     // Reset BOGO item when changing discount
-                                    if (item.key !== "BOGO") {
+                                    if (
+                                      !["BOGO", "BOGOHO"].includes(item.key)
+                                    ) {
                                       setBogoItems([]);
                                     }
                                   }}
@@ -1607,7 +1616,9 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                                   </HelperText>
                                 )}
 
-                                {selectedPredefinedDiscount?.key === "BOGO" ? (
+                                {["BOGO", "BOGOHO"].includes(
+                                  selectedPredefinedDiscount?.key
+                                ) ? (
                                   <>
                                     <TouchableOpacity
                                       style={styles.bogoToggleContainer}
@@ -1620,11 +1631,11 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                                         color={AppColor.primary}
                                       />
                                       <Text style={styles.bogoToggleText}>
-                                        Add Item for BOGO
+                                        {`Add Item for ${selectedPredefinedDiscount?.key}`}
                                       </Text>
                                     </TouchableOpacity>
 
-                                    {/* Display BOGO Items if available */}
+                                    {/* Display BOGO/BOGOHO Items if available */}
                                     {bogoItems.length > 0 && (
                                       <View style={styles.bogoItemsContainer}>
                                         <FlatList
@@ -1946,14 +1957,14 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
         </>
       )}
 
-      {/* BOGO Items Action Sheet */}
+      {/* BOGO/BOGOHO Items Action Sheet */}
       <ComboItemsActionSheet
         limit={1}
         actionSheetRef={bogoActionSheetRef}
         selectedMenus={bogoItems}
         menuList={menuList}
         onSelectionChange={handleBogoItemsChange}
-        onClose={() => console.log("BOGO items sheet closed")}
+        onClose={() => console.log("BOGO/BOGOHO items sheet closed")}
       />
 
       {/* Media Picker Modal */}

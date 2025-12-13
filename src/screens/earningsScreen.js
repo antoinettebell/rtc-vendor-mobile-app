@@ -75,6 +75,17 @@ const EarningsScreen = ({ navigation }) => {
     }
   };
 
+  const onPressNavigationHandler = ({
+    listType = "earning",
+    durationType = "monthly",
+  }) => {
+    navigation.navigate("earningListScreen", {
+      truckId: user.foodTruck._id,
+      listType: listType,
+      durationType: durationType,
+    });
+  };
+
   useFocusEffect(
     useCallback(() => {
       onRefresh({ isInitialLoad: true });
@@ -116,30 +127,38 @@ const EarningsScreen = ({ navigation }) => {
                 <EarningComponent
                   title={"Total Earnings"}
                   amount={formatMoney(earnings?.totalEarning || 0)}
-                  // onPress={() => navigation.navigate("earningsTotal")}
+                  onPress={() => onPressNavigationHandler({})}
                 />
                 <EarningComponent
                   title={"Today's Earning"}
                   amount={formatMoney(earnings?.todayEarning || 0)}
-                  // onPress={() => navigation.navigate("earningsToday")}
+                  onPress={() =>
+                    onPressNavigationHandler({ durationType: "daily" })
+                  }
                 />
               </View>
               <View style={styles.earningsRow}>
                 <EarningComponent
                   title={"Weekly Earning"}
                   amount={formatMoney(earnings?.weeklyEarning || 0)}
-                  // onPress={() => navigation.navigate("earningsWeekly")}
+                  onPress={() =>
+                    onPressNavigationHandler({ durationType: "weekly" })
+                  }
                 />
                 <EarningComponent
                   title={"Monthly Earning"}
                   amount={formatMoney(earnings?.monthlyEarning || 0)}
-                  // onPress={() => navigation.navigate("earningsMonthly")}
+                  onPress={() =>
+                    onPressNavigationHandler({ durationType: "monthly" })
+                  }
                 />
               </View>
 
               <Pressable
                 style={styles.totalDeliveredContainer}
-                onPress={() => {}}
+                onPress={() =>
+                  onPressNavigationHandler({ listType: "desserts" })
+                }
               >
                 <Text style={styles.totalDeliveredText} numberOfLines={1}>
                   {"Total Delevered Desserts"}

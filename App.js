@@ -48,7 +48,6 @@ import ProfileMapScreen from "./src/screens/profileMapScreen";
 import ProfileAvailabilityScreen from "./src/screens/profileSetAvailabilityScreen";
 import MenuDishListScreen from "./src/screens/menuDishListScreen";
 import MenuAddDishItemScreen from "./src/screens/menuAddDishItemScreen";
-import MenuEditDishItemScreen from "./src/screens/menuEditDishItemScreen";
 import TermsOfServiceScreen from "./src/screens/termsOfServiceScreen";
 import PrivacyPolicyScreen from "./src/screens/privacyPolicyScreen";
 import AgreementScreen from "./src/screens/agreementScreen";
@@ -65,6 +64,7 @@ import OneTapSignInScreen from "./src/screens/oneTapSigninScreen";
 import AuthSetBusinessHrsScreen from "./src/screens/authSetBusinessHrsScreen";
 import ProfileSetBusinessHrsScreen from "./src/screens/profileSetBusinessHrsScreen";
 import EditMailingAddressScreen from "./src/screens/editMailingAddressScreen";
+import EarningListScreen from "./src/screens/earningListScreen";
 
 const Stack = createNativeStackNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -98,6 +98,7 @@ const AuthNavigator = () => (
   </Stack.Navigator>
 );
 
+// register navigator
 const FinalSignupStepsNavigator = () => (
   <Stack.Navigator
     screenOptions={{ headerShown: false }}
@@ -141,6 +142,7 @@ const FinalSignupStepsNavigator = () => (
   </Stack.Navigator>
 );
 
+// bottom tab navigator
 const BottomTabNavigator = ({ insets }) => (
   <BottomTab.Navigator
     screenOptions={{
@@ -228,6 +230,7 @@ const BottomTabNavigator = ({ insets }) => (
   </BottomTab.Navigator>
 );
 
+// main app navigator
 const MainAppNavigator = ({ insets }) => (
   <Stack.Navigator
     screenOptions={{ headerShown: false }}
@@ -238,7 +241,10 @@ const MainAppNavigator = ({ insets }) => (
       {() => <BottomTabNavigator insets={insets} />}
     </Stack.Screen>
     <Stack.Screen name="editProfileScreen" component={EditProfileScreen} />
-    <Stack.Screen name="editMailingAddressScreen" component={EditMailingAddressScreen} />
+    <Stack.Screen
+      name="editMailingAddressScreen"
+      component={EditMailingAddressScreen}
+    />
     <Stack.Screen
       name="profileServingLocationScreen"
       component={ProfileServingLocationScreen}
@@ -262,10 +268,6 @@ const MainAppNavigator = ({ insets }) => (
       component={MenuAddDishItemScreen}
     />
     <Stack.Screen
-      name="menuEditDishItemScreen"
-      component={MenuEditDishItemScreen}
-    />
-    <Stack.Screen
       name="appTermsOfServiceScreen"
       component={AppTermsOfServiceScreen}
     />
@@ -285,6 +287,7 @@ const MainAppNavigator = ({ insets }) => (
       name="deleteOtpVerification"
       component={OtpVerificationScreen}
     />
+    <Stack.Screen name="earningListScreen" component={EarningListScreen} />
   </Stack.Navigator>
 );
 

@@ -13,6 +13,8 @@ import {
   GET_DEFAULT_CATEGORY,
   GET_DIET_LIST,
   GET_EARNINGS,
+  GET_EARNINGS_HOMESCREEN,
+  GET_EARNING_LIST,
   GET_FOODTRUCK_DETAILS,
   GET_FOOD_CATEGORY,
   GET_FOOD_ITEM,
@@ -541,11 +543,92 @@ export const updateOrderStatusByID_API = async ({ order_id, payload }) => {
 /**
  * Get earning by food truck ID
  * @param {string} foodTruck_id - Food truck ID to fetch
+ * @param {string} startDate - Start date UTC for earning range (optional)
+ * @param {string} endDate - End date UTC for earning range (optional)
  * @returns {Promise<Object>} Earning details
  */
-export const getEarningByFoodTruckID_API = async ({ foodTruck_id }) => {
+export const getEarningByFoodTruckID_API = async ({
+  foodTruck_id,
+  startDate = null,
+  endDate = null,
+}) => {
   try {
-    const URL = `${GET_EARNINGS}?foodTruckId=${foodTruck_id}`;
+    let URL = GET_EARNINGS;
+
+    // Build query string with required and optional parameters
+    const queryParams = [`foodTruckId=${foodTruck_id}`];
+
+    if (startDate) {
+      queryParams.push(`startDate=${startDate}`);
+    }
+    if (endDate) {
+      queryParams.push(`endDate=${endDate}`);
+    }
+
+    URL += `?${queryParams.join("&")}`;
+
+    const response = await apiClient.get(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+/**
+ * Get earning list by food truck ID
+ * @param {string} foodTruck_id - Food truck ID to fetch
+ * @param {string} startDate - Start date UTC for earning range (optional)
+ * @param {string} endDate - End date UTC for earning range (optional)
+ * @param {string} list - Type of list to fetch (default: "normal")
+ * @param {string} listType - Earning list type (default: "weekly")
+ * @returns {Promise<Object>} Earning details
+ */
+export const getEarningListByFoodTruckID_API = async ({
+  foodTruck_id,
+  page = 1,
+  limit = 10,
+  list = "normal",
+  listType = "weekly",
+  startDate = null,
+  endDate = null,
+}) => {
+  try {
+    let URL = GET_EARNING_LIST;
+
+    // Build query string with required and optional parameters
+    const queryParams = [
+      `page=${page}`,
+      `limit=${limit}`,
+      `is_list=${list}`,
+      `earning_list=${listType}`,
+      `foodTruckId=${foodTruck_id}`,
+    ];
+
+    if (startDate) {
+      queryParams.push(`startDate=${startDate}`);
+    }
+    if (endDate) {
+      queryParams.push(`endDate=${endDate}`);
+    }
+
+    URL += `?${queryParams.join("&")}`;
+
+    const response = await apiClient.get(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+/**
+ * Get earning data for homescreen by food truck ID
+ * @param {string} foodTruck_id - Food truck ID to fetch
+ * @returns {Promise<Object>} Earning details
+ */
+export const getEarningForHomeByFoodTruckID_API = async (foodTruck_id) => {
+  try {
+    const URL = `${GET_EARNINGS_HOMESCREEN}?foodTruckId=${foodTruck_id}`;
+
     const response = await apiClient.get(URL, { skipToken: false });
     return response?.data;
   } catch (error) {

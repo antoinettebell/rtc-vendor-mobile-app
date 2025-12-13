@@ -15,7 +15,7 @@ import moment from "moment";
 import FastImage from "@d11/react-native-fast-image";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import StatusBarManager from "../components/StatusBarManager";
-import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400, Mulish500 } from "../utils/theme";
 import { getOrderByID_API, updateOrderStatusByID_API } from "../api/appAPI";
 import { useDispatch } from "react-redux";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
@@ -24,6 +24,7 @@ import {
   orderCurrentStatusNames,
   PROFILE_AVATAR,
   orderStatusStrings,
+  PaymentMethodNames,
 } from "../utils/constants";
 import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
 import {
@@ -482,33 +483,70 @@ const OrderDetailsScreen = ({ navigation, route }) => {
             </View>
             <Divider style={styles.orderDivider} />
             {/* Item Details */}
-            {orderData?.items?.map((item, index) => (
-              <View style={styles.orderItemContainer} key={index}>
-                <View style={styles.orderItemDetails}>
-                  <Text
-                    style={styles.orderItemName}
-                  >{`${item.qty} x ${item.menuItem.name}`}</Text>
-                  <Text style={styles.orderItemDescription}>
-                    {item.menuItem.description}
-                  </Text>
-                </View>
+            <View
+              style={{ gap: 12, paddingVertical: 12, paddingHorizontal: 8 }}
+            >
+              {orderData?.items?.map((item, index) => (
                 <View>
-                  <Text
-                    style={styles.orderItemPrice}
-                  >{`$${item.total.toFixed(2)}`}</Text>
+                  <View style={styles.orderItemContainer} key={index}>
+                    <View style={styles.orderItemDetails}>
+                      <Text
+                        style={styles.orderItemName}
+                      >{`${item.menuItem.name} (x${item.qty})`}</Text>
+                      {item.customization && (
+                        <Text
+                          style={[
+                            styles.itemDesc,
+                            {
+                              flex: 1,
+                              color: AppColor.text,
+                              flexWrap: "wrap",
+                            },
+                          ]}
+                        >
+                          {item.customization}
+                        </Text>
+                      )}
+                    </View>
+                    <View>
+                      <Text
+                        style={styles.orderItemPrice}
+                      >{`$${item.total.toFixed(2)}`}</Text>
+                    </View>
+                  </View>
+                  {/* Below is for BOGO/BOGOHO items */}
+                  {item?.menuItem?.bogoItems?.map((bogoItem) => (
+                    <View
+                      style={styles.orderItemContainer}
+                      key={bogoItem?.itemId}
+                    >
+                      <View style={styles.orderItemDetails}>
+                        <Text
+                          style={styles.orderItemName}
+                        >{`• ${bogoItem.name} (x${bogoItem.qty})`}</Text>
+                      </View>
+                      <Text style={styles.orderItemPrice}>
+                        {item?.menuItem.discountType === "BOGOHO"
+                          ? `$${(bogoItem.price * bogoItem.qty * 0.5).toFixed(2)}`
+                          : "$0.00"}
+                      </Text>
+                    </View>
+                  ))}
                 </View>
-              </View>
-            ))}
-            {/* for dessert */}
-            {/* <View style={styles.orderItemContainer}>
-              <View style={styles.freeItemContainer}>
-                <Text style={styles.orderItemName}>{"1 x Dessert"}</Text>
-                <Text style={styles.freeItemBadge}>{"Free"}</Text>
-              </View>
-              <View>
-                <Text style={styles.orderItemPrice}>{"$0.00"}</Text>
-              </View>
-            </View> */}
+              ))}
+              {/* for dessert */}
+              {orderData?.freeDessertApplied ? (
+                <View style={styles.orderItemContainer}>
+                  <View style={styles.freeItemContainer}>
+                    <Text style={styles.orderItemName}>{"Dessert"}</Text>
+                    <Text style={styles.freeItemBadge}>{"Free"}</Text>
+                  </View>
+                  <View>
+                    <Text style={styles.orderItemPrice}>{"$0.00"}</Text>
+                  </View>
+                </View>
+              ) : null}
+            </View>
             <Divider style={styles.orderDivider} />
             {/* Total */}
             <View style={styles.orderTotalContainer}>
@@ -612,6 +650,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   {`$${(orderData?.discount || 0).toFixed(2)}`}
                 </Text>
               </View>
+              <Divider style={{ marginTop: 16 }} />
               <View
                 style={{
                   flexDirection: "row",
@@ -666,6 +705,164 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   {`$${(orderData?.paymentProcessingFee || 0).toFixed(2)}`}
                 </Text>
               </View>
+            </View>
+          </View>
+
+          {/* Payment Summary Container */}
+          <View
+            style={{
+              marginHorizontal: 16,
+              marginTop: 16,
+              padding: 16,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: AppColor.border,
+              backgroundColor: AppColor.white,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Text
+                style={{
+                  fontFamily: Mulish700,
+                  fontSize: 18,
+                  color: AppColor.black,
+                }}
+              >
+                {"Payment Summary"}
+              </Text>
+              <Text
+                style={{
+                  fontFamily: Mulish400,
+                  fontSize: 18,
+                  color: AppColor.black,
+                  textTransform: "capitalize",
+                }}
+              >
+                {orderData?.paymentStatus || "N/A"}
+              </Text>
+            </View>
+            <Divider style={{ marginTop: 16 }} />
+            <View>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginTop: 16,
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: Mulish400,
+                    fontSize: 14,
+                    color: AppColor.black,
+                  }}
+                >
+                  {"Payment Method"}
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: Mulish400,
+                    fontSize: 14,
+                    color: AppColor.black,
+                  }}
+                >
+                  {PaymentMethodNames[orderData?.paymentMethod || "COD"]}
+                </Text>
+              </View>
+              {["APPLE_PAY", "GOOGLE_PAY"].includes(
+                orderData?.paymentMethod
+              ) && (
+                <>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginTop: 16,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: Mulish400,
+                        fontSize: 14,
+                        color: AppColor.black,
+                      }}
+                    >
+                      {"Auth Code"}
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: Mulish400,
+                        fontSize: 14,
+                        color: AppColor.black,
+                      }}
+                    >
+                      {orderData?.authCode || "N/A"}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginTop: 16,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: Mulish400,
+                        fontSize: 14,
+                        color: AppColor.black,
+                      }}
+                    >
+                      {"Invoice No"}
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: Mulish400,
+                        fontSize: 14,
+                        color: AppColor.black,
+                      }}
+                    >
+                      {orderData?.invoiceNumber || "N/A"}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginTop: 16,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: Mulish400,
+                        fontSize: 14,
+                        color: AppColor.black,
+                      }}
+                    >
+                      {"Transaction ID"}
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: Mulish400,
+                        fontSize: 14,
+                        color: AppColor.black,
+                      }}
+                    >
+                      {orderData?.transactionId || "N/A"}
+                    </Text>
+                  </View>
+                </>
+              )}
             </View>
           </View>
 
@@ -904,8 +1101,6 @@ const styles = StyleSheet.create({
   orderItemContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginHorizontal: 8,
-    marginVertical: 8,
   },
   orderItemDetails: {
     flex: 1,

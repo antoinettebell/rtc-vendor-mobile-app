@@ -436,21 +436,62 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
             <FlatList
               data={orderData?.items || []}
               keyExtractor={(_, index) => index.toString()}
+              contentContainerStyle={{ gap: 12 }}
               renderItem={({ item }) => (
                 <View style={styles.itemContainer}>
                   <View style={styles.itemDetails}>
                     <Text
                       style={styles.itemName}
-                    >{`${item.qty} x ${item.menuItem.name}`}</Text>
-                    <Text style={styles.itemDescription}>
-                      {item.menuItem.description}
-                    </Text>
+                    >{`${item.menuItem.name}`}</Text>
+                    {["BOGO", "BOGOHO"].includes(
+                      item.menuItem?.discountType
+                    ) ? (
+                      <Text style={styles.itemDescription} numberOfLines={2}>
+                        {`${item.menuItem?.discountType}`}
+                      </Text>
+                    ) : null}
                   </View>
-                  <Text
-                    style={styles.itemPrice}
-                  >{`$${item.total.toFixed(2)}`}</Text>
+                  <Text style={styles.itemPrice}>{`x${item.qty}`}</Text>
                 </View>
               )}
+              ListFooterComponent={() =>
+                orderData?.freeDessertApplied ? (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                    }}
+                  >
+                    <View
+                      style={{
+                        flex: 1,
+                        gap: 8,
+                        flexDirection: "row",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Text style={styles.itemName}>{"Dessert"}</Text>
+                      <Text
+                        style={{
+                          fontFamily: Mulish400,
+                          fontSize: 10,
+                          color: "#008B8B",
+                          backgroundColor: "#C2FFFF",
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
+                          borderRadius: 4,
+                          letterSpacing: 0.8,
+                        }}
+                      >
+                        {"Free"}
+                      </Text>
+                    </View>
+                    <View>
+                      <Text style={styles.itemPrice}>{"x1"}</Text>
+                    </View>
+                  </View>
+                ) : null
+              }
               showsVerticalScrollIndicator={false}
             />
           </View>
@@ -642,7 +683,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    marginBottom: 12,
   },
   itemDetails: {
     flex: 1,
@@ -654,10 +694,9 @@ const styles = StyleSheet.create({
     color: AppColor.black,
   },
   itemDescription: {
-    fontSize: 14,
     fontFamily: Mulish400,
-    color: "#6F6F6F",
-    marginTop: 4,
+    fontSize: 10,
+    color: AppColor.black,
   },
   itemPrice: {
     fontSize: 16,

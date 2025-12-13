@@ -128,3 +128,9 @@ export const discountTypeList = [
   { label: "Percentage", type: "PERCENTAGE", txt: "" },
   { label: "Fixed", type: "FIXED", txt: "" },
 ];
+
+export const PaymentMethodNames = {
+  COD: "Cash on Pickup",
+  APPLE_PAY: "Apple Pay",
+  GOOGLE_PAY: "Google Pay",
+};

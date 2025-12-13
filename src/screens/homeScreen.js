@@ -19,6 +19,7 @@ import StatusBarManager from "../components/StatusBarManager";
 import FastImage from "@d11/react-native-fast-image";
 import CustomBanner from "../components/CustomBanner";
 import {
+  getEarningForHomeByFoodTruckID_API,
   getOrderList_API,
   getUserDetail_API,
   updateFcmToken_API,
@@ -78,6 +79,7 @@ const HomeScreen = ({ navigation }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [newOrderLoading, setNewOrderLoading] = useState(false);
   const [newOrderData, setNewOrderData] = useState(null);
+  const [earningData, setEarningData] = useState(null);
   const [orderRejectBtnLoading, setOrderRejectBtnLoading] = useState(false);
   const [orderAcceptBtnLoading, setOrderAcceptBtnLoading] = useState(false);
   const [locationTimeAdvanceData, setLocationTimeAdvanceData] = useState(null);
@@ -139,6 +141,16 @@ const HomeScreen = ({ navigation }) => {
       if (response?.success && response.data) {
         console.log("response => ", response);
         dispatch(setUser(response.data.user));
+      }
+
+      if (user?.foodTruck?._id) {
+        const earningData = await getEarningForHomeByFoodTruckID_API(
+          user?.foodTruck?._id
+        );
+        console.log("earningData => ", earningData);
+        if (earningData?.success && earningData.data) {
+          setEarningData(earningData.data.vendorHomeData);
+        }
       }
     } catch (error) {
       console.log("error => ", error);
@@ -290,6 +302,7 @@ const HomeScreen = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       getOrderDataFromAPI();
+      getUserDataFromAPI(); // to refresh the active location data
     }, [])
   );
 
@@ -643,30 +656,37 @@ const HomeScreen = ({ navigation }) => {
                         <View style={styles.orderItemDetails}>
                           <Text
                             style={styles.orderItemName}
-                          >{`${item.qty} x ${item.menuItem.name}`}</Text>
-                          <Text style={styles.orderItemDescription}>
-                            {item.menuItem.description}
-                          </Text>
+                          >{`${item.menuItem.name}`}</Text>
+                          {["BOGO", "BOGOHO"].includes(
+                            item.menuItem?.discountType
+                          ) ? (
+                            <Text
+                              style={styles.orderItemDescription}
+                              numberOfLines={2}
+                            >
+                              {`${item.menuItem?.discountType}`}
+                            </Text>
+                          ) : null}
                         </View>
                         <View>
                           <Text
                             style={styles.orderItemPrice}
-                          >{`$${item.total.toFixed(2)}`}</Text>
+                          >{`x${item.qty}`}</Text>
                         </View>
                       </View>
                     ))}
                     {/* for dessert */}
-                    {/* <View style={styles.orderItemContainer}>
-                      <View style={styles.freeItemContainer}>
-                        <Text style={styles.orderItemName}>
-                          {"1 x Dessert"}
-                        </Text>
-                        <Text style={styles.freeItemBadge}>{"Free"}</Text>
+                    {newOrderData?.freeDessertApplied ? (
+                      <View style={styles.orderItemContainer}>
+                        <View style={styles.freeItemContainer}>
+                          <Text style={styles.orderItemName}>{"Dessert"}</Text>
+                          <Text style={styles.freeItemBadge}>{"Free"}</Text>
+                        </View>
+                        <View>
+                          <Text style={styles.orderItemPrice}>{"x1"}</Text>
+                        </View>
                       </View>
-                      <View>
-                        <Text style={styles.orderItemPrice}>{"$0.00"}</Text>
-                      </View>
-                    </View> */}
+                    ) : null}
                     <Divider style={styles.orderDivider} />
                     {/* Total */}
                     <View style={styles.orderTotalContainer}>
@@ -728,7 +748,9 @@ const HomeScreen = ({ navigation }) => {
                       style={styles.pieChartIcon}
                     />
                     <View style={styles.salesCardTextContainer}>
-                      <Text style={styles.salesCardAmount}>{"$0"}</Text>
+                      <Text
+                        style={styles.salesCardAmount}
+                      >{`$${(earningData?.todaySales || 0).toFixed(2)}`}</Text>
                       <Text style={styles.salesCardLabel}>
                         {"Today's Sales "}
                       </Text>
@@ -743,7 +765,9 @@ const HomeScreen = ({ navigation }) => {
                       style={styles.pieChartIcon}
                     />
                     <View style={styles.salesCardTextContainer}>
-                      <Text style={styles.salesCardAmount}>{"0"}</Text>
+                      <Text
+                        style={styles.salesCardAmount}
+                      >{`${earningData?.todayTotalOrders || 0}`}</Text>
                       <Text style={styles.salesCardLabel}>
                         {"Today's Order"}
                       </Text>
@@ -761,17 +785,17 @@ const HomeScreen = ({ navigation }) => {
                 <View style={styles.quickStatsItemsContainer}>
                   <QuickStatsComponent
                     title={"Monthly Earnings"}
-                    subTitle={"$0"}
+                    subTitle={`$${(earningData?.monthlyEarning || 0).toFixed(2)}`}
                     icon={require("../assets/images/monthlyEarningIcon.png")}
                     onPress={() => navigation.navigate("earningsScreen")}
                   />
                   <QuickStatsComponent
                     title={"Monthly Delivered Desserts"}
-                    subTitle={"0"}
+                    subTitle={earningData?.monthlyDeliveredDessertsCount || 0}
                     icon={require("../assets/images/monthlyDeliveredDessertIcon.png")}
                     onPress={() => navigation.navigate("earningsScreen")}
                   />
-                  <QuickStatsComponent
+                  {/* <QuickStatsComponent
                     title={"Active Customers"}
                     subTitle={"0"}
                     icon={require("../assets/images/activeCustomerIcon.png")}
@@ -782,7 +806,7 @@ const HomeScreen = ({ navigation }) => {
                     subTitle={"-"}
                     icon={require("../assets/images/trendingItemsIcon.png")}
                     onPress={() => navigation.navigate("earningsScreen")}
-                  />
+                  /> */}
                 </View>
               </View>
             </View>
@@ -1015,7 +1039,7 @@ const styles = StyleSheet.create({
   },
   orderItemDescription: {
     fontFamily: Mulish400,
-    fontSize: 14,
+    fontSize: 10,
     color: AppColor.black,
   },
   orderItemPrice: {

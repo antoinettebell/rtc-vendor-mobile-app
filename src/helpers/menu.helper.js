@@ -296,85 +296,64 @@ export const editValidatePrepTime = (value) => {
 };
 
 /**
- * Evaluates whether a given string matches any category from the specified enum array.
- * @param {string} categoryName - The category name to be checked.
- * @returns {boolean} - True if the input string matches any category, false otherwise.
+ * Evaluates whether a given string is NOT one of the specified exclusion categories.
+ * If the category is "Sides", "Beverages", or "Desserts", it returns false.
+ * For all other categories, it returns true.
+ * * @param {string} categoryName - The category name to be checked.
+ * @returns {boolean} - True if the input string is NOT an exclusion category, false otherwise.
  */
 export const isValidCategoryForMeat = (categoryName) => {
+  // 1. Handle Null/Empty Input
   if (!categoryName) {
-    return false;
+    // Treat null/empty as a valid (non-excluded) category, or change this
+    // to return false if you want strict validation. We'll return true
+    // since it's not one of the *excluded* names.
+    return true;
   }
 
-  const trimmedCategoryName = categoryName.trim().toLowerCase();
-  const categories = ["Popular*", "*Combos*", "Sides", "Kids"];
+  // 2. Define Exclusion Categories
+  // All comparisons will be case-insensitive.
+  const EXCLUSION_CATEGORIES = ["sides", "beverages", "desserts"];
 
-  for (const category of categories) {
-    const lowerCaseCategory = category.toLowerCase();
-    const startsWithWildcard = lowerCaseCategory.startsWith("*");
-    const endsWithWildcard = lowerCaseCategory.endsWith("*");
+  // 3. Normalize Input
+  const normalizedCategoryName = categoryName.trim().toLowerCase();
 
-    if (startsWithWildcard && endsWithWildcard) {
-      const substring = lowerCaseCategory.slice(1, -1);
-      if (trimmedCategoryName.includes(substring)) {
-        return true;
-      }
-    } else if (startsWithWildcard) {
-      const suffix = lowerCaseCategory.slice(1);
-      if (trimmedCategoryName.endsWith(suffix)) {
-        return true;
-      }
-    } else if (endsWithWildcard) {
-      const prefix = lowerCaseCategory.slice(0, -1);
-      if (trimmedCategoryName.startsWith(prefix)) {
-        return true;
-      }
-    } else {
-      if (trimmedCategoryName === lowerCaseCategory) {
-        return true;
-      }
-    }
-  }
-  return false;
+  // 4. Check for Exclusion
+  // Array.includes() efficiently checks if the normalized input matches any item in the array.
+  const isExcluded = EXCLUSION_CATEGORIES.includes(normalizedCategoryName);
+
+  // 5. Return the Inverse Result
+  // We want to return TRUE if it is NOT excluded, and FALSE if it IS excluded.
+  return !isExcluded;
 };
 
 /**
- * Evaluates whether a given string matches any category from the specified enum array.
- * @param {string} categoryName - The category name to be checked.
- * @returns {boolean} - True if the input string matches any category, false otherwise.
+ * Evaluates whether a given string is NOT one of the specified exclusion categories.
+ * If the category is "Sides", "Beverages", or "Desserts", it returns false.
+ * For all other categories, it returns true.
+ * * @param {string} categoryName - The category name to be checked.
+ * @returns {boolean} - True if the input string is NOT an exclusion category, false otherwise.
  */
 export const isValidCategoryForMeatWellness = (categoryName) => {
+  // 1. Handle Null/Empty Input
+  // A null or empty string is not one of the *explicitly excluded* categories,
+  // so we return true.
   if (!categoryName) {
-    return false;
+    return true;
   }
 
-  const trimmedCategoryName = categoryName.trim().toLowerCase();
-  const categories = ["Popular Items", "Combos"];
+  // 2. Define Exclusion Categories (in lowercase for case-insensitive comparison)
+  const EXCLUSION_CATEGORIES = ["sides", "beverages", "desserts"];
 
-  for (const category of categories) {
-    const lowerCaseCategory = category.toLowerCase();
-    const startsWithWildcard = lowerCaseCategory.startsWith("*");
-    const endsWithWildcard = lowerCaseCategory.endsWith("*");
+  // 3. Normalize Input
+  // Trim whitespace and convert to lowercase for case-insensitive matching.
+  const normalizedCategoryName = categoryName.trim().toLowerCase();
 
-    if (startsWithWildcard && endsWithWildcard) {
-      const substring = lowerCaseCategory.slice(1, -1);
-      if (trimmedCategoryName.includes(substring)) {
-        return true;
-      }
-    } else if (startsWithWildcard) {
-      const suffix = lowerCaseCategory.slice(1);
-      if (trimmedCategoryName.endsWith(suffix)) {
-        return true;
-      }
-    } else if (endsWithWildcard) {
-      const prefix = lowerCaseCategory.slice(0, -1);
-      if (trimmedCategoryName.startsWith(prefix)) {
-        return true;
-      }
-    } else {
-      if (trimmedCategoryName === lowerCaseCategory) {
-        return true;
-      }
-    }
-  }
-  return false;
+  // 4. Check for Exclusion
+  // Use .includes() for an efficient exact match check against the exclusion list.
+  const isExcluded = EXCLUSION_CATEGORIES.includes(normalizedCategoryName);
+
+  // 5. Return the Inverse Result
+  // Return TRUE if it is NOT excluded, and FALSE if it IS excluded.
+  return !isExcluded;
 };
