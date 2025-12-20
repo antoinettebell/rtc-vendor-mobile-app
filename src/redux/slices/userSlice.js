@@ -5,6 +5,7 @@ const initialState = {
   authToken: null,
   selectedPlan: null,
   profileStatus: null,
+  bankStatus: false,
 };
 
 const userSlice = createSlice({
@@ -28,6 +29,9 @@ const userSlice = createSlice({
     setProfileStatus: (state, { payload }) => {
       state.profileStatus = payload;
     },
+    setBankStatus: (state, { payload }) => {
+      state.bankStatus = payload;
+    },
     clearUserSlice: () => initialState,
     updateUser: (state, { payload }) => {
       state.user = { ...state.user, ...payload };
@@ -41,6 +45,7 @@ export const {
   setAuthToken,
   setSelectedPlan,
   setProfileStatus,
+  setBankStatus,
   clearUserSlice,
   updateUser,
 } = userSlice.actions;

@@ -297,7 +297,7 @@ export const editValidatePrepTime = (value) => {
 
 /**
  * Evaluates whether a given string is NOT one of the specified exclusion categories.
- * If the category is "Sides", "Beverages", or "Desserts", it returns false.
+ * If the category is "Beverages", or "Desserts", it returns false.
  * For all other categories, it returns true.
  * * @param {string} categoryName - The category name to be checked.
  * @returns {boolean} - True if the input string is NOT an exclusion category, false otherwise.
@@ -313,7 +313,7 @@ export const isValidCategoryForMeat = (categoryName) => {
 
   // 2. Define Exclusion Categories
   // All comparisons will be case-insensitive.
-  const EXCLUSION_CATEGORIES = ["sides", "beverages", "desserts"];
+  const EXCLUSION_CATEGORIES = ["beverages", "desserts"];
 
   // 3. Normalize Input
   const normalizedCategoryName = categoryName.trim().toLowerCase();
@@ -329,7 +329,7 @@ export const isValidCategoryForMeat = (categoryName) => {
 
 /**
  * Evaluates whether a given string is NOT one of the specified exclusion categories.
- * If the category is "Sides", "Beverages", or "Desserts", it returns false.
+ * If the category is "Beverages", or "Desserts", it returns false.
  * For all other categories, it returns true.
  * * @param {string} categoryName - The category name to be checked.
  * @returns {boolean} - True if the input string is NOT an exclusion category, false otherwise.
@@ -343,7 +343,7 @@ export const isValidCategoryForMeatWellness = (categoryName) => {
   }
 
   // 2. Define Exclusion Categories (in lowercase for case-insensitive comparison)
-  const EXCLUSION_CATEGORIES = ["sides", "beverages", "desserts"];
+  const EXCLUSION_CATEGORIES = ["beverages", "desserts"];
 
   // 3. Normalize Input
   // Trim whitespace and convert to lowercase for case-insensitive matching.

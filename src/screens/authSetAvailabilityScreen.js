@@ -28,7 +28,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
 import Tooltip from "react-native-walkthrough-tooltip";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
-import { updateFoodTruckProfile_API } from "../api/appAPI";
+import { registerComplete_API, updateFoodTruckProfile_API } from "../api/appAPI";
 import { setUser, updateFoodTruck } from "../redux/slices/userSlice";
 import { setPreOrderAvailability } from "../redux/slices/foodTruckProfileSlice";
 import StatusBarManager from "../components/StatusBarManager";
@@ -38,6 +38,7 @@ import {
   transformLocationsForAPI,
 } from "../helpers/availability.helper";
 import { fullDayNames } from "../utils/constants";
+import { onUnderReview } from "../redux/slices/authSlice";
 
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -300,7 +301,17 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
       if (response?.success && response?.data) {
         dispatch(setPreOrderAvailability(availability));
         dispatch(updateFoodTruck(response.data.foodtruck));
-        navigation.navigate("authFoodTruckBankDetailScreen");
+        // navigation.navigate("authFoodTruckBankDetailScreen");
+
+        const response1 = await registerComplete_API();
+        console.log("response1 => ", response1);
+        if (response1?.success) {
+          dispatch(onUnderReview(true));
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "authUnderReviewNoteScreen" }],
+          });
+        }
       }
     } catch (error) {
       console.error("error =>", error);
@@ -364,10 +375,10 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
                 />
               </View>
             </View>
-            <View style={styles.line} />
+            {/* <View style={styles.line} />
             <View style={styles.stepSubContainer}>
               <View style={styles.emptyCircle} />
-            </View>
+            </View> */}
           </View>
 
           {/* Content Header Continer */}

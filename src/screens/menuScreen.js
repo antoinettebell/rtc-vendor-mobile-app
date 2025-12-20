@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator as NativeIndicator,
+  Alert,
 } from "react-native";
 import {
   Divider,
@@ -27,6 +28,7 @@ import StatusBarManager from "../components/StatusBarManager";
 import {
   addCategory_API,
   getAllCategory_API,
+  getBankDetail_API,
   getDefaultCategories_API,
   removeCategory_API,
 } from "../api/appAPI";
@@ -35,6 +37,8 @@ import { setSelectedFoodCategory } from "../redux/slices/foodTruckProfileSlice";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
 import { vendorProfileStatus } from "../utils/constants";
 import { Dropdown } from "react-native-element-dropdown";
+import { setBankStatus } from "../redux/slices/userSlice";
+import { useFocusEffect } from "@react-navigation/native";
 
 const MenuScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -43,7 +47,9 @@ const MenuScreen = ({ navigation }) => {
   const { selectedFoodCategory } = useSelector(
     (state) => state.foodTruckProfileReducer
   );
-  const { profileStatus } = useSelector((state) => state.userReducer);
+  const { profileStatus, bankStatus } = useSelector(
+    (state) => state.userReducer
+  );
 
   const [category, setCategory] = useState([]);
   const [dataLoading, setDataLoading] = useState(false);
@@ -169,6 +175,45 @@ const MenuScreen = ({ navigation }) => {
     }
   };
 
+  const checkBankStatus = async () => {
+    if (!bankStatus && profileStatus === vendorProfileStatus.approved) {
+      try {
+        const response = await getBankDetail_API();
+        if (response?.success) {
+          if (response?.data?.bankDetail) {
+            dispatch(setBankStatus(true));
+          } else {
+            dispatch(setBankStatus(false));
+          }
+        }
+      } catch (error) {
+        console.log("bank data fetch error => ", error);
+      }
+    }
+  };
+
+  const checkBankStatusAndOpenModel = () => {
+    if (!bankStatus) {
+      Alert.alert(
+        "Bank Details Required",
+        "Please update your bank details to continue.",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Update",
+            style: "destructive",
+            onPress: () => navigation.navigate("editBankDetailScreen"),
+          },
+        ]
+      );
+    } else {
+      setModalVisible(true);
+    }
+  };
+
   useEffect(() => {
     getDataFromAPI(false); // Initial load, not a refresh
   }, []);
@@ -176,6 +221,12 @@ const MenuScreen = ({ navigation }) => {
   useEffect(() => {
     setCategory(selectedFoodCategory);
   }, [selectedFoodCategory]);
+
+  useFocusEffect(
+    useCallback(() => {
+      checkBankStatus();
+    }, [])
+  );
 
   return (
     <View style={styles.container}>
@@ -312,7 +363,7 @@ const MenuScreen = ({ navigation }) => {
                     ]}
                   >
                     <TouchableOpacity
-                      onPress={() => setModalVisible(true)}
+                      onPress={checkBankStatusAndOpenModel}
                       activeOpacity={0.8}
                       style={styles.emptyListButton}
                     >
@@ -330,7 +381,7 @@ const MenuScreen = ({ navigation }) => {
                 ListFooterComponent={() =>
                   category?.length ? (
                     <TouchableOpacity
-                      onPress={() => setModalVisible(true)}
+                      onPress={checkBankStatusAndOpenModel}
                       activeOpacity={0.7}
                       style={{
                         flexDirection: "row",

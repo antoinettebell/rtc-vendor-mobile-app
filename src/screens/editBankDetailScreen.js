@@ -28,6 +28,7 @@ import {
 } from "../utils/constants";
 import { addBankDetail_API, getBankDetail_API } from "../api/appAPI";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
+import { setBankStatus } from "../redux/slices/userSlice";
 
 const validateAccountHolderName = (text) => {
   if (!text.trim()) return "Account holder name is required";
@@ -123,8 +124,8 @@ const EditBankDetailScreen = ({ navigation, route }) => {
         : "Routing number is required",
       accountType: validateAccountType(selectedAccountType),
       remittanceEmail: validateRemittanceEmail(remittanceEmail),
-      swiftCode: validateSwiftCode(swiftCode),
-      iban: validateIban(iban),
+      // swiftCode: validateSwiftCode(swiftCode),
+      // iban: validateIban(iban),
       currency: validateCurrency(selectedCurrency),
       paymentMethod: validatePaymentMethod(selectedPaymentMethod),
     };
@@ -146,8 +147,8 @@ const EditBankDetailScreen = ({ navigation, route }) => {
         routingNumber,
         accountType: selectedAccountType,
         remittanceEmail,
-        swiftCode,
-        iban,
+        // swiftCode,
+        // iban,
         currency: selectedCurrency,
         paymentMethod: selectedPaymentMethod,
       };
@@ -155,6 +156,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
       console.log("response => ", response);
       if (response?.success && response?.data) {
         setBankData(response?.data?.bankDetail);
+        dispatch(setBankStatus(true));
         dispatch(
           showSnackbar({
             message: "Bank detail updated successfully",
@@ -191,8 +193,14 @@ const EditBankDetailScreen = ({ navigation, route }) => {
       console.log("response => ", response);
       if (response?.success && response?.data) {
         setAPIDataToLocalState(response?.data?.bankDetail);
+        if (response?.data?.bankDetail) {
+          dispatch(setBankStatus(true));
+        } else {
+          dispatch(setBankStatus(false));
+        }
       }
     } catch (error) {
+      console.log("bank data fetch error => ", error);
     } finally {
       setDataLoading(false);
     }
@@ -545,7 +553,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
                   </View>
 
                   {/* Swift Code */}
-                  <View style={styles.section}>
+                  {/* <View style={styles.section}>
                     <Text style={styles.inputLabel}>{"Swift Code"}</Text>
                     <TextInput
                       dense
@@ -579,10 +587,10 @@ const EditBankDetailScreen = ({ navigation, route }) => {
                         {errors.swiftCode}
                       </HelperText>
                     )}
-                  </View>
+                  </View> */}
 
                   {/* IBAN */}
-                  <View style={styles.section}>
+                  {/* <View style={styles.section}>
                     <Text style={styles.inputLabel}>{"IBAN"}</Text>
                     <TextInput
                       dense
@@ -616,7 +624,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
                         {errors.iban}
                       </HelperText>
                     )}
-                  </View>
+                  </View> */}
 
                   {/* Payment Method */}
                   <View style={styles.section}>

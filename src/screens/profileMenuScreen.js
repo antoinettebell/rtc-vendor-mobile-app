@@ -25,7 +25,11 @@ import { onSignOut } from "../redux/slices/authSlice";
 import { clearUserSlice } from "../redux/slices/userSlice";
 import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlice";
 import StatusBarManager from "../components/StatusBarManager";
-import { PROFILE_MENU_IMAGES, passwordRegex } from "../utils/constants";
+import {
+  PROFILE_MENU_IMAGES,
+  passwordRegex,
+  vendorProfileStatus,
+} from "../utils/constants";
 import {
   ActivityIndicator,
   HelperText,
@@ -399,7 +403,9 @@ const ChangePWDModal = ({
 const ProfileMenuScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
-  const { user } = useSelector((state) => state.userReducer);
+  const { user, bankStatus, profileStatus } = useSelector(
+    (state) => state.userReducer
+  );
 
   const [signoutModalVisible, setSignoutModalVisible] = useState(false);
   const [signoutModalLoading, setSignoutModalLoading] = useState(false);
@@ -742,13 +748,17 @@ const ProfileMenuScreen = ({ navigation }) => {
             onPress={() => navigation.navigate("profileAvailabilityScreen")}
           />
           <HR />
-          <ItemComponent
-            rightIcon
-            label="Bank Detail"
-            imageUri={PROFILE_MENU_IMAGES.bankDetail}
-            onPress={() => navigation.navigate("editBankDetailScreen")}
-          />
-          <HR />
+          {(bankStatus || profileStatus === vendorProfileStatus.approved) && (
+            <>
+              <ItemComponent
+                rightIcon
+                label="Bank Detail"
+                imageUri={PROFILE_MENU_IMAGES.bankDetail}
+                onPress={() => navigation.navigate("editBankDetailScreen")}
+              />
+              <HR />
+            </>
+          )}
           <ItemComponent
             rightIcon
             label="Subscription"

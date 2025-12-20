@@ -133,7 +133,7 @@ const SignUpScreen = ({ navigation }) => {
   };
 
   const validateMailingAddressLine2 = (value) => {
-    if (!value.trim()) return "Address Line 2 is required";
+    // if (!value.trim()) return "Address Line 2 is required";
     if (!addressRegex.test(value)) {
       return "Address must contain only letters, numbers, and basic punctuation.";
     }
@@ -224,7 +224,7 @@ const SignUpScreen = ({ navigation }) => {
     const isValid = validateForm();
     if (!isValid) return;
 
-    const payload = {
+    let payload = {
       firstName: firstName,
       lastName: lastName,
       foodTruck: {
@@ -243,13 +243,16 @@ const SignUpScreen = ({ navigation }) => {
       //   zipcode: mailingPostalCode,
       // },
       addressLine1: mailingAddressLine1,
-      addressLine2: mailingAddressLine2,
       addressCity: mailingCity,
       addressState: mailingState,
       addressCountry: mailingCountry,
       addressPostal: mailingPostalCode,
       subscribedForOffGrid: offGrid,
     };
+
+    if (mailingAddressLine2.trim().length > 0) {
+      payload.addressLine2 = mailingAddressLine2;
+    }
 
     console.log("Payload:", payload);
     setLoading(true);
@@ -487,7 +490,7 @@ const SignUpScreen = ({ navigation }) => {
 
               {/* Address Line 2 */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                {"Address Line 2 *"}
+                {"Address Line 2"}
               </Text>
               <TextInput
                 dense

@@ -19,6 +19,7 @@ import StatusBarManager from "../components/StatusBarManager";
 import FastImage from "@d11/react-native-fast-image";
 import CustomBanner from "../components/CustomBanner";
 import {
+  getBankDetail_API,
   getEarningForHomeByFoodTruckID_API,
   getOrderList_API,
   getUserDetail_API,
@@ -27,6 +28,7 @@ import {
   updateOrderStatusByID_API,
 } from "../api/appAPI";
 import {
+  setBankStatus,
   setProfileStatus,
   setUser,
   updateFoodTruck,
@@ -68,7 +70,9 @@ const QuickStatsComponent = ({ title, subTitle, icon, onPress }) => (
 const HomeScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
-  const { user, profileStatus } = useSelector((state) => state.userReducer);
+  const { user, profileStatus, bankStatus } = useSelector(
+    (state) => state.userReducer
+  );
 
   const HEADER_HEIGHT = 60;
   const totalHeaderHeight = insets.top + HEADER_HEIGHT;
@@ -150,6 +154,21 @@ const HomeScreen = ({ navigation }) => {
         console.log("earningData => ", earningData);
         if (earningData?.success && earningData.data) {
           setEarningData(earningData.data.vendorHomeData);
+        }
+      }
+
+      if (!bankStatus) {
+        try {
+          const response = await getBankDetail_API();
+          if (response?.success) {
+            if (response?.data?.bankDetail) {
+              dispatch(setBankStatus(true));
+            } else {
+              dispatch(setBankStatus(false));
+            }
+          }
+        } catch (error) {
+          console.log("bank data fetch error => ", error);
         }
       }
     } catch (error) {

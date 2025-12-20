@@ -458,7 +458,7 @@ export const getDietList_API = async () => {
  */
 export const getMeatList_API = async () => {
   try {
-    const URL = `${GET_MEAT_LIST}`;
+    const URL = `${GET_MEAT_LIST}?limit=1000`;
     const response = await apiClient.get(URL, { skipToken: false });
     return response?.data;
   } catch (error) {

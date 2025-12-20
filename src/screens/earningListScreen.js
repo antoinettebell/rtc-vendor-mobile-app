@@ -59,6 +59,8 @@ const EarningListScreen = ({ navigation, route }) => {
   const [earningsTotal, setEarningsTotal] = useState(0);
   const [dessertAmount, setDessertAmount] = useState(0);
   const [dessertCount, setDessertCount] = useState(0);
+  const [cashEarningsTotal, setCashEarningsTotal] = useState(0);
+  const [digitalEarningsTotal, setDigitalEarningsTotal] = useState(0);
 
   const renderItem = ({ item }) => {
     return (
@@ -129,7 +131,7 @@ const EarningListScreen = ({ navigation, route }) => {
       const response = await getEarningListByFoodTruckID_API({
         page: page + 1,
         limit: 30,
-        list: listType === "earning" ? "normal" : listType,
+        list: listType === "earning" ? "normal" : "dessert",
         listType: durationType,
         foodTruck_id: truckId,
       });
@@ -145,6 +147,8 @@ const EarningListScreen = ({ navigation, route }) => {
         setDessertCount(response.data.totalFreeDessertCount || 0);
         setCurrentPage(response?.data?.page);
         setTotalPage(response?.data?.totalPages);
+        setCashEarningsTotal(response.data.cashEarning || 0);
+        setDigitalEarningsTotal(response.data.digitalEarning || 0);
       }
     } catch (error) {
       console.log(error);
@@ -229,6 +233,15 @@ const EarningListScreen = ({ navigation, route }) => {
               <ContentRowItem
                 title={`Dessert (${dessertCount})`}
                 value={`$${dessertAmount.toFixed(2)}`}
+              />
+              <Divider />
+              <ContentRowItem
+                title="Cash Earning"
+                value={`$${cashEarningsTotal.toFixed(2)}`}
+              />
+              <ContentRowItem
+                title="Digital Earning"
+                value={`$${digitalEarningsTotal.toFixed(2)}`}
               />
             </View>
           ) : (

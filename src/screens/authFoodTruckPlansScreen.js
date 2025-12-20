@@ -357,10 +357,10 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
               <View style={styles.stepSubContainer}>
                 <View style={styles.emptyCircle} />
               </View>
-              <View style={styles.line} />
+              {/* <View style={styles.line} />
               <View style={styles.stepSubContainer}>
                 <View style={styles.emptyCircle} />
-              </View>
+              </View> */}
             </View>
 
             {/* Main Form */}

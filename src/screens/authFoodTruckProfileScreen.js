@@ -746,10 +746,10 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
               <View style={styles.stepSubContainer}>
                 <View style={styles.emptyCircle} />
               </View>
-              <View style={styles.line} />
+              {/* <View style={styles.line} />
               <View style={styles.stepSubContainer}>
                 <View style={styles.emptyCircle} />
-              </View>
+              </View> */}
             </View>
 
             {/* Main Form */}
@@ -1201,7 +1201,9 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
                     paddingVertical: 10,
                   }}
                 >
-                  <Text style={[styles.label]}>Select Serving Location</Text>
+                  <Text style={[styles.label]} numberOfLines={1}>
+                    Select Primary Serving Location
+                  </Text>
                   <FontAwesome6
                     name="angle-right"
                     color={AppColor.black}
