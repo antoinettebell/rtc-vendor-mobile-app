@@ -1818,7 +1818,7 @@ PODS:
     - Yoga
   - RNDeviceInfo (14.0.4):
     - React-Core
-  - RNFastImage (8.9.2):
+  - RNFastImage (8.11.1):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1878,15 +1878,53 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNImageCropPicker (0.41.5):
+  - RNImageCropPicker (0.51.0):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.11.18.00)
+    - RCTRequired
+    - RCTTypeSafety
     - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
     - React-RCTImage
-    - RNImageCropPicker/QBImagePickerController (= 0.41.5)
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - RNImageCropPicker/QBImagePickerController (= 0.51.0)
     - TOCropViewController (~> 2.7.4)
-  - RNImageCropPicker/QBImagePickerController (0.41.5):
+    - Yoga
+  - RNImageCropPicker/QBImagePickerController (0.51.0):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.11.18.00)
+    - RCTRequired
+    - RCTTypeSafety
     - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
     - React-RCTImage
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
     - TOCropViewController (~> 2.7.4)
+    - Yoga
   - RNNotifee (9.1.8):
     - React-Core
     - RNNotifee/NotifeeCore (= 9.1.8)
@@ -2547,12 +2585,12 @@ SPEC CHECKSUMS:
   RNCAsyncStorage: 320c8b9217695928a64d8ae993653425c8605368
   RNDateTimePicker: 0037a03f1099b7745f0a37d994b029204405dff3
   RNDeviceInfo: feea80a690d2bde1fe51461cf548039258bd03f2
-  RNFastImage: 3bb64d1e5ec0e087d3a17b2adc7e53b18c3c70bb
+  RNFastImage: ce27d1287fc7a781f685671afd2c31fef7486187
   RNFBApp: df5caad9f64b6bc87f8a0b110e6bc411fb00a12b
   RNFBInstallations: bf3fabe3946877569671461936b4b4d505050799
   RNFBMessaging: 6586f18ab3411aeb3349088c19fe54283d39e529
   RNGestureHandler: 3ca128bc8b8f15f04ba00dbbd05b90df34404b05
-  RNImageCropPicker: a536bb88eade8336e1d18fdeafa77dc893fbc42e
+  RNImageCropPicker: fe84968c82474f1833668fb7d440c6a5df39efdc
   RNNotifee: 4a6ee5c7deaf00e005050052d73ee6315dff7ec9
   RNPermissions: 04e2657f8e274735ac8b755c448bb705af94a0b2
   RNReanimated: 66c4a3320d73cdec5f8f24d215c475a1d59643ae

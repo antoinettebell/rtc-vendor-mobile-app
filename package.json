@@ -9,7 +9,7 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
-    "@d11/react-native-fast-image": "^8.9.2",
+    "@d11/react-native-fast-image": "8.11.1",
     "@gorhom/bottom-sheet": "^5.1.5",
     "@notifee/react-native": "^9.1.8",
     "@react-native-async-storage/async-storage": "^2.1.2",
@@ -38,7 +38,7 @@
     "react-native-gesture-handler": "^2.25.0",
     "react-native-get-random-values": "^1.11.0",
     "react-native-google-places-autocomplete": "2.5.6",
-    "react-native-image-crop-picker": "^0.41.5",
+    "react-native-image-crop-picker": "0.51.0",
     "react-native-maps": "1.20.1",
     "react-native-modal": "^14.0.0-rc.1",
     "react-native-modal-datetime-picker": "^18.0.0",
