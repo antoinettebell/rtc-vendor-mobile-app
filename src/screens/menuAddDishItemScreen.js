@@ -1916,7 +1916,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                       </View>
 
                       {/* Food Type Container */}
-                      <View style={styles.section}>
+                      {/* <View style={styles.section}>
                         <Text style={styles.inputLabel}>{"Food Type"}</Text>
                         <Dropdown
                           data={foodTypeList}
@@ -1934,7 +1934,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                           itemTextStyle={{ fontFamily: Mulish400 }}
                           selectedTextStyle={{ fontFamily: Mulish400 }}
                         />
-                      </View>
+                      </View> */}
                     </View>
                   )}
                 </View>
