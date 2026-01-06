@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import {
   ActivityIndicator,
+  Divider,
   HelperText,
   IconButton,
   TextInput,
@@ -25,6 +26,9 @@ import {
   bankPaymentMethodList,
   bankCurrencyList,
   emailRegex,
+  addressRegex,
+  addressStateRegex,
+  addressPostalCodeRegex,
 } from "../utils/constants";
 import { addBankDetail_API, getBankDetail_API } from "../api/appAPI";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
@@ -82,6 +86,46 @@ const validatePaymentMethod = (text) => {
   return "";
 };
 
+const validateAddressLine1 = (value) => {
+  if (!value.trim()) return "Address Line 1 is required";
+  if (!addressRegex.test(value)) {
+    return "Address must contain only letters, numbers, and basic punctuation.";
+  }
+  return "";
+};
+
+const validateAddressLine2 = (value) => {
+  // if (!value.trim()) return "Address Line 2 is required";
+  if (!addressRegex.test(value)) {
+    return "Address must contain only letters, numbers, and basic punctuation.";
+  }
+  return "";
+};
+
+const validateCity = (value) => {
+  if (!value.trim()) return "City is required";
+  if (!addressRegex.test(value)) {
+    return "City must contain only letters, numbers, and basic punctuation.";
+  }
+  return "";
+};
+
+const validateState = (value) => {
+  if (!value.trim()) return "State is required";
+  if (!addressStateRegex.test(value)) {
+    return "State value is not valid";
+  }
+  return "";
+};
+
+const validatePostalcode = (value) => {
+  if (!value.trim()) return "Postal code is required";
+  if (!addressPostalCodeRegex.test(value)) {
+    return "Postal Code is not valid";
+  }
+  return "";
+};
+
 const EditBankDetailScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -99,6 +143,11 @@ const EditBankDetailScreen = ({ navigation, route }) => {
   const [iban, setIban] = useState("");
   const [selectedCurrency, setSelectedCurrency] = useState("");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [postalCode, setPostalCode] = useState("");
 
   const [errors, setErrors] = useState({
     accountHolderName: "",
@@ -111,6 +160,11 @@ const EditBankDetailScreen = ({ navigation, route }) => {
     iban: "",
     currency: "",
     paymentMethod: "",
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    state: "",
+    postalCode: "",
   });
 
   const handleContinueBtnPress = async () => {
@@ -128,6 +182,11 @@ const EditBankDetailScreen = ({ navigation, route }) => {
       // iban: validateIban(iban),
       currency: validateCurrency(selectedCurrency),
       paymentMethod: validatePaymentMethod(selectedPaymentMethod),
+      addressLine1: validateAddressLine1(addressLine1),
+      addressLine2: validateAddressLine2(addressLine2),
+      city: validateCity(city),
+      state: validateState(state),
+      postalCode: validatePostalcode(postalCode),
     };
 
     setErrors(newErrors);
@@ -151,6 +210,11 @@ const EditBankDetailScreen = ({ navigation, route }) => {
         // iban,
         currency: selectedCurrency,
         paymentMethod: selectedPaymentMethod,
+        bankAddressLine1: addressLine1,
+        bankAddressLine2: addressLine2,
+        bankCity: city,
+        bankState: state,
+        bankPostal: postalCode,
       };
       const response = await addBankDetail_API(payload);
       console.log("response => ", response);
@@ -184,6 +248,11 @@ const EditBankDetailScreen = ({ navigation, route }) => {
     setIban(data?.iban || "");
     setSelectedCurrency(data?.currency || "");
     setSelectedPaymentMethod(data?.paymentMethod || "");
+    setAddressLine1(data?.bankAddressLine1 || "");
+    setAddressLine2(data?.bankAddressLine2 || "");
+    setCity(data?.bankCity || "");
+    setState(data?.bankState || "");
+    setPostalCode(data?.bankPostal || "");
   };
 
   const getBankDetailFromAPI = async () => {
@@ -658,6 +727,218 @@ const EditBankDetailScreen = ({ navigation, route }) => {
                         style={styles.helper}
                       >
                         {errors.paymentMethod}
+                      </HelperText>
+                    )}
+                  </View>
+
+                  {/* Divider with address title */}
+                  <View
+                    style={[
+                      styles.section,
+                      { flexDirection: "row", alignItems: "center" },
+                    ]}
+                  >
+                    <Divider style={{ flex: 1 }} />
+                    <Text
+                      style={{
+                        marginHorizontal: 16,
+                        fontSize: 18,
+                        fontFamily: Mulish700,
+                        color: AppColor.gray,
+                      }}
+                    >
+                      {"Bank Address"}
+                    </Text>
+                    <Divider style={{ flex: 1 }} />
+                  </View>
+
+                  {/* Address Line 1 */}
+                  <View style={styles.section}>
+                    <Text style={styles.inputLabel}>{"Address Line 1"}</Text>
+                    <TextInput
+                      dense
+                      value={addressLine1}
+                      onChangeText={(text) => {
+                        setAddressLine1(text);
+                        if (!validateAddressLine1(text)) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            addressLine1: "",
+                          }));
+                        }
+                      }}
+                      style={styles.inputStyle}
+                      contentStyle={styles.inputText}
+                      placeholder="Enter Address Line 1"
+                      placeholderTextColor={AppColor.placeholderTextColor}
+                      mode="outlined"
+                      error={!!errors.addressLine1}
+                      outlineColor={AppColor.border}
+                      activeOutlineColor={AppColor.primary}
+                      outlineStyle={{ borderRadius: 8 }}
+                      autoCapitalize="sentences"
+                      theme={{ colors: { onSurfaceVariant: "#777" } }}
+                    />
+                    {!!errors.addressLine1 && (
+                      <HelperText
+                        type="error"
+                        visible={!!errors.addressLine1}
+                        style={styles.helper}
+                      >
+                        {errors.addressLine1}
+                      </HelperText>
+                    )}
+                  </View>
+
+                  {/* Address Line 2 */}
+                  <View style={styles.section}>
+                    <Text style={styles.inputLabel}>{"Address Line 2"}</Text>
+                    <TextInput
+                      dense
+                      value={addressLine2}
+                      onChangeText={(text) => {
+                        setAddressLine2(text);
+                        if (!validateAddressLine2(text)) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            addressLine2: "",
+                          }));
+                        }
+                      }}
+                      style={styles.inputStyle}
+                      contentStyle={styles.inputText}
+                      placeholder="Enter Address Line 2"
+                      placeholderTextColor={AppColor.placeholderTextColor}
+                      mode="outlined"
+                      error={!!errors.addressLine2}
+                      outlineColor={AppColor.border}
+                      activeOutlineColor={AppColor.primary}
+                      outlineStyle={{ borderRadius: 8 }}
+                      autoCapitalize="sentences"
+                      theme={{ colors: { onSurfaceVariant: "#777" } }}
+                    />
+                    {!!errors.addressLine2 && (
+                      <HelperText
+                        type="error"
+                        visible={!!errors.addressLine2}
+                        style={styles.helper}
+                      >
+                        {errors.addressLine2}
+                      </HelperText>
+                    )}
+                  </View>
+
+                  {/* City */}
+                  <View style={styles.section}>
+                    <Text style={styles.inputLabel}>{"City"}</Text>
+                    <TextInput
+                      dense
+                      value={city}
+                      onChangeText={(text) => {
+                        setCity(text);
+                        if (!validateCity(text)) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            city: "",
+                          }));
+                        }
+                      }}
+                      style={styles.inputStyle}
+                      contentStyle={styles.inputText}
+                      placeholder="Enter City"
+                      placeholderTextColor={AppColor.placeholderTextColor}
+                      mode="outlined"
+                      error={!!errors.city}
+                      outlineColor={AppColor.border}
+                      activeOutlineColor={AppColor.primary}
+                      outlineStyle={{ borderRadius: 8 }}
+                      autoCapitalize="sentences"
+                      theme={{ colors: { onSurfaceVariant: "#777" } }}
+                    />
+                    {!!errors.city && (
+                      <HelperText
+                        type="error"
+                        visible={!!errors.city}
+                        style={styles.helper}
+                      >
+                        {errors.city}
+                      </HelperText>
+                    )}
+                  </View>
+
+                  {/* State */}
+                  <View style={styles.section}>
+                    <Text style={styles.inputLabel}>{"State"}</Text>
+                    <TextInput
+                      dense
+                      value={state}
+                      onChangeText={(text) => {
+                        setState(text);
+                        if (!validateState(text)) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            state: "",
+                          }));
+                        }
+                      }}
+                      style={styles.inputStyle}
+                      contentStyle={styles.inputText}
+                      placeholder="Enter State"
+                      placeholderTextColor={AppColor.placeholderTextColor}
+                      mode="outlined"
+                      error={!!errors.state}
+                      outlineColor={AppColor.border}
+                      activeOutlineColor={AppColor.primary}
+                      outlineStyle={{ borderRadius: 8 }}
+                      autoCapitalize="sentences"
+                      theme={{ colors: { onSurfaceVariant: "#777" } }}
+                    />
+                    {!!errors.state && (
+                      <HelperText
+                        type="error"
+                        visible={!!errors.state}
+                        style={styles.helper}
+                      >
+                        {errors.state}
+                      </HelperText>
+                    )}
+                  </View>
+
+                  {/* Postal Code */}
+                  <View style={styles.section}>
+                    <Text style={styles.inputLabel}>{"Postal Code"}</Text>
+                    <TextInput
+                      dense
+                      value={postalCode}
+                      onChangeText={(text) => {
+                        setPostalCode(text);
+                        if (!validatePostalcode(text)) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            postalCode: "",
+                          }));
+                        }
+                      }}
+                      style={styles.inputStyle}
+                      contentStyle={styles.inputText}
+                      placeholder="Enter Postal Code"
+                      placeholderTextColor={AppColor.placeholderTextColor}
+                      mode="outlined"
+                      error={!!errors.postalCode}
+                      outlineColor={AppColor.border}
+                      activeOutlineColor={AppColor.primary}
+                      outlineStyle={{ borderRadius: 8 }}
+                      autoCapitalize="sentences"
+                      maxLength={6}
+                      theme={{ colors: { onSurfaceVariant: "#777" } }}
+                    />
+                    {!!errors.postalCode && (
+                      <HelperText
+                        type="error"
+                        visible={!!errors.postalCode}
+                        style={styles.helper}
+                      >
+                        {errors.postalCode}
                       </HelperText>
                     )}
                   </View>

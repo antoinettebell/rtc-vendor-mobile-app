@@ -6,16 +6,18 @@ import { AppColor } from "../utils/theme";
 
 const GlobalSnackbar = () => {
   const dispatch = useDispatch();
-  const { visible, message, type } = useSelector(
-    (state) => state.snackbatReducer
+  const { visible, message, type, duration } = useSelector(
+    (state) => state.snackbarReducer
   );
+
+  const onHideSnackbar = () => dispatch(hideSnackbar());
 
   return (
     <Portal>
       <Snackbar
         visible={visible}
-        onDismiss={() => dispatch(hideSnackbar())}
-        duration={4000}
+        onDismiss={onHideSnackbar}
+        duration={duration || 4000}
         style={{
           backgroundColor:
             type === "success"
@@ -24,6 +26,7 @@ const GlobalSnackbar = () => {
                 ? AppColor.snackbarError
                 : AppColor.snackbarDefault,
         }}
+        onIconPress={onHideSnackbar}
       >
         {message}
       </Snackbar>

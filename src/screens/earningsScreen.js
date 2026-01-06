@@ -161,7 +161,7 @@ const EarningsScreen = ({ navigation }) => {
                 }
               >
                 <Text style={styles.totalDeliveredText} numberOfLines={1}>
-                  {"Total Delevered Desserts"}
+                  {"Total Delivered Desserts"}
                 </Text>
                 <FontAwesome6
                   name="circle-arrow-right"

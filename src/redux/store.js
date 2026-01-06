@@ -6,7 +6,7 @@ import authReducer from "./slices/authSlice";
 import userReducer from "./slices/userSlice";
 import userInfoReducer from "./slices/userInfoSlice";
 import foodTruckProfileReducer from "./slices/foodTruckProfileSlice";
-import snackbatReducer from "./slices/snackbarSlice";
+import snackbarReducer from "./slices/snackbarSlice";
 import pushNotificationReducer from "./slices/pushNotificationSlice";
 
 const persistConfig = {
@@ -19,7 +19,7 @@ const persistConfig = {
     "foodTruckProfileReducer",
     "pushNotificationReducer",
   ],
-  blacklist: ["snackbatReducer"],
+  blacklist: ["snackbarReducer"],
 };
 
 const rootReducer = combineReducers({
@@ -27,7 +27,7 @@ const rootReducer = combineReducers({
   userReducer,
   userInfoReducer,
   foodTruckProfileReducer,
-  snackbatReducer,
+  snackbarReducer,
   pushNotificationReducer,
 });
 
