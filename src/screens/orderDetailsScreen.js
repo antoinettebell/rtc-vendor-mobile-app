@@ -611,7 +611,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     color: AppColor.black,
                   }}
                 >
-                  {"Sales Tax"}
+                  {"Coupon Discount"}
                 </Text>
                 <Text
                   style={{
@@ -620,7 +620,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     color: AppColor.black,
                   }}
                 >
-                  {`$${(orderData?.taxAmount || 0).toFixed(2)}`}
+                  {`- $${(orderData?.discount || 0).toFixed(2)}`}
                 </Text>
               </View>
               <View
@@ -638,7 +638,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     color: AppColor.black,
                   }}
                 >
-                  {"Coupon Discount"}
+                  {"Sales Tax"}
                 </Text>
                 <Text
                   style={{
@@ -647,7 +647,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     color: AppColor.black,
                   }}
                 >
-                  {`$${(orderData?.discount || 0).toFixed(2)}`}
+                  {`$${(orderData?.taxAmount || 0).toFixed(2)}`}
                 </Text>
               </View>
               <Divider style={{ marginTop: 16 }} />
@@ -675,7 +675,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     color: AppColor.black,
                   }}
                 >
-                  {`$${(orderData?.totalAfterDiscount || 0).toFixed(2)}`}
+                  {`$${((orderData?.totalAfterDiscount || 0) + (orderData?.taxAmount || 0)).toFixed(2)}`}
                 </Text>
               </View>
               <View
