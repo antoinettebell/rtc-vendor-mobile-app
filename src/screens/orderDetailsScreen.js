@@ -397,7 +397,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
             </View>
           ) : null}
 
-          {/* Order Details Container */}
+          {/* Item Details Container */}
           <View style={styles.orderDetailsContainer}>
             {/* Order Header */}
             <View style={[styles.orderHeader, { marginTop: 0 }]}>
@@ -582,7 +582,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   color: AppColor.black,
                 }}
               >
-                Total Order
+                Order Total
               </Text>
               <Text
                 style={{
@@ -705,6 +705,38 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   {`$${(orderData?.paymentProcessingFee || 0).toFixed(2)}`}
                 </Text>
               </View>
+              {orderData?.tipsAmount > 0 ? (
+                <>
+                  <Divider style={{ marginTop: 16 }} />
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginTop: 16,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: Mulish400,
+                        fontSize: 14,
+                        color: AppColor.black,
+                      }}
+                    >
+                      {"Tip"}
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: Mulish400,
+                        fontSize: 14,
+                        color: AppColor.black,
+                      }}
+                    >
+                      {`$${(orderData?.tipsAmount || 0).toFixed(2)}`}
+                    </Text>
+                  </View>
+                </>
+              ) : null}
             </View>
           </View>
 
