@@ -40,7 +40,7 @@ const validateMailingAddressLine1 = (value) => {
 };
 
 const validateMailingAddressLine2 = (value) => {
-  if (!value.trim()) return "Address Line 2 is required";
+  // if (!value.trim()) return "Address Line 2 is required";
   if (!addressRegex.test(value)) {
     return "Address must contain only letters, numbers, and basic punctuation.";
   }
@@ -124,14 +124,16 @@ const EditMailingAddressScreen = ({ navigation, route }) => {
     setLoading(true);
     try {
       const user_id = user?._id;
-      const payload = {
+      let payload = {
         addressLine1: mailingAddressLine1,
-        addressLine2: mailingAddressLine2,
         addressCity: mailingCity,
         addressState: mailingState,
         addressCountry: mailingCountry,
         addressPostal: mailingPostalCode,
       };
+      if (mailingAddressLine2.trim().length > 0) {
+        payload.addressLine2 = mailingAddressLine2;
+      }
       const response = await updateUserDetail_API({
         payload,
         user_id,
@@ -294,7 +296,7 @@ const EditMailingAddressScreen = ({ navigation, route }) => {
 
                   {/* Address Line 2 */}
                   <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                    {"Address Line 2 *"}
+                    {"Address Line 2"}
                   </Text>
                   <TextInput
                     dense
