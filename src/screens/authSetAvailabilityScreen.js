@@ -28,7 +28,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
 import Tooltip from "react-native-walkthrough-tooltip";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
-import { registerComplete_API, updateFoodTruckProfile_API } from "../api/appAPI";
+import {
+  registerComplete_API,
+  updateFoodTruckProfile_API,
+} from "../api/appAPI";
 import { setUser, updateFoodTruck } from "../redux/slices/userSlice";
 import { setPreOrderAvailability } from "../redux/slices/foodTruckProfileSlice";
 import StatusBarManager from "../components/StatusBarManager";
@@ -276,13 +279,13 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
     const preOrderData = transformLocationsForAPI(availability);
     console.log("preOrderData => ", preOrderData);
 
-    if (preOrderData?.length < 1) {
-      Alert.alert(
-        "Availability Required",
-        "Please provide at least one availability."
-      );
-      return;
-    }
+    // if (preOrderData?.length < 1) {
+    //   Alert.alert(
+    //     "Availability Required",
+    //     "Please provide at least one availability."
+    //   );
+    //   return;
+    // }
 
     const businessHoursData = transformBusinessHoursForAPI(selectedBusinessHrs);
     console.log("businessHoursData => ", businessHoursData);
@@ -290,7 +293,7 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
     setLoading(true);
     try {
       const payload = {
-        availability: preOrderData,
+        availability: preOrderData?.length ? preOrderData : [],
         businessHours: businessHoursData,
       };
       const response = await updateFoodTruckProfile_API({

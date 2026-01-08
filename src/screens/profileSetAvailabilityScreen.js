@@ -289,18 +289,18 @@ export default function ProfileAvailabilityScreen({ navigation }) {
     const finalResult = transformLocationsForAPI(availability);
     console.log("finalResult => ", finalResult);
 
-    if (finalResult?.length < 1) {
-      Alert.alert(
-        "Availability Required",
-        "Please provide at least one availability."
-      );
-      return;
-    }
+    // if (finalResult?.length < 1) {
+    //   Alert.alert(
+    //     "Availability Required",
+    //     "Please provide at least one availability."
+    //   );
+    //   return;
+    // }
 
     setLoading(true);
     try {
       const payload = {
-        availability: finalResult,
+        availability: finalResult?.length ? finalResult : [],
       };
       const response = await updateFoodTruckProfile_API({
         payload,
