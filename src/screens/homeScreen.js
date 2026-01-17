@@ -41,6 +41,7 @@ import { ActivityIndicator, Divider } from "react-native-paper";
 import moment from "moment";
 import { useFocusEffect } from "@react-navigation/native";
 import {
+  foodTypeStrings,
   orderStatusStrings,
   PROFILE_AVATAR,
   vendorProfileStatus,
@@ -676,16 +677,33 @@ const HomeScreen = ({ navigation }) => {
                           <Text
                             style={styles.orderItemName}
                           >{`${item.menuItem.name}`}</Text>
-                          {["BOGO", "BOGOHO"].includes(
-                            item.menuItem?.discountType
-                          ) ? (
-                            <Text
-                              style={styles.orderItemDescription}
-                              numberOfLines={2}
-                            >
-                              {`${item.menuItem?.discountType}`}
-                            </Text>
-                          ) : null}
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 5,
+                            }}
+                          >
+                            {["BOGO", "BOGOHO"].includes(
+                              item.menuItem?.discountType
+                            ) ? (
+                              <Text
+                                style={styles.orderItemDescription}
+                                numberOfLines={1}
+                              >
+                                {`${item.menuItem?.discountType}`}
+                              </Text>
+                            ) : null}
+                            {item.menuItem?.itemType ===
+                            foodTypeStrings.combo ? (
+                              <Text
+                                style={styles.orderItemDescription}
+                                numberOfLines={1}
+                              >
+                                {`${item.menuItem?.itemType}`}
+                              </Text>
+                            ) : null}
+                          </View>
                         </View>
                         <View>
                           <Text

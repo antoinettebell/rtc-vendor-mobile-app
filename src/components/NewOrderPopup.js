@@ -443,13 +443,29 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
                     <Text
                       style={styles.itemName}
                     >{`${item.menuItem.name}`}</Text>
-                    {["BOGO", "BOGOHO"].includes(
-                      item.menuItem?.discountType
-                    ) ? (
-                      <Text style={styles.itemDescription} numberOfLines={2}>
-                        {`${item.menuItem?.discountType}`}
-                      </Text>
-                    ) : null}
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 5,
+                      }}
+                    >
+                      {["BOGO", "BOGOHO"].includes(
+                        item.menuItem?.discountType
+                      ) ? (
+                        <Text style={styles.itemDescription} numberOfLines={1}>
+                          {`${item.menuItem?.discountType}`}
+                        </Text>
+                      ) : null}
+                      {item.menuItem?.itemType === foodTypeStrings.combo ? (
+                        <Text
+                          style={styles.itemDescription}
+                          numberOfLines={1}
+                        >
+                          {`${item.menuItem?.itemType}`}
+                        </Text>
+                      ) : null}
+                    </View>
                   </View>
                   <Text style={styles.itemPrice}>{`x${item.qty}`}</Text>
                 </View>

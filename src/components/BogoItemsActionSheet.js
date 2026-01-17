@@ -12,7 +12,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { AppColor, Mulish700, Mulish400, Mulish600 } from "../utils/theme";
 import AppImage from "./AppImage";
 
-const ComboItemsActionSheet = ({
+const BogoItemsActionSheet = ({
   actionSheetRef,
   selectedMenus: initialSelectedMenus = [],
   menuList = [],
@@ -59,32 +59,19 @@ const ComboItemsActionSheet = ({
   }, []);
 
   // Group menus by their category
-  const groupMenusByCategory = useCallback(
-    (allowedCategories = []) => {
-      const grouped = {};
-
-      menuList.forEach((menu) => {
-        // Check if category exists and if its name is in the allowedCategories array
-        if (
-          menu.category &&
-          menu.category.name &&
-          allowedCategories.includes(menu.category.name)
-        ) {
-          if (!grouped[menu.category._id]) {
-            grouped[menu.category._id] = {
-              categoryId: menu.category._id,
-              categoryName: menu.category.name,
-              items: [],
-            };
-          }
-          grouped[menu.category._id].items.push(menu);
-        }
-      });
-
-      return grouped;
-    },
-    [menuList]
-  );
+  const groupMenusByCategory = useCallback(() => {
+    const grouped = {};
+    menuList.forEach((menu) => {
+      if (!grouped[menu.category._id]) {
+        grouped[menu.category._id] = {
+          categoryName: menu.category.name,
+          items: [],
+        };
+      }
+      grouped[menu.category._id].items.push(menu);
+    });
+    return grouped;
+  }, [menuList]);
 
   // Toggle category expansion
   const toggleCategory = (categoryId) => {
@@ -206,109 +193,104 @@ const ComboItemsActionSheet = ({
               style={styles.emptyMenuIcon}
             />
             <Text style={styles.emptyMenuText}>
-              No menu items available to add to combo
+              No menu items available to add to BOGO/BOGOHO
             </Text>
           </View>
         ) : (
           <ScrollView showsVerticalScrollIndicator={false}>
-            {Object.entries(
-              groupMenusByCategory([
-                "Individual",
-                "Sides",
-                "Desserts",
-                "Beverages",
-              ])
-            ).map(([categoryId, categoryData]) => (
-              <View key={categoryId} style={styles.categoryContainer}>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => toggleCategory(categoryId)}
-                  style={styles.categoryHeader}
-                >
-                  <Text style={styles.categoryTitle}>
-                    {categoryData.categoryName}
-                  </Text>
-                  <Ionicons
-                    name={
-                      expandedCategories[categoryId]
-                        ? "chevron-up"
-                        : "chevron-down"
-                    }
-                    size={20}
-                    color={AppColor.text}
-                  />
-                </TouchableOpacity>
+            {Object.entries(groupMenusByCategory()).map(
+              ([categoryId, categoryData]) => (
+                <View key={categoryId} style={styles.categoryContainer}>
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => toggleCategory(categoryId)}
+                    style={styles.categoryHeader}
+                  >
+                    <Text style={styles.categoryTitle}>
+                      {categoryData.categoryName}
+                    </Text>
+                    <Ionicons
+                      name={
+                        expandedCategories[categoryId]
+                          ? "chevron-up"
+                          : "chevron-down"
+                      }
+                      size={20}
+                      color={AppColor.text}
+                    />
+                  </TouchableOpacity>
 
-                {expandedCategories[categoryId] && (
-                  <View style={styles.categoryItemsContainer}>
-                    {categoryData.items.map((item) => (
-                      <TouchableOpacity
-                        activeOpacity={0.7}
-                        key={item._id}
-                        onPress={() => handleItemSelect(item)}
-                        style={styles.menuItemRow}
-                      >
-                        <AppImage
-                          uri={item.imgUrls?.[0]}
-                          containerStyle={styles.menuItemImage}
-                        />
-                        <View style={styles.menuItemDetails}>
-                          <Text style={styles.menuItemName} numberOfLines={1}>
-                            {item.name}
-                          </Text>
-                          <Text
-                            style={styles.menuItemDescription}
-                            numberOfLines={2}
-                          >
-                            {item.description}
-                          </Text>
-                          <Text style={styles.menuItemPrice}>
-                            ${item.price.toFixed(2)}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.selectionIndicator,
-                            internalSelectedMenus.some(
-                              (selected) => selected._id === item._id
-                            ) && styles.selectionIndicatorActive,
-                            limit !== undefined &&
-                              internalSelectedMenus.length >= limit &&
-                              !internalSelectedMenus.some(
-                                (selected) => selected._id === item._id
-                              ) &&
-                              styles.selectionIndicatorDisabled,
-                          ]}
+                  {expandedCategories[categoryId] && (
+                    <View style={styles.categoryItemsContainer}>
+                      {categoryData.items.map((item) => (
+                        <TouchableOpacity
+                          activeOpacity={0.7}
+                          key={item._id}
+                          onPress={() => handleItemSelect(item)}
+                          style={styles.menuItemRow}
                         >
-                          {internalSelectedMenus.some(
-                            (selected) => selected._id === item._id
-                          ) ? (
-                            <AntDesign
-                              name="check"
-                              size={16}
-                              color={AppColor.white}
-                            />
-                          ) : limit !== undefined &&
-                            internalSelectedMenus.length >= limit ? (
-                            <AntDesign
-                              name="lock"
-                              size={16}
-                              color={AppColor.border}
-                            />
-                          ) : (
-                            <AntDesign
-                              name="plus"
-                              size={16}
-                              color={AppColor.border}
-                            />
-                          )}
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
-            ))}
+                          <AppImage
+                            uri={item.imgUrls?.[0]}
+                            containerStyle={styles.menuItemImage}
+                          />
+                          <View style={styles.menuItemDetails}>
+                            <Text style={styles.menuItemName} numberOfLines={1}>
+                              {item.name}
+                            </Text>
+                            <Text
+                              style={styles.menuItemDescription}
+                              numberOfLines={2}
+                            >
+                              {item.description}
+                            </Text>
+                            <Text style={styles.menuItemPrice}>
+                              ${item.price.toFixed(2)}
+                            </Text>
+                          </View>
+                          <View
+                            style={[
+                              styles.selectionIndicator,
+                              internalSelectedMenus.some(
+                                (selected) => selected._id === item._id
+                              ) && styles.selectionIndicatorActive,
+                              limit !== undefined &&
+                                internalSelectedMenus.length >= limit &&
+                                !internalSelectedMenus.some(
+                                  (selected) => selected._id === item._id
+                                ) &&
+                                styles.selectionIndicatorDisabled,
+                            ]}
+                          >
+                            {internalSelectedMenus.some(
+                              (selected) => selected._id === item._id
+                            ) ? (
+                              <AntDesign
+                                name="check"
+                                size={16}
+                                color={AppColor.white}
+                              />
+                            ) : limit !== undefined &&
+                              internalSelectedMenus.length >= limit ? (
+                              <AntDesign
+                                name="lock"
+                                size={16}
+                                color={AppColor.border}
+                              />
+                            ) : (
+                              <AntDesign
+                                name="plus"
+                                size={16}
+                                color={AppColor.border}
+                              />
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )
+            )}
           </ScrollView>
         )}
 
@@ -479,4 +461,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default memo(ComboItemsActionSheet);
+export default memo(BogoItemsActionSheet);

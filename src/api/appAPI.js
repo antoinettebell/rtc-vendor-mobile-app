@@ -40,6 +40,7 @@ import {
   UPDATE_FOOD_ITEM,
   UPDATE_ORDER_STATUS,
   UPDATE_REVIEW_BY_ID,
+  UPDATE_SUBSCRIPTION_ADD_ONS,
   UPDATE_SUBSCRIPTION_PLAN,
   UPDATE_USER_DETAILS,
 } from "./apiEndPoint";
@@ -742,6 +743,21 @@ export const getPlansData_API = async () => {
 export const updateFoodtruckSubscription_API = async (payload) => {
   try {
     const URL = `${UPDATE_SUBSCRIPTION_PLAN}`;
+    const response = await apiClient.put(URL, payload, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+/**
+ * Update food truck subscription add-ons
+ * @param {Object} payload - Subscription data to update
+ * @returns {Promise<Object>} Updated subscription data
+ */
+export const updateFoodtruckAddons_API = async (payload) => {
+  try {
+    const URL = `${UPDATE_SUBSCRIPTION_ADD_ONS}`;
     const response = await apiClient.put(URL, payload, { skipToken: false });
     return response?.data;
   } catch (error) {

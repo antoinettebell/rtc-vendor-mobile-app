@@ -16,6 +16,7 @@ export const REGISTER_COMPLETE = "/food-truck/complete";
 
 // Subscription
 export const UPDATE_SUBSCRIPTION_PLAN = "/food-truck/change-plan";
+export const UPDATE_SUBSCRIPTION_ADD_ONS = "/food-truck/change-add-on-plan";
 
 // Add-ons
 export const GET_ADD_ONS = "/public/add-ons";

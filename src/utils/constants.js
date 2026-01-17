@@ -87,11 +87,6 @@ export const fullDayNames = {
   Sun: "Sunday",
 };
 
-export const foodTypeList = [
-  { label: "Individual", type: "INDIVIDUAL" },
-  { label: "Combo", type: "COMBO" },
-];
-
 export const foodTypeStrings = {
   individual: "INDIVIDUAL",
   combo: "COMBO",

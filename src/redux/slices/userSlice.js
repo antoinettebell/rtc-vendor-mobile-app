@@ -20,6 +20,12 @@ const userSlice = createSlice({
         state.user = { ...state.user, foodTruck: payload };
       }
     },
+    updateFoodTruckKey: (state, { payload }) => {
+      const { keyName, keyValue } = payload;
+      if (state.user?.foodTruck) {
+        state.user.foodTruck[keyName] = keyValue;
+      }
+    },
     setAuthToken: (state, { payload }) => {
       state.authToken = payload;
     },
@@ -42,6 +48,7 @@ const userSlice = createSlice({
 export const {
   setUser,
   updateFoodTruck,
+  updateFoodTruckKey,
   setAuthToken,
   setSelectedPlan,
   setProfileStatus,

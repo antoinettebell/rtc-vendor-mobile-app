@@ -532,6 +532,22 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                       </Text>
                     </View>
                   ))}
+                  {/* Below is for Combo items */}
+                  {item?.menuItem?.comboItems?.map((comboItem) => (
+                    <View
+                      style={styles.orderItemContainer}
+                      key={comboItem?.itemId}
+                    >
+                      <View style={styles.orderItemDetails}>
+                        <Text
+                          style={styles.orderItemName}
+                        >{`• ${comboItem.name} (x${item.qty})`}</Text>
+                      </View>
+                      <Text style={styles.orderItemPrice}>
+                        {`$${((comboItem?.price || 0) * item.qty).toFixed(2)}`}
+                      </Text>
+                    </View>
+                  ))}
                 </View>
               ))}
               {/* for dessert */}

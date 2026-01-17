@@ -357,3 +357,13 @@ export const isValidCategoryForMeatWellness = (categoryName) => {
   // Return TRUE if it is NOT excluded, and FALSE if it IS excluded.
   return !isExcluded;
 };
+
+/**
+ * Determines if a category name contains "combo" (case-insensitive).
+ * @param {string} categoryName - The category name to check.
+ * @returns {"COMBO"|"INDIVIDUAL"} - "COMBO" if the name includes "combo", otherwise "INDIVIDUAL".
+ */
+export const getFoodType = (categoryName) => {
+  if (!categoryName) return "INDIVIDUAL";
+  return categoryName.toLowerCase().includes("combo") ? "COMBO" : "INDIVIDUAL";
+};

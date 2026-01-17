@@ -17,7 +17,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 import {
   ActivityIndicator,
-  Divider,
   HelperText,
   IconButton,
   Switch,
@@ -45,13 +44,8 @@ import {
 } from "../api/appAPI";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
 import {
-  setSelectedFoodCategory,
-  setSelectedFoodItems,
-} from "../redux/slices/foodTruckProfileSlice";
-import {
   discountTypeList,
   dishNewFlagAllowPlanArray,
-  foodTypeList,
   foodTypeStrings,
 } from "../utils/constants";
 import AppImage from "../components/AppImage";
@@ -66,7 +60,9 @@ import {
   addValidatePrepTime,
   isValidCategoryForMeat,
   isValidCategoryForMeatWellness,
+  getFoodType,
 } from "../helpers/menu.helper";
+import BogoItemsActionSheet from "../components/BogoItemsActionSheet";
 import ComboItemsActionSheet from "../components/ComboItemsActionSheet";
 
 const width = Dimensions.get("window").width;
@@ -75,11 +71,9 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const bogoActionSheetRef = useRef(null);
+  const comboActionSheetRef = useRef(null);
   const Params = React.useMemo(() => route.params, [route.params]);
 
-  const { selectedFoodItems, selectedFoodCategory } = useSelector(
-    (state) => state.foodTruckProfileReducer
-  );
   const { selectedPlan } = useSelector((state) => state.userReducer);
 
   const isMeatDisable = React.useMemo(
@@ -89,6 +83,11 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 
   const isMeatWellnessDisable = React.useMemo(
     () => !isValidCategoryForMeatWellness(Params?.category?.name),
+    [Params?.category?.name]
+  );
+
+  const foodType = React.useMemo(
+    () => getFoodType(Params?.category?.name),
     [Params?.category?.name]
   );
 
@@ -115,9 +114,9 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [dietList, setDietList] = useState([]);
   const [selectedDiet, setSelectedDiet] = useState([]);
-  const [selectedFoodType, setSelectedFoodType] = useState("");
   const [menuList, setMenuList] = useState([]);
   const [bogoItems, setBogoItems] = useState([]);
+  const [comboItems, setComboItems] = useState([]);
   const [customization, setCustomization] = useState(false);
   const [meatList, setMeatList] = useState([]);
   const [selectedMeat, setSelectedMeat] = useState("");
@@ -133,12 +132,15 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     itemPhotos: "",
     customDiscount: "",
     predefinedDiscount: "",
+    comboItems: "",
     itemDescription: "",
     itemPrice: "",
     qtMin: "",
     qtMax: "",
     prepTime: "",
   });
+
+  const memoizedMenuList = React.useMemo(() => menuList, [menuList]);
 
   // Handle upload photos press
   const onPressUploadPhotos = () => {
@@ -341,6 +343,11 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     bogoActionSheetRef.current?.show();
   };
 
+  // open Combo action sheet
+  const openComboSheet = () => {
+    comboActionSheetRef.current?.show();
+  };
+
   // Handle BOGO items change
   const handleBogoItemsChange = (selectedItems) => {
     setBogoItems(selectedItems);
@@ -357,10 +364,32 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     }
   };
 
+  // Handle Combo items change
+  const handleComboItemsChange = (selectedItems) => {
+    setComboItems(selectedItems);
+    if (selectedItems.length === 0) {
+      setErrors((prev) => ({
+        ...prev,
+        comboItems: "Please select Combo items",
+      }));
+    } else {
+      setErrors((prev) => ({
+        ...prev,
+        comboItems: "",
+      }));
+    }
+  };
+
   // Handle BOGO item remove press
   const onBogoItemRemovePress = (index) => {
     const tempBogoItems = bogoItems.filter((_, i) => i !== index);
     setBogoItems(tempBogoItems);
+  };
+
+  // Handle Combo item remove press
+  const onComboItemRemovePress = (index) => {
+    const tempComboItems = comboItems.filter((_, i) => i !== index);
+    setComboItems(tempComboItems);
   };
 
   // validation function for basic info tab
@@ -497,7 +526,6 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     setSelectedPhotos(transformedPhotos);
     setCustomization(item.allowCustomize || false);
     setSelectedDiet(item.diet.map((diet) => diet._id));
-    setSelectedFoodType(item.itemType);
 
     if (item.discountMode === "PREDEFINED") {
       setSelectedPredefinedDiscount(item.predefinedDiscount || null);
@@ -508,6 +536,17 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     } else if (item.discountMode === "CUSTOM") {
       setSelectedDiscountType(item.discountType || "FIXED");
       setItemDiscount(discountString || "0");
+    }
+
+    // Set combo items if food type is combo
+    if (item.itemType === foodTypeStrings.combo) {
+      if (item.subItem && item.subItem.length > 0) {
+        setComboItems(item.subItem.map((item) => item.menuItem) || []);
+      } else {
+        setComboItems([]);
+      }
+    } else {
+      setComboItems([]);
     }
   };
 
@@ -607,6 +646,17 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
       newErrors.predefinedDiscount = ""; // Clear predefined discount error if toggle is off
     }
 
+    // Validate combo items if food type is combo
+    if (foodType === foodTypeStrings.combo) {
+      if (comboItems.length === 0) {
+        newErrors.comboItems = "Please select at least one combo item";
+      } else {
+        newErrors.comboItems = "";
+      }
+    } else {
+      newErrors.comboItems = "";
+    }
+
     setErrors(newErrors);
 
     // Check if there are any errors
@@ -623,19 +673,13 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
         categoryId: Params?.category?._id || "",
         description: itemDescription || "",
         hasDiscount: discountEnabled || false,
-        itemType: selectedFoodType || "",
+        itemType: foodType || "",
         maxQty: parseInt(maxQt, 10) || 1,
         minQty: parseInt(minQt, 10) || 1,
         name: itemName || "",
         newDish: newDishItemEnabled || false,
         preparationTime: parseInt(prepTime || 0, 10) || 0,
         price: parseFloat(parseFloat(itemPrice).toFixed(2)) || 0, // will change after discount check
-        // subItem: [
-        //   {
-        //     menuItem: "",
-        //     qty: 0,
-        //   },
-        // ], // this is not required for the moment, used before for older functionality
         ...discountParams,
       };
 
@@ -674,6 +718,13 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 
       if (meatWellness) {
         payload.meatWellness = meatWellness;
+      }
+
+      if (foodType === foodTypeStrings.combo) {
+        payload.subItem = comboItems.map((item) => ({
+          menuItem: item._id || "",
+          qty: 1,
+        }));
       }
 
       console.log("Food Item API request payload => ", payload);
@@ -817,7 +868,6 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 
   // Fetch initial data when screen mounts
   useEffect(() => {
-    setSelectedFoodType(foodTypeStrings.individual);
     getDietListFromAPI();
     getMenuListFromAPI();
     getMeatListFromAPI();
@@ -1916,25 +1966,79 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                       </View>
 
                       {/* Food Type Container */}
-                      {/* <View style={styles.section}>
-                        <Text style={styles.inputLabel}>{"Food Type"}</Text>
-                        <Dropdown
-                          data={foodTypeList}
-                          mode="modal"
-                          labelField="label"
-                          valueField="type"
-                          value={selectedFoodType}
-                          onChange={(selected) =>
-                            setSelectedFoodType(selected.type)
-                          }
-                          placeholder="Select Food Type"
-                          style={styles.dropdown}
-                          containerStyle={styles.dropdownContainer}
-                          placeholderStyle={styles.dropdownPlaceholder}
-                          itemTextStyle={{ fontFamily: Mulish400 }}
-                          selectedTextStyle={{ fontFamily: Mulish400 }}
-                        />
-                      </View> */}
+                      {foodType === foodTypeStrings.combo ? (
+                        <View style={styles.section}>
+                          <Text style={[styles.inputLabel, { marginTop: 10 }]}>
+                            {"Combo Sides *"}
+                          </Text>
+
+                          {/* Display Combo Items if available */}
+                          {comboItems.length > 0 && (
+                            <View style={styles.bogoItemsContainer}>
+                              <FlatList
+                                data={comboItems}
+                                keyExtractor={(item) => item._id}
+                                renderItem={({ item, index }) => (
+                                  <View style={styles.bogoItemCard}>
+                                    <AppImage
+                                      uri={item.imgUrls?.[0]}
+                                      containerStyle={styles.bogoItemImage}
+                                    />
+                                    <View style={{ flex: 1, gap: 8 }}>
+                                      <Text
+                                        style={styles.bogoItemName}
+                                        numberOfLines={1}
+                                      >
+                                        {item.name}
+                                      </Text>
+                                      <Text style={styles.bogoItemPrice}>
+                                        ${parseFloat(item.price).toFixed(2)}
+                                      </Text>
+                                    </View>
+                                    <IconButton
+                                      icon="close-circle"
+                                      iconColor={AppColor.error}
+                                      size={20}
+                                      onPress={() =>
+                                        onComboItemRemovePress(index)
+                                      }
+                                      style={styles.removeBogoItemIcon}
+                                    />
+                                  </View>
+                                )}
+                              />
+                            </View>
+                          )}
+
+                          <TouchableOpacity
+                            style={[
+                              styles.bogoToggleContainer,
+                              { marginTop: comboItems.length > 0 ? 10 : 0 },
+                            ]}
+                            onPress={openComboSheet}
+                            activeOpacity={0.7}
+                          >
+                            <AntDesign
+                              name={"pluscircleo"}
+                              size={20}
+                              color={AppColor.primary}
+                            />
+                            <Text style={styles.bogoToggleText}>
+                              {`Add Item for Combo Sides`}
+                            </Text>
+                          </TouchableOpacity>
+
+                          {!!errors.comboItems && (
+                            <HelperText
+                              type="error"
+                              visible={!!errors.comboItems}
+                              style={styles.helper}
+                            >
+                              {errors.comboItems}
+                            </HelperText>
+                          )}
+                        </View>
+                      ) : null}
                     </View>
                   )}
                 </View>
@@ -1963,13 +2067,22 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
       )}
 
       {/* BOGO/BOGOHO Items Action Sheet */}
-      <ComboItemsActionSheet
+      <BogoItemsActionSheet
         limit={1}
         actionSheetRef={bogoActionSheetRef}
         selectedMenus={bogoItems}
-        menuList={menuList}
+        menuList={memoizedMenuList}
         onSelectionChange={handleBogoItemsChange}
         onClose={() => console.log("BOGO/BOGOHO items sheet closed")}
+      />
+
+      {/* Combo Items Action Sheet */}
+      <ComboItemsActionSheet
+        actionSheetRef={comboActionSheetRef}
+        selectedMenus={comboItems}
+        menuList={memoizedMenuList}
+        onSelectionChange={handleComboItemsChange}
+        onClose={() => console.log("Combo items sheet closed")}
       />
 
       {/* Media Picker Modal */}
