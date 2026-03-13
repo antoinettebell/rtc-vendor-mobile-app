@@ -116,5 +116,9 @@
 	<false/>
 	<key>UIDesignRequiresCompatibility</key>
 	<true/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>mailto</string>
+	</array>
 </dict>
 </plist>

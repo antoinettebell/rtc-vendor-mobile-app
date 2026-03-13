@@ -511,12 +511,7 @@ const ProfileMenuScreen = ({ navigation }) => {
     const url = `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
     try {
-      const canOpen = await Linking.canOpenURL(url);
-      if (canOpen) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert("Error", "Could not open email app");
-      }
+      await Linking.openURL(url);
     } catch (error) {
       console.log("Error opening email app:", error);
       Alert.alert("Error", "Failed to open email app");
