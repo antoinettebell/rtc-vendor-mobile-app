@@ -60,6 +60,7 @@ const SignUpScreen = ({ navigation }) => {
   const [countryPickerType, setCountryPickerType] = useState(null);
   const [offGrid, setOffGrid] = useState(true);
   const [agreed, setAgreed] = useState(true);
+  const [agreedToMessages, setAgreedToMessages] = useState(false);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({
     visible: false,
@@ -925,11 +926,45 @@ const SignUpScreen = ({ navigation }) => {
                 </Text>
               </View>
 
+              {/* sms consent checkbox */}
+              <View style={styles.termsContainer}>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => setAgreedToMessages(!agreedToMessages)}
+                  style={styles.iconBox}
+                >
+                  <Ionicons
+                    name={agreedToMessages ? "checkbox" : "square-outline"}
+                    size={22}
+                    color={AppColor.primary}
+                  />
+                </TouchableOpacity>
+
+                <Text style={styles.termsText}>
+                  {
+                    "I agree to receive recurring automated text messages (eg. cart reminders, marketing) at the phone number provided. Consent is not a condition to purchase. Msg & data rates may apply. Reply HELP for help and STOP to cancel. View our "
+                  }
+                  <Text
+                    style={styles.linkText}
+                    onPress={() => navigation.navigate("termsOfService")}
+                  >
+                    {"Terms of Service"}
+                  </Text>
+                  {" and "}
+                  <Text
+                    style={styles.linkText}
+                    onPress={() => navigation.navigate("privacyPolicy")}
+                  >
+                    {"Privacy Policy"}
+                  </Text>
+                </Text>
+              </View>
+
               <TouchableOpacity
                 onPress={handleSignUp}
                 activeOpacity={0.7}
-                disabled={!agreed || loading}
-                style={[styles.signInButton, { opacity: agreed ? 1 : 0.5 }]}
+                disabled={!agreed || !agreedToMessages || loading}
+                style={[styles.signInButton, { opacity: (agreed && agreedToMessages) ? 1 : 0.5 }]}
               >
                 {loading ? (
                   <ActivityIndicator color={AppColor.white} />

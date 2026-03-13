@@ -551,13 +551,15 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
       logo: selectedLogo ? "" : "Logo is required",
       photos: selectedPhotos.length > 0 ? "" : "At least one image is required",
       empNumber:
-        selectedEmpNumberType === "ein"
-          ? validateEinNumber(selectedEmpNumberText)
-            ? ""
-            : "Please enter a valid 9-digit EIN"
-          : validateSsnNumber(selectedEmpNumberText)
-            ? ""
-            : "Please enter a valid 9-digit SSN",
+        selectedEmpNumberText?.length > 0
+          ? selectedEmpNumberType === "ein"
+            ? validateEinNumber(selectedEmpNumberText)
+              ? ""
+              : "Please enter a valid 9-digit EIN"
+            : validateSsnNumber(selectedEmpNumberText)
+              ? ""
+              : "Please enter a valid 9-digit SSN"
+          : "",
       cuisine:
         selectedCuisine.length > 0 ? "" : "At least one Cuisine is required",
       location:
@@ -627,12 +629,17 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
         locations: selectedLocations?.length ? selectedLocations : [],
       };
 
-      if (selectedEmpNumberType === "ein") {
-        payload.ein = selectedEmpNumberText;
-        // payload.ssn = null;
+      if (selectedEmpNumberText?.length > 0) {
+        if (selectedEmpNumberType === "ein") {
+          payload.ein = selectedEmpNumberText;
+          payload.ssn = null;
+        } else {
+          payload.ein = null;
+          payload.ssn = selectedEmpNumberText;
+        }
       } else {
-        // payload.ein = null;
-        payload.ssn = selectedEmpNumberText;
+        payload.ein = null;
+        payload.ssn = null;
       }
 
       if (logoResult) {
@@ -1005,11 +1012,15 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
                         : formatSSN(selectedEmpNumberText)
                     }
                     onChangeText={(txt) => {
-                      if (selectedEmpNumberType === "ein") {
-                        // Remove non-digits and limit to 9 characters
-                        const digitsOnly = txt.replace(/\D/g, "").slice(0, 9);
-                        setSelectedEmpNumberText(digitsOnly);
+                      const digitsOnly = txt.replace(/\D/g, "").slice(0, 9);
+                      setSelectedEmpNumberText(digitsOnly);
 
+                      if (digitsOnly.length === 0) {
+                        setErrors((prev) => ({
+                          ...prev,
+                          empNumber: "",
+                        }));
+                      } else if (selectedEmpNumberType === "ein") {
                         if (validateEinNumber(digitsOnly)) {
                           setErrors((prev) => ({
                             ...prev,
@@ -1017,10 +1028,6 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
                           }));
                         }
                       } else {
-                        // Remove non-digits and limit to 9 characters
-                        const digitsOnly = txt.replace(/\D/g, "").slice(0, 9);
-                        setSelectedEmpNumberText(digitsOnly);
-
                         if (validateSsnNumber(digitsOnly)) {
                           setErrors((prev) => ({
                             ...prev,

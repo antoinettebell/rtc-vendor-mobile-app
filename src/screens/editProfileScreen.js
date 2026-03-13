@@ -706,9 +706,11 @@ const EditProfileScreen = ({ navigation }) => {
     const foodTruckNameError = validateFoodTruckName(foodTruckName);
     const mobileNumberError = validateMobileNumber(mobileNumber);
     const empNumberError =
-      selectedEmpNumberType === "ein"
-        ? validateEinNumber(selectedEmpNumberText)
-        : validateSsnNumber(selectedEmpNumberText);
+      selectedEmpNumberText?.length > 0
+        ? selectedEmpNumberType === "ein"
+          ? validateEinNumber(selectedEmpNumberText)
+          : validateSsnNumber(selectedEmpNumberText)
+        : "";
 
     // Additional validations
     let logoError = "";
@@ -785,12 +787,17 @@ const EditProfileScreen = ({ navigation }) => {
         infoType: infoType === "Food Truck" ? "truck" : "caterer",
         socialMedia: createSocialMediaPayload().socialMedia,
       };
-      if (selectedEmpNumberType === "ein") {
-        foodTruckPayload.ein = selectedEmpNumberText;
-        foodTruckPayload.ssn = null;
+      if (selectedEmpNumberText?.length > 0) {
+        if (selectedEmpNumberType === "ein") {
+          foodTruckPayload.ein = selectedEmpNumberText;
+          foodTruckPayload.ssn = null;
+        } else {
+          foodTruckPayload.ein = null;
+          foodTruckPayload.ssn = selectedEmpNumberText;
+        }
       } else {
         foodTruckPayload.ein = null;
-        foodTruckPayload.ssn = selectedEmpNumberText;
+        foodTruckPayload.ssn = null;
       }
       //   manage logo image upload
       if (selectedLogo && selectedLogo.old === undefined) {
@@ -1248,7 +1255,7 @@ const EditProfileScreen = ({ navigation }) => {
 
               {/* EIN/SSN Number */}
               <View style={styles.section}>
-                <Text style={styles.inputLabel}>{"EIN/SSN Number *"}</Text>
+                <Text style={styles.inputLabel}>{"EIN/SSN Number"}</Text>
                 <View
                   style={{
                     flexDirection: "row",
@@ -1334,7 +1341,7 @@ const EditProfileScreen = ({ navigation }) => {
                       const digitsOnly = txt.replace(/\D/g, "").slice(0, 9);
                       setSelectedEmpNumberText(digitsOnly);
 
-                      if (digitsOnly.length === 9) {
+                      if (digitsOnly.length === 0 || digitsOnly.length === 9) {
                         setErrors((prev) => ({
                           ...prev,
                           empNumber: "",
