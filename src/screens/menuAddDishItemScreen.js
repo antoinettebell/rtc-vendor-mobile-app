@@ -126,6 +126,10 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
   const [discountSource, setDiscountSource] = useState("custom"); // 'custom' or 'predefined'
   const [selectedPredefinedDiscount, setSelectedPredefinedDiscount] =
     useState(null);
+  const [buyQty, setBuyQty] = useState("1");
+  const [getQty, setGetQty] = useState("1");
+  const [isSameItemForBogo, setIsSameItemForBogo] = useState(false);
+  const [discountRuleVal, setDiscountRuleVal] = useState("1.0"); // 1.0 for BOGO, 0.5 for BOGOHO
   const [activeSection, setActiveSection] = useState("basic"); // 'basic', 'pricing', 'details'
   const [errors, setErrors] = useState({
     itemName: "",
@@ -286,6 +290,17 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
       ...prev,
       itemPrice: addValidateItemPrice(cleanedText),
     }));
+
+    // If "Same item for free/reward" is enabled, update the BOGO item price
+    if (isSameItemForBogo) {
+      setBogoItems((prev) =>
+        prev.map((item) =>
+          item._id === "SAME_ITEM"
+            ? { ...item, price: parseFloat(cleanedText) || 0 }
+            : item
+        )
+      );
+    }
   };
 
   // Handle item discount (text input value) change
@@ -361,6 +376,29 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
         ...prev,
         predefinedDiscount: "",
       }));
+    }
+  };
+
+  // Handle BOGO same item toggle
+  const handleBogoSameItemToggle = (value) => {
+    setIsSameItemForBogo(value);
+    if (value) {
+      // Automatically set to same item
+      const sameItem = {
+        _id: "SAME_ITEM",
+        name: "Same Item",
+        isSameItem: true,
+        imgUrls: [],
+        price: parseFloat(itemPrice) || 0,
+      };
+      setBogoItems([sameItem]);
+      setErrors((prev) => ({
+        ...prev,
+        predefinedDiscount: "",
+      }));
+    } else {
+      // Clear BOGO items when toggled off to allow manual selection
+      setBogoItems([]);
     }
   };
 
@@ -530,8 +568,29 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     if (item.discountMode === "PREDEFINED") {
       setSelectedPredefinedDiscount(item.predefinedDiscount || null);
       if (["BOGO", "BOGOHO"].includes(item.predefinedDiscount?.key)) {
-        const temp_data = item.bogoItems.map((obj) => obj.itemId);
+        let sameItemFound = false;
+        const temp_data = item.bogoItems.map((obj) => {
+          if (obj.isSameItem) {
+            sameItemFound = true;
+            return {
+              _id: "SAME_ITEM",
+              name: "Same Item",
+              isSameItem: true,
+              imgUrls: [],
+              price: item.strikePrice || item.price,
+            };
+          }
+          return obj.itemId;
+        });
         setBogoItems(temp_data || []);
+        setIsSameItemForBogo(sameItemFound);
+
+        // Load discount rules
+        if (item.discountRules) {
+          setBuyQty(item.discountRules.buyQty?.toString() || "1");
+          setGetQty(item.discountRules.getQty?.toString() || "1");
+          setDiscountRuleVal(item.discountRules.discount?.toString() || "0");
+        }
       }
     } else if (item.discountMode === "CUSTOM") {
       setSelectedDiscountType(item.discountType || "FIXED");
@@ -619,13 +678,29 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
           } else if (
             ["BOGO", "BOGOHO"].includes(selectedPredefinedDiscount?.key)
           ) {
+            const parsedBuyQty = parseInt(buyQty, 10) || 1;
+            const parsedGetQty = parseInt(getQty, 10) || 1;
+
             // only add this param, when discount is BOGO/BOGOHO
+            // qty on each reward line = getQty (reward items per qualifying set), aligned with discountRules.getQty
             discountParams.bogoItems = [
               {
-                itemId: bogoItems?.[0]?._id || "",
-                qty: 1,
+                itemId:
+                  bogoItems?.[0]?._id === "SAME_ITEM"
+                    ? null
+                    : bogoItems?.[0]?._id || "",
+                qty: parsedGetQty,
+                isSameItem: bogoItems?.[0]?._id === "SAME_ITEM",
               },
             ];
+
+            // Add discountRules
+            discountParams.discountRules = {
+              buyQty: parsedBuyQty,
+              getQty: parsedGetQty,
+              discount: parseFloat(discountRuleVal) || 0,
+              repeatable: true,
+            };
 
             // sending "null" value to get original price as "afterdiscountprice"
             discountedObject = getDiscountedPrice(
@@ -1647,11 +1722,22 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                                       ...prev,
                                       predefinedDiscount: "",
                                     }));
+                                    // Set default rules for BOGO/BOGOHO
+                                    if (item.key === "BOGO") {
+                                      setBuyQty("1");
+                                      setGetQty("1");
+                                      setDiscountRuleVal("1.0");
+                                    } else if (item.key === "BOGOHO") {
+                                      setBuyQty("1");
+                                      setGetQty("1");
+                                      setDiscountRuleVal("0.5");
+                                    }
                                     // Reset BOGO item when changing discount
                                     if (
                                       !["BOGO", "BOGOHO"].includes(item.key)
                                     ) {
                                       setBogoItems([]);
+                                      setIsSameItemForBogo(false);
                                     }
                                   }}
                                   placeholder="Select a predefined discount"
@@ -1675,20 +1761,70 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                                   selectedPredefinedDiscount?.key
                                 ) ? (
                                   <>
-                                    <TouchableOpacity
-                                      style={styles.bogoToggleContainer}
-                                      onPress={openBogoSheet}
-                                      activeOpacity={0.7}
+                                    <View
+                                      style={{
+                                        flexDirection: "row",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        paddingVertical: 12,
+                                        borderBottomWidth: 1,
+                                        borderBottomColor: AppColor.border,
+                                        marginBottom: 12,
+                                      }}
                                     >
-                                      <AntDesign
-                                        name={"pluscircleo"}
-                                        size={20}
-                                        color={AppColor.primary}
-                                      />
-                                      <Text style={styles.bogoToggleText}>
-                                        {`Add Item for ${selectedPredefinedDiscount?.key}`}
+                                      <Text style={styles.inputLabel}>
+                                        {"Same item for free/reward"}
                                       </Text>
-                                    </TouchableOpacity>
+                                      <Switch
+                                        color={AppColor.primary}
+                                        value={isSameItemForBogo}
+                                        onValueChange={handleBogoSameItemToggle}
+                                      />
+                                    </View>
+
+                                    {!isSameItemForBogo && (
+                                      <TouchableOpacity
+                                        style={styles.bogoToggleContainer}
+                                        onPress={openBogoSheet}
+                                        activeOpacity={0.7}
+                                      >
+                                        <AntDesign
+                                          name={"pluscircleo"}
+                                          size={20}
+                                          color={AppColor.primary}
+                                        />
+                                        <Text style={styles.bogoToggleText}>
+                                          {`Add Item for ${selectedPredefinedDiscount?.key}`}
+                                        </Text>
+                                      </TouchableOpacity>
+                                    )}
+
+                                    {/* Discount Rules Configuration */}
+                                    <View style={{ marginTop: 16, gap: 12 }}>
+                                      <Text style={styles.inputLabel}>
+                                        Configure Discount
+                                      </Text>
+                                      <View style={{ flexDirection: "row", gap: 12 }}>
+                                        <View style={{ flex: 1 }}>
+                                          <Text style={{ fontSize: 12, color: AppColor.textGray, marginBottom: 4 }}>Buy Qty</Text>
+                                          <NativeTextInput
+                                            value={buyQty}
+                                            onChangeText={setBuyQty}
+                                            keyboardType="number-pad"
+                                            style={styles.ruleInput}
+                                          />
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                          <Text style={{ fontSize: 12, color: AppColor.textGray, marginBottom: 4 }}>Get Qty</Text>
+                                          <NativeTextInput
+                                            value={getQty}
+                                            onChangeText={setGetQty}
+                                            keyboardType="number-pad"
+                                            style={styles.ruleInput}
+                                          />
+                                        </View>                                        
+                                      </View>
+                                    </View>
 
                                     {/* Display BOGO/BOGOHO Items if available */}
                                     {bogoItems.length > 0 && (
@@ -1698,12 +1834,32 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                                           keyExtractor={(item) => item._id}
                                           renderItem={({ item, index }) => (
                                             <View style={styles.bogoItemCard}>
-                                              <AppImage
-                                                uri={item.imgUrls?.[0]}
-                                                containerStyle={
-                                                  styles.bogoItemImage
-                                                }
-                                              />
+                                              {item._id === "SAME_ITEM" ? (
+                                                <View
+                                                  style={[
+                                                    styles.bogoItemImage,
+                                                    {
+                                                      backgroundColor:
+                                                        AppColor.primary + "20",
+                                                      justifyContent: "center",
+                                                      alignItems: "center",
+                                                    },
+                                                  ]}
+                                                >
+                                                  <AntDesign
+                                                    name="sync"
+                                                    size={24}
+                                                    color={AppColor.primary}
+                                                  />
+                                                </View>
+                                              ) : (
+                                                <AppImage
+                                                  uri={item.imgUrls?.[0]}
+                                                  containerStyle={
+                                                    styles.bogoItemImage
+                                                  }
+                                                />
+                                              )}
                                               <View style={{ flex: 1, gap: 8 }}>
                                                 <Text
                                                   style={styles.bogoItemName}
@@ -1711,14 +1867,16 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                                                 >
                                                   {item.name}
                                                 </Text>
-                                                <Text
-                                                  style={styles.bogoItemPrice}
-                                                >
-                                                  $
-                                                  {parseFloat(
-                                                    item.price
-                                                  ).toFixed(2)}
-                                                </Text>
+                                                {item._id !== "SAME_ITEM" && (
+                                                  <Text
+                                                    style={styles.bogoItemPrice}
+                                                  >
+                                                    $
+                                                    {parseFloat(
+                                                      item.price
+                                                    ).toFixed(2)}
+                                                  </Text>
+                                                )}
                                               </View>
                                               <IconButton
                                                 icon="close-circle"
@@ -2124,6 +2282,16 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
     fontSize: 14,
     color: AppColor.textHighlighter,
+  },
+  ruleInput: {
+    borderWidth: 1,
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 40,
+    fontSize: 14,
+    fontFamily: Mulish400,
+    color: AppColor.text,
   },
 
   // header
