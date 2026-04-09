@@ -15,7 +15,7 @@ import moment from "moment";
 import FastImage from "@d11/react-native-fast-image";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import StatusBarManager from "../components/StatusBarManager";
-import { AppColor, Mulish700, Mulish400, Mulish500 } from "../utils/theme";
+import { AppColor, Mulish700, Mulish400, Mulish500, Mulish600 } from "../utils/theme";
 import { getOrderByID_API, updateOrderStatusByID_API } from "../api/appAPI";
 import { useDispatch } from "react-redux";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
@@ -25,7 +25,9 @@ import {
   PROFILE_AVATAR,
   orderStatusStrings,
   PaymentMethodNames,
+  foodTypeStrings,
 } from "../utils/constants";
+import { getRewardItemsDisplay } from "../helpers/discount.helper";
 import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
 import {
   calculateTotalPreparationTime,
@@ -483,73 +485,174 @@ const OrderDetailsScreen = ({ navigation, route }) => {
             </View>
             <Divider style={styles.orderDivider} />
             {/* Item Details */}
-            <View
-              style={{ gap: 12, paddingVertical: 12, paddingHorizontal: 8 }}
-            >
-              {orderData?.items?.map((item, index) => (
-                <View>
-                  <View style={styles.orderItemContainer} key={index}>
-                    <View style={styles.orderItemDetails}>
-                      <Text
-                        style={styles.orderItemName}
-                      >{`${item.menuItem.name} (x${item.qty})`}</Text>
-                      {item.customization && (
-                        <Text
-                          style={[
-                            styles.itemDesc,
-                            {
-                              flex: 1,
-                              color: AppColor.text,
-                              flexWrap: "wrap",
-                            },
-                          ]}
-                        >
-                          {item.customization}
+            <View style={styles.itemsList}>
+              {orderData?.items?.map((itm, idx) => {
+                const raw = itm?.menuItem;
+                const menuItem = {
+                  ...(raw || {}),
+                  name: raw?.name || itm?.name,
+                  imgUrls:
+                    raw?.imgUrls?.length > 0 ? raw.imgUrls : itm?.imgUrls,
+                  discountType: raw?.discountType ?? itm?.discountType,
+                  description: raw?.description ?? itm?.description,
+                };
+                const comboItemsList =
+                  menuItem?.comboItems?.length > 0
+                    ? menuItem.comboItems
+                    : itm?.comboItems || [];
+                const rewardItems = getRewardItemsDisplay(menuItem, itm?.qty);
+                const hasRewardNested = rewardItems.length > 0;
+                const hasComboNested = comboItemsList.length > 0;
+                const discountType = menuItem?.discountType;
+                const isBogoType = ["BOGO", "BOGOHO"].includes(
+                  String(discountType || "").toUpperCase()
+                );
+                const comboSectionLabel =
+                  String(menuItem?.itemType || "").toUpperCase() ===
+                  foodTypeStrings.combo
+                    ? "Combo includes"
+                    : "Included selections";
+
+                return (
+                  <View
+                    key={itm?.menuItemId || itm?._id || `line-${idx}`}
+                    style={styles.orderLineBlock}
+                  >
+                    <View style={styles.orderLineMainRow}>
+                      <AppImage
+                        uri={menuItem?.imgUrls?.[0]}
+                        containerStyle={styles.orderLineMainImage}
+                      />
+                      <View style={styles.orderLineMainInfo}>
+                        <Text style={styles.orderLineMainTitle}>
+                          {menuItem?.name || ""}
                         </Text>
-                      )}
+                        <Text style={styles.orderLineMainMeta}>
+                          {`Qty ${itm?.qty ?? 0}`}
+                        </Text>
+                        {itm.customization ? (
+                          <Text style={styles.orderLineCustomization}>
+                            {itm.customization}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Text style={styles.orderLineMainPrice}>
+                        ${Number(itm?.total || 0).toFixed(2)}
+                      </Text>
                     </View>
-                    <View>
-                      <Text
-                        style={styles.orderItemPrice}
-                      >{`$${item.total.toFixed(2)}`}</Text>
-                    </View>
+
+                    {hasRewardNested ? (
+                      <View style={styles.nestedSection}>
+                        <Text style={styles.nestedSectionLabel}>
+                          {discountType
+                            ? `Included with offer · ${discountType}`
+                            : "Included with offer"}
+                        </Text>
+                        {rewardItems.map((rewardItem, index) => (
+                          <View
+                            style={[
+                              styles.nestedItemRow,
+                              index === rewardItems.length - 1 &&
+                                styles.nestedItemRowLast,
+                            ]}
+                            key={rewardItem._id || `r-${index}`}
+                          >
+                            <AppImage
+                              uri={rewardItem.displayImg}
+                              containerStyle={styles.nestedFoodImg}
+                            />
+                            <View style={styles.nestedItemDetails}>
+                              <Text style={styles.nestedItemBadge}>Reward</Text>
+                              <Text
+                                style={styles.nestedItemTitle}
+                                numberOfLines={2}
+                              >
+                                {rewardItem.displayName || ""}
+                              </Text>
+                              {rewardItem.displayDesc ? (
+                                <Text
+                                  style={styles.nestedItemDesc}
+                                  numberOfLines={2}
+                                >
+                                  {rewardItem.displayDesc}
+                                </Text>
+                              ) : null}
+                            </View>
+                            <View style={styles.nestedRowRight}>
+                              {!isBogoType ? (
+                                <Text
+                                  style={styles.nestedQtyText}
+                                >{`×${rewardItem.displayQty || 0}`}</Text>
+                              ) : null}
+                              <Text style={styles.nestedItemLinePrice}>
+                                {rewardItem.displayPrice}
+                              </Text>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    ) : null}
+
+                    {hasComboNested ? (
+                      <View
+                        style={[
+                          styles.nestedSection,
+                          hasRewardNested && styles.nestedSectionAfterSibling,
+                        ]}
+                      >
+                        <Text style={styles.nestedSectionLabel}>
+                          {comboSectionLabel}
+                        </Text>
+                        {comboItemsList.map((comboItem, cIdx) => (
+                          <View
+                            style={[
+                              styles.nestedItemRow,
+                              cIdx === comboItemsList.length - 1 &&
+                                styles.nestedItemRowLast,
+                            ]}
+                            key={comboItem?._id || `c-${cIdx}`}
+                          >
+                            <AppImage
+                              uri={comboItem?.imgUrls?.[0]}
+                              containerStyle={styles.nestedFoodImg}
+                            />
+                            <View style={styles.nestedItemDetails}>
+                              <Text style={styles.nestedItemBadgeCombo}>
+                                Combo item
+                              </Text>
+                              <Text
+                                style={styles.nestedItemTitle}
+                                numberOfLines={2}
+                              >
+                                {comboItem.name}
+                              </Text>
+                              {comboItem.description ? (
+                                <Text
+                                  style={styles.nestedItemDesc}
+                                  numberOfLines={2}
+                                >
+                                  {comboItem.description}
+                                </Text>
+                              ) : null}
+                              <Text style={styles.nestedItemPriceMuted}>
+                                Part of combo
+                              </Text>
+                            </View>
+                            <View style={styles.nestedRowRight}>
+                              <Text
+                                style={styles.nestedQtyText}
+                              >{`×${itm.qty}`}</Text>
+                              <Text style={styles.nestedItemLinePrice}>
+                                {`$${((comboItem?.price || 0) * itm.qty).toFixed(2)}`}
+                              </Text>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    ) : null}
                   </View>
-                  {/* Below is for BOGO/BOGOHO items */}
-                  {item?.menuItem?.bogoItems?.map((bogoItem) => (
-                    <View
-                      style={styles.orderItemContainer}
-                      key={bogoItem?.itemId}
-                    >
-                      <View style={styles.orderItemDetails}>
-                        <Text
-                          style={styles.orderItemName}
-                        >{`• ${bogoItem.name} (x${bogoItem.qty})`}</Text>
-                      </View>
-                      <Text style={styles.orderItemPrice}>
-                        {item?.menuItem.discountType === "BOGOHO"
-                          ? `$${(bogoItem.price * bogoItem.qty * 0.5).toFixed(2)}`
-                          : "$0.00"}
-                      </Text>
-                    </View>
-                  ))}
-                  {/* Below is for Combo items */}
-                  {item?.menuItem?.comboItems?.map((comboItem) => (
-                    <View
-                      style={styles.orderItemContainer}
-                      key={comboItem?.itemId}
-                    >
-                      <View style={styles.orderItemDetails}>
-                        <Text
-                          style={styles.orderItemName}
-                        >{`• ${comboItem.name} (x${item.qty})`}</Text>
-                      </View>
-                      <Text style={styles.orderItemPrice}>
-                        {`$${((comboItem?.price || 0) * item.qty).toFixed(2)}`}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              ))}
+                );
+              })}
               {/* for dessert */}
               {orderData?.freeDessertApplied ? (
                 <View style={styles.orderItemContainer}>
@@ -1145,6 +1248,162 @@ const styles = StyleSheet.create({
   },
   orderDivider: {
     marginHorizontal: 8,
+  },
+  itemsList: {
+    marginVertical: 15,
+    paddingHorizontal: 0,
+    gap: 0,
+  },
+  orderLineBlock: {
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E5EA",
+  },
+  orderLineMainRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  orderLineMainImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+  },
+  orderLineMainInfo: {
+    flex: 1,
+    gap: 4,
+    minWidth: 0,
+  },
+  orderLineMainTitle: {
+    fontFamily: Mulish700,
+    fontSize: 15,
+    color: AppColor.text,
+  },
+  orderLineMainMeta: {
+    fontFamily: Mulish400,
+    fontSize: 13,
+    color: AppColor.textHighlighter,
+  },
+  orderLineCustomization: {
+    fontFamily: Mulish400,
+    fontSize: 12,
+    color: AppColor.text,
+    marginTop: 2,
+  },
+  orderLineMainPrice: {
+    fontFamily: Mulish700,
+    fontSize: 15,
+    color: AppColor.primary,
+    minWidth: 72,
+    textAlign: "right",
+  },
+  nestedSection: {
+    marginTop: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: AppColor.white,
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
+    borderLeftWidth: 3,
+    borderLeftColor: AppColor.primary,
+    ...Platform.select({
+      ios: {
+        shadowColor: AppColor.black,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
+  },
+  nestedSectionAfterSibling: {
+    marginTop: 10,
+  },
+  nestedSectionLabel: {
+    fontFamily: Mulish700,
+    fontSize: 11,
+    color: AppColor.gray,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    marginBottom: 10,
+  },
+  nestedItemRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 10,
+    gap: 8,
+  },
+  nestedItemRowLast: {
+    marginBottom: 0,
+  },
+  nestedFoodImg: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+  },
+  nestedItemDetails: {
+    flex: 1,
+    gap: 4,
+    minWidth: 0,
+  },
+  nestedItemBadge: {
+    alignSelf: "flex-start",
+    fontFamily: Mulish600,
+    fontSize: 10,
+    color: AppColor.primary,
+    backgroundColor: "#FFF0E6",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  nestedItemBadgeCombo: {
+    alignSelf: "flex-start",
+    fontFamily: Mulish600,
+    fontSize: 10,
+    color: AppColor.primary,
+    backgroundColor: "#E8F4FF",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  nestedItemTitle: {
+    fontFamily: Mulish600,
+    fontSize: 14,
+    color: AppColor.text,
+  },
+  nestedItemDesc: {
+    fontFamily: Mulish400,
+    fontSize: 12,
+    color: AppColor.textHighlighter,
+  },
+  nestedItemPriceMuted: {
+    fontFamily: Mulish400,
+    fontSize: 12,
+    color: AppColor.textHighlighter,
+    fontStyle: "italic",
+  },
+  nestedRowRight: {
+    alignItems: "flex-end",
+    justifyContent: "flex-start",
+    gap: 4,
+    minWidth: 56,
+    paddingTop: 2,
+  },
+  nestedQtyText: {
+    fontFamily: Mulish600,
+    fontSize: 13,
+    color: AppColor.text,
+  },
+  nestedItemLinePrice: {
+    fontFamily: Mulish600,
+    fontSize: 13,
+    color: AppColor.primary,
+    textAlign: "right",
   },
   orderItemContainer: {
     flexDirection: "row",
