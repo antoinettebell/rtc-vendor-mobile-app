@@ -942,7 +942,7 @@ const SignUpScreen = ({ navigation }) => {
 
                 <Text style={styles.termsText}>
                   {
-                    "I agree to receive recurring automated text messages (eg. cart reminders, marketing) at the phone number provided. Consent is not a condition to purchase. Msg & data rates may apply. Reply HELP for help and STOP to cancel. View our "
+                    "I agree to receive recurring automated text messages (eg. Cart reminders, Account updates) at the phone number provided. Consent is not a condition to purchase. Msg & data rates may apply. Reply HELP for help and STOP to cancel. View our "
                   }
                   <Text
                     style={styles.linkText}
