@@ -27,7 +27,6 @@ import {
   emailRegex,
   passwordRegex,
   addressRegex,
-  addressStateRegex,
   addressCountryRegex,
   addressPostalCodeRegex,
   nameRegex,
@@ -36,6 +35,8 @@ import {
 import { registerVendor_API } from "../api/authAPI";
 import StatusBarManager from "../components/StatusBarManager";
 import { useSelector } from "react-redux";
+import StatePickerModal from "../components/StatePickerModal";
+import { usStates } from "../utils/usStates";
 
 const SignUpScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -151,8 +152,14 @@ const SignUpScreen = ({ navigation }) => {
 
   const validateMailingState = (value) => {
     if (!value.trim()) return "State is required";
-    if (!addressStateRegex.test(value)) {
-      return "State value is not valid";
+    const normalizedValue = value.trim().toUpperCase();
+    const validState = usStates.some(
+      (state) =>
+        state.value === normalizedValue ||
+        state.label.toUpperCase() === normalizedValue
+    );
+    if (!validState) {
+      return "Please select a valid state";
     }
     return "";
   };
@@ -563,31 +570,19 @@ const SignUpScreen = ({ navigation }) => {
               )}
 
               {/* State */}
-              <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                {"State *"}
-              </Text>
-              <TextInput
-                dense
-                value={mailingState}
-                onChangeText={setMailingState}
-                style={styles.input}
-                contentStyle={styles.inputText}
-                placeholder="Enter State"
-                placeholderTextColor={AppColor.placeholderTextColor}
-                mode="outlined"
-                error={!!errors.mailingState}
-                outlineColor={AppColor.border}
-                activeOutlineColor={AppColor.primary}
-                outlineStyle={{ borderRadius: 8 }}
-                autoCapitalize="sentences"
-                theme={{ colors: { onSurfaceVariant: "#777" } }}
-                onBlur={() =>
-                  setErrors((prev) => ({
-                    ...prev,
-                    mailingState: validateMailingState(mailingState),
-                  }))
-                }
-              />
+              <View style={{ marginTop: 16 }}>
+                <StatePickerModal
+                  value={mailingState}
+                  error={!!errors.mailingState}
+                  onChange={(state) => {
+                    setMailingState(state);
+                    setErrors((prev) => ({
+                      ...prev,
+                      mailingState: "",
+                    }));
+                  }}
+                />
+              </View>
               {!!errors.mailingState && (
                 <HelperText
                   type="error"

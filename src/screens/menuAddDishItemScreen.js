@@ -64,8 +64,18 @@ import {
 } from "../helpers/menu.helper";
 import BogoItemsActionSheet from "../components/BogoItemsActionSheet";
 import ComboItemsActionSheet from "../components/ComboItemsActionSheet";
+import { toTitleCase } from "../utils/textFormat";
 
 const width = Dimensions.get("window").width;
+const flavorCountOptions = Array.from({ length: 15 }, (_, index) => ({
+  label: `${index + 1}`,
+  value: index + 1,
+}));
+const flavorsPerOrderOptions = Array.from({ length: 5 }, (_, index) => ({
+  label: `${index + 1}`,
+  value: index + 1,
+}));
+const flavorCategoryNames = ["individual", "dessert", "desserts", "side", "sides"];
 
 export default function MenuAddDishItemScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
@@ -88,6 +98,15 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 
   const foodType = React.useMemo(
     () => getFoodType(Params?.category?.name),
+    [Params?.category?.name]
+  );
+  const canUseFlavors = React.useMemo(
+    () => {
+      const categoryName = String(Params?.category?.name || "")
+        .trim()
+        .toLowerCase();
+      return flavorCategoryNames.some((name) => categoryName.includes(name));
+    },
     [Params?.category?.name]
   );
 
@@ -118,6 +137,20 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
   const [bogoItems, setBogoItems] = useState([]);
   const [comboItems, setComboItems] = useState([]);
   const [customization, setCustomization] = useState(false);
+  const [hasFlavors, setHasFlavors] = useState(false);
+  const [flavorCount, setFlavorCount] = useState(1);
+  const [flavorsPerOrder, setFlavorsPerOrder] = useState(1);
+  const [flavors, setFlavors] = useState(["Plain"]);
+  const [hasFlavorCosts, setHasFlavorCosts] = useState(false);
+  const [flavorCostEnabled, setFlavorCostEnabled] = useState([false]);
+  const [flavorCosts, setFlavorCosts] = useState(["0"]);
+  const [hasToppings, setHasToppings] = useState(false);
+  const [toppingCount, setToppingCount] = useState(1);
+  const [toppingsPerOrder, setToppingsPerOrder] = useState(1);
+  const [toppings, setToppings] = useState([""]);
+  const [hasToppingCosts, setHasToppingCosts] = useState(false);
+  const [toppingCostEnabled, setToppingCostEnabled] = useState([false]);
+  const [toppingCosts, setToppingCosts] = useState(["0"]);
   const [meatList, setMeatList] = useState([]);
   const [selectedMeat, setSelectedMeat] = useState("");
   const [meatWellness, setMeatWellness] = useState("");
@@ -142,6 +175,8 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     qtMin: "",
     qtMax: "",
     prepTime: "",
+    flavors: "",
+    toppings: "",
   });
 
   const memoizedMenuList = React.useMemo(() => menuList, [menuList]);
@@ -353,6 +388,149 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     }));
   };
 
+  const handleFlavorCountChange = (selected) => {
+    const nextCount = selected.value;
+    setFlavorCount(nextCount);
+    setFlavorsPerOrder((currentValue) => Math.min(currentValue, nextCount, 5));
+    setFlavors((currentFlavors) => {
+      const nextFlavors = ["Plain"];
+      for (let index = 1; index < nextCount; index += 1) {
+        nextFlavors[index] = currentFlavors[index] || "";
+      }
+      return nextFlavors;
+    });
+    setFlavorCostEnabled((currentValues) =>
+      Array.from({ length: nextCount }, (_, index) => currentValues[index] || false)
+    );
+    setFlavorCosts((currentValues) =>
+      Array.from({ length: nextCount }, (_, index) => currentValues[index] || "0")
+    );
+    setErrors((prev) => ({ ...prev, flavors: "" }));
+  };
+
+  const handleFlavorNameChange = (text, index) => {
+    setFlavors((currentFlavors) => {
+      const nextFlavors = [...currentFlavors];
+      nextFlavors[index] = text;
+      return nextFlavors;
+    });
+    setErrors((prev) => ({ ...prev, flavors: "" }));
+  };
+
+  const handleToppingCountChange = (selected) => {
+    const nextCount = selected.value;
+    setToppingCount(nextCount);
+    setToppingsPerOrder((currentValue) => Math.min(currentValue, nextCount));
+    setToppings((currentToppings) =>
+      Array.from({ length: nextCount }, (_, index) => currentToppings[index] || "")
+    );
+    setToppingCostEnabled((currentValues) =>
+      Array.from({ length: nextCount }, (_, index) => currentValues[index] || false)
+    );
+    setToppingCosts((currentValues) =>
+      Array.from({ length: nextCount }, (_, index) => currentValues[index] || "0")
+    );
+    setErrors((prev) => ({ ...prev, toppings: "" }));
+  };
+
+  const handleToppingNameChange = (text, index) => {
+    setToppings((currentToppings) => {
+      const nextToppings = [...currentToppings];
+      nextToppings[index] = text;
+      return nextToppings;
+    });
+    setErrors((prev) => ({ ...prev, toppings: "" }));
+  };
+
+  const handleOptionCostToggle = (setter, index) => {
+    setter((currentValues) => {
+      const nextValues = [...currentValues];
+      nextValues[index] = !nextValues[index];
+      return nextValues;
+    });
+  };
+
+  const handleOptionCostChange = (setter, text, index) => {
+    const cleanedText = text.replace(/[^0-9.]/g, "");
+    setter((currentValues) => {
+      const nextValues = [...currentValues];
+      nextValues[index] = cleanedText;
+      return nextValues;
+    });
+  };
+
+  const validateFlavors = () => {
+    if (!canUseFlavors || !hasFlavors) {
+      return "";
+    }
+
+    const requiredFlavors = flavors.slice(0, flavorCount);
+    const missingFlavorIndex = requiredFlavors.findIndex(
+      (flavor, index) => index > 0 && !String(flavor || "").trim()
+    );
+
+    if (missingFlavorIndex !== -1) {
+      return `Flavor ${missingFlavorIndex + 1} is required`;
+    }
+
+    const normalizedFlavors = requiredFlavors.map((flavor) =>
+      String(flavor || "").trim().toLowerCase()
+    );
+    if (new Set(normalizedFlavors).size !== normalizedFlavors.length) {
+      return "Flavor names must be unique";
+    }
+
+    if (flavorsPerOrder > flavorCount) {
+      return "Flavors per order cannot exceed total flavors";
+    }
+
+    const missingCostIndex = requiredFlavors.findIndex(
+      (_, index) =>
+        hasFlavorCosts &&
+        flavorCostEnabled[index] &&
+        (parseFloat(flavorCosts[index] || "0") <= 0)
+    );
+    if (missingCostIndex !== -1) {
+      return `Flavor ${missingCostIndex + 1} cost must be greater than 0`;
+    }
+
+    return "";
+  };
+
+  const validateToppings = () => {
+    if (!hasToppings) {
+      return "";
+    }
+
+    const requiredToppings = toppings.slice(0, toppingCount);
+    const missingToppingIndex = requiredToppings.findIndex(
+      (topping) => !String(topping || "").trim()
+    );
+
+    if (missingToppingIndex !== -1) {
+      return `Topping ${missingToppingIndex + 1} is required`;
+    }
+
+    const normalizedToppings = requiredToppings.map((topping) =>
+      String(topping || "").trim().toLowerCase()
+    );
+    if (new Set(normalizedToppings).size !== normalizedToppings.length) {
+      return "Topping names must be unique";
+    }
+
+    const missingCostIndex = requiredToppings.findIndex(
+      (_, index) =>
+        hasToppingCosts &&
+        toppingCostEnabled[index] &&
+        (parseFloat(toppingCosts[index] || "0") <= 0)
+    );
+    if (missingCostIndex !== -1) {
+      return `Topping ${missingCostIndex + 1} cost must be greater than 0`;
+    }
+
+    return "";
+  };
+
   // open BOGO action sheet
   const openBogoSheet = () => {
     bogoActionSheetRef.current?.show();
@@ -435,9 +613,11 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     const newErrors = {
       itemName: addValidateItemName(itemName),
       itemDescription: addValidateItemDescription(itemDescription),
-      itemPhotos:
-        selectedPhotos.length === 0 ? "At least one image is required" : "",
-    };
+	      itemPhotos:
+	        selectedPhotos.length === 0 ? "At least one image is required" : "",
+	      flavors: validateFlavors(),
+	      toppings: validateToppings(),
+	    };
     setErrors((prev) => ({ ...prev, ...newErrors }));
     return !Object.values(newErrors).some((error) => error !== "");
   };
@@ -563,6 +743,55 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     setPrepTime(prepTimeString);
     setSelectedPhotos(transformedPhotos);
     setCustomization(item.allowCustomize || false);
+    setHasFlavors(canUseFlavors ? item.hasFlavors || false : false);
+	    const itemFlavors =
+	      Array.isArray(item.flavors) && item.flavors.length > 0
+	        ? item.flavors
+	        : ["Plain"];
+	    const itemFlavorOptions =
+	      Array.isArray(item.flavorOptions) && item.flavorOptions.length > 0
+	        ? item.flavorOptions
+	        : itemFlavors.map((name) => ({ name, hasCost: false, cost: 0 }));
+	    const nextFlavorCount = Math.min(Math.max(itemFlavors.length, 1), 15);
+	    setFlavorCount(nextFlavorCount);
+	    setFlavors(
+	      ["Plain", ...itemFlavors.filter((flavor) => flavor !== "Plain")].slice(
+	        0,
+	        15
+	      )
+	    );
+	    setHasFlavorCosts(itemFlavorOptions.some((option) => option.hasCost));
+	    setFlavorCostEnabled(
+	      itemFlavorOptions.slice(0, 15).map((option) => !!option.hasCost)
+	    );
+	    setFlavorCosts(
+	      itemFlavorOptions.slice(0, 15).map((option) => `${option.cost || 0}`)
+	    );
+	    setFlavorsPerOrder(
+	      Math.min(Math.max(item.flavorsPerOrder || 1, 1), nextFlavorCount, 5)
+	    );
+	    const itemToppings =
+	      Array.isArray(item.toppings) && item.toppings.length > 0
+	        ? item.toppings
+	        : [""];
+	    const itemToppingOptions =
+	      Array.isArray(item.toppingOptions) && item.toppingOptions.length > 0
+	        ? item.toppingOptions
+	        : itemToppings.map((name) => ({ name, hasCost: false, cost: 0 }));
+	    const nextToppingCount = Math.min(Math.max(itemToppings.length, 1), 15);
+	    setHasToppings(item.hasToppings || false);
+	    setToppingCount(nextToppingCount);
+	    setToppings(itemToppings.slice(0, 15));
+	    setHasToppingCosts(itemToppingOptions.some((option) => option.hasCost));
+	    setToppingCostEnabled(
+	      itemToppingOptions.slice(0, 15).map((option) => !!option.hasCost)
+	    );
+	    setToppingCosts(
+	      itemToppingOptions.slice(0, 15).map((option) => `${option.cost || 0}`)
+	    );
+	    setToppingsPerOrder(
+	      Math.min(Math.max(item.toppingsPerOrder || 1, 1), nextToppingCount)
+	    );
     setSelectedDiet(item.diet.map((diet) => diet._id));
 
     if (item.discountMode === "PREDEFINED") {
@@ -721,18 +950,20 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
       newErrors.predefinedDiscount = ""; // Clear predefined discount error if toggle is off
     }
 
-    // Validate combo items if food type is combo
-    if (foodType === foodTypeStrings.combo) {
+	    // Validate combo items if food type is combo
+	    if (foodType === foodTypeStrings.combo) {
       if (comboItems.length === 0) {
         newErrors.comboItems = "Please select at least one combo item";
       } else {
         newErrors.comboItems = "";
       }
-    } else {
-      newErrors.comboItems = "";
-    }
+	    } else {
+	      newErrors.comboItems = "";
+	    }
+	    newErrors.flavors = validateFlavors();
+	    newErrors.toppings = validateToppings();
 
-    setErrors(newErrors);
+	    setErrors(newErrors);
 
     // Check if there are any errors
     const hasErrors = Object.values(newErrors).some((error) => error !== "");
@@ -757,6 +988,50 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
         price: parseFloat(parseFloat(itemPrice).toFixed(2)) || 0, // will change after discount check
         ...discountParams,
       };
+
+	      if (canUseFlavors && hasFlavors) {
+	        payload.hasFlavors = true;
+		        payload.flavors = flavors
+		          .slice(0, flavorCount)
+		          .map((flavor, index) =>
+		            index === 0 ? "Plain" : toTitleCase(flavor)
+		          );
+	        payload.flavorOptions = payload.flavors.map((name, index) => ({
+	          name,
+	          hasCost: !!(hasFlavorCosts && flavorCostEnabled[index]),
+	          cost:
+	            hasFlavorCosts && flavorCostEnabled[index]
+	              ? parseFloat(flavorCosts[index] || "0") || 0
+	              : 0,
+	        }));
+	        payload.flavorsPerOrder = Math.min(flavorsPerOrder, flavorCount, 5);
+	      } else {
+	        payload.hasFlavors = false;
+	        payload.flavors = [];
+	        payload.flavorOptions = [];
+	        payload.flavorsPerOrder = 1;
+	      }
+
+	      if (hasToppings) {
+	        payload.hasToppings = true;
+		        payload.toppings = toppings
+		          .slice(0, toppingCount)
+		          .map((topping) => toTitleCase(topping));
+	        payload.toppingOptions = payload.toppings.map((name, index) => ({
+	          name,
+	          hasCost: !!(hasToppingCosts && toppingCostEnabled[index]),
+	          cost:
+	            hasToppingCosts && toppingCostEnabled[index]
+	              ? parseFloat(toppingCosts[index] || "0") || 0
+	              : 0,
+	        }));
+	        payload.toppingsPerOrder = Math.min(toppingsPerOrder, toppingCount);
+	      } else {
+	        payload.hasToppings = false;
+	        payload.toppings = [];
+	        payload.toppingOptions = [];
+	        payload.toppingsPerOrder = 1;
+	      }
 
       // manage photos image upload
       const imageResult = [];
@@ -1253,7 +1528,315 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                             {errors.itemDescription}
                           </HelperText>
                         )}
-                      </View>
+
+                        {canUseFlavors ? (
+                          <View style={styles.flavorPanel}>
+                            <View style={styles.switchRow}>
+                              <Text
+                                numberOfLines={1}
+                                style={[styles.inputLabel, { marginBottom: 0 }]}
+                              >
+                                {"Flavors"}
+                              </Text>
+                              <Switch
+                                color={AppColor.primary}
+                                value={hasFlavors}
+                                onValueChange={(value) => {
+                                  setHasFlavors(value);
+                                  if (!value) {
+                                    setErrors((prev) => ({
+                                      ...prev,
+                                      flavors: "",
+                                    }));
+                                  }
+                                }}
+                              />
+                            </View>
+
+                            {hasFlavors ? (
+                              <View style={{ marginTop: 12, gap: 12 }}>
+                                <View style={styles.flavorPickerRow}>
+                                  <View style={{ flex: 1 }}>
+                                    <Text style={styles.inputLabel}>
+                                      {"How many flavors"}
+                                    </Text>
+                                    <Dropdown
+                                      data={flavorCountOptions}
+                                      labelField="label"
+                                      valueField="value"
+                                      value={flavorCount}
+                                      onChange={handleFlavorCountChange}
+                                      placeholder="Select"
+                                      style={styles.dropdown}
+                                      containerStyle={styles.dropdownContainer}
+                                      placeholderStyle={styles.dropdownPlaceholder}
+                                      itemTextStyle={{ fontFamily: Mulish400 }}
+                                      selectedTextStyle={{ fontFamily: Mulish400 }}
+                                    />
+                                  </View>
+                                  <View style={{ flex: 1 }}>
+                                    <Text style={styles.inputLabel}>
+                                      {"Flavors per order"}
+                                    </Text>
+                                    <Dropdown
+                                      data={flavorsPerOrderOptions.filter(
+                                        (option) => option.value <= flavorCount
+                                      )}
+                                      labelField="label"
+                                      valueField="value"
+                                      value={flavorsPerOrder}
+                                      onChange={(selected) =>
+                                        setFlavorsPerOrder(selected.value)
+                                      }
+                                      placeholder="Select"
+                                      style={styles.dropdown}
+                                      containerStyle={styles.dropdownContainer}
+                                      placeholderStyle={styles.dropdownPlaceholder}
+                                      itemTextStyle={{ fontFamily: Mulish400 }}
+                                      selectedTextStyle={{ fontFamily: Mulish400 }}
+                                    />
+                                  </View>
+                                </View>
+
+	                                {flavors.slice(0, flavorCount).map((flavor, index) => (
+	                                  <View key={`flavor-${index}`} style={styles.optionCostRow}>
+	                                    <TextInput
+	                                      dense
+	                                      value={index === 0 ? "Plain" : flavor}
+	                                      onChangeText={(text) =>
+	                                        handleFlavorNameChange(text, index)
+	                                      }
+	                                      style={[styles.input, { flex: 1 }]}
+	                                      contentStyle={styles.inputText}
+	                                      placeholder={`Flavor ${index + 1}`}
+	                                      placeholderTextColor={
+	                                        AppColor.placeholderTextColor
+	                                      }
+	                                      mode="outlined"
+	                                      disabled={index === 0}
+	                                      error={!!errors.flavors && index > 0}
+	                                      outlineColor={AppColor.border}
+	                                      activeOutlineColor={AppColor.primary}
+	                                      outlineStyle={{ borderRadius: 8 }}
+	                                      autoCapitalize="words"
+	                                      theme={{
+	                                        colors: { onSurfaceVariant: "#777" },
+	                                      }}
+	                                    />
+	                                    {hasFlavorCosts ? (
+	                                      <>
+	                                        <Switch
+	                                          color={AppColor.primary}
+	                                          value={!!flavorCostEnabled[index]}
+	                                          onValueChange={() =>
+	                                            handleOptionCostToggle(
+	                                              setFlavorCostEnabled,
+	                                              index
+	                                            )
+	                                          }
+	                                        />
+	                                        {flavorCostEnabled[index] ? (
+	                                          <TextInput
+	                                            dense
+	                                            value={flavorCosts[index] || ""}
+	                                            onChangeText={(text) =>
+	                                              handleOptionCostChange(
+	                                                setFlavorCosts,
+	                                                text,
+	                                                index
+	                                              )
+	                                            }
+	                                            style={[styles.input, styles.optionCostInput]}
+	                                            contentStyle={styles.inputText}
+	                                            placeholder="Cost"
+	                                            mode="outlined"
+	                                            keyboardType="decimal-pad"
+	                                            outlineColor={AppColor.border}
+	                                            activeOutlineColor={AppColor.primary}
+	                                            outlineStyle={{ borderRadius: 8 }}
+	                                          />
+	                                        ) : null}
+	                                      </>
+	                                    ) : null}
+	                                  </View>
+	                                ))}
+
+	                                <View style={styles.switchRow}>
+	                                  <Text style={[styles.inputLabel, { marginBottom: 0 }]}>
+	                                    {"Additional cost"}
+	                                  </Text>
+	                                  <Switch
+	                                    color={AppColor.primary}
+	                                    value={hasFlavorCosts}
+	                                    onValueChange={setHasFlavorCosts}
+	                                  />
+	                                </View>
+
+                                {!!errors.flavors && (
+                                  <HelperText
+                                    type="error"
+                                    visible={!!errors.flavors}
+                                    style={styles.helper}
+                                  >
+                                    {errors.flavors}
+                                  </HelperText>
+                                )}
+	                          </View>
+	                        ) : null}
+
+	                        <View style={styles.flavorPanel}>
+	                          <View style={styles.switchRow}>
+	                            <Text
+	                              numberOfLines={1}
+	                              style={[styles.inputLabel, { marginBottom: 0 }]}
+	                            >
+	                              {"Toppings"}
+	                            </Text>
+	                            <Switch
+	                              color={AppColor.primary}
+	                              value={hasToppings}
+	                              onValueChange={(value) => {
+	                                setHasToppings(value);
+	                                if (!value) {
+	                                  setErrors((prev) => ({
+	                                    ...prev,
+	                                    toppings: "",
+	                                  }));
+	                                }
+	                              }}
+	                            />
+	                          </View>
+
+	                          {hasToppings ? (
+	                            <View style={{ marginTop: 12, gap: 12 }}>
+	                              <View style={styles.flavorPickerRow}>
+	                                <View style={{ flex: 1 }}>
+	                                  <Text style={styles.inputLabel}>
+	                                    {"How many toppings"}
+	                                  </Text>
+	                                  <Dropdown
+	                                    data={flavorCountOptions}
+	                                    labelField="label"
+	                                    valueField="value"
+	                                    value={toppingCount}
+	                                    onChange={handleToppingCountChange}
+	                                    placeholder="Select"
+	                                    style={styles.dropdown}
+	                                    containerStyle={styles.dropdownContainer}
+	                                    placeholderStyle={styles.dropdownPlaceholder}
+	                                    itemTextStyle={{ fontFamily: Mulish400 }}
+	                                    selectedTextStyle={{ fontFamily: Mulish400 }}
+	                                  />
+	                                </View>
+	                                <View style={{ flex: 1 }}>
+	                                  <Text style={styles.inputLabel}>
+	                                    {"Toppings per order"}
+	                                  </Text>
+	                                  <Dropdown
+	                                    data={flavorCountOptions.filter(
+	                                      (option) => option.value <= toppingCount
+	                                    )}
+	                                    labelField="label"
+	                                    valueField="value"
+	                                    value={toppingsPerOrder}
+	                                    onChange={(selected) =>
+	                                      setToppingsPerOrder(selected.value)
+	                                    }
+	                                    placeholder="Select"
+	                                    style={styles.dropdown}
+	                                    containerStyle={styles.dropdownContainer}
+	                                    placeholderStyle={styles.dropdownPlaceholder}
+	                                    itemTextStyle={{ fontFamily: Mulish400 }}
+	                                    selectedTextStyle={{ fontFamily: Mulish400 }}
+	                                  />
+	                                </View>
+	                              </View>
+
+	                              {toppings.slice(0, toppingCount).map((topping, index) => (
+	                                <View key={`topping-${index}`} style={styles.optionCostRow}>
+	                                  <TextInput
+	                                    dense
+	                                    value={topping}
+	                                    onChangeText={(text) =>
+	                                      handleToppingNameChange(text, index)
+	                                    }
+	                                    style={[styles.input, { flex: 1 }]}
+	                                    contentStyle={styles.inputText}
+	                                    placeholder={`Topping ${index + 1}`}
+	                                    placeholderTextColor={
+	                                      AppColor.placeholderTextColor
+	                                    }
+	                                    mode="outlined"
+	                                    error={!!errors.toppings}
+	                                    outlineColor={AppColor.border}
+	                                    activeOutlineColor={AppColor.primary}
+	                                    outlineStyle={{ borderRadius: 8 }}
+	                                    autoCapitalize="words"
+	                                  />
+	                                  {hasToppingCosts ? (
+	                                    <>
+	                                      <Switch
+	                                        color={AppColor.primary}
+	                                        value={!!toppingCostEnabled[index]}
+	                                        onValueChange={() =>
+	                                          handleOptionCostToggle(
+	                                            setToppingCostEnabled,
+	                                            index
+	                                          )
+	                                        }
+	                                      />
+	                                      {toppingCostEnabled[index] ? (
+	                                        <TextInput
+	                                          dense
+	                                          value={toppingCosts[index] || ""}
+	                                          onChangeText={(text) =>
+	                                            handleOptionCostChange(
+	                                              setToppingCosts,
+	                                              text,
+	                                              index
+	                                            )
+	                                          }
+	                                          style={[styles.input, styles.optionCostInput]}
+	                                          contentStyle={styles.inputText}
+	                                          placeholder="Cost"
+	                                          mode="outlined"
+	                                          keyboardType="decimal-pad"
+	                                          outlineColor={AppColor.border}
+	                                          activeOutlineColor={AppColor.primary}
+	                                          outlineStyle={{ borderRadius: 8 }}
+	                                        />
+	                                      ) : null}
+	                                    </>
+	                                  ) : null}
+	                                </View>
+	                              ))}
+
+	                              <View style={styles.switchRow}>
+	                                <Text style={[styles.inputLabel, { marginBottom: 0 }]}>
+	                                  {"Additional cost"}
+	                                </Text>
+	                                <Switch
+	                                  color={AppColor.primary}
+	                                  value={hasToppingCosts}
+	                                  onValueChange={setHasToppingCosts}
+	                                />
+	                              </View>
+
+	                              {!!errors.toppings && (
+	                                <HelperText
+	                                  type="error"
+	                                  visible={!!errors.toppings}
+	                                  style={styles.helper}
+	                                >
+	                                  {errors.toppings}
+	                                </HelperText>
+	                              )}
+	                            </View>
+	                          ) : null}
+	                        </View>
+		                      </View>
+                        ) : null}
+	                      </View>
 
                       {/* Diet Preferences */}
                       <View style={styles.section}>
@@ -2407,6 +2990,31 @@ const styles = StyleSheet.create({
     paddingLeft: 0,
     paddingTop: 0,
     fontFamily: Mulish400,
+  },
+  flavorPanel: {
+    marginTop: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    backgroundColor: AppColor.white,
+  },
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  flavorPickerRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  optionCostRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  optionCostInput: {
+    width: 88,
   },
 
   // save button container

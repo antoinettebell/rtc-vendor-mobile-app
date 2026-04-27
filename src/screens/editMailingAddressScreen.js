@@ -24,12 +24,13 @@ import { CountryPicker } from "react-native-country-codes-picker";
 import {
   addressPostalCodeRegex,
   addressCountryRegex,
-  addressStateRegex,
   addressRegex,
 } from "../utils/constants";
 import { getUserDetail_API, updateUserDetail_API } from "../api/appAPI";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
 import { setUser, updateUser } from "../redux/slices/userSlice";
+import StatePickerModal from "../components/StatePickerModal";
+import { usStates } from "../utils/usStates";
 
 const validateMailingAddressLine1 = (value) => {
   if (!value.trim()) return "Address Line 1 is required";
@@ -57,8 +58,14 @@ const validateMailingCity = (value) => {
 
 const validateMailingState = (value) => {
   if (!value.trim()) return "State is required";
-  if (!addressStateRegex.test(value)) {
-    return "State value is not valid";
+  const normalizedValue = value.trim().toUpperCase();
+  const validState = usStates.some(
+    (state) =>
+      state.value === normalizedValue ||
+      state.label.toUpperCase() === normalizedValue
+  );
+  if (!validState) {
+    return "Please select a valid state";
   }
   return "";
 };
@@ -368,31 +375,19 @@ const EditMailingAddressScreen = ({ navigation, route }) => {
                   )}
 
                   {/* State */}
-                  <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                    {"State *"}
-                  </Text>
-                  <TextInput
-                    dense
-                    value={mailingState}
-                    onChangeText={setMailingState}
-                    style={styles.input}
-                    contentStyle={styles.inputText}
-                    placeholder="Enter State"
-                    placeholderTextColor={AppColor.placeholderTextColor}
-                    mode="outlined"
-                    error={!!errors.mailingState}
-                    outlineColor={AppColor.border}
-                    activeOutlineColor={AppColor.primary}
-                    outlineStyle={{ borderRadius: 8 }}
-                    autoCapitalize="sentences"
-                    theme={{ colors: { onSurfaceVariant: "#777" } }}
-                    onBlur={() =>
-                      setErrors((prev) => ({
-                        ...prev,
-                        mailingState: validateMailingState(mailingState),
-                      }))
-                    }
-                  />
+                  <View style={{ marginTop: 16 }}>
+                    <StatePickerModal
+                      value={mailingState}
+                      error={!!errors.mailingState}
+                      onChange={(state) => {
+                        setMailingState(state);
+                        setErrors((prev) => ({
+                          ...prev,
+                          mailingState: "",
+                        }));
+                      }}
+                    />
+                  </View>
                   {!!errors.mailingState && (
                     <HelperText
                       type="error"
@@ -412,7 +407,6 @@ const EditMailingAddressScreen = ({ navigation, route }) => {
                       activeOpacity={0.7}
                       onPress={() => {
                         setCountryPickerVisible(true);
-                        setCountryPickerType("address");
                       }}
                       style={[
                         styles.countryInput,
