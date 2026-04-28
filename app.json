@@ -1,4 +1,16 @@
 {
-  "name": "FoodtruckVendor",
-  "displayName": "foodtruckvendor"
+  "expo": {
+    "name": "FoodtruckVendor",
+    "slug": "foodtruckvendor",
+    "version": "1.6",
+    "ios": {
+      "bundleIdentifier": "com.ea.rtcvendor",
+      "buildNumber": "18"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "07ad6d5a-7b77-4222-b853-aba5e4183be8"
+      }
+    }
+  }
 }
