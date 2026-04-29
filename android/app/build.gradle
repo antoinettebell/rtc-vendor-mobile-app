@@ -83,8 +83,8 @@ android {
         applicationId "com.ea.rtcvendor"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 9
-        versionName "1.5"
+        versionCode 20
+        versionName "1.6"
         vectorDrawables.useSupportLibrary = true
     }
     signingConfigs {

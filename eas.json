@@ -1,7 +1,7 @@
 {
   "cli": {
     "version": ">= 18.8.1",
-    "appVersionSource": "remote"
+    "appVersionSource": "local"
   },
   "build": {
     "development": {
@@ -12,7 +12,10 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": false,
+      "ios": {
+        "image": "latest"
+      }
     }
   },
   "submit": {
