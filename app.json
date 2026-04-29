@@ -5,7 +5,7 @@
     "version": "1.6",
     "ios": {
       "bundleIdentifier": "com.ea.rtcvendor",
-      "buildNumber": "22"
+      "buildNumber": "23"
     },
     "extra": {
       "eas": {
