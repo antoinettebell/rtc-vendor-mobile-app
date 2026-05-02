@@ -22,6 +22,9 @@ import {
   GET_ORDER_BY_ID,
   GET_ORDER_LIST,
   GET_PLANS_DATA,
+  GET_TAX_OF_LOCATION,
+  PAYMENT_CHECKOUT,
+  PLACE_FOOD_ORDER,
   GET_REVIEW_BY_FOODTRUCK_ID,
   GET_REVIEW_STATS_BY_FOODTRUCK_ID,
   GET_USER_DETAILS,
@@ -32,6 +35,7 @@ import {
   REMOVE_FOOD_CATEGORY,
   REMOVE_FOOD_ITEM,
   REMOVE_LOCATION,
+  REFUND_ORDER,
   REVERSE_LOCATION,
   SET_FCM_TOKEN,
   UPDATE_FCM_TOKEN,
@@ -43,6 +47,7 @@ import {
   UPDATE_SUBSCRIPTION_ADD_ONS,
   UPDATE_SUBSCRIPTION_PLAN,
   UPDATE_USER_DETAILS,
+  VALIDATE_ORDER,
 } from "./apiEndPoint";
 
 /**
@@ -535,6 +540,64 @@ export const updateOrderStatusByID_API = async ({ order_id, payload }) => {
   try {
     const URL = `${UPDATE_ORDER_STATUS}/${order_id}`;
     const response = await apiClient.put(URL, payload, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const validatePosOrder_API = async (payload) => {
+  try {
+    const response = await apiClient.post(VALIDATE_ORDER, payload, {
+      skipToken: false,
+    });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const placePosOrder_API = async (payload) => {
+  try {
+    const response = await apiClient.post(PLACE_FOOD_ORDER, payload, {
+      skipToken: false,
+    });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const paymentCheckout_API = async (payload) => {
+  try {
+    const response = await apiClient.post(PAYMENT_CHECKOUT, payload, {
+      skipToken: false,
+    });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const refundOrder_API = async ({ order_id, payload = {} }) => {
+  try {
+    const response = await apiClient.post(REFUND_ORDER(order_id), payload, {
+      skipToken: false,
+    });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const checkPosTax_API = async (params = {}) => {
+  try {
+    const URL = GET_TAX_OF_LOCATION(
+      params?.foodTruck_id,
+      params?.location_id,
+      params?.amount
+    );
+    const response = await apiClient.get(URL, { skipToken: false });
     return response?.data;
   } catch (error) {
     throw error?.response?.data || error;

@@ -65,6 +65,12 @@ export const GET_DIET_LIST = "/public/diet";
 export const GET_ORDER_LIST = "/order";
 export const GET_ORDER_BY_ID = "/order";
 export const UPDATE_ORDER_STATUS = "/order";
+export const VALIDATE_ORDER = "/order/validate-order";
+export const PLACE_FOOD_ORDER = "/order";
+export const PAYMENT_CHECKOUT = "/order/payment-checkout";
+export const REFUND_ORDER = (order_id) => `/order/${order_id}/refund`;
+export const GET_TAX_OF_LOCATION = (foodTruck_id, location_id, amount) =>
+  `/public/avalaratax-rates-check?foodTruckId=${foodTruck_id}&locationId=${location_id}&amount=${amount}`;
 
 // Notification
 export const SET_FCM_TOKEN = "/user/set-fcm-token";

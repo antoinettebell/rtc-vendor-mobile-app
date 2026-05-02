@@ -16,7 +16,11 @@ import FastImage from "@d11/react-native-fast-image";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import StatusBarManager from "../components/StatusBarManager";
 import { AppColor, Mulish700, Mulish400, Mulish500, Mulish600 } from "../utils/theme";
-import { getOrderByID_API, updateOrderStatusByID_API } from "../api/appAPI";
+import {
+  getOrderByID_API,
+  refundOrder_API,
+  updateOrderStatusByID_API,
+} from "../api/appAPI";
 import { useDispatch } from "react-redux";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
 import {
@@ -45,6 +49,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
   const [dataLoading, setDataLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [rejectBtnLoading, setRejectBtnLoading] = useState(false);
+  const [refundBtnLoading, setRefundBtnLoading] = useState(false);
   const [multiActionBtnLoading, setMultiActionBtnLoading] = useState(false);
   const [orderData, setOrderData] = useState(null);
   const [timeModal, setTimeModal] = useState(null);
@@ -164,6 +169,60 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     );
   };
 
+  const handleRefundPress = (order) => {
+    const refundAmount = Math.max(
+      0,
+      Number(order?.total || 0) - Number(order?.tipsAmount || 0)
+    );
+    const refundMessage =
+      order?.paymentMethod === "TAP_TO_PAY"
+        ? `Refund $${refundAmount.toFixed(2)} to the customer? Tips are excluded from Tap to Pay refunds.`
+        : "Mark this cash order as refunded?";
+
+    Alert.alert(
+      "Refund order",
+      refundMessage,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Refund",
+          style: "destructive",
+          onPress: async () => {
+            setRefundBtnLoading(true);
+            try {
+              const response = await refundOrder_API({
+                order_id: order?._id,
+                payload: { reason: "Customer requested refund" },
+              });
+
+              if (response?.success && response?.data?.order) {
+                setOrderData(response.data.order);
+                dispatch(
+                  showSnackbar({
+                    type: "success",
+                    message: "Order refunded successfully",
+                  })
+                );
+              }
+            } catch (error) {
+              dispatch(
+                showSnackbar({
+                  type: "error",
+                  message: error?.message || "Refund failed",
+                })
+              );
+            } finally {
+              setRefundBtnLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // handle prep time submit
   const handleSubmitPrepTime = async () => {
     const prepTime = timeModal?.prepTime;
@@ -274,6 +333,13 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     rejectBtnLoading ||
     getDisabledStatuses(orderData?.orderStatus).includes(
       orderStatusStrings.rejected
+    );
+  const canRefundPosOrder =
+    orderData?.orderSource === "VENDOR_POS" &&
+    ["CASH", "TAP_TO_PAY"].includes(orderData?.paymentMethod) &&
+    orderData?.paymentStatus !== "REFUNDED" &&
+    [orderStatusStrings.preparing, orderStatusStrings.ready_for_pickup].includes(
+      orderData?.orderStatus
     );
 
   return (
@@ -1064,20 +1130,30 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                 <TouchableOpacity
                   style={[
                     styles.rejectOrderBtn,
-                    { opacity: rjctBtnDisabled ? 0.5 : 1 },
+                    {
+                      opacity: canRefundPosOrder || !rjctBtnDisabled ? 1 : 0.5,
+                    },
                   ]}
                   activeOpacity={0.7}
-                  disabled={rjctBtnDisabled}
-                  onPress={() => handleRejectPress(orderData)}
+                  disabled={
+                    canRefundPosOrder ? refundBtnLoading : rjctBtnDisabled
+                  }
+                  onPress={() =>
+                    canRefundPosOrder
+                      ? handleRefundPress(orderData)
+                      : handleRejectPress(orderData)
+                  }
                 >
-                  {rejectBtnLoading ? (
+                  {canRefundPosOrder && refundBtnLoading ? (
+                    <ActivityIndicator color={AppColor.primary} />
+                  ) : !canRefundPosOrder && rejectBtnLoading ? (
                     <ActivityIndicator color={AppColor.primary} />
                   ) : (
                     <Text
                       style={[styles.orderBtnText, { color: AppColor.primary }]}
                       numberOfLines={1}
                     >
-                      {"Reject"}
+                      {canRefundPosOrder ? "Refund" : "Reject"}
                     </Text>
                   )}
                 </TouchableOpacity>
