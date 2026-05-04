@@ -341,6 +341,14 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     [orderStatusStrings.preparing, orderStatusStrings.ready_for_pickup].includes(
       orderData?.orderStatus
     );
+  const orderIsTerminal =
+    orderData?.paymentStatus === "REFUNDED" ||
+    [
+      orderStatusStrings.cancel,
+      orderStatusStrings.rejected,
+      orderStatusStrings.completed,
+    ].includes(orderData?.orderStatus);
+  const showOrderActions = !!nextOrderStatus && !orderIsTerminal;
 
   return (
     <View style={styles.container}>
@@ -1118,7 +1126,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                 {`$${orderData?.total?.toFixed(2) || 0}`}
               </Text>
             </View>
-            {nextOrderStatus ? (
+            {showOrderActions ? (
               <View
                 style={{
                   flexDirection: "row",

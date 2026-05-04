@@ -65,6 +65,8 @@ import AuthSetBusinessHrsScreen from "./src/screens/authSetBusinessHrsScreen";
 import ProfileSetBusinessHrsScreen from "./src/screens/profileSetBusinessHrsScreen";
 import EditMailingAddressScreen from "./src/screens/editMailingAddressScreen";
 import EarningListScreen from "./src/screens/earningListScreen";
+import VendorPosMenuScreen from "./src/screens/vendorPosMenuScreen";
+import VendorPosCheckoutScreen from "./src/screens/vendorPosCheckoutScreen";
 
 const Stack = createNativeStackNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -288,6 +290,11 @@ const MainAppNavigator = ({ insets }) => (
       component={OtpVerificationScreen}
     />
     <Stack.Screen name="earningListScreen" component={EarningListScreen} />
+    <Stack.Screen name="vendorPosMenuScreen" component={VendorPosMenuScreen} />
+    <Stack.Screen
+      name="vendorPosCheckoutScreen"
+      component={VendorPosCheckoutScreen}
+    />
   </Stack.Navigator>
 );
 

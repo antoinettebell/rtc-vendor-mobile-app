@@ -19,7 +19,6 @@ import {
   checkPosTax_API,
   paymentCheckout_API,
   placePosOrder_API,
-  updateOrderStatusByID_API,
   validatePosOrder_API,
 } from "../api/appAPI";
 import { clearPosOrder } from "../redux/slices/posOrderSlice";
@@ -37,6 +36,13 @@ const toMoneyNumber = (value) => {
   return Number.isFinite(n) ? Number(n.toFixed(2)) : 0;
 };
 
+const TIP_OPTIONS = [
+  { label: "10%", value: "10" },
+  { label: "15%", value: "15" },
+  { label: "20%", value: "20" },
+  { label: "Custom", value: "custom" },
+];
+
 const VendorPosCheckoutScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -49,9 +55,16 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
   const [taxAmount, setTaxAmount] = useState(0);
   const [cashOrder, setCashOrder] = useState(null);
   const [tapOrder, setTapOrder] = useState(null);
-  const [tipInput, setTipInput] = useState("");
+  const [selectedTipOption, setSelectedTipOption] = useState("10");
+  const [customTipInput, setCustomTipInput] = useState("");
 
-  const tipAmount = useMemo(() => toMoneyNumber(tipInput), [tipInput]);
+  const tipAmount = useMemo(() => {
+    if (selectedTipOption === "custom") {
+      return toMoneyNumber(customTipInput);
+    }
+
+    return toMoneyNumber((order.subtotal * Number(selectedTipOption)) / 100);
+  }, [customTipInput, order.subtotal, selectedTipOption]);
 
   const basePayload = useMemo(() => {
     return {
@@ -139,16 +152,20 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
           setCashOrder(cashValidation.data.order);
         }
 
-        const tapValidation = await validatePosOrder_API({
-          ...basePayload,
-          taxAmount: nextTax,
-          tax: nextTax,
-          tipsAmount: tipAmount,
-          paymentMethod: "TAP_TO_PAY",
-        });
+        if (tapToPayConfig.enabled) {
+          const tapValidation = await validatePosOrder_API({
+            ...basePayload,
+            taxAmount: nextTax,
+            tax: nextTax,
+            tipsAmount: tipAmount,
+            paymentMethod: "TAP_TO_PAY",
+          });
 
-        if (tapValidation?.success && tapValidation?.data?.order) {
-          setTapOrder(tapValidation.data.order);
+          if (tapValidation?.success && tapValidation?.data?.order) {
+            setTapOrder(tapValidation.data.order);
+          }
+        } else {
+          setTapOrder(null);
         }
       } catch (error) {
         Alert.alert("Checkout unavailable", error?.message || "Could not validate order.");
@@ -175,6 +192,13 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
     return response.data.order;
   };
 
+  const finishCheckout = (createdOrder) => {
+    dispatch(clearPosOrder());
+    navigation.replace("orderDetailsScreen", {
+      orderId: createdOrder._id,
+    });
+  };
+
   const handleCash = async () => {
     Alert.alert(
       "Confirm cash collected",
@@ -188,19 +212,11 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
             try {
               const createdOrder = await createOrder({
                 paymentMethod: "CASH",
-                paymentStatus: "PENDING",
+                paymentStatus: "PAID",
                 tipsAmount: tipAmount,
               });
 
-              await updateOrderStatusByID_API({
-                order_id: createdOrder._id,
-                payload: { paymentStatus: "PAID" },
-              });
-
-              dispatch(clearPosOrder());
-              navigation.navigate("orderDetailsScreen", {
-                orderId: createdOrder._id,
-              });
+              finishCheckout(createdOrder);
             } catch (error) {
               Alert.alert("Cash checkout failed", error?.message || "Please try again.");
             } finally {
@@ -269,8 +285,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
         accountType: payment.accountType,
       });
 
-      dispatch(clearPosOrder());
-      navigation.navigate("orderDetailsScreen", { orderId: createdOrder._id });
+      finishCheckout(createdOrder);
     } catch (error) {
       Alert.alert("Tap to Pay failed", error?.message || "Please try again.");
     } finally {
@@ -338,13 +353,44 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
 
           <View style={styles.tipBox}>
             <Text style={styles.sectionTitle}>Tip</Text>
-            <TextInput
-              value={tipInput}
-              onChangeText={(value) => setTipInput(value.replace(/[^0-9.]/g, ""))}
-              placeholder="0.00"
-              keyboardType="decimal-pad"
-              style={styles.tipInput}
-            />
+            <View style={styles.tipOptions}>
+              {TIP_OPTIONS.map((option) => {
+                const selected = selectedTipOption === option.value;
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.tipOption,
+                      selected && styles.tipOptionSelected,
+                    ]}
+                    onPress={() => setSelectedTipOption(option.value)}
+                  >
+                    <Text
+                      style={[
+                        styles.tipOptionText,
+                        selected && styles.tipOptionTextSelected,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {selectedTipOption === "custom" ? (
+              <TextInput
+                value={customTipInput}
+                onChangeText={(value) =>
+                  setCustomTipInput(value.replace(/[^0-9.]/g, ""))
+                }
+                placeholder="0.00"
+                keyboardType="decimal-pad"
+                style={styles.tipInput}
+              />
+            ) : null}
+            <Text style={styles.tipCalculatedText}>
+              {`Tip amount: $${toAmount(tipAmount)}`}
+            </Text>
           </View>
 
           <Text style={styles.sectionTitle}>Payment method</Text>
@@ -354,7 +400,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
               !tapToPayConfig.enabled && styles.paymentButtonDisabled,
             ]}
             onPress={handleTapToPay}
-            disabled={!!paymentLoading}
+            disabled={!!paymentLoading || !tapToPayConfig.enabled}
           >
             <Text style={styles.paymentButtonText}>
               {paymentLoading === "tap"
@@ -430,6 +476,32 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
   },
+  tipOptions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12,
+  },
+  tipOption: {
+    minWidth: 72,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  tipOptionSelected: {
+    borderColor: AppColor.primary,
+    backgroundColor: AppColor.primary,
+  },
+  tipOptionText: {
+    fontFamily: Mulish700,
+    color: AppColor.black,
+  },
+  tipOptionTextSelected: {
+    color: AppColor.white,
+  },
   tipInput: {
     borderWidth: 1,
     borderColor: AppColor.border,
@@ -439,6 +511,11 @@ const styles = StyleSheet.create({
     fontFamily: Mulish600,
     fontSize: 18,
     color: AppColor.black,
+  },
+  tipCalculatedText: {
+    fontFamily: Mulish600,
+    color: AppColor.black,
+    marginTop: 8,
   },
   paymentButton: {
     borderWidth: 1,

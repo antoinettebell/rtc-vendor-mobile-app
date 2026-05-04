@@ -832,6 +832,12 @@ const HomeScreen = ({ navigation }) => {
                     icon={require("../assets/images/monthlyDeliveredDessertIcon.png")}
                     onPress={() => navigation.navigate("earningsScreen")}
                   />
+                  <QuickStatsComponent
+                    title={"Takeout POS"}
+                    subTitle={"Create walk-up orders"}
+                    icon={require("../assets/images/cutlery.png")}
+                    onPress={() => navigation.navigate("vendorPosMenuScreen")}
+                  />
                   {/* <QuickStatsComponent
                     title={"Active Customers"}
                     subTitle={"0"}

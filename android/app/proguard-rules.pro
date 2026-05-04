@@ -8,3 +8,7 @@
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
 # Add any project specific keep options here:
+
+# Tap to Pay SDKs use native callbacks and serialized transaction models.
+-keep class com.cybersource.** { *; }
+-keep class net.authorize.** { *; }

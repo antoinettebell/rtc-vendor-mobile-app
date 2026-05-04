@@ -12,6 +12,7 @@ import {
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import Feather from "react-native-vector-icons/Feather";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import moment from "moment";
 import StatusBarManager from "../components/StatusBarManager";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
@@ -30,6 +31,13 @@ import {
   getDisabledStatuses,
 } from "../helpers/order.helper";
 import AppImage from "../components/AppImage";
+
+const ACTIVE_ORDER_STATUSES = [
+  orderStatusStrings.placed,
+  orderStatusStrings.accepted,
+  orderStatusStrings.preparing,
+  orderStatusStrings.ready_for_pickup,
+];
 
 const OrderScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -50,11 +58,15 @@ const OrderScreen = ({ navigation }) => {
   // render order component
   const renderOrderComponent = ({ item, index }) => {
     const disabledStatuses = getDisabledStatuses(item?.orderStatus);
+    const orderIsTerminal =
+      item?.paymentStatus === "REFUNDED" ||
+      [
+        orderStatusStrings.rejected,
+        orderStatusStrings.completed,
+        orderStatusStrings.cancel,
+      ].includes(item?.orderStatus);
     const hideActionBtns =
-      item?.orderStatus === orderStatusStrings.rejected ||
-      item?.orderStatus === orderStatusStrings.completed ||
-      item?.orderStatus === orderStatusStrings.cancel ||
-      false;
+      orderIsTerminal || false;
     const locationData = extractAdvanceOrderLocationAndTime(item);
 
     return (
@@ -81,7 +93,9 @@ const OrderScreen = ({ navigation }) => {
               <TouchableOpacity
                 style={styles.menuAnchorContainer}
                 activeOpacity={0.7}
-                onPress={() => handleMenuVisibility({ menuIndex: index })}
+                onPress={() =>
+                  !orderIsTerminal && handleMenuVisibility({ menuIndex: index })
+                }
               >
                 <Text style={styles.menuAnchorText}>
                   {orderCurrentStatusNames[item?.orderStatus]}
@@ -352,12 +366,12 @@ const OrderScreen = ({ navigation }) => {
       console.log("response => ", response);
       if (response?.success && response?.data) {
         const tempOrderData = orderData.map((item) => {
-          if (item?._id === order?._id) {
-            return {
-              ...item,
-              orderStatus: response.data.order.orderStatus,
-            };
-          }
+              if (item?._id === order?._id) {
+                return {
+                  ...item,
+                  ...response.data.order,
+                };
+              }
           return item;
         });
         setOrderData(tempOrderData);
@@ -404,15 +418,19 @@ const OrderScreen = ({ navigation }) => {
               console.log("response => ", response);
               if (response?.success && response?.data) {
                 const tempOrderData = orderData.map((item) => {
-                  if (item?._id === order?._id) {
-                    return {
-                      ...item,
-                      orderStatus: response.data.order.orderStatus,
-                    };
-                  }
+                    if (item?._id === order?._id) {
+                      return {
+                        ...item,
+                        ...response.data.order,
+                      };
+                    }
                   return item;
                 });
-                setOrderData(tempOrderData);
+                setOrderData(
+                  tempOrderData.filter((item) =>
+                    ACTIVE_ORDER_STATUSES.includes(item?.orderStatus)
+                  )
+                );
                 dispatch(
                   showSnackbar({
                     type: "success",
@@ -464,15 +482,19 @@ const OrderScreen = ({ navigation }) => {
       console.log("response => ", response);
       if (response?.success && response?.data) {
         const tempOrderData = orderData.map((item) => {
-          if (item?._id === order_id) {
-            return {
-              ...item,
-              orderStatus: status,
-            };
-          }
+              if (item?._id === order_id) {
+                return {
+                  ...item,
+                  ...response.data.order,
+                };
+              }
           return item;
         });
-        setOrderData(tempOrderData);
+        setOrderData(
+          tempOrderData.filter((item) =>
+            ACTIVE_ORDER_STATUSES.includes(item?.orderStatus)
+          )
+        );
       }
     } catch (error) {
       console.log("error => ", error);
@@ -539,6 +561,12 @@ const OrderScreen = ({ navigation }) => {
     setOrderData([]);
     getOrderDataFromAPI(1, false, activeStage === "advance");
   }, [activeStage]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      getOrderDataFromAPI(1, false, activeStage === "advance");
+    }, [activeStage])
+  );
 
   return (
     <View style={styles.container}>

@@ -1,0 +1,56 @@
+import { NativeModules, Platform } from "react-native";
+import tapToPayConfig from "./tapToPay-config";
+
+const nativeTapToPay = NativeModules.RTCTapToPay;
+
+const normalizeTapToPayResult = (result = {}) => {
+  if (result.opaqueToken || result.dataValue || result.token) {
+    return {
+      type: "OPAQUE_TOKEN",
+      opaqueToken: result.opaqueToken || result.dataValue || result.token,
+      raw: result,
+    };
+  }
+
+  if (result.transactionId || result.transId) {
+    return {
+      type: "PROCESSED_TRANSACTION",
+      transactionId: result.transactionId || result.transId,
+      authCode: result.authCode || null,
+      invoiceNumber: result.invoiceNumber || null,
+      accountNumber: result.accountNumber || null,
+      accountType: result.accountType || null,
+      raw: result,
+    };
+  }
+
+  throw new Error("Tap to Pay did not return a usable payment result.");
+};
+
+export const startTapToPaySale = async ({
+  amount,
+  currency = "USD",
+  orderNumber,
+  orderId,
+}) => {
+  if (!nativeTapToPay?.startSale) {
+    throw new Error(
+      "Tap to Pay native module is not installed. Add the iOS/Android Tap to Pay SDK bridge as RTCTapToPay."
+    );
+  }
+
+  const result = await nativeTapToPay.startSale({
+    amount: Number(amount).toFixed(2),
+    currency: currency || tapToPayConfig.currency,
+    orderNumber: orderNumber ? String(orderNumber) : null,
+    orderId: orderId ? String(orderId) : null,
+    platform: Platform.OS,
+    provider: tapToPayConfig.provider,
+    environment: tapToPayConfig.environment,
+    merchantId: tapToPayConfig.merchantId,
+    terminalId: tapToPayConfig.terminalId,
+    sdkConfigId: tapToPayConfig.sdkConfigId,
+  });
+
+  return normalizeTapToPayResult(result);
+};

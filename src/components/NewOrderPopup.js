@@ -247,6 +247,14 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
     getDisabledStatuses(orderData?.orderStatus).includes(
       orderStatusStrings.rejected
     );
+  const orderIsTerminal =
+    orderData?.paymentStatus === "REFUNDED" ||
+    [
+      orderStatusStrings.cancel,
+      orderStatusStrings.rejected,
+      orderStatusStrings.completed,
+    ].includes(orderData?.orderStatus);
+  const showOrderActions = !!nextOrderStatus && !orderIsTerminal;
 
   if (!mounted || loading) {
     return (
@@ -522,7 +530,7 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
           </View>
 
           {/* Action Buttons or Status */}
-          {nextOrderStatus ? (
+          {showOrderActions ? (
             <View style={styles.actionContainer}>
               <TouchableOpacity
                 style={styles.rejectButton}

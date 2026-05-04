@@ -1,0 +1,130 @@
+import { createSlice } from "@reduxjs/toolkit";
+import { calculateItemTotalWithDiscount } from "../../helpers/discount.helper";
+
+const initialState = {
+  currentOrder: {
+    foodTruckId: null,
+    foodTruckName: null,
+    foodTruckLogo: null,
+    items: [],
+    totalItems: 0,
+    subtotal: 0,
+    lastUpdate: null,
+  },
+};
+
+const calculateItemTotal = (item) => calculateItemTotalWithDiscount(item);
+
+const posOrderSlice = createSlice({
+  name: "posOrder",
+  initialState,
+  reducers: {
+    addItemToPosOrder: (state, { payload }) => {
+      const { foodTruckId, foodTruckName, foodTruckLogo, item } = payload;
+
+      if (
+        !state.currentOrder.foodTruckId ||
+        state.currentOrder.foodTruckId !== foodTruckId
+      ) {
+        state.currentOrder = {
+          foodTruckId,
+          foodTruckName,
+          foodTruckLogo,
+          items: [],
+          totalItems: 0,
+          subtotal: 0,
+          lastUpdate: new Date().toISOString(),
+        };
+      }
+
+      const existingItemIndex = state.currentOrder.items.findIndex(
+        (i) => i._id === item._id
+      );
+
+      if (existingItemIndex === -1) {
+        state.currentOrder.items.push({
+          ...item,
+          quantity: 1,
+        });
+      } else {
+        state.currentOrder.items[existingItemIndex].quantity += 1;
+      }
+
+      state.currentOrder.totalItems = state.currentOrder.items.reduce(
+        (sum, item) => sum + item.quantity,
+        0
+      );
+      state.currentOrder.subtotal = state.currentOrder.items.reduce(
+        (sum, item) => sum + calculateItemTotal(item),
+        0
+      );
+      state.currentOrder.lastUpdate = new Date().toISOString();
+    },
+
+    removeItemFromPosOrder: (state, { payload }) => {
+      const itemIndex = state.currentOrder.items.findIndex(
+        (item) => item._id === payload.itemId
+      );
+
+      if (itemIndex === -1) {
+        return;
+      }
+
+      if (state.currentOrder.items[itemIndex].quantity > 1) {
+        state.currentOrder.items[itemIndex].quantity -= 1;
+      } else {
+        state.currentOrder.items.splice(itemIndex, 1);
+      }
+
+      state.currentOrder.totalItems = state.currentOrder.items.reduce(
+        (sum, item) => sum + item.quantity,
+        0
+      );
+      state.currentOrder.subtotal = state.currentOrder.items.reduce(
+        (sum, item) => sum + calculateItemTotal(item),
+        0
+      );
+
+      if (state.currentOrder.items.length === 0) {
+        state.currentOrder = initialState.currentOrder;
+      } else {
+        state.currentOrder.lastUpdate = new Date().toISOString();
+      }
+    },
+
+    updatePosItemProperty: (state, { payload }) => {
+      const { itemId, keyName, value } = payload;
+      const itemIndex = state.currentOrder.items.findIndex(
+        (item) => item._id === itemId
+      );
+
+      if (itemIndex === -1) {
+        return;
+      }
+
+      state.currentOrder.items[itemIndex] = {
+        ...state.currentOrder.items[itemIndex],
+        [keyName]: value,
+      };
+
+      state.currentOrder.subtotal = state.currentOrder.items.reduce(
+        (sum, item) => sum + calculateItemTotal(item),
+        0
+      );
+      state.currentOrder.lastUpdate = new Date().toISOString();
+    },
+
+    clearPosOrder: (state) => {
+      state.currentOrder = initialState.currentOrder;
+    },
+  },
+});
+
+export const {
+  addItemToPosOrder,
+  removeItemFromPosOrder,
+  updatePosItemProperty,
+  clearPosOrder,
+} = posOrderSlice.actions;
+
+export default posOrderSlice.reducer;
