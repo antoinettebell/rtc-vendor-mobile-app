@@ -6,13 +6,25 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "API_URL": "http://157.245.6.61:8000",
+        "API_PREFIX": "/api/v1"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "API_URL": "http://157.245.6.61:8000",
+        "API_PREFIX": "/api/v1"
+      }
     },
     "production": {
       "autoIncrement": false,
+      "env": {
+        "API_URL": "http://157.245.6.61:8000",
+        "API_PREFIX": "/api/v1"
+      },
       "ios": {
         "image": "latest"
       }

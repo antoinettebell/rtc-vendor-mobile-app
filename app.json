@@ -1,11 +1,16 @@
 {
   "expo": {
-    "name": "FoodtruckVendor",
+    "name": "RTC_DEV_VENDOR",
     "slug": "foodtruckvendor",
     "version": "1.6",
     "ios": {
-      "bundleIdentifier": "com.ea.rtcvendor",
-      "buildNumber": "23"
+      "bundleIdentifier": "com.rounddacorner.dev.vendor",
+      "buildNumber": "23",
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
+      }
     },
     "extra": {
       "eas": {
