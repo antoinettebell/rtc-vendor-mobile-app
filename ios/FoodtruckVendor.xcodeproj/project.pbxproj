@@ -399,7 +399,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.ea.rtcvendor;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rounddacorner.dev.vendor;
 				PRODUCT_NAME = FoodtruckVendor;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -436,7 +436,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.ea.rtcvendor;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rounddacorner.dev.vendor;
 				PRODUCT_NAME = FoodtruckVendor;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

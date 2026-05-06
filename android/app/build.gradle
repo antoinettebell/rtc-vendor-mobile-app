@@ -80,7 +80,7 @@ android {
 
     namespace "com.ea.rtcvendor"
     defaultConfig {
-        applicationId "com.ea.rtcvendor"
+        applicationId "com.rounddacorner.dev.vendor"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 23

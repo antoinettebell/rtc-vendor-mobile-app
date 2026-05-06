@@ -5,7 +5,6 @@
 import { AppRegistry, LogBox } from "react-native";
 import React, { useEffect } from "react";
 import App from "./App";
-import appConfig from "./app.json";
 import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 import { DefaultTheme, PaperProvider } from "react-native-paper";
@@ -20,7 +19,7 @@ import {
 } from "./src/helpers/notification.helper";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-const appName = appConfig.expo.name;
+const appName = "FoodtruckVendor";
 
 console.log(Config);
 

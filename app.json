@@ -12,6 +12,9 @@
         }
       }
     },
+    "android": {
+      "package": "com.rounddacorner.dev.vendor"
+    },
     "extra": {
       "eas": {
         "projectId": "07ad6d5a-7b77-4222-b853-aba5e4183be8"
