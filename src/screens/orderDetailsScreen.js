@@ -38,6 +38,7 @@ import {
   extractAdvanceOrderLocationAndTime,
   getDisabledStatuses,
   getNextOrderStatus,
+  isVendorPosOrder,
 } from "../helpers/order.helper";
 import AppImage from "../components/AppImage";
 
@@ -348,7 +349,14 @@ const OrderDetailsScreen = ({ navigation, route }) => {
       orderStatusStrings.rejected,
       orderStatusStrings.completed,
     ].includes(orderData?.orderStatus);
-  const showOrderActions = !!nextOrderStatus && !orderIsTerminal;
+  const isWalkUpOrder = isVendorPosOrder(orderData);
+  const canShowLeftAction = !isWalkUpOrder || canRefundPosOrder;
+  const canShowRightAction =
+    !isWalkUpOrder || nextOrderStatus !== orderStatusStrings.accepted;
+  const showOrderActions =
+    !!nextOrderStatus &&
+    !orderIsTerminal &&
+    (canShowLeftAction || canShowRightAction);
 
   return (
     <View style={styles.container}>
@@ -569,6 +577,8 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     raw?.imgUrls?.length > 0 ? raw.imgUrls : itm?.imgUrls,
                   discountType: raw?.discountType ?? itm?.discountType,
                   description: raw?.description ?? itm?.description,
+                  selectedDiscountFlavors: itm?.selectedDiscountFlavors || [],
+                  selectedDiscountToppings: itm?.selectedDiscountToppings || [],
                 };
                 const comboItemsList =
                   menuItem?.comboItems?.length > 0
@@ -607,6 +617,16 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                         {itm.customization ? (
                           <Text style={styles.orderLineCustomization}>
                             {itm.customization}
+                          </Text>
+                        ) : null}
+                        {itm.selectedFlavors?.length > 0 ? (
+                          <Text style={styles.orderLineCustomization}>
+                            {`Flavors: ${itm.selectedFlavors.join(", ")}`}
+                          </Text>
+                        ) : null}
+                        {itm.selectedToppings?.length > 0 ? (
+                          <Text style={styles.orderLineCustomization}>
+                            {`Toppings: ${itm.selectedToppings.join(", ")}`}
                           </Text>
                         ) : null}
                       </View>
@@ -649,6 +669,22 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                                   numberOfLines={2}
                                 >
                                   {rewardItem.displayDesc}
+                                </Text>
+                              ) : null}
+                              {rewardItem.displayFlavors?.length > 0 ? (
+                                <Text
+                                  style={styles.nestedItemDesc}
+                                  numberOfLines={2}
+                                >
+                                  {`Flavors: ${rewardItem.displayFlavors.join(", ")}`}
+                                </Text>
+                              ) : null}
+                              {rewardItem.displayToppings?.length > 0 ? (
+                                <Text
+                                  style={styles.nestedItemDesc}
+                                  numberOfLines={2}
+                                >
+                                  {`Toppings: ${rewardItem.displayToppings.join(", ")}`}
                                 </Text>
                               ) : null}
                             </View>
@@ -1135,52 +1171,60 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   gap: 12,
                 }}
               >
-                <TouchableOpacity
-                  style={[
-                    styles.rejectOrderBtn,
-                    {
-                      opacity: canRefundPosOrder || !rjctBtnDisabled ? 1 : 0.5,
-                    },
-                  ]}
-                  activeOpacity={0.7}
-                  disabled={
-                    canRefundPosOrder ? refundBtnLoading : rjctBtnDisabled
-                  }
-                  onPress={() =>
-                    canRefundPosOrder
-                      ? handleRefundPress(orderData)
-                      : handleRejectPress(orderData)
-                  }
-                >
-                  {canRefundPosOrder && refundBtnLoading ? (
-                    <ActivityIndicator color={AppColor.primary} />
-                  ) : !canRefundPosOrder && rejectBtnLoading ? (
-                    <ActivityIndicator color={AppColor.primary} />
-                  ) : (
-                    <Text
-                      style={[styles.orderBtnText, { color: AppColor.primary }]}
-                      numberOfLines={1}
-                    >
-                      {canRefundPosOrder ? "Refund" : "Reject"}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.acceptOrderBtn}
-                  activeOpacity={0.7}
-                  disabled={multiActionBtnLoading}
-                  onPress={() =>
-                    handleMultiActionPress(nextOrderStatus, orderData)
-                  }
-                >
-                  {multiActionBtnLoading ? (
-                    <ActivityIndicator color={AppColor.primary} />
-                  ) : (
-                    <Text style={styles.orderBtnText} numberOfLines={1}>
-                      {orderNextStatusNames[nextOrderStatus]}
-                    </Text>
-                  )}
-                </TouchableOpacity>
+                {canShowLeftAction ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.rejectOrderBtn,
+                      {
+                        opacity:
+                          canRefundPosOrder || !rjctBtnDisabled ? 1 : 0.5,
+                      },
+                    ]}
+                    activeOpacity={0.7}
+                    disabled={
+                      canRefundPosOrder ? refundBtnLoading : rjctBtnDisabled
+                    }
+                    onPress={() =>
+                      canRefundPosOrder
+                        ? handleRefundPress(orderData)
+                        : handleRejectPress(orderData)
+                    }
+                  >
+                    {canRefundPosOrder && refundBtnLoading ? (
+                      <ActivityIndicator color={AppColor.primary} />
+                    ) : !canRefundPosOrder && rejectBtnLoading ? (
+                      <ActivityIndicator color={AppColor.primary} />
+                    ) : (
+                      <Text
+                        style={[
+                          styles.orderBtnText,
+                          { color: AppColor.primary },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {canRefundPosOrder ? "Refund" : "Reject"}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                ) : null}
+                {canShowRightAction ? (
+                  <TouchableOpacity
+                    style={styles.acceptOrderBtn}
+                    activeOpacity={0.7}
+                    disabled={multiActionBtnLoading}
+                    onPress={() =>
+                      handleMultiActionPress(nextOrderStatus, orderData)
+                    }
+                  >
+                    {multiActionBtnLoading ? (
+                      <ActivityIndicator color={AppColor.primary} />
+                    ) : (
+                      <Text style={styles.orderBtnText} numberOfLines={1}>
+                        {orderNextStatusNames[nextOrderStatus]}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                ) : null}
               </View>
             ) : (
               <View style={{ marginVertical: 16 }}>

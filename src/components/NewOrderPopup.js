@@ -28,6 +28,7 @@ import {
   extractAdvanceOrderLocationAndTime,
   getDisabledStatuses,
   getNextOrderStatus,
+  isVendorPosOrder,
 } from "../helpers/order.helper";
 import AppImage from "./AppImage";
 
@@ -254,7 +255,8 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
       orderStatusStrings.rejected,
       orderStatusStrings.completed,
     ].includes(orderData?.orderStatus);
-  const showOrderActions = !!nextOrderStatus && !orderIsTerminal;
+  const showOrderActions =
+    !!nextOrderStatus && !orderIsTerminal && !isVendorPosOrder(orderData);
 
   if (!mounted || loading) {
     return (

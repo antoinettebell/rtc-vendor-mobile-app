@@ -29,6 +29,7 @@ import {
 import {
   extractAdvanceOrderLocationAndTime,
   getDisabledStatuses,
+  isVendorPosOrder,
 } from "../helpers/order.helper";
 import AppImage from "../components/AppImage";
 
@@ -65,8 +66,7 @@ const OrderScreen = ({ navigation }) => {
         orderStatusStrings.completed,
         orderStatusStrings.cancel,
       ].includes(item?.orderStatus);
-    const hideActionBtns =
-      orderIsTerminal || false;
+    const hideActionBtns = orderIsTerminal || isVendorPosOrder(item);
     const locationData = extractAdvanceOrderLocationAndTime(item);
 
     return (

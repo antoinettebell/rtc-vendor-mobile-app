@@ -51,6 +51,7 @@ import { getMessaging } from "@react-native-firebase/messaging";
 import {
   extractAdvanceOrderLocationAndTime,
   getDisabledStatuses,
+  isVendorPosOrder,
 } from "../helpers/order.helper";
 import AppImage from "../components/AppImage";
 
@@ -730,40 +731,44 @@ const HomeScreen = ({ navigation }) => {
                       <Text
                         style={styles.orderTotalText}
                       >{`$${(newOrderData?.total || 0).toFixed(2)}`}</Text>
-                      <View style={styles.orderActionButtons}>
-                        <TouchableOpacity
-                          style={styles.rejectOrderBtn}
-                          activeOpacity={0.7}
-                          disabled={orderRejectBtnLoading}
-                          onPress={() => handleRejectOrderPress(newOrderData)}
-                        >
-                          {orderRejectBtnLoading ? (
-                            <ActivityIndicator color={AppColor.primary} />
-                          ) : (
-                            <Text
-                              style={[
-                                styles.orderBtnText,
-                                { color: AppColor.primary },
-                              ]}
-                            >
-                              {"Reject"}
-                            </Text>
-                          )}
-                        </TouchableOpacity>
+                      {!isVendorPosOrder(newOrderData) ? (
+                        <View style={styles.orderActionButtons}>
+                          <TouchableOpacity
+                            style={styles.rejectOrderBtn}
+                            activeOpacity={0.7}
+                            disabled={orderRejectBtnLoading}
+                            onPress={() => handleRejectOrderPress(newOrderData)}
+                          >
+                            {orderRejectBtnLoading ? (
+                              <ActivityIndicator color={AppColor.primary} />
+                            ) : (
+                              <Text
+                                style={[
+                                  styles.orderBtnText,
+                                  { color: AppColor.primary },
+                                ]}
+                              >
+                                {"Reject"}
+                              </Text>
+                            )}
+                          </TouchableOpacity>
 
-                        <TouchableOpacity
-                          style={styles.acceptOrderBtn}
-                          activeOpacity={0.7}
-                          disabled={orderAcceptBtnLoading}
-                          onPress={() => handleAcceptPress(newOrderData)}
-                        >
-                          {orderAcceptBtnLoading ? (
-                            <ActivityIndicator color={AppColor.primary} />
-                          ) : (
-                            <Text style={styles.orderBtnText}>{"Accept"}</Text>
-                          )}
-                        </TouchableOpacity>
-                      </View>
+                          <TouchableOpacity
+                            style={styles.acceptOrderBtn}
+                            activeOpacity={0.7}
+                            disabled={orderAcceptBtnLoading}
+                            onPress={() => handleAcceptPress(newOrderData)}
+                          >
+                            {orderAcceptBtnLoading ? (
+                              <ActivityIndicator color={AppColor.primary} />
+                            ) : (
+                              <Text style={styles.orderBtnText}>
+                                {"Accept"}
+                              </Text>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      ) : null}
                     </View>
                   </TouchableOpacity>
                 </View>

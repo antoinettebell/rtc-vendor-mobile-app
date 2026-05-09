@@ -200,10 +200,11 @@ export const getNextOrderStatus = (currentStatus) => {
   return null;
 };
 
+export const isVendorPosOrder = (order) => order?.orderSource === "VENDOR_POS";
+
 export const formatMoney = (value) => {
   if (typeof value !== 'number') {
     return '0';
   }
   return Math.floor(value).toLocaleString('en-US');
 };
-
