@@ -1,14 +1,14 @@
 import axios, { AxiosRequestConfig, AxiosError } from "axios";
-import Config from "react-native-config";
 
 import { store } from "../redux/store";
 import { clearUserSlice } from "../redux/slices/userSlice";
 import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlice";
 import { onSignOut } from "../redux/slices/authSlice";
 import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlice";
+import runtimeConfig from "../config/runtimeConfig";
 
-const API_URL = Config.API_URL;
-const API_PREFIX = Config.API_PREFIX;
+const API_URL = runtimeConfig.apiUrl;
+const API_PREFIX = runtimeConfig.apiPrefix;
 
 // Axios instance
 const apiClient = axios.create({

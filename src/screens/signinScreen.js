@@ -43,6 +43,7 @@ import {
 } from "../helpers/notification.helper";
 import { setFcmToken_API } from "../api/appAPI";
 import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
+import runtimeConfig from "../config/runtimeConfig";
 
 const SignInScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -224,6 +225,20 @@ const SignInScreen = ({ navigation, route }) => {
             {/* Sign In Form */}
             <Text style={styles.title}>{"Sign In"}</Text>
             <Text style={styles.subtitle}>{"Sign in your account"}</Text>
+            <View style={styles.debugConfigContainer}>
+              <Text style={styles.debugConfigText}>
+                {`API_URL: ${runtimeConfig.apiUrl}`}
+              </Text>
+              <Text style={styles.debugConfigText}>
+                {`API_PREFIX: ${runtimeConfig.apiPrefix}`}
+              </Text>
+              <Text style={styles.debugConfigText}>
+                {`Environment: ${runtimeConfig.environment}`}
+              </Text>
+              <Text style={styles.debugConfigText}>
+                {`API source: ${runtimeConfig.apiUrlSource}`}
+              </Text>
+            </View>
 
             <View style={styles.formContainer}>
               {/* Email Container */}
@@ -404,7 +419,22 @@ const styles = StyleSheet.create({
     fontFamily: Mulish400,
     fontSize: 14,
     color: AppColor.textHighlighter,
-    marginBottom: 50,
+    marginBottom: 14,
+  },
+  debugConfigContainer: {
+    backgroundColor: "#FFF7E6",
+    borderColor: "#D9822B",
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 28,
+  },
+  debugConfigText: {
+    color: "#7A3E00",
+    fontFamily: Mulish600,
+    fontSize: 12,
+    marginBottom: 2,
   },
   formContainer: {
     flex: 1,
