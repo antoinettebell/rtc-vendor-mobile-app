@@ -64,21 +64,21 @@ This is one way to run your app — you can also build it directly from Android 
 
 ## Vendor POS Tap to Pay
 
-The vendor POS checkout uses the existing backend `/order/payment-checkout` flow for card-present Tap to Pay transactions. Keep `TAP_TO_PAY_ENABLED=false` until the merchant account, native SDK package, and device enrollment are configured.
+The vendor POS checkout uses the existing backend `/order/payment-checkout` flow for card-present Tap to Pay transactions. With Tap to Pay approval in place, production builds should set `TAP_TO_PAY_ENABLED=true` and use the production gateway environment.
 
 Required environment values are documented in `.env.example`:
 
 ```sh
-TAP_TO_PAY_ENABLED=false
+TAP_TO_PAY_ENABLED=true
 TAP_TO_PAY_PROVIDER=AUTHORIZE_NET
-TAP_TO_PAY_ENVIRONMENT=sandbox
+TAP_TO_PAY_ENVIRONMENT=production
 TAP_TO_PAY_MERCHANT_ID=
 TAP_TO_PAY_TERMINAL_ID=
 TAP_TO_PAY_SDK_CONFIG_ID=
 TAP_TO_PAY_CURRENCY=USD
 ```
 
-Android requires an NFC-capable supported device and the Authorize.net/Cybersource Tap to Pay SDK bridge to resolve `RTCTapToPay.startSale`. iOS requires Apple Tap to Pay entitlement approval before production builds can accept card-present payments.
+Android requires an NFC-capable supported device and the Authorize.net/Cybersource Tap to Pay SDK bridge to resolve `RTCTapToPay.startSale`. iOS production builds require the Apple Tap to Pay entitlement in the provisioning profile and `com.apple.developer.proximity-reader.payment.acceptance` in the app entitlements.
 
 ## Step 3: Modify your app
 

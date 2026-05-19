@@ -4,10 +4,24 @@ import tapToPayConfig from "./tapToPay-config";
 const nativeTapToPay = NativeModules.RTCTapToPay;
 
 const normalizeTapToPayResult = (result = {}) => {
-  if (result.opaqueToken || result.dataValue || result.token) {
+  const dataValue =
+    result.opaqueToken?.dataValue ||
+    result.opaqueData?.dataValue ||
+    result.dataValue ||
+    result.token;
+  const dataDescriptor =
+    result.opaqueToken?.dataDescriptor ||
+    result.opaqueData?.dataDescriptor ||
+    result.dataDescriptor ||
+    null;
+
+  if (dataValue) {
     return {
       type: "OPAQUE_TOKEN",
-      opaqueToken: result.opaqueToken || result.dataValue || result.token,
+      opaqueToken: {
+        dataValue,
+        dataDescriptor,
+      },
       raw: result,
     };
   }

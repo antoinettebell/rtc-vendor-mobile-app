@@ -297,7 +297,10 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
     const opaqueToken = route.params?.tapToPayToken;
     if (opaqueToken) {
       setPaymentLoading("tap");
-      completeTapToPayPayment({ type: "OPAQUE_TOKEN", opaqueToken });
+      completeTapToPayPayment({
+        type: "OPAQUE_TOKEN",
+        opaqueToken: { dataValue: opaqueToken, dataDescriptor: null },
+      });
     }
   }, [route.params?.tapToPayToken]);
 
