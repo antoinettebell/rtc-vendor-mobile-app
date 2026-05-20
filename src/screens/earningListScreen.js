@@ -14,6 +14,7 @@ import moment from "moment";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
 import { getEarningListByFoodTruckID_API } from "../api/appAPI";
+import { getVendorOrderTotal } from "../helpers/order.helper";
 
 const ToggleButton = ({ text, isActive, onPress }) => {
   return (
@@ -80,7 +81,7 @@ const EarningListScreen = ({ navigation, route }) => {
           </Text>
         </View>
         <View>
-          <Text style={styles.totalText}>{`$${item.total.toFixed(2)}`}</Text>
+          <Text style={styles.totalText}>{`$${getVendorOrderTotal(item).toFixed(2)}`}</Text>
         </View>
       </Pressable>
     );
@@ -132,7 +133,7 @@ const EarningListScreen = ({ navigation, route }) => {
         page: page + 1,
         limit: 30,
         list: listType === "earning" ? "normal" : "dessert",
-        listType: durationType,
+        listType: activeSection,
         foodTruck_id: truckId,
       });
       console.log("response => ", response);
