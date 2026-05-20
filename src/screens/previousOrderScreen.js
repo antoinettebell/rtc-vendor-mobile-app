@@ -181,7 +181,7 @@ const PreviousOrderScreen = ({ navigation }) => {
       const reqPayload = {
         page,
         limit: 20,
-        status: "CANCEL, REJECTED, COMPLETED",
+        status: "CANCEL, REJECTED, DELIVERED, COMPLETED",
       };
       const response = await getOrderList_API(reqPayload);
       console.log("reponse => ", response);

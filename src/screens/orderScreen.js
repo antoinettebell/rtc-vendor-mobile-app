@@ -38,6 +38,7 @@ const ACTIVE_ORDER_STATUSES = [
   orderStatusStrings.accepted,
   orderStatusStrings.preparing,
   orderStatusStrings.ready_for_pickup,
+  orderStatusStrings.driver_picked_up,
 ];
 
 const OrderScreen = ({ navigation }) => {
@@ -63,6 +64,7 @@ const OrderScreen = ({ navigation }) => {
       item?.paymentStatus === "REFUNDED" ||
       [
         orderStatusStrings.rejected,
+        orderStatusStrings.delivered,
         orderStatusStrings.completed,
         orderStatusStrings.cancel,
       ].includes(item?.orderStatus);
@@ -520,8 +522,8 @@ const OrderScreen = ({ navigation }) => {
         limit: 20,
         advance,
         status: advance
-          ? "PLACED, ACCEPTED, PREPARING, READY_FOR_PICKUP"
-          : "PLACED, ACCEPTED, PREPARING, READY_FOR_PICKUP",
+          ? "PLACED, ACCEPTED, PREPARING, READY_FOR_PICKUP, DRIVER_PICKED_UP"
+          : "PLACED, ACCEPTED, PREPARING, READY_FOR_PICKUP, DRIVER_PICKED_UP",
       };
 
       const response = await getOrderList_API(payload);

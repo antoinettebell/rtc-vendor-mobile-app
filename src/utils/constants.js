@@ -38,6 +38,8 @@ export const orderStatusStrings = {
   rejected: "REJECTED",
   preparing: "PREPARING",
   ready_for_pickup: "READY_FOR_PICKUP",
+  driver_picked_up: "DRIVER_PICKED_UP",
+  delivered: "DELIVERED",
   completed: "COMPLETED",
 };
 
@@ -48,6 +50,8 @@ export const orderNextStatusNames = {
   REJECTED: "Reject",
   PREPARING: "Preparing",
   READY_FOR_PICKUP: "Ready for pickup",
+  DRIVER_PICKED_UP: "Out for delivery",
+  DELIVERED: "Delivered",
   COMPLETED: "Complete",
 };
 
@@ -58,6 +62,8 @@ export const orderCurrentStatusNames = {
   REJECTED: "Rejected",
   PREPARING: "Preparing",
   READY_FOR_PICKUP: "Ready for pickup",
+  DRIVER_PICKED_UP: "Out for delivery",
+  DELIVERED: "Delivered",
   COMPLETED: "Completed",
 };
 
@@ -68,6 +74,8 @@ export const notificationTypes = {
   order_rejected: "ORDER_REJECTED",
   order_preparing: "ORDER_PREPARING",
   order_ready_for_pickup: "ORDER_READY_FOR_PICKUP",
+  order_driver_picked_up: "ORDER_DRIVER_PICKED_UP",
+  order_delivered: "ORDER_DELIVERED",
   order_completed: "ORDER_COMPLETED",
 };
 

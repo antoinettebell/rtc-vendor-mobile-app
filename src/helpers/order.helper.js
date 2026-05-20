@@ -10,6 +10,8 @@ export const getDisabledStatuses = (currentStatus) => {
     orderStatusStrings.rejected,
     orderStatusStrings.preparing,
     orderStatusStrings.ready_for_pickup,
+    orderStatusStrings.driver_picked_up,
+    orderStatusStrings.delivered,
     orderStatusStrings.completed,
   ];
 
@@ -24,6 +26,8 @@ export const getDisabledStatuses = (currentStatus) => {
         orderStatusStrings.rejected,
         orderStatusStrings.preparing,
         orderStatusStrings.ready_for_pickup,
+        orderStatusStrings.driver_picked_up,
+        orderStatusStrings.delivered,
         orderStatusStrings.completed
       );
       break;
@@ -32,6 +36,8 @@ export const getDisabledStatuses = (currentStatus) => {
         orderStatusStrings.cancel,
         orderStatusStrings.preparing,
         orderStatusStrings.ready_for_pickup,
+        orderStatusStrings.driver_picked_up,
+        orderStatusStrings.delivered,
         orderStatusStrings.completed
       );
       break;
@@ -41,6 +47,8 @@ export const getDisabledStatuses = (currentStatus) => {
         orderStatusStrings.placed,
         orderStatusStrings.rejected,
         orderStatusStrings.ready_for_pickup,
+        orderStatusStrings.driver_picked_up,
+        orderStatusStrings.delivered,
         orderStatusStrings.completed
       );
       break;
@@ -52,6 +60,8 @@ export const getDisabledStatuses = (currentStatus) => {
         orderStatusStrings.placed,
         orderStatusStrings.rejected,
         orderStatusStrings.accepted,
+        orderStatusStrings.driver_picked_up,
+        orderStatusStrings.delivered,
         orderStatusStrings.completed
       );
       break;
@@ -64,6 +74,10 @@ export const getDisabledStatuses = (currentStatus) => {
         orderStatusStrings.preparing
       );
       break;
+    case orderStatusStrings.driver_picked_up:
+      return allStatuses;
+    case orderStatusStrings.delivered:
+      return allStatuses;
     case orderStatusStrings.completed:
       return allStatuses;
     default:
@@ -176,6 +190,8 @@ const successOrderFlow = [
   orderStatusStrings.accepted,
   orderStatusStrings.preparing,
   orderStatusStrings.ready_for_pickup,
+  orderStatusStrings.driver_picked_up,
+  orderStatusStrings.delivered,
   orderStatusStrings.completed,
 ];
 

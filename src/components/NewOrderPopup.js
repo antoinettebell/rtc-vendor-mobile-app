@@ -253,6 +253,7 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
     [
       orderStatusStrings.cancel,
       orderStatusStrings.rejected,
+      orderStatusStrings.delivered,
       orderStatusStrings.completed,
     ].includes(orderData?.orderStatus);
   const showOrderActions =
