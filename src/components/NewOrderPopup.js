@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator as NativeIndicator,
   FlatList,
+  Alert,
 } from "react-native";
 import { ActivityIndicator, Divider } from "react-native-paper";
 import FastImage from "@d11/react-native-fast-image";
@@ -207,6 +208,20 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
   };
 
   const handlePrintPress = async () => {
+    Alert.alert(
+      "Print order?",
+      `Open printer options for order #${orderData?.orderNumber || orderData?._id}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Print",
+          onPress: printCurrentOrder,
+        },
+      ]
+    );
+  };
+
+  const printCurrentOrder = async () => {
     try {
       setPrintLoading(true);
       await printOrderTickets(orderData);

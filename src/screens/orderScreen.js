@@ -351,6 +351,33 @@ const OrderScreen = ({ navigation }) => {
   };
 
   const handlePrintOrders = async (orders = []) => {
+    const printableOrders = orders.filter(Boolean);
+    if (!printableOrders.length) {
+      dispatch(
+        showSnackbar({
+          type: "error",
+          message: "No orders available to print.",
+        })
+      );
+      return;
+    }
+
+    Alert.alert(
+      printableOrders.length === 1 ? "Print order?" : "Print orders?",
+      printableOrders.length === 1
+        ? `Open printer options for order #${printableOrders[0]?.orderNumber || printableOrders[0]?._id}?`
+        : `Open printer options for ${printableOrders.length} visible orders?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Print",
+          onPress: () => printOrders(printableOrders),
+        },
+      ]
+    );
+  };
+
+  const printOrders = async (orders = []) => {
     try {
       setPrinting(true);
       await printOrderTickets(orders);
