@@ -6,7 +6,9 @@
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "start": "react-native start --reset-cache",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "ios:entitlements:production": "node scripts/set-ios-entitlements.js production",
+    "ios:entitlements:tap-to-pay": "node scripts/set-ios-entitlements.js tapToPay"
   },
   "dependencies": {
     "@d11/react-native-fast-image": "8.11.1",

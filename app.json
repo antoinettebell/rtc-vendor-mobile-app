@@ -5,7 +5,7 @@
     "version": "1.6",
     "ios": {
       "bundleIdentifier": "com.rounddacorner.dev.vendor",
-      "buildNumber": "24",
+      "buildNumber": "27",
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
