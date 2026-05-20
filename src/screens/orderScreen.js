@@ -53,6 +53,8 @@ const OrderScreen = ({ navigation }) => {
   const [menuVisible, setMenuVisible] = useState(null);
   const [orderData, setOrderData] = useState([]);
   const [printing, setPrinting] = useState(false);
+  const [isPrintSelectMode, setIsPrintSelectMode] = useState(false);
+  const [selectedPrintOrderIds, setSelectedPrintOrderIds] = useState([]);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -70,26 +72,47 @@ const OrderScreen = ({ navigation }) => {
         orderStatusStrings.delivered,
         orderStatusStrings.completed,
         orderStatusStrings.cancel,
-      ].includes(item?.orderStatus);
+    ].includes(item?.orderStatus);
     const hideActionBtns = orderIsTerminal || isVendorPosOrder(item);
     const locationData = extractAdvanceOrderLocationAndTime(item);
+    const isSelectedForPrint = selectedPrintOrderIds.includes(item?._id);
 
     return (
       <TouchableOpacity
         key={index}
         activeOpacity={0.7}
-        style={styles.orderDetailsContainer}
-        onPress={() =>
+        style={[
+          styles.orderDetailsContainer,
+          isSelectedForPrint && styles.orderDetailsContainerSelected,
+        ]}
+        onPress={() => {
+          if (isPrintSelectMode) {
+            togglePrintOrderSelection(item?._id);
+            return;
+          }
           navigation.navigate("orderDetailsScreen", {
             orderId: item?._id,
-          })
-        }
+          });
+        }}
       >
         {/* Order Header */}
         <View style={[styles.orderHeader, { marginTop: 0 }]}>
-          <Text style={[styles.orderIdText, { color: AppColor.black }]}>
-            {"Order Status"}
-          </Text>
+          <View style={styles.orderHeaderTitleRow}>
+            {isPrintSelectMode ? (
+              <MaterialCommunityIcons
+                name={
+                  isSelectedForPrint
+                    ? "checkbox-marked-circle"
+                    : "checkbox-blank-circle-outline"
+                }
+                size={22}
+                color={isSelectedForPrint ? AppColor.primary : "#6F6F6F"}
+              />
+            ) : null}
+            <Text style={[styles.orderIdText, { color: AppColor.black }]}>
+              {"Order Status"}
+            </Text>
+          </View>
           <Menu
             mode="flat"
             visible={menuVisible === index}
@@ -99,7 +122,9 @@ const OrderScreen = ({ navigation }) => {
                 style={styles.menuAnchorContainer}
                 activeOpacity={0.7}
                 onPress={() =>
-                  !orderIsTerminal && handleMenuVisibility({ menuIndex: index })
+                  !isPrintSelectMode &&
+                  !orderIsTerminal &&
+                  handleMenuVisibility({ menuIndex: index })
                 }
               >
                 <Text style={styles.menuAnchorText}>
@@ -342,12 +367,40 @@ const OrderScreen = ({ navigation }) => {
 
   // handle stage change
   const handleStageChange = (stage) => {
+    cancelPrintSelection();
     setActiveStage(stage);
   };
 
   // handle hide menu
   const handleMenuVisibility = ({ menuIndex = null }) => {
     setMenuVisible(menuIndex);
+  };
+
+  const togglePrintOrderSelection = (orderId) => {
+    if (!orderId) return;
+    setSelectedPrintOrderIds((prev) =>
+      prev.includes(orderId)
+        ? prev.filter((id) => id !== orderId)
+        : [...prev, orderId]
+    );
+  };
+
+  const startPrintSelection = () => {
+    setMenuVisible(null);
+    setSelectedPrintOrderIds([]);
+    setIsPrintSelectMode(true);
+  };
+
+  const cancelPrintSelection = () => {
+    setIsPrintSelectMode(false);
+    setSelectedPrintOrderIds([]);
+  };
+
+  const handlePrintSelectedOrders = () => {
+    const selectedOrders = orderData.filter((order) =>
+      selectedPrintOrderIds.includes(order?._id)
+    );
+    handlePrintOrders(selectedOrders);
   };
 
   const handlePrintOrders = async (orders = []) => {
@@ -381,6 +434,7 @@ const OrderScreen = ({ navigation }) => {
     try {
       setPrinting(true);
       await printOrderTickets(orders);
+      cancelPrintSelection();
     } catch (error) {
       dispatch(
         showSnackbar({
@@ -638,8 +692,18 @@ const OrderScreen = ({ navigation }) => {
           },
         ]}
       >
-        <View style={{ width: "30%" }} />
-        <Text style={styles.headerTitle}>{"Orders"}</Text>
+        <View style={styles.headerSide}>
+          {isPrintSelectMode ? (
+            <TouchableOpacity activeOpacity={0.7} onPress={cancelPrintSelection}>
+              <Text style={styles.headerActionText}>{"Cancel"}</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+        <Text style={styles.headerTitle}>
+          {isPrintSelectMode
+            ? `${selectedPrintOrderIds.length} Selected`
+            : "Orders"}
+        </Text>
         <View style={styles.headerActions}>
           {profileStatus === vendorProfileStatus.approved ? (
             <>
@@ -647,15 +711,25 @@ const OrderScreen = ({ navigation }) => {
                 icon="printer"
                 iconColor={AppColor.black}
                 size={22}
-                disabled={printing || orderData.length === 0}
-                onPress={() => handlePrintOrders(orderData)}
+                disabled={
+                  printing ||
+                  orderData.length === 0 ||
+                  (isPrintSelectMode && selectedPrintOrderIds.length === 0)
+                }
+                onPress={
+                  isPrintSelectMode
+                    ? handlePrintSelectedOrders
+                    : startPrintSelection
+                }
               />
-              <IconButton
-                icon="history"
-                iconColor={AppColor.black}
-                size={24}
-                onPress={() => navigation.navigate("previousOrderScreen")}
-              />
+              {!isPrintSelectMode ? (
+                <IconButton
+                  icon="history"
+                  iconColor={AppColor.black}
+                  size={24}
+                  onPress={() => navigation.navigate("previousOrderScreen")}
+                />
+              ) : null}
             </>
           ) : null}
         </View>
@@ -711,7 +785,7 @@ const OrderScreen = ({ navigation }) => {
           <View style={styles.contentContainer}>
             <FlatList
               data={orderData}
-              extraData={orderData}
+              extraData={{ orderData, isPrintSelectMode, selectedPrintOrderIds }}
               keyExtractor={(item) => item?._id.toString()}
               renderItem={renderOrderComponent}
               contentContainerStyle={styles.flatListContent}
@@ -775,6 +849,14 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
     color: AppColor.black,
     textAlign: "center",
+  },
+  headerSide: {
+    width: "30%",
+  },
+  headerActionText: {
+    fontFamily: Mulish700,
+    fontSize: 14,
+    color: AppColor.primary,
   },
   headerActions: {
     width: "30%",
@@ -869,6 +951,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginVertical: 16,
+  },
+  orderHeaderTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  orderDetailsContainerSelected: {
+    borderColor: AppColor.primary,
+    backgroundColor: "rgba(252, 123, 3, 0.06)",
   },
   orderUserImageContainer: {
     height: 50,
