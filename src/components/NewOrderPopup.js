@@ -31,6 +31,7 @@ import {
   getVendorOrderTotal,
   isVendorPosOrder,
 } from "../helpers/order.helper";
+import { printOrderTickets } from "../helpers/print.helper";
 import AppImage from "./AppImage";
 
 const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
@@ -49,6 +50,7 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
   const [prepTimeError, setPrepTimeError] = useState("");
   const [nextOrderStatus, setNextOrderStatus] = useState(null);
   const [locationTimeAdvanceData, setLocationTimeAdvanceData] = useState(null);
+  const [printLoading, setPrintLoading] = useState(false);
 
   // Modal cancel press
   const onModalCancelPress = () => {
@@ -204,6 +206,22 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
     }
   };
 
+  const handlePrintPress = async () => {
+    try {
+      setPrintLoading(true);
+      await printOrderTickets(orderData);
+    } catch (error) {
+      dispatch(
+        showSnackbar({
+          type: "error",
+          message: error?.message || "Unable to print order.",
+        })
+      );
+    } finally {
+      setPrintLoading(false);
+    }
+  };
+
   const getOrderDetails = async () => {
     setLoading(true);
     try {
@@ -259,6 +277,12 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
     ].includes(orderData?.orderStatus);
   const showOrderActions =
     !!nextOrderStatus && !orderIsTerminal && !isVendorPosOrder(orderData);
+  const showPrintAction =
+    ![
+      orderStatusStrings.placed,
+      orderStatusStrings.cancel,
+      orderStatusStrings.rejected,
+    ].includes(orderData?.orderStatus);
 
   if (!mounted || loading) {
     return (
@@ -533,6 +557,28 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
             >{`Total: $${getVendorOrderTotal(orderData).toFixed(2)}`}</Text>
           </View>
 
+          {showPrintAction ? (
+            <TouchableOpacity
+              style={styles.printButton}
+              activeOpacity={0.7}
+              disabled={printLoading}
+              onPress={handlePrintPress}
+            >
+              {printLoading ? (
+                <ActivityIndicator color={AppColor.primary} />
+              ) : (
+                <>
+                  <MaterialCommunityIcons
+                    name="printer-outline"
+                    size={18}
+                    color={AppColor.primary}
+                  />
+                  <Text style={styles.printButtonText}>{"Print Order"}</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          ) : null}
+
           {/* Action Buttons or Status */}
           {showOrderActions ? (
             <View style={styles.actionContainer}>
@@ -608,6 +654,23 @@ const styles = StyleSheet.create({
   },
   orderStatusInfoText: {
     fontSize: 16,
+    fontFamily: Mulish700,
+    color: AppColor.primary,
+  },
+  printButton: {
+    height: 44,
+    marginTop: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: AppColor.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+    backgroundColor: AppColor.white,
+  },
+  printButtonText: {
+    fontSize: 14,
     fontFamily: Mulish700,
     color: AppColor.primary,
   },

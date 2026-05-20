@@ -32,6 +32,7 @@ import {
   getVendorOrderTotal,
   isVendorPosOrder,
 } from "../helpers/order.helper";
+import { printOrderTickets } from "../helpers/print.helper";
 import AppImage from "../components/AppImage";
 
 const ACTIVE_ORDER_STATUSES = [
@@ -51,6 +52,7 @@ const OrderScreen = ({ navigation }) => {
   const [activeStage, setActiveStage] = useState("current");
   const [menuVisible, setMenuVisible] = useState(null);
   const [orderData, setOrderData] = useState([]);
+  const [printing, setPrinting] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -112,6 +114,13 @@ const OrderScreen = ({ navigation }) => {
             }
             contentStyle={styles.menuContent}
           >
+            <Menu.Item
+              title="Print"
+              onPress={() => {
+                setMenuVisible(null);
+                handlePrintOrders([item]);
+              }}
+            />
             <Menu.Item
               title="Cancel"
               disabled={disabledStatuses.includes(orderStatusStrings.cancel)}
@@ -339,6 +348,22 @@ const OrderScreen = ({ navigation }) => {
   // handle hide menu
   const handleMenuVisibility = ({ menuIndex = null }) => {
     setMenuVisible(menuIndex);
+  };
+
+  const handlePrintOrders = async (orders = []) => {
+    try {
+      setPrinting(true);
+      await printOrderTickets(orders);
+    } catch (error) {
+      dispatch(
+        showSnackbar({
+          type: "error",
+          message: error?.message || "Unable to print order.",
+        })
+      );
+    } finally {
+      setPrinting(false);
+    }
   };
 
   // handle menu item press
@@ -586,16 +611,25 @@ const OrderScreen = ({ navigation }) => {
           },
         ]}
       >
-        <View style={{ width: "20%" }} />
+        <View style={{ width: "30%" }} />
         <Text style={styles.headerTitle}>{"Orders"}</Text>
-        <View style={{ width: "20%", alignItems: "flex-end" }}>
+        <View style={styles.headerActions}>
           {profileStatus === vendorProfileStatus.approved ? (
-            <IconButton
-              icon="history"
-              iconColor={AppColor.black}
-              size={24}
-              onPress={() => navigation.navigate("previousOrderScreen")}
-            />
+            <>
+              <IconButton
+                icon="printer"
+                iconColor={AppColor.black}
+                size={22}
+                disabled={printing || orderData.length === 0}
+                onPress={() => handlePrintOrders(orderData)}
+              />
+              <IconButton
+                icon="history"
+                iconColor={AppColor.black}
+                size={24}
+                onPress={() => navigation.navigate("previousOrderScreen")}
+              />
+            </>
           ) : null}
         </View>
       </View>
@@ -714,6 +748,12 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
     color: AppColor.black,
     textAlign: "center",
+  },
+  headerActions: {
+    width: "30%",
+    alignItems: "flex-end",
+    flexDirection: "row",
+    justifyContent: "flex-end",
   },
 
   // Button Container
