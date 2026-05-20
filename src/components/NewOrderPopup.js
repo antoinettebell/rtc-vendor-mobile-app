@@ -28,6 +28,7 @@ import {
   extractAdvanceOrderLocationAndTime,
   getDisabledStatuses,
   getNextOrderStatus,
+  getVendorOrderTotal,
   isVendorPosOrder,
 } from "../helpers/order.helper";
 import AppImage from "./AppImage";
@@ -529,7 +530,7 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
           <View style={styles.totalContainer}>
             <Text
               style={styles.totalText}
-            >{`Total: $${(orderData?.total || 0).toFixed(2)}`}</Text>
+            >{`Total: $${getVendorOrderTotal(orderData).toFixed(2)}`}</Text>
           </View>
 
           {/* Action Buttons or Status */}

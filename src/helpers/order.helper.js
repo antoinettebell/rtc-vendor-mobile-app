@@ -218,9 +218,32 @@ export const getNextOrderStatus = (currentStatus) => {
 
 export const isVendorPosOrder = (order) => order?.orderSource === "VENDOR_POS";
 
+const toMoneyNumber = (value) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? Number(n.toFixed(2)) : 0;
+};
+
+export const getVendorOrderSubtotal = (order) =>
+  toMoneyNumber(
+    order?.totalAfterDiscount ??
+      order?.subTotal ??
+      order?.subtotal ??
+      0
+  );
+
+export const getVendorTipAmount = (order) =>
+  toMoneyNumber(order?.tipsAmount ?? 0);
+
+export const getVendorOrderTotal = (order) =>
+  toMoneyNumber(getVendorOrderSubtotal(order) + getVendorTipAmount(order));
+
 export const formatMoney = (value) => {
-  if (typeof value !== 'number') {
-    return '0';
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) {
+    return '0.00';
   }
-  return Math.floor(value).toLocaleString('en-US');
+  return amount.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 };

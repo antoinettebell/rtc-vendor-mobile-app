@@ -29,6 +29,7 @@ import {
 import {
   extractAdvanceOrderLocationAndTime,
   getDisabledStatuses,
+  getVendorOrderTotal,
   isVendorPosOrder,
 } from "../helpers/order.helper";
 import AppImage from "../components/AppImage";
@@ -249,7 +250,7 @@ const OrderScreen = ({ navigation }) => {
         <View style={styles.orderTotalContainer}>
           <Text
             style={styles.orderTotalText}
-          >{`$${(item?.total || 0).toFixed(2)}`}</Text>
+          >{`$${getVendorOrderTotal(item).toFixed(2)}`}</Text>
           {!hideActionBtns ? (
             <View style={styles.orderActionButtons}>
               <TouchableOpacity

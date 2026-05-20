@@ -29,6 +29,7 @@ import {
   calculateTotalPreparationTime,
   extractAdvanceOrderLocationAndTime,
   getDisabledStatuses,
+  getVendorOrderTotal,
 } from "../helpers/order.helper";
 import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
 import AppImage from "../components/AppImage";
@@ -127,7 +128,7 @@ const PreviousOrderScreen = ({ navigation }) => {
         <View style={styles.orderTotalContainer}>
           <Text
             style={styles.orderTotalText}
-          >{`$${(item?.total || 0).toFixed(2)}`}</Text>
+          >{`$${getVendorOrderTotal(item).toFixed(2)}`}</Text>
         </View>
       </TouchableOpacity>
     );

@@ -43,6 +43,8 @@ const TIP_OPTIONS = [
   { label: "Custom", value: "custom" },
 ];
 
+const TAP_TO_PAY_PROCESSING_FEE_RATE = 0.035;
+
 const VendorPosCheckoutScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -239,7 +241,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
 
     setPaymentLoading("tap");
     try {
-      const amount = toAmount(tapOrder?.total || 0);
+      const amount = toAmount(tapSummary.total || 0);
       const tapToPayResult = await startTapToPaySale({
         amount,
         currency: "USD",
@@ -255,7 +257,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
 
   const completeTapToPayPayment = async (tapToPayResult) => {
     try {
-      const amount = toAmount(tapOrder?.total || 0);
+      const amount = toAmount(tapSummary.total || 0);
       let payment = tapToPayResult;
 
       if (tapToPayResult?.type === "OPAQUE_TOKEN") {
@@ -312,10 +314,18 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
     paymentProcessingFee: 0,
     total: order.subtotal + taxAmount + tipAmount,
   };
-  const tapSummary = tapOrder || {
-    ...summary,
-    paymentProcessingFee: 0,
-    total: summary.total,
+  const tapFeeFromValidation = Number(tapOrder?.paymentProcessingFee || 0);
+  const tapPaymentProcessingFee =
+    tapFeeFromValidation > 0
+      ? toMoneyNumber(tapFeeFromValidation)
+      : toMoneyNumber(summary.total * TAP_TO_PAY_PROCESSING_FEE_RATE);
+  const tapSummary = {
+    ...(tapOrder || summary),
+    paymentProcessingFee: tapPaymentProcessingFee,
+    total:
+      tapFeeFromValidation > 0 && tapOrder?.total
+        ? toMoneyNumber(tapOrder.total)
+        : toMoneyNumber(summary.total + tapPaymentProcessingFee),
   };
 
   return (

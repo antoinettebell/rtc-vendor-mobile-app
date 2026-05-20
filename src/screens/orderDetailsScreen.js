@@ -38,6 +38,8 @@ import {
   extractAdvanceOrderLocationAndTime,
   getDisabledStatuses,
   getNextOrderStatus,
+  getVendorOrderTotal,
+  getVendorTipAmount,
   isVendorPosOrder,
 } from "../helpers/order.helper";
 import AppImage from "../components/AppImage";
@@ -57,6 +59,8 @@ const OrderDetailsScreen = ({ navigation, route }) => {
   const [prepTimeError, setPrepTimeError] = useState("");
   const [nextOrderStatus, setNextOrderStatus] = useState(null);
   const [locationTimeAdvanceData, setLocationTimeAdvanceData] = useState(null);
+  const vendorTipAmount = getVendorTipAmount(orderData);
+  const vendorOrderTotal = getVendorOrderTotal(orderData);
 
   // Modal cancel press
   const onModalCancelPress = () => {
@@ -853,89 +857,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   {`- $${(orderData?.discount || 0).toFixed(2)}`}
                 </Text>
               </View>
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginTop: 16,
-                }}
-              >
-                <Text
-                  style={{
-                    fontFamily: Mulish400,
-                    fontSize: 14,
-                    color: AppColor.black,
-                  }}
-                >
-                  {"Sales Tax"}
-                </Text>
-                <Text
-                  style={{
-                    fontFamily: Mulish400,
-                    fontSize: 14,
-                    color: AppColor.black,
-                  }}
-                >
-                  {`$${(orderData?.taxAmount || 0).toFixed(2)}`}
-                </Text>
-              </View>
-              <Divider style={{ marginTop: 16 }} />
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginTop: 16,
-                }}
-              >
-                <Text
-                  style={{
-                    fontFamily: Mulish400,
-                    fontSize: 14,
-                    color: AppColor.black,
-                  }}
-                >
-                  {"Total with Tax"}
-                </Text>
-                <Text
-                  style={{
-                    fontFamily: Mulish400,
-                    fontSize: 14,
-                    color: AppColor.black,
-                  }}
-                >
-                  {`$${((orderData?.totalAfterDiscount || 0) + (orderData?.taxAmount || 0)).toFixed(2)}`}
-                </Text>
-              </View>
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginTop: 16,
-                }}
-              >
-                <Text
-                  style={{
-                    fontFamily: Mulish400,
-                    fontSize: 14,
-                    color: AppColor.black,
-                  }}
-                >
-                  {"Payment Processing Fee"}
-                </Text>
-                <Text
-                  style={{
-                    fontFamily: Mulish400,
-                    fontSize: 14,
-                    color: AppColor.black,
-                  }}
-                >
-                  {`$${(orderData?.paymentProcessingFee || 0).toFixed(2)}`}
-                </Text>
-              </View>
-              {orderData?.tipsAmount > 0 ? (
+              {vendorTipAmount > 0 ? (
                 <>
                   <Divider style={{ marginTop: 16 }} />
                   <View
@@ -962,7 +884,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                         color: AppColor.black,
                       }}
                     >
-                      {`$${(orderData?.tipsAmount || 0).toFixed(2)}`}
+                      {`$${vendorTipAmount.toFixed(2)}`}
                     </Text>
                   </View>
                 </>
@@ -1160,7 +1082,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   color: AppColor.black,
                 }}
               >
-                {`$${orderData?.total?.toFixed(2) || 0}`}
+                {`$${vendorOrderTotal.toFixed(2)}`}
               </Text>
             </View>
             {showOrderActions ? (

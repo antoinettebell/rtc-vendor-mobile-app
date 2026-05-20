@@ -51,6 +51,7 @@ import { getMessaging } from "@react-native-firebase/messaging";
 import {
   extractAdvanceOrderLocationAndTime,
   getDisabledStatuses,
+  getVendorOrderTotal,
   isVendorPosOrder,
 } from "../helpers/order.helper";
 import AppImage from "../components/AppImage";
@@ -730,7 +731,7 @@ const HomeScreen = ({ navigation }) => {
                     <View style={styles.orderTotalContainer}>
                       <Text
                         style={styles.orderTotalText}
-                      >{`$${(newOrderData?.total || 0).toFixed(2)}`}</Text>
+                      >{`$${getVendorOrderTotal(newOrderData).toFixed(2)}`}</Text>
                       {!isVendorPosOrder(newOrderData) ? (
                         <View style={styles.orderActionButtons}>
                           <TouchableOpacity
