@@ -184,8 +184,7 @@ export const extractAdvanceOrderLocationAndTime = (order) => {
   };
 };
 
-// The successful order flow sequence
-const successOrderFlow = [
+const deliverySuccessOrderFlow = [
   orderStatusStrings.placed,
   orderStatusStrings.accepted,
   orderStatusStrings.preparing,
@@ -195,14 +194,28 @@ const successOrderFlow = [
   orderStatusStrings.completed,
 ];
 
+const pickupSuccessOrderFlow = [
+  orderStatusStrings.placed,
+  orderStatusStrings.accepted,
+  orderStatusStrings.preparing,
+  orderStatusStrings.ready_for_pickup,
+  orderStatusStrings.completed,
+];
+
 /**
  * Returns the next order status in the successful flow.
  *
  * @param {string} currentStatus - The current status of the order.
+ * @param {Object} order - The order object, used to pick pickup vs delivery flow.
  * @returns {string|null} The next order status, or null if the current
  * status is the last one or not part of the successful flow.
  */
-export const getNextOrderStatus = (currentStatus) => {
+export const getNextOrderStatus = (currentStatus, order = null) => {
+  const successOrderFlow =
+    order?.fulfillmentType === "DELIVERY"
+      ? deliverySuccessOrderFlow
+      : pickupSuccessOrderFlow;
+
   // Find the index of the current status in the success flow
   const currentIndex = successOrderFlow.indexOf(currentStatus);
 

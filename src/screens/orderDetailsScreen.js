@@ -328,7 +328,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     if (orderData?.orderStatus) {
-      setNextOrderStatus(getNextOrderStatus(orderData?.orderStatus));
+      setNextOrderStatus(getNextOrderStatus(orderData?.orderStatus, orderData));
     } else {
       setNextOrderStatus(null);
     }
