@@ -32,6 +32,7 @@ import {
   foodTypeStrings,
 } from "../utils/constants";
 import { getRewardItemsDisplay } from "../helpers/discount.helper";
+import { printOrderTickets } from "../helpers/print.helper";
 import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
 import {
   calculateTotalPreparationTime,
@@ -54,6 +55,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
   const [rejectBtnLoading, setRejectBtnLoading] = useState(false);
   const [refundBtnLoading, setRefundBtnLoading] = useState(false);
   const [multiActionBtnLoading, setMultiActionBtnLoading] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const [orderData, setOrderData] = useState(null);
   const [timeModal, setTimeModal] = useState(null);
   const [prepTimeError, setPrepTimeError] = useState("");
@@ -321,6 +323,31 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     }
   };
 
+  const printOrderDetails = async () => {
+    if (!orderData || printing) return;
+    try {
+      setPrinting(true);
+      await printOrderTickets(orderData);
+    } catch (error) {
+      dispatch(
+        showSnackbar({
+          type: "error",
+          message: "Unable to open printer",
+        })
+      );
+    } finally {
+      setPrinting(false);
+    }
+  };
+
+  const handlePrintOrderPress = () => {
+    if (!orderData || printing) return;
+    Alert.alert("Print order?", "Open printer options for this order.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Print", onPress: printOrderDetails },
+    ]);
+  };
+
   useEffect(() => {
     console.log("params => ", params);
     getOrderDetailsFromAPI();
@@ -369,23 +396,34 @@ const OrderDetailsScreen = ({ navigation, route }) => {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
-        <IconButton
-          icon="arrow-left"
-          iconColor={AppColor.black}
-          size={24}
-          onPress={() => navigation.goBack()}
-        />
-        <Text style={styles.headerTitle}>{"Order Details"}</Text>
-        {params ? (
+        <View style={styles.headerSide}>
           <IconButton
-            icon="refresh"
+            icon="arrow-left"
             iconColor={AppColor.black}
             size={24}
-            onPress={() => getOrderDetailsFromAPI()}
+            onPress={() => navigation.goBack()}
           />
-        ) : (
-          <View style={styles.headerIconContainer}></View>
-        )}
+        </View>
+        <Text style={styles.headerTitle}>{"Order Details"}</Text>
+        <View style={styles.headerActions}>
+          {orderData ? (
+            <IconButton
+              icon="printer"
+              iconColor={AppColor.black}
+              size={22}
+              disabled={printing || dataLoading}
+              onPress={handlePrintOrderPress}
+            />
+          ) : null}
+          {params ? (
+            <IconButton
+              icon="refresh"
+              iconColor={AppColor.black}
+              size={24}
+              onPress={() => getOrderDetailsFromAPI()}
+            />
+          ) : null}
+        </View>
       </View>
 
       {/* Main Container */}
@@ -1212,8 +1250,14 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: Mulish700,
   },
-  headerIconContainer: {
-    width: 48,
+  headerSide: {
+    width: 96,
+    alignItems: "flex-start",
+  },
+  headerActions: {
+    width: 96,
+    flexDirection: "row",
+    justifyContent: "flex-end",
     alignItems: "center",
   },
 
