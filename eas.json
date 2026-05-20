@@ -20,6 +20,7 @@
       }
     },
     "tapToPayTest": {
+      "developmentClient": true,
       "distribution": "internal",
       "env": {
         "API_URL": "http://157.245.6.61:8000",
