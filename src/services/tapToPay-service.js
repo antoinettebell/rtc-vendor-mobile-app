@@ -47,6 +47,29 @@ export const startTapToPaySale = async ({
   orderNumber,
   orderId,
 }) => {
+  if (tapToPayConfig.mockMode) {
+    const invoiceNumber = orderNumber
+      ? `MOCK-${String(orderNumber)}`
+      : `MOCK-${Date.now()}`;
+
+    return {
+      type: "PROCESSED_TRANSACTION",
+      transactionId: `mock_tap_${Date.now()}`,
+      authCode: "MOCKED",
+      invoiceNumber,
+      accountNumber: "XXXX1111",
+      accountType: "VISA",
+      raw: {
+        amount: Number(amount).toFixed(2),
+        currency: currency || tapToPayConfig.currency,
+        orderId: orderId ? String(orderId) : null,
+        provider: tapToPayConfig.provider,
+        environment: tapToPayConfig.environment,
+        mockMode: true,
+      },
+    };
+  }
+
   if (!nativeTapToPay?.startSale) {
     throw new Error(
       "Tap to Pay native module is not installed. Add the iOS/Android Tap to Pay SDK bridge as RTCTapToPay."
