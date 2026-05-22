@@ -250,6 +250,12 @@ export const getVendorTipAmount = (order) =>
 export const getVendorOrderTotal = (order) =>
   toMoneyNumber(getVendorOrderSubtotal(order) + getVendorTipAmount(order));
 
+export const getPastOrderDate = (order) =>
+  order?.statusTime?.deliveredAt ||
+  order?.statusTime?.completedAt ||
+  order?.updatedAt ||
+  order?.createdAt;
+
 export const formatMoney = (value) => {
   const amount = Number(value);
   if (!Number.isFinite(amount)) {

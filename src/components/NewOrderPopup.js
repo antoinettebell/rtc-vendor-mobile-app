@@ -521,44 +521,6 @@ const NewOrderPopup = ({ orderId, onCloseCurrentOrder }) => {
                   <Text style={styles.itemPrice}>{`x${item.qty}`}</Text>
                 </View>
               )}
-              ListFooterComponent={() =>
-                orderData?.freeDessertApplied ? (
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                    }}
-                  >
-                    <View
-                      style={{
-                        flex: 1,
-                        gap: 8,
-                        flexDirection: "row",
-                        alignItems: "center",
-                      }}
-                    >
-                      <Text style={styles.itemName}>{"Dessert"}</Text>
-                      <Text
-                        style={{
-                          fontFamily: Mulish400,
-                          fontSize: 10,
-                          color: "#008B8B",
-                          backgroundColor: "#C2FFFF",
-                          paddingHorizontal: 8,
-                          paddingVertical: 4,
-                          borderRadius: 4,
-                          letterSpacing: 0.8,
-                        }}
-                      >
-                        {"Free"}
-                      </Text>
-                    </View>
-                    <View>
-                      <Text style={styles.itemPrice}>{"x1"}</Text>
-                    </View>
-                  </View>
-                ) : null
-              }
               showsVerticalScrollIndicator={false}
             />
           </View>

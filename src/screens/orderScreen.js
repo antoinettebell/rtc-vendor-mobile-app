@@ -451,9 +451,7 @@ const OrderScreen = ({ navigation }) => {
   const handleMenuItemPress = ({ item, index, status = null }) => {
     setMenuVisible(null);
     if (!status) return;
-    if (status === orderStatusStrings.preparing) {
-      handleAcceptPress(item);
-    } else if (status === orderStatusStrings.rejected) {
+    if (status === orderStatusStrings.rejected) {
       handleRejectOrderPress(item);
     } else {
       updateOrderStatusAPI({
@@ -474,16 +472,7 @@ const OrderScreen = ({ navigation }) => {
       });
       console.log("response => ", response);
       if (response?.success && response?.data) {
-        const tempOrderData = orderData.map((item) => {
-              if (item?._id === order?._id) {
-                return {
-                  ...item,
-                  ...response.data.order,
-                };
-              }
-          return item;
-        });
-        setOrderData(tempOrderData);
+        await getOrderDataFromAPI(1, false, activeStage === "advance");
         dispatch(
           showSnackbar({
             type: "success",
@@ -590,20 +579,7 @@ const OrderScreen = ({ navigation }) => {
       });
       console.log("response => ", response);
       if (response?.success && response?.data) {
-        const tempOrderData = orderData.map((item) => {
-              if (item?._id === order_id) {
-                return {
-                  ...item,
-                  ...response.data.order,
-                };
-              }
-          return item;
-        });
-        setOrderData(
-          tempOrderData.filter((item) =>
-            ACTIVE_ORDER_STATUSES.includes(item?.orderStatus)
-          )
-        );
+        await getOrderDataFromAPI(1, false, activeStage === "advance");
       }
     } catch (error) {
       console.log("error => ", error);
@@ -781,6 +757,28 @@ const OrderScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.pastOrdersButton}
+            onPress={() => navigation.navigate("previousOrderScreen")}
+          >
+            <View style={styles.pastOrdersButtonLabel}>
+              <MaterialCommunityIcons
+                name="history"
+                size={20}
+                color={AppColor.primary}
+              />
+              <Text style={styles.pastOrdersButtonText}>
+                {"Past Orders"}
+              </Text>
+            </View>
+            <MaterialCommunityIcons
+              name="chevron-right"
+              size={22}
+              color="#6F6F6F"
+            />
+          </TouchableOpacity>
+
           {/* Content Container */}
           <View style={styles.contentContainer}>
             <FlatList
@@ -899,6 +897,29 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.primary,
+  },
+  pastOrdersButton: {
+    minHeight: 46,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingHorizontal: 14,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: AppColor.border,
+    backgroundColor: AppColor.white,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  pastOrdersButtonLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  pastOrdersButtonText: {
+    fontFamily: Mulish700,
+    fontSize: 14,
+    color: AppColor.black,
   },
 
   // Loading Container

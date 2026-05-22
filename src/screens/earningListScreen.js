@@ -58,8 +58,6 @@ const EarningListScreen = ({ navigation, route }) => {
   const [totalPage, setTotalPage] = useState(1);
   const [itemList, setItemList] = useState([]);
   const [earningsTotal, setEarningsTotal] = useState(0);
-  const [dessertAmount, setDessertAmount] = useState(0);
-  const [dessertCount, setDessertCount] = useState(0);
   const [cashEarningsTotal, setCashEarningsTotal] = useState(0);
   const [digitalEarningsTotal, setDigitalEarningsTotal] = useState(0);
 
@@ -144,8 +142,6 @@ const EarningListScreen = ({ navigation, route }) => {
           setItemList((prevList) => [...prevList, ...response?.data?.data]);
         }
         setEarningsTotal(response.data.earnings_total || 0);
-        setDessertAmount(response.data.totalFreeDessertAmount || 0);
-        setDessertCount(response.data.totalFreeDessertCount || 0);
         setCurrentPage(response?.data?.page);
         setTotalPage(response?.data?.totalPages);
         setCashEarningsTotal(response.data.cashEarning || 0);
@@ -179,7 +175,7 @@ const EarningListScreen = ({ navigation, route }) => {
           />
         </View>
         <Text style={styles.title}>
-          {listType === "earning" ? "Earnings" : "Desserts"}
+          {"Earnings"}
         </Text>
         <View style={styles.sideContainer} />
       </View>
@@ -232,11 +228,6 @@ const EarningListScreen = ({ navigation, route }) => {
                 value={`$${earningsTotal.toFixed(2)}`}
               />
               <ContentRowItem
-                title={`Dessert (${dessertCount})`}
-                value={`$${dessertAmount.toFixed(2)}`}
-              />
-              <Divider />
-              <ContentRowItem
                 title="Cash Earning"
                 value={`$${cashEarningsTotal.toFixed(2)}`}
               />
@@ -245,23 +236,7 @@ const EarningListScreen = ({ navigation, route }) => {
                 value={`$${digitalEarningsTotal.toFixed(2)}`}
               />
             </View>
-          ) : (
-            <View style={styles.contentContainer}>
-              <ContentRowItem
-                title="Total Delivered Desserts"
-                value={dessertCount}
-                titleStyle={styles.contentRowTitleLarge}
-                valueStyle={styles.contentRowValueLarge}
-              />
-              <Divider />
-              <ContentRowItem
-                title="Total"
-                value={`$${dessertAmount.toFixed(2)}`}
-                titleStyle={styles.contentRowTitleLarge}
-                valueStyle={styles.contentRowValueLarge}
-              />
-            </View>
-          )}
+          ) : null}
 
           {/* List Container */}
           <View style={{ flex: 1, paddingBottom: insets.bottom }}>

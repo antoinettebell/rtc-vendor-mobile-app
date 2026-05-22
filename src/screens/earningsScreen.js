@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useState } from "react";
+import React, { memo, useCallback, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -11,13 +11,35 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 import { useFocusEffect } from "@react-navigation/native";
+import moment from "moment";
 import Entypo from "react-native-vector-icons/Entypo";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { vendorProfileStatus } from "../utils/constants";
-import { getEarningByFoodTruckID_API } from "../api/appAPI";
-import { formatMoney } from "../helpers/order.helper";
+import { getOrderList_API } from "../api/appAPI";
+import {
+  formatMoney,
+  getPastOrderDate,
+  getVendorOrderTotal,
+} from "../helpers/order.helper";
 import StatusBarManager from "../components/StatusBarManager";
+
+const PAST_ORDER_STATUSES = "DELIVERED, COMPLETED";
+
+const getOrdersTotal = (orders) =>
+  orders.reduce((total, order) => total + getVendorOrderTotal(order), 0);
+
+const getOrdersForPeriod = (orders, period) => {
+  const periodStart = moment().startOf(period);
+  const periodEnd = moment().endOf(period);
+
+  return orders.filter((order) => {
+    const orderDate = getPastOrderDate(order);
+    if (!orderDate) return false;
+
+    return moment(orderDate).isBetween(periodStart, periodEnd, null, "[]");
+  });
+};
 
 const EarningComponent = memo(({ title, amount, onPress }) => {
   return (
@@ -52,6 +74,28 @@ const EarningsScreen = ({ navigation }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [earnings, setEarnings] = useState(null);
 
+  const fetchPastOrders = async () => {
+    let page = 1;
+    let totalPages = 1;
+    let orders = [];
+
+    do {
+      const response = await getOrderList_API({
+        page,
+        limit: 100,
+        status: PAST_ORDER_STATUSES,
+      });
+
+      if (!response?.success || !response?.data) break;
+
+      orders = [...orders, ...(response.data.orderList || [])];
+      totalPages = response.data.totalPages || 1;
+      page += 1;
+    } while (page <= totalPages);
+
+    return orders;
+  };
+
   const onRefresh = async ({ isInitialLoad = false }) => {
     if (isInitialLoad) {
       setDataLoading(true);
@@ -59,14 +103,17 @@ const EarningsScreen = ({ navigation }) => {
       setIsRefreshing(true);
     }
     try {
-      const foodTruckId = user.foodTruck._id;
-      const response = await getEarningByFoodTruckID_API({
-        foodTruck_id: foodTruckId,
+      const pastOrders = await fetchPastOrders();
+      const todayOrders = getOrdersForPeriod(pastOrders, "day");
+      const weeklyOrders = getOrdersForPeriod(pastOrders, "week");
+      const monthlyOrders = getOrdersForPeriod(pastOrders, "month");
+
+      setEarnings({
+        totalEarning: getOrdersTotal(pastOrders),
+        todayEarning: getOrdersTotal(todayOrders),
+        weeklyEarning: getOrdersTotal(weeklyOrders),
+        monthlyEarning: getOrdersTotal(monthlyOrders),
       });
-      console.log("response", response);
-      if (response?.success && response?.data) {
-        setEarnings(response?.data?.earningsFulldata || null);
-      }
     } catch (error) {
       console.error("Error refreshing data:", error);
     } finally {
@@ -154,22 +201,6 @@ const EarningsScreen = ({ navigation }) => {
                 />
               </View>
 
-              <Pressable
-                style={styles.totalDeliveredContainer}
-                onPress={() =>
-                  onPressNavigationHandler({ listType: "desserts" })
-                }
-              >
-                <Text style={styles.totalDeliveredText} numberOfLines={1}>
-                  {"Total Delivered Desserts"}
-                </Text>
-                <FontAwesome6
-                  name="circle-arrow-right"
-                  size={18}
-                  color={AppColor.primary}
-                  style={styles.arrowIcon}
-                />
-              </Pressable>
             </>
           )}
         </ScrollView>

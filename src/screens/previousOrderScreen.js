@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useState } from "react";
+import React, { memo, useCallback, useMemo, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -7,32 +7,37 @@ import {
   ActivityIndicator as NativeIndicator,
   FlatList,
   Platform,
-  Alert,
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import FastImage from "@d11/react-native-fast-image";
 import moment from "moment";
 import StatusBarManager from "../components/StatusBarManager";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
-import { Divider, IconButton, Menu } from "react-native-paper";
-import { getOrderList_API, updateOrderStatusByID_API } from "../api/appAPI";
-import { useDispatch, useSelector } from "react-redux";
+import { Divider, IconButton } from "react-native-paper";
+import { getOrderList_API } from "../api/appAPI";
+import { useDispatch } from "react-redux";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
 import {
   orderCurrentStatusNames,
-  orderStatusStrings,
   PROFILE_AVATAR,
-  vendorProfileStatus,
 } from "../utils/constants";
 import {
-  calculateTotalPreparationTime,
   extractAdvanceOrderLocationAndTime,
-  getDisabledStatuses,
+  getPastOrderDate,
   getVendorOrderTotal,
 } from "../helpers/order.helper";
-import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
 import AppImage from "../components/AppImage";
+import { useFocusEffect } from "@react-navigation/native";
+
+const ORDER_PERIOD_FILTERS = [
+  { key: "day", label: "Daily" },
+  { key: "week", label: "Weekly" },
+  { key: "month", label: "Monthly" },
+  { key: "year", label: "Yearly" },
+  { key: "all", label: "All" },
+];
+
+const PAST_ORDER_STATUSES = "DELIVERED, COMPLETED";
 
 const PreviousOrderScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -40,12 +45,36 @@ const PreviousOrderScreen = ({ navigation }) => {
 
   const [dataLoading, setDataLoading] = useState(false);
   const [orderData, setOrderData] = useState([]);
+  const [selectedPeriod, setSelectedPeriod] = useState("day");
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMoreData, setHasMoreData] = useState(true);
+
+  const filteredOrderData = useMemo(() => {
+    if (selectedPeriod === "all") return orderData;
+
+    const periodStart = moment().startOf(selectedPeriod);
+    const periodEnd = moment().endOf(selectedPeriod);
+
+    return orderData.filter((order) => {
+      const orderDate = getPastOrderDate(order);
+      if (!orderDate) return false;
+
+      return moment(orderDate).isBetween(periodStart, periodEnd, null, "[]");
+    });
+  }, [orderData, selectedPeriod]);
+
+  const filteredOrderTotal = useMemo(
+    () =>
+      filteredOrderData.reduce(
+        (total, order) => total + getVendorOrderTotal(order),
+        0
+      ),
+    [filteredOrderData]
+  );
 
   // render order component
   const renderOrderComponent = ({ item, index }) => {
@@ -108,7 +137,7 @@ const PreviousOrderScreen = ({ navigation }) => {
           </View>
           <View>
             <Text style={styles.orderDate}>
-              {moment(item?.createdAt).format("DD MMM, YYYY")}
+              {moment(getPastOrderDate(item)).format("DD MMM, YYYY")}
             </Text>
             <View style={styles.orderTimeContainer}>
               <MaterialCommunityIcons
@@ -117,7 +146,7 @@ const PreviousOrderScreen = ({ navigation }) => {
                 color="#6F6F6F"
               />
               <Text style={styles.orderTime}>
-                {moment(item?.createdAt).format("hh:mm A")}
+                {moment(getPastOrderDate(item)).format("hh:mm A")}
               </Text>
             </View>
           </View>
@@ -181,8 +210,8 @@ const PreviousOrderScreen = ({ navigation }) => {
     try {
       const reqPayload = {
         page,
-        limit: 20,
-        status: "CANCEL, REJECTED, DELIVERED, COMPLETED",
+        limit: 100,
+        status: PAST_ORDER_STATUSES,
       };
       const response = await getOrderList_API(reqPayload);
       console.log("reponse => ", response);
@@ -215,9 +244,14 @@ const PreviousOrderScreen = ({ navigation }) => {
     }
   };
 
-  useEffect(() => {
-    getOrderDataFromAPI(1, false);
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      setCurrentPage(1);
+      setHasMoreData(true);
+      setOrderData([]);
+      getOrderDataFromAPI(1, false);
+    }, [])
+  );
 
   return (
     <View style={styles.container}>
@@ -233,15 +267,15 @@ const PreviousOrderScreen = ({ navigation }) => {
             onPress={() => navigation.goBack()}
           />
         </View>
-        <Text style={styles.headerTitle}>{"Previous Orders"}</Text>
+        <Text style={styles.headerTitle}>{"Past Orders"}</Text>
         <View style={{ width: "20%" }} />
       </View>
 
       {/* Content Container */}
       <View style={styles.contentContainer}>
         <FlatList
-          data={orderData}
-          extraData={orderData}
+          data={filteredOrderData}
+          extraData={{ filteredOrderData, selectedPeriod }}
           keyExtractor={(item) => item?._id.toString()}
           renderItem={renderOrderComponent}
           contentContainerStyle={styles.flatListContent}
@@ -251,6 +285,47 @@ const PreviousOrderScreen = ({ navigation }) => {
           refreshing={dataLoading}
           onRefresh={handleRefresh}
           ListEmptyComponent={renderEmptyComponent}
+          ListHeaderComponent={
+            <View style={styles.filterContainer}>
+              <View style={styles.filterHeaderRow}>
+                <View>
+                  <Text style={styles.filterTitle}>{"Past Orders"}</Text>
+                  <Text style={styles.filterSubtitle}>
+                    {`${filteredOrderData.length} orders`}
+                  </Text>
+                </View>
+                <Text style={styles.filterTotal}>
+                  {`$${filteredOrderTotal.toFixed(2)}`}
+                </Text>
+              </View>
+              <View style={styles.periodButtonContainer}>
+                {ORDER_PERIOD_FILTERS.map((period) => {
+                  const isActive = selectedPeriod === period.key;
+
+                  return (
+                    <TouchableOpacity
+                      key={period.key}
+                      activeOpacity={0.7}
+                      style={[
+                        styles.periodButton,
+                        isActive && styles.periodButtonActive,
+                      ]}
+                      onPress={() => setSelectedPeriod(period.key)}
+                    >
+                      <Text
+                        style={[
+                          styles.periodButtonText,
+                          isActive && styles.periodButtonTextActive,
+                        ]}
+                      >
+                        {period.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          }
           showsVerticalScrollIndicator={false}
         />
       </View>
@@ -333,6 +408,60 @@ const styles = StyleSheet.create({
   },
   flatListContent: {
     flexGrow: 1,
+    paddingBottom: 16,
+  },
+  filterContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  filterHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  filterTitle: {
+    fontFamily: Mulish700,
+    fontSize: 16,
+    color: AppColor.black,
+  },
+  filterSubtitle: {
+    fontFamily: Mulish400,
+    fontSize: 13,
+    color: "#6F6F6F",
+    marginTop: 2,
+  },
+  filterTotal: {
+    fontFamily: Mulish700,
+    fontSize: 18,
+    color: AppColor.black,
+  },
+  periodButtonContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  periodButton: {
+    minHeight: 36,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: AppColor.border,
+    backgroundColor: AppColor.white,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  periodButtonActive: {
+    borderColor: AppColor.primary,
+    backgroundColor: AppColor.primary,
+  },
+  periodButtonText: {
+    fontFamily: Mulish700,
+    fontSize: 13,
+    color: "#6F6F6F",
+  },
+  periodButtonTextActive: {
+    color: AppColor.white,
   },
   footerContainer: {
     padding: 20,

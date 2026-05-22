@@ -714,18 +714,6 @@ const HomeScreen = ({ navigation }) => {
                         </View>
                       </View>
                     ))}
-                    {/* for dessert */}
-                    {newOrderData?.freeDessertApplied ? (
-                      <View style={styles.orderItemContainer}>
-                        <View style={styles.freeItemContainer}>
-                          <Text style={styles.orderItemName}>{"Dessert"}</Text>
-                          <Text style={styles.freeItemBadge}>{"Free"}</Text>
-                        </View>
-                        <View>
-                          <Text style={styles.orderItemPrice}>{"x1"}</Text>
-                        </View>
-                      </View>
-                    ) : null}
                     <Divider style={styles.orderDivider} />
                     {/* Total */}
                     <View style={styles.orderTotalContainer}>
@@ -830,12 +818,6 @@ const HomeScreen = ({ navigation }) => {
                     title={"Monthly Earnings"}
                     subTitle={`$${(earningData?.monthlyEarning || 0).toFixed(2)}`}
                     icon={require("../assets/images/monthlyEarningIcon.png")}
-                    onPress={() => navigation.navigate("earningsScreen")}
-                  />
-                  <QuickStatsComponent
-                    title={"Monthly Delivered Desserts"}
-                    subTitle={earningData?.monthlyDeliveredDessertsCount || 0}
-                    icon={require("../assets/images/monthlyDeliveredDessertIcon.png")}
                     onPress={() => navigation.navigate("earningsScreen")}
                   />
                   <QuickStatsComponent

@@ -82,17 +82,6 @@ const renderOrderHtml = (order) => {
               `;
             })
             .join("")}
-          ${
-            order?.freeDessertApplied
-              ? `
-                <tr>
-                  <td>1</td>
-                  <td><div class="item-name">Free Loyalty Bucks item</div></td>
-                  <td>$0.00</td>
-                </tr>
-              `
-              : ""
-          }
         </tbody>
       </table>
       <div class="totals">

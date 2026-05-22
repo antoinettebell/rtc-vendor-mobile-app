@@ -96,12 +96,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
       });
       console.log("response => ", response);
       if (response?.success && response?.data) {
-        setOrderData((prev) => ({
-          ...prev,
-          orderStatus: response.data.order.orderStatus,
-          statusTime: response.data.order.statusTime,
-          pickupTime: response.data.order.pickupTime,
-        }));
+        await getOrderDetailsFromAPI();
         dispatch(
           showSnackbar({
             type: "success",
@@ -146,12 +141,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
               });
               console.log("response => ", response);
               if (response?.success && response?.data) {
-                setOrderData((prev) => ({
-                  ...prev,
-                  orderStatus: response.data.order.orderStatus,
-                  statusTime: response.data.order.statusTime,
-                  pickupTime: response.data.order.pickupTime,
-                }));
+                await getOrderDetailsFromAPI();
                 dispatch(
                   showSnackbar({
                     type: "success",
@@ -272,12 +262,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
       });
       console.log("response => ", response);
       if (response?.success && response?.data) {
-        setOrderData((prev) => ({
-          ...prev,
-          orderStatus: response.data.order.orderStatus,
-          statusTime: response.data.order.statusTime,
-          pickupTime: response.data.order.pickupTime,
-        }));
+        await getOrderDetailsFromAPI();
         dispatch(
           showSnackbar({
             type: "success",
@@ -806,18 +791,6 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   </View>
                 );
               })}
-              {/* for dessert */}
-              {orderData?.freeDessertApplied ? (
-                <View style={styles.orderItemContainer}>
-                  <View style={styles.freeItemContainer}>
-                    <Text style={styles.orderItemName}>{"Dessert"}</Text>
-                    <Text style={styles.freeItemBadge}>{"Free"}</Text>
-                  </View>
-                  <View>
-                    <Text style={styles.orderItemPrice}>{"$0.00"}</Text>
-                  </View>
-                </View>
-              ) : null}
             </View>
             <Divider style={styles.orderDivider} />
             {/* Total */}
