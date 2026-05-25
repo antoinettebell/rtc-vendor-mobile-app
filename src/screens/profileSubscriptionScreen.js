@@ -327,10 +327,6 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
         {/* Rate */}
         <Text style={{ fontSize: 28, fontWeight: "700", marginTop: 8 }}>
           {item.rate}%
-          <Text style={{ fontSize: 14, fontWeight: "500" }}>
-            {" "}
-            {item.rateType}
-          </Text>
         </Text>
 
         {/* See all benefits */}
