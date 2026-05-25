@@ -42,20 +42,20 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
   const [selectedAddOns, setSelectedAddOns] = useState([]);
   const selectedPlanForAddOns = useMemo(
     () => plansData.find((plan) => plan._id === selectedPlanId),
-    [plansData, selectedPlanId]
+    [plansData, selectedPlanId],
   );
   const isEliteSelected = selectedPlanForAddOns?.slug === "SUB_ELITE";
   const isEventAddOn = (addOn) => /event/i.test(addOn?.name || "");
   const eventAddOnIds = useMemo(
     () => addOnsData.filter(isEventAddOn).map((addOn) => addOn._id),
-    [addOnsData]
+    [addOnsData],
   );
   const visibleAddOns = useMemo(
     () =>
       isEliteSelected
         ? addOnsData.filter((addOn) => !isEventAddOn(addOn))
         : addOnsData,
-    [addOnsData, isEliteSelected]
+    [addOnsData, isEliteSelected],
   );
 
   const handleContinueBtnPress = async () => {
@@ -97,7 +97,7 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
             dispatch(clearPushNotificationRedux());
           },
         },
-      ]
+      ],
     );
   };
 
@@ -106,7 +106,7 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
     setExpandedPlanId(item._id);
     if (item.slug === "SUB_ELITE") {
       setSelectedAddOns((prev) =>
-        prev.filter((id) => !eventAddOnIds.includes(id))
+        prev.filter((id) => !eventAddOnIds.includes(id)),
       );
     }
   };
@@ -119,6 +119,18 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
         return [...prevSelectedAddOns, id];
       }
     });
+  };
+
+  const getBenefitLabel = (plan, benefit) => {
+    const benefitText = String(benefit || "");
+    if (
+      plan?.slug === "SUB_ELITE" &&
+      /event|marketplace|booking/i.test(benefitText)
+    ) {
+      return benefitText.replace(/\s*\(coming soon\)$/i, "") + " (Coming Soon)";
+    }
+
+    return benefitText;
   };
 
   const renderAddOnCard = ({ item }) => {
@@ -280,7 +292,7 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
                     flexWrap: "wrap",
                   }}
                 >
-                  {benefit}
+                  {getBenefitLabel(item, benefit)}
                 </Text>
               </View>
             ))}
@@ -319,7 +331,7 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
         showSnackbar({
           message: "Something went wrong!",
           type: "error",
-        })
+        }),
       );
     } finally {
       setDataLoading(false);
@@ -417,7 +429,8 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Select Add-Ons</Text>
                     <Text style={styles.sectionSubtitle}>
-                      Event Bookings are optional for Basic and Platinum, and included with Elite.
+                      Event Bookings are optional for Basic and Platinum. Elite
+                      Event Marketplace is coming soon.
                     </Text>
                   </View>
 

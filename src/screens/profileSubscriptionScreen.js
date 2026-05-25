@@ -55,20 +55,20 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
   const [currentAddOns, setCurrentAddOns] = useState(null);
   const selectedPlanForAddOns = useMemo(
     () => plansData.find((plan) => plan._id === selectedPlanId),
-    [plansData, selectedPlanId]
+    [plansData, selectedPlanId],
   );
   const isEliteSelected = selectedPlanForAddOns?.slug === "SUB_ELITE";
   const isEventAddOn = (addOn) => /event/i.test(addOn?.name || "");
   const eventAddOnIds = useMemo(
     () => addOnsData.filter(isEventAddOn).map((addOn) => addOn._id),
-    [addOnsData]
+    [addOnsData],
   );
   const visibleAddOns = useMemo(
     () =>
       isEliteSelected
         ? addOnsData.filter((addOn) => !isEventAddOn(addOn))
         : addOnsData,
-    [addOnsData, isEliteSelected]
+    [addOnsData, isEliteSelected],
   );
 
   const onUpdatePlanPress = async () => {
@@ -80,13 +80,13 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
       console.log("response => ", response);
       if (response?.success && response?.data) {
         dispatch(
-          updateFoodTruckKey({ keyName: "planId", keyValue: selectedPlanId })
+          updateFoodTruckKey({ keyName: "planId", keyValue: selectedPlanId }),
         );
         dispatch(
           showSnackbar({
             message: "Plan updated successfully!",
             type: "success",
-          })
+          }),
         );
         navigation.goBack();
       }
@@ -112,13 +112,13 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
       console.log("response => ", response);
       if (response?.success && response?.data) {
         dispatch(
-          updateFoodTruckKey({ keyName: "addOns", keyValue: nextAddOns })
+          updateFoodTruckKey({ keyName: "addOns", keyValue: nextAddOns }),
         );
         dispatch(
           showSnackbar({
             message: "Add-ons updated successfully!",
             type: "success",
-          })
+          }),
         );
         navigation.goBack();
       }
@@ -171,7 +171,7 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
 
         if (Array.isArray(truck.addOns)) {
           const filteredAddOns = truck.addOns.filter((id) =>
-            validAddOnsList.some((validAddOn) => validAddOn._id === id)
+            validAddOnsList.some((validAddOn) => validAddOn._id === id),
           );
           setSelectedAddOns(filteredAddOns);
         }
@@ -182,7 +182,7 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
         showSnackbar({
           message: "Something went wrong!",
           type: "error",
-        })
+        }),
       );
     } finally {
       setDataLoading(false);
@@ -194,7 +194,7 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
     setExpandedPlanId(item._id);
     if (item.slug === "SUB_ELITE") {
       setSelectedAddOns((prev) =>
-        prev.filter((id) => !eventAddOnIds.includes(id))
+        prev.filter((id) => !eventAddOnIds.includes(id)),
       );
     }
   };
@@ -234,6 +234,18 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
         />
       </TouchableOpacity>
     );
+  };
+
+  const getBenefitLabel = (plan, benefit) => {
+    const benefitText = String(benefit || "");
+    if (
+      plan?.slug === "SUB_ELITE" &&
+      /event|marketplace|booking/i.test(benefitText)
+    ) {
+      return benefitText.replace(/\s*\(coming soon\)$/i, "") + " (Coming Soon)";
+    }
+
+    return benefitText;
   };
 
   const renderPlanCard = ({ item }) => {
@@ -368,7 +380,7 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
                     flexWrap: "wrap",
                   }}
                 >
-                  {benefit}
+                  {getBenefitLabel(item, benefit)}
                 </Text>
               </View>
             ))}
@@ -475,7 +487,8 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Add-Ons</Text>
                   <Text style={styles.sectionSubtitle}>
-                    Event Bookings are optional for Basic and Platinum, and included with Elite.
+                    Event Bookings are optional for Basic and Platinum. Elite
+                    Event Marketplace is coming soon.
                   </Text>
                 </View>
 
