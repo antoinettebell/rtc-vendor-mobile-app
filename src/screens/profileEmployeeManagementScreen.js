@@ -19,6 +19,7 @@ import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 import {
   archiveVendorEmployee_API,
   createVendorEmployee_API,
+  deleteVendorEmployee_API,
   getVendorEmployees_API,
   resetVendorEmployeePin_API,
   updateVendorEmployee_API,
@@ -51,6 +52,8 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
   const [saving, setSaving] = useState(false);
   const [resetEmployeeId, setResetEmployeeId] = useState(null);
   const [resetPin, setResetPin] = useState("");
+  const [expandedEmployeeId, setExpandedEmployeeId] = useState(null);
+  const [employeeLocationDrafts, setEmployeeLocationDrafts] = useState({});
 
   const locationOptions = useMemo(
     () =>
@@ -62,6 +65,10 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
   );
 
   const loginPreview = getGeneratedLoginPreview(form);
+
+  const getLocationLabel = (locationId) =>
+    locationOptions.find((location) => location.value === locationId)?.label ||
+    "Unassigned location";
 
   const setFormValue = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -144,6 +151,42 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
     }
   };
 
+  const toggleEmployeeDetails = (employee) => {
+    setExpandedEmployeeId((current) =>
+      current === employee._id ? null : employee._id
+    );
+    setEmployeeLocationDrafts((current) => ({
+      ...current,
+      [employee._id]: current[employee._id] || employee.assigned_location_id,
+    }));
+  };
+
+  const setEmployeeLocationDraft = (employeeId, locationId) => {
+    setEmployeeLocationDrafts((current) => ({
+      ...current,
+      [employeeId]: locationId,
+    }));
+  };
+
+  const assignEmployeeLocation = async (employee) => {
+    const assignedLocationId = employeeLocationDrafts[employee._id];
+
+    if (!assignedLocationId) {
+      Alert.alert("Location required", "Select a saved location.");
+      return;
+    }
+
+    if (assignedLocationId === employee.assigned_location_id) {
+      Alert.alert("No change", "This employee is already assigned there.");
+      return;
+    }
+
+    await updateEmployee(employee, {
+      assigned_location_id: assignedLocationId,
+      is_working: false,
+    });
+  };
+
   const resetEmployeePin = async (employee) => {
     if (!resetPin.trim()) {
       Alert.alert("PIN required", "Enter a new PIN.");
@@ -166,7 +209,7 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
   const archiveEmployee = (employee) => {
     Alert.alert(
       "Archive employee?",
-      `${employee.first_name} ${employee.last_name} will be removed from active employee lists.`,
+      `${employee.first_name} ${employee.last_name} will be removed from active employee lists but historical activity will stay saved.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -180,6 +223,30 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
               );
             } catch (error) {
               Alert.alert("Archive failed", error?.message || "Please try again.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const deleteEmployee = (employee) => {
+    Alert.alert(
+      "Delete employee?",
+      `${employee.first_name} ${employee.last_name} will be permanently deleted if they do not have activity history. Use Archive for employees with orders, sessions, or requests.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteVendorEmployee_API(employee._id);
+              setEmployees((current) =>
+                current.filter((item) => item._id !== employee._id)
+              );
+            } catch (error) {
+              Alert.alert("Delete failed", error?.message || "Please try again.");
             }
           },
         },
@@ -254,6 +321,9 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
 
           <Text style={styles.label}>Employee Login ID</Text>
           <TextInput value={loginPreview} editable={false} style={styles.readOnlyInput} />
+          <Text style={styles.helperText}>
+            If this ID is already taken, the system will add -2, -3, and so on.
+          </Text>
 
           <Text style={styles.label}>PIN</Text>
           <TextInput
@@ -286,18 +356,83 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
           employees.map((employee) => (
             <View key={employee._id} style={styles.employeeCard}>
               <View style={styles.employeeHeader}>
-                <View style={{ flex: 1 }}>
+                <TouchableOpacity
+                  onPress={() => toggleEmployeeDetails(employee)}
+                  style={styles.employeeSummary}
+                >
                   <Text style={styles.employeeName}>
                     {employee.first_name} {employee.last_name}
                   </Text>
                   <Text style={styles.employeeMeta}>
-                    {employee.role} · {employee.zip_code}
+                    {employee.role} - {employee.zip_code}
                   </Text>
-                </View>
-                <TouchableOpacity onPress={() => archiveEmployee(employee)}>
-                  <Text style={styles.archiveText}>Archive</Text>
+                  <Text style={styles.employeeMeta}>
+                    Assigned: {getLocationLabel(employee.assigned_location_id)}
+                  </Text>
                 </TouchableOpacity>
+                <View style={styles.employeeActions}>
+                  <IconButton
+                    icon={
+                      expandedEmployeeId === employee._id
+                        ? "chevron-up"
+                        : "chevron-down"
+                    }
+                    iconColor={AppColor.textHighlighter}
+                    size={22}
+                    style={styles.trashButton}
+                    onPress={() => toggleEmployeeDetails(employee)}
+                    accessibilityLabel={`Manage ${employee.first_name} ${employee.last_name}`}
+                  />
+                  <TouchableOpacity
+                    onPress={() => archiveEmployee(employee)}
+                    style={styles.archivePill}
+                  >
+                    <Text style={styles.archiveText}>Archive</Text>
+                  </TouchableOpacity>
+                  <IconButton
+                    icon="trash-can-outline"
+                    iconColor={AppColor.red}
+                    size={22}
+                    style={styles.trashButton}
+                    onPress={() => deleteEmployee(employee)}
+                    accessibilityLabel={`Delete ${employee.first_name} ${employee.last_name}`}
+                  />
+                </View>
               </View>
+
+              {expandedEmployeeId === employee._id ? (
+                <View style={styles.submenu}>
+                  <Text style={styles.submenuTitle}>Location Assignment</Text>
+                  <Text style={styles.helperText}>
+                    Moving an employee to another location sets them off duty and
+                    ends any active session.
+                  </Text>
+                  <Text style={styles.label}>Assigned Location</Text>
+                  <Dropdown
+                    data={locationOptions}
+                    labelField="label"
+                    valueField="value"
+                    value={
+                      employeeLocationDrafts[employee._id] ||
+                      employee.assigned_location_id
+                    }
+                    onChange={(item) =>
+                      setEmployeeLocationDraft(employee._id, item.value)
+                    }
+                    placeholder="Select location"
+                    style={styles.dropdown}
+                    selectedTextStyle={styles.dropdownText}
+                    placeholderStyle={styles.placeholderText}
+                    itemTextStyle={styles.dropdownText}
+                  />
+                  <TouchableOpacity
+                    onPress={() => assignEmployeeLocation(employee)}
+                    style={styles.secondaryButton}
+                  >
+                    <Text style={styles.secondaryButtonText}>Save Location</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
 
               <Text style={styles.label}>Employee Login ID</Text>
               <TextInput
@@ -446,6 +581,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     minHeight: 46,
   },
+  helperText: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 12,
+    marginTop: 6,
+  },
   dropdown: {
     borderWidth: 1,
     borderColor: AppColor.border,
@@ -505,6 +646,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 12,
   },
+  employeeSummary: { flex: 1 },
   employeeName: {
     color: AppColor.text,
     fontFamily: Mulish700,
@@ -516,10 +658,34 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
+  employeeActions: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 2,
+  },
+  archivePill: {
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
   archiveText: {
-    color: AppColor.red,
+    color: AppColor.textHighlighter,
     fontFamily: Mulish700,
-    fontSize: 13,
+    fontSize: 12,
+  },
+  trashButton: { margin: -8 },
+  submenu: {
+    borderTopWidth: 1,
+    borderColor: AppColor.border,
+    marginTop: 12,
+    paddingTop: 12,
+  },
+  submenuTitle: {
+    color: AppColor.text,
+    fontFamily: Mulish700,
+    fontSize: 14,
   },
   toggleRow: {
     flexDirection: "row",

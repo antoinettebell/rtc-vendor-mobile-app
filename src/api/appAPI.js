@@ -4,6 +4,7 @@ import {
   ADD_BANK_DETAIL,
   ADD_FOOD_CATEGORY,
   ADD_FOOD_ITEM,
+  ARCHIVE_VENDOR_EMPLOYEE,
   ADD_REVIEW,
   CHANGE_MENU_AVAILABILITY,
   CUISINE,
@@ -937,6 +938,21 @@ export const resetVendorEmployeePin_API = async ({ employee_id, pin }) => {
 };
 
 export const archiveVendorEmployee_API = async (employee_id) => {
+  try {
+    const response = await apiClient.patch(
+      ARCHIVE_VENDOR_EMPLOYEE(employee_id),
+      {},
+      {
+        skipToken: false,
+      },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const deleteVendorEmployee_API = async (employee_id) => {
   try {
     const response = await apiClient.delete(
       VENDOR_EMPLOYEE_BY_ID(employee_id),

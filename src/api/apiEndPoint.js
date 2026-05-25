@@ -21,6 +21,8 @@ export const UPDATE_SUBSCRIPTION_ADD_ONS = "/food-truck/change-add-on-plan";
 export const VENDOR_EMPLOYEE = "/vendor-employee";
 export const VENDOR_EMPLOYEE_BY_ID = (employee_id) =>
   `/vendor-employee/${employee_id}`;
+export const ARCHIVE_VENDOR_EMPLOYEE = (employee_id) =>
+  `/vendor-employee/${employee_id}/archive`;
 export const RESET_VENDOR_EMPLOYEE_PIN = (employee_id) =>
   `/vendor-employee/${employee_id}/reset-pin`;
 export const EMPLOYEE_DASHBOARD = "/vendor-employee/dashboard";

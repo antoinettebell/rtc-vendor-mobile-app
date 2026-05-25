@@ -43,6 +43,11 @@ const UserProfileScreen = ({ navigation }) => {
 
   const [getUserDetailLoading, setGetUserDetailLoading] = useState(false);
   const [socialMedia, setSocialMedia] = useState([]);
+  const canUseEmployeeLogin =
+    !!user?.foodTruck?.plan?.capabilities?.employeeLogin;
+  const vendorAccessCode = user?.foodTruck?._id
+    ? user.foodTruck._id.toString().slice(-6).toUpperCase()
+    : "";
 
   const updateStateOnDataFetch = (USER_DATA, FOOD_TRUCK_DATA) => {
     setSocialMedia(FOOD_TRUCK_DATA?.socialMedia || []);
@@ -200,6 +205,27 @@ const UserProfileScreen = ({ navigation }) => {
                 overflow: "hidden",
               }}
             />
+
+            {canUseEmployeeLogin && !!vendorAccessCode ? (
+              <View style={styles.accessCodeBox}>
+                <View style={styles.accessCodeIconContainer}>
+                  <Ionicons
+                    name="key-outline"
+                    size={22}
+                    color={AppColor.primary}
+                  />
+                </View>
+                <View style={styles.accessCodeTextContainer}>
+                  <Text style={styles.accessCodeLabel}>
+                    Vendor Access Code
+                  </Text>
+                  <Text style={styles.accessCodeHelper}>
+                    Share this with employees when they log in.
+                  </Text>
+                </View>
+                <Text style={styles.accessCodeValue}>{vendorAccessCode}</Text>
+              </View>
+            ) : null}
 
             <Divider />
 
@@ -384,6 +410,47 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: Mulish400,
     color: AppColor.subText,
+  },
+  accessCodeBox: {
+    alignItems: "center",
+    backgroundColor: "#FFF7ED",
+    borderColor: "#FED7AA",
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    marginBottom: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  accessCodeIconContainer: {
+    alignItems: "center",
+    backgroundColor: AppColor.white,
+    borderRadius: 18,
+    height: 36,
+    justifyContent: "center",
+    marginRight: 10,
+    width: 36,
+  },
+  accessCodeTextContainer: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  accessCodeLabel: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 14,
+  },
+  accessCodeHelper: {
+    color: AppColor.subText,
+    fontFamily: Mulish400,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  accessCodeValue: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 18,
+    letterSpacing: 0,
   },
 
   socialMediaContainer: {
