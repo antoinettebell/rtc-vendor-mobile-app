@@ -28,7 +28,7 @@ import {
 } from "../utils/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { emailRegex, passwordRegex } from "../utils/constants";
-import { login_API } from "../api/authAPI";
+import { employeeLogin_API, login_API } from "../api/authAPI";
 import { useDispatch } from "react-redux";
 import { setAuthToken, setUser } from "../redux/slices/userSlice";
 import { onOnBoard, onSignin } from "../redux/slices/authSlice";
@@ -54,6 +54,14 @@ const SignInScreen = ({ navigation, route }) => {
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [loginMode, setLoginMode] = useState("OWNER");
+  const [vendorAccessCode, setVendorAccessCode] = useState("");
+  const [vendorAccessCodeError, setVendorAccessCodeError] = useState("");
+  const [employeeLoginId, setEmployeeLoginId] = useState("");
+  const [employeeLoginIdError, setEmployeeLoginIdError] = useState("");
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [pinVisible, setPinVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({
     visible: false,
@@ -65,12 +73,25 @@ const SignInScreen = ({ navigation, route }) => {
     setPasswordVisible(!passwordVisible);
   };
 
+  const togglePinVisibility = () => {
+    setPinVisible(!pinVisible);
+  };
+
   const validateEmail = (email) => {
     return emailRegex?.test(email);
   };
 
   const validatePassword = (password) => {
     return passwordRegex?.test(password);
+  };
+
+  const handleModeChange = (mode) => {
+    setLoginMode(mode);
+    setEmailError("");
+    setPasswordError("");
+    setVendorAccessCodeError("");
+    setEmployeeLoginIdError("");
+    setPinError("");
   };
 
   const handleSignIn = async (passedEmail, passedPassword) => {
@@ -163,6 +184,68 @@ const SignInScreen = ({ navigation, route }) => {
     }
   };
 
+  const handleEmployeeSignIn = async () => {
+    let isValid = true;
+    const currentAccessCode = vendorAccessCode.trim();
+    const currentLoginId = employeeLoginId.trim().toLowerCase();
+    const currentPin = pin.trim();
+
+    if (currentAccessCode.length !== 6) {
+      setVendorAccessCodeError("Enter the 6-character vendor access code.");
+      isValid = false;
+    } else {
+      setVendorAccessCodeError("");
+    }
+
+    if (!currentLoginId) {
+      setEmployeeLoginIdError("Employee Login ID is required.");
+      isValid = false;
+    } else {
+      setEmployeeLoginIdError("");
+    }
+
+    if (!currentPin) {
+      setPinError("PIN is required.");
+      isValid = false;
+    } else {
+      setPinError("");
+    }
+
+    if (!isValid) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await employeeLogin_API({
+        vendorAccessCode: currentAccessCode,
+        employeeLoginId: currentLoginId,
+        pin: currentPin,
+      });
+
+      if (response?.success && response?.data) {
+        dispatch(
+          setUser({
+            ...response.data.employee,
+            foodTruck: response.data.foodTruck,
+            assignedLocation: response.data.assignedLocation,
+          })
+        );
+        dispatch(setAuthToken(response.data.authToken));
+        dispatch(onSignin(true));
+      }
+    } catch (error) {
+      console.log("Error => ", error);
+      setSnackbar({
+        visible: true,
+        message: error.message,
+        type: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleForgetPWD = () => {
     navigation.navigate("forgetPassword");
   };
@@ -240,7 +323,46 @@ const SignInScreen = ({ navigation, route }) => {
               </Text>
             </View>
 
+            <View style={styles.modeSelector}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[
+                  styles.modeButton,
+                  loginMode === "OWNER" && styles.modeButtonActive,
+                ]}
+                onPress={() => handleModeChange("OWNER")}
+              >
+                <Text
+                  style={[
+                    styles.modeButtonText,
+                    loginMode === "OWNER" && styles.modeButtonTextActive,
+                  ]}
+                >
+                  Vendor / Owner Login
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[
+                  styles.modeButton,
+                  loginMode === "EMPLOYEE" && styles.modeButtonActive,
+                ]}
+                onPress={() => handleModeChange("EMPLOYEE")}
+              >
+                <Text
+                  style={[
+                    styles.modeButtonText,
+                    loginMode === "EMPLOYEE" && styles.modeButtonTextActive,
+                  ]}
+                >
+                  Employee Login
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.formContainer}>
+              {loginMode === "OWNER" ? (
+                <>
               {/* Email Container */}
               <Text style={styles.inputLabel}>{"Email"}</Text>
               <TextInput
@@ -331,10 +453,125 @@ const SignInScreen = ({ navigation, route }) => {
                   {"Forgot Password?"}
                 </Text>
               </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.inputLabel}>{"Vendor Access Code"}</Text>
+                  <TextInput
+                    dense
+                    value={vendorAccessCode}
+                    onChangeText={(text) => {
+                      setVendorAccessCode(text);
+                      if (text.trim().length === 6) {
+                        setVendorAccessCodeError("");
+                      }
+                    }}
+                    style={styles.input}
+                    contentStyle={styles.inputText}
+                    mode="outlined"
+                    error={!!vendorAccessCodeError}
+                    outlineColor={AppColor.border}
+                    activeOutlineColor={AppColor.primary}
+                    outlineStyle={{ borderRadius: 8 }}
+                    autoCapitalize="characters"
+                    maxLength={6}
+                    theme={{ colors: { onSurfaceVariant: "#777" } }}
+                  />
+                  {!!vendorAccessCodeError && (
+                    <HelperText
+                      type="error"
+                      visible={!!vendorAccessCodeError}
+                      style={styles.helper}
+                    >
+                      {vendorAccessCodeError}
+                    </HelperText>
+                  )}
+
+                  <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+                    {"Employee Login ID"}
+                  </Text>
+                  <TextInput
+                    dense
+                    value={employeeLoginId}
+                    onChangeText={(text) => {
+                      setEmployeeLoginId(text);
+                      if (text.trim()) {
+                        setEmployeeLoginIdError("");
+                      }
+                    }}
+                    style={styles.input}
+                    contentStyle={styles.inputText}
+                    mode="outlined"
+                    autoCapitalize="none"
+                    error={!!employeeLoginIdError}
+                    outlineColor={AppColor.border}
+                    activeOutlineColor={AppColor.primary}
+                    outlineStyle={{ borderRadius: 8 }}
+                    textContentType="username"
+                    theme={{ colors: { onSurfaceVariant: "#777" } }}
+                  />
+                  {!!employeeLoginIdError && (
+                    <HelperText
+                      type="error"
+                      visible={!!employeeLoginIdError}
+                      style={styles.helper}
+                    >
+                      {employeeLoginIdError}
+                    </HelperText>
+                  )}
+
+                  <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+                    {"PIN"}
+                  </Text>
+                  <TextInput
+                    dense
+                    value={pin}
+                    onChangeText={(text) => {
+                      setPin(text);
+                      if (text.trim()) {
+                        setPinError("");
+                      }
+                    }}
+                    style={styles.input}
+                    contentStyle={styles.inputText}
+                    mode="outlined"
+                    autoCapitalize="none"
+                    error={!!pinError}
+                    secureTextEntry={!pinVisible}
+                    outlineColor={AppColor.border}
+                    activeOutlineColor={AppColor.primary}
+                    outlineStyle={{ borderRadius: 8 }}
+                    right={
+                      <TextInput.Icon
+                        icon={pinVisible ? "eye-off" : "eye"}
+                        onPress={togglePinVisibility}
+                        color={AppColor.textHighlighter}
+                        forceTextInputFocus={false}
+                      />
+                    }
+                    keyboardType="number-pad"
+                    textContentType="oneTimeCode"
+                    theme={{ colors: { onSurfaceVariant: "#777" } }}
+                  />
+                  {!!pinError && (
+                    <HelperText
+                      type="error"
+                      visible={!!pinError}
+                      style={styles.helper}
+                    >
+                      {pinError}
+                    </HelperText>
+                  )}
+                </>
+              )}
 
               {/* Signin Btn */}
               <TouchableOpacity
-                onPress={() => handleSignIn(email, password)}
+                onPress={() =>
+                  loginMode === "OWNER"
+                    ? handleSignIn(email, password)
+                    : handleEmployeeSignIn()
+                }
                 activeOpacity={0.7}
                 style={styles.signInButton}
                 disabled={loading}
@@ -347,15 +584,17 @@ const SignInScreen = ({ navigation, route }) => {
               </TouchableOpacity>
 
               {/* SignUp Btn */}
-              <View style={styles.signUpContainer}>
-                <Text style={styles.signUpText}>{"Don't have account?"} </Text>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate("signup")}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.signUpLink}>{"Sign Up"}</Text>
-                </TouchableOpacity>
-              </View>
+              {loginMode === "OWNER" && (
+                <View style={styles.signUpContainer}>
+                  <Text style={styles.signUpText}>{"Don't have account?"} </Text>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate("signup")}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.signUpLink}>{"Sign Up"}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           </View>
           <Portal>
@@ -435,6 +674,33 @@ const styles = StyleSheet.create({
     fontFamily: Mulish600,
     fontSize: 12,
     marginBottom: 2,
+  },
+  modeSelector: {
+    backgroundColor: AppColor.lightGray || "#F5F5F5",
+    borderRadius: 8,
+    flexDirection: "row",
+    marginBottom: 24,
+    padding: 4,
+  },
+  modeButton: {
+    alignItems: "center",
+    borderRadius: 6,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 42,
+    paddingHorizontal: 8,
+  },
+  modeButtonActive: {
+    backgroundColor: AppColor.primary,
+  },
+  modeButtonText: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish600,
+    fontSize: 13,
+    textAlign: "center",
+  },
+  modeButtonTextActive: {
+    color: AppColor.white,
   },
   formContainer: {
     flex: 1,

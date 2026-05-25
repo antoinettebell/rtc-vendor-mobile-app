@@ -3,6 +3,7 @@ import {
   AGREEMENT,
   CHANGE_PASSWORD,
   CUISINE,
+  EMPLOYEE_LOGIN,
   FORGOT_PASSWORD,
   LOGIN,
   PRIVACY_POLICY,
@@ -17,6 +18,17 @@ import {
 export const login_API = async (payload) => {
   try {
     const URL = `${LOGIN}`;
+    const response = await apiClient.post(URL, payload, { skipToken: true });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+// Employee Login API
+export const employeeLogin_API = async (payload) => {
+  try {
+    const URL = `${EMPLOYEE_LOGIN}`;
     const response = await apiClient.post(URL, payload, { skipToken: true });
     return response?.data;
   } catch (error) {

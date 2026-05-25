@@ -406,6 +406,7 @@ const ProfileMenuScreen = ({ navigation }) => {
   const { user, bankStatus, profileStatus } = useSelector(
     (state) => state.userReducer
   );
+  const canManageEmployees = !!user?.foodTruck?.plan?.capabilities?.employeeLogin;
 
   const [signoutModalVisible, setSignoutModalVisible] = useState(false);
   const [signoutModalLoading, setSignoutModalLoading] = useState(false);
@@ -761,6 +762,19 @@ const ProfileMenuScreen = ({ navigation }) => {
             onPress={() => navigation.navigate("profileSubscriptionScreen")}
           />
           <HR />
+          {canManageEmployees && (
+            <>
+              <ItemComponent
+                rightIcon
+                label="Employees"
+                imageUri={PROFILE_MENU_IMAGES.yourProfile}
+                onPress={() =>
+                  navigation.navigate("profileEmployeeManagementScreen")
+                }
+              />
+              <HR />
+            </>
+          )}
           <ItemComponent
             rightIcon
             label="Change Password"

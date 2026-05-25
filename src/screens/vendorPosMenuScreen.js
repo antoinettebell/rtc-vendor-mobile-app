@@ -66,6 +66,8 @@ const VendorPosMenuScreen = ({ navigation }) => {
   const [guestPhone, setGuestPhone] = useState("");
 
   const foodTruckId = user?.foodTruck?._id;
+  const isEmployeeSession =
+    user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
 
   const cartItemById = useMemo(() => {
     return order.items.reduce((acc, item) => {
@@ -83,7 +85,9 @@ const VendorPosMenuScreen = ({ navigation }) => {
     setLoading(true);
     try {
       const [truckResponse, itemsResponse] = await Promise.all([
-        getFoodtruckDetail_API(foodTruckId),
+        isEmployeeSession
+          ? Promise.resolve(null)
+          : getFoodtruckDetail_API(foodTruckId),
         getAllFoodItem_API(),
       ]);
 
@@ -99,7 +103,7 @@ const VendorPosMenuScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
     }
-  }, [foodTruckId]);
+  }, [foodTruckId, isEmployeeSession]);
 
   useEffect(() => {
     loadData();
@@ -186,10 +190,11 @@ const VendorPosMenuScreen = ({ navigation }) => {
       return;
     }
 
-    const currentLocation =
-      foodTruck?.locations?.find(
-        (location) => location._id === foodTruck?.currentLocation
-      ) || foodTruck?.locations?.[0];
+    const currentLocation = isEmployeeSession
+      ? user?.assignedLocation
+      : foodTruck?.locations?.find(
+          (location) => location._id === foodTruck?.currentLocation
+        ) || foodTruck?.locations?.[0];
 
     if (!currentLocation?._id) {
       Alert.alert(

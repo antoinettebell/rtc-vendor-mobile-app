@@ -49,8 +49,14 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const order = useSelector((state) => state.posOrderReducer.currentOrder);
+  const { user } = useSelector((state) => state.userReducer);
 
   const { foodTruck, location, guestPhone } = route.params || {};
+  const isEmployeeSession =
+    user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
+  const canUseTapToPay =
+    tapToPayConfig.enabled &&
+    (!isEmployeeSession || !!user?.employeeCapabilities?.tapToPay);
 
   const [loading, setLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState(null);
@@ -72,7 +78,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
     return {
       foodTruckId: foodTruck?._id || order.foodTruckId,
       locationId: location?._id,
-      orderSource: "VENDOR_POS",
+      orderSource: isEmployeeSession ? "WALK_UP_EMPLOYEE" : "VENDOR_POS",
       fulfillmentType: "PICKUP",
       guestCustomer: {
         phone: guestPhone || null,
@@ -120,11 +126,23 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
         return itemPayload;
       }),
     };
-  }, [foodTruck?._id, guestPhone, location?._id, order.foodTruckId, order.items, taxAmount, tipAmount]);
+  }, [
+    foodTruck?._id,
+    guestPhone,
+    location?._id,
+    order.foodTruckId,
+    order.items,
+    taxAmount,
+    tipAmount,
+  ]);
 
   useEffect(() => {
     const loadCheckout = async () => {
-      if (!basePayload.foodTruckId || !basePayload.locationId || order.items.length === 0) {
+      if (
+        !basePayload.foodTruckId ||
+        !basePayload.locationId ||
+        order.items.length === 0
+      ) {
         navigation.goBack();
         return;
       }
@@ -154,7 +172,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
           setCashOrder(cashValidation.data.order);
         }
 
-        if (tapToPayConfig.enabled) {
+        if (canUseTapToPay) {
           const tapValidation = await validatePosOrder_API({
             ...basePayload,
             taxAmount: nextTax,
@@ -170,14 +188,25 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
           setTapOrder(null);
         }
       } catch (error) {
-        Alert.alert("Checkout unavailable", error?.message || "Could not validate order.");
+        Alert.alert(
+          "Checkout unavailable",
+          error?.message || "Could not validate order.",
+        );
       } finally {
         setLoading(false);
       }
     };
 
     loadCheckout();
-  }, [basePayload.foodTruckId, basePayload.locationId, navigation, order.items.length, order.subtotal, tipAmount]);
+  }, [
+    basePayload.foodTruckId,
+    basePayload.locationId,
+    canUseTapToPay,
+    navigation,
+    order.items.length,
+    order.subtotal,
+    tipAmount,
+  ]);
 
   const createOrder = async (paymentFields) => {
     const response = await placePosOrder_API({
@@ -196,6 +225,13 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
 
   const finishCheckout = (createdOrder) => {
     dispatch(clearPosOrder());
+    if (isEmployeeSession) {
+      navigation.navigate(
+        route.params?.returnScreen || "employeeSessionScreen",
+      );
+      return;
+    }
+
     navigation.replace("orderDetailsScreen", {
       orderId: createdOrder._id,
     });
@@ -220,21 +256,26 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
 
               finishCheckout(createdOrder);
             } catch (error) {
-              Alert.alert("Cash checkout failed", error?.message || "Please try again.");
+              Alert.alert(
+                "Cash checkout failed",
+                error?.message || "Please try again.",
+              );
             } finally {
               setPaymentLoading(null);
             }
           },
         },
-      ]
+      ],
     );
   };
 
   const handleTapToPay = async () => {
-    if (!tapToPayConfig.enabled) {
+    if (!canUseTapToPay) {
       Alert.alert(
-        "Tap to Pay not configured",
-        "Tap to Pay is not enabled for this build yet."
+        "Tap to Pay unavailable",
+        isEmployeeSession
+          ? "Tap to Pay is only available to employees on the Elite plan."
+          : "Tap to Pay is not enabled for this build yet.",
       );
       return;
     }
@@ -250,7 +291,10 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
 
       await completeTapToPayPayment(tapToPayResult);
     } catch (error) {
-      Alert.alert("Tap to Pay unavailable", error?.message || "Please try again.");
+      Alert.alert(
+        "Tap to Pay unavailable",
+        error?.message || "Please try again.",
+      );
       setPaymentLoading(null);
     }
   };
@@ -345,17 +389,37 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.summaryBox}>
             <Text style={styles.sectionTitle}>Order summary</Text>
-            <SummaryRow label="Item Total" value={`$${toAmount(summary.subTotal)}`} />
-            <SummaryRow label="Discount" value={`-$${toAmount(summary.discount)}`} />
-            <SummaryRow label="Sales Tax" value={`$${toAmount(summary.taxAmount)}`} />
-            <SummaryRow label="Tip" value={`$${toAmount(summary.tipsAmount)}`} />
             <SummaryRow
-              label="Processing Fee"
+              label="Item Total"
+              value={`$${toAmount(summary.subTotal)}`}
+            />
+            <SummaryRow
+              label="Discount"
+              value={`-$${toAmount(summary.discount)}`}
+            />
+            <SummaryRow
+              label="Sales Tax"
+              value={`$${toAmount(summary.taxAmount)}`}
+            />
+            <SummaryRow
+              label="Tip"
+              value={`$${toAmount(summary.tipsAmount)}`}
+            />
+            <SummaryRow
+              label="Payment Processing Fee"
               value={`$${toAmount(tapSummary.paymentProcessingFee)}`}
             />
             <View style={styles.divider} />
-            <SummaryRow label="Cash Total" value={`$${toAmount(summary.total)}`} bold />
-            <SummaryRow label="Tap to Pay Total" value={`$${toAmount(tapSummary.total)}`} bold />
+            <SummaryRow
+              label="Cash Total"
+              value={`$${toAmount(summary.total)}`}
+              bold
+            />
+            <SummaryRow
+              label="Tap to Pay Total"
+              value={`$${toAmount(tapSummary.total)}`}
+              bold
+            />
             {guestPhone ? (
               <Text style={styles.guestText}>Guest phone: {guestPhone}</Text>
             ) : null}
@@ -410,10 +474,10 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
           <TouchableOpacity
             style={[
               styles.paymentButton,
-              !tapToPayConfig.enabled && styles.paymentButtonDisabled,
+              !canUseTapToPay && styles.paymentButtonDisabled,
             ]}
             onPress={handleTapToPay}
-            disabled={!!paymentLoading || !tapToPayConfig.enabled}
+            disabled={!!paymentLoading || !canUseTapToPay}
           >
             <Text style={styles.paymentButtonText}>
               {paymentLoading === "tap"
@@ -421,9 +485,11 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
                 : `Tap to Pay $${toAmount(tapSummary.total)}`}
             </Text>
             <Text style={styles.paymentButtonSubText}>
-              {tapToPayConfig.enabled
+              {canUseTapToPay
                 ? "Card-present gateway payment"
-                : "Requires Tap to Pay merchant setup"}
+                : isEmployeeSession
+                  ? "Available for Elite employees only"
+                  : "Requires Tap to Pay merchant setup"}
             </Text>
           </TouchableOpacity>
 
@@ -437,7 +503,9 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
                 ? "Completing..."
                 : `Cash $${toAmount(summary.total)}`}
             </Text>
-            <Text style={styles.paymentButtonSubText}>No processing fee or gateway call</Text>
+            <Text style={styles.paymentButtonSubText}>
+              No payment processing fee or gateway call
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       )}
@@ -447,8 +515,12 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
 
 const SummaryRow = ({ label, value, bold }) => (
   <View style={styles.summaryRow}>
-    <Text style={[styles.summaryLabel, bold && styles.summaryBold]}>{label}</Text>
-    <Text style={[styles.summaryValue, bold && styles.summaryBold]}>{value}</Text>
+    <Text style={[styles.summaryLabel, bold && styles.summaryBold]}>
+      {label}
+    </Text>
+    <Text style={[styles.summaryValue, bold && styles.summaryBold]}>
+      {value}
+    </Text>
   </View>
 );
 
@@ -540,6 +612,14 @@ const styles = StyleSheet.create({
   paymentButtonDisabled: {
     opacity: 0.6,
   },
-  paymentButtonText: { fontFamily: Mulish700, fontSize: 18, color: AppColor.black },
-  paymentButtonSubText: { fontFamily: Mulish400, color: AppColor.gray, marginTop: 4 },
+  paymentButtonText: {
+    fontFamily: Mulish700,
+    fontSize: 18,
+    color: AppColor.black,
+  },
+  paymentButtonSubText: {
+    fontFamily: Mulish400,
+    color: AppColor.gray,
+    marginTop: 4,
+  },
 });

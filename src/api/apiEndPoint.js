@@ -1,5 +1,6 @@
 // Auth
 export const LOGIN = "/auth/vendor-login";
+export const EMPLOYEE_LOGIN = "/auth/employee-login";
 export const VERIFY_OTP = "/auth/verify-otp";
 export const FORGOT_PASSWORD = "/auth/forgot-password";
 export const CHANGE_PASSWORD = "/auth/change-password";
@@ -17,6 +18,17 @@ export const REGISTER_COMPLETE = "/food-truck/complete";
 // Subscription
 export const UPDATE_SUBSCRIPTION_PLAN = "/food-truck/change-plan";
 export const UPDATE_SUBSCRIPTION_ADD_ONS = "/food-truck/change-add-on-plan";
+export const VENDOR_EMPLOYEE = "/vendor-employee";
+export const VENDOR_EMPLOYEE_BY_ID = (employee_id) =>
+  `/vendor-employee/${employee_id}`;
+export const RESET_VENDOR_EMPLOYEE_PIN = (employee_id) =>
+  `/vendor-employee/${employee_id}/reset-pin`;
+export const EMPLOYEE_DASHBOARD = "/vendor-employee/dashboard";
+export const END_EMPLOYEE_SESSION = "/vendor-employee/session/end";
+export const TOGGLE_EMPLOYEE_DUTY = "/vendor-employee/session/duty";
+export const REFUND_CANCEL_REQUESTS = "/vendor-employee/refund-cancel-requests";
+export const REVIEW_REFUND_CANCEL_REQUEST = (request_id) =>
+  `/vendor-employee/refund-cancel-requests/${request_id}/review`;
 
 // Add-ons
 export const GET_ADD_ONS = "/public/add-ons";
@@ -31,6 +43,8 @@ export const UPDATE_USER_DETAILS = "/user";
 export const UPDATE_PASSWORD = (user_id) => `/user/${user_id}/change-password`;
 export const REMOVE_LOCATION = (foodtruck_id, location_id) =>
   `/food-truck/${foodtruck_id}/location/${location_id}`;
+export const UPDATE_LOCATION_ORDERING = (foodtruck_id, location_id) =>
+  `/food-truck/${foodtruck_id}/location/${location_id}/ordering-open`;
 
 // TnC & Privacy-Policy & agreement
 export const TNC = "/public/terms-conditions";

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -40,6 +40,23 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
   const [expandedPlanId, setExpandedPlanId] = useState(null);
   const [agreed, setAgreed] = useState(false);
   const [selectedAddOns, setSelectedAddOns] = useState([]);
+  const selectedPlanForAddOns = useMemo(
+    () => plansData.find((plan) => plan._id === selectedPlanId),
+    [plansData, selectedPlanId]
+  );
+  const isEliteSelected = selectedPlanForAddOns?.slug === "SUB_ELITE";
+  const isEventAddOn = (addOn) => /event/i.test(addOn?.name || "");
+  const eventAddOnIds = useMemo(
+    () => addOnsData.filter(isEventAddOn).map((addOn) => addOn._id),
+    [addOnsData]
+  );
+  const visibleAddOns = useMemo(
+    () =>
+      isEliteSelected
+        ? addOnsData.filter((addOn) => !isEventAddOn(addOn))
+        : addOnsData,
+    [addOnsData, isEliteSelected]
+  );
 
   const handleContinueBtnPress = async () => {
     setLoading(true);
@@ -50,9 +67,13 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
       // You can now use selectedAddOns in your logic here
       console.log("Selected Add-Ons:", selectedAddOns);
       const temp_plan = plansData.find((plan) => plan._id === selectedPlanId);
+      const nextAddOns =
+        temp_plan?.slug === "SUB_ELITE"
+          ? selectedAddOns.filter((id) => !eventAddOnIds.includes(id))
+          : selectedAddOns;
       dispatch(setSelectedPlan(temp_plan));
       navigation.navigate("authFoodTruckProfileScreen", {
-        addOns: selectedAddOns,
+        addOns: nextAddOns,
       });
     } catch (error) {
       console.error("error => ", error);
@@ -83,6 +104,11 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
   const onSelectePlan = (item) => {
     setSelectedPlanId(item._id);
     setExpandedPlanId(item._id);
+    if (item.slug === "SUB_ELITE") {
+      setSelectedAddOns((prev) =>
+        prev.filter((id) => !eventAddOnIds.includes(id))
+      );
+    }
   };
 
   const handleAddOnSelection = (id) => {
@@ -106,6 +132,12 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
       >
         <View style={{ flex: 1 }}>
           <Text style={styles.addOnCardName}>{item.name}</Text>
+          {item.priceLabel ? (
+            <Text style={styles.addOnCardPrice}>{item.priceLabel}</Text>
+          ) : null}
+          {item.description ? (
+            <Text style={styles.addOnCardDescription}>{item.description}</Text>
+          ) : null}
         </View>
         <Ionicons
           name={"checkmark-circle"}
@@ -380,15 +412,18 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
                 />
               </View>
 
-              {addOnsData?.length ? (
+              {visibleAddOns?.length ? (
                 <View>
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Select Add-Ons</Text>
+                    <Text style={styles.sectionSubtitle}>
+                      Event Bookings are optional for Basic and Platinum, and included with Elite.
+                    </Text>
                   </View>
 
                   <FlatList
                     bounces={false}
-                    data={addOnsData}
+                    data={visibleAddOns}
                     renderItem={renderAddOnCard}
                     keyExtractor={(item) => item._id}
                     contentContainerStyle={{
@@ -658,6 +693,18 @@ const styles = StyleSheet.create({
     fontFamily: Mulish600,
     color: AppColor.text,
     flexWrap: "wrap",
+  },
+  addOnCardPrice: {
+    fontSize: 14,
+    fontFamily: Mulish700,
+    color: AppColor.primary,
+    marginTop: 4,
+  },
+  addOnCardDescription: {
+    fontSize: 12,
+    fontFamily: Mulish400,
+    color: AppColor.textHighlighter,
+    marginTop: 4,
   },
   termsText: {
     flex: 1,

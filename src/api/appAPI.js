@@ -42,12 +42,21 @@ import {
   UPDATE_FOODTRUCK,
   UPDATE_FOOD_CATEGORY,
   UPDATE_FOOD_ITEM,
+  UPDATE_LOCATION_ORDERING,
   UPDATE_ORDER_STATUS,
   UPDATE_REVIEW_BY_ID,
   UPDATE_SUBSCRIPTION_ADD_ONS,
   UPDATE_SUBSCRIPTION_PLAN,
   UPDATE_USER_DETAILS,
   VALIDATE_ORDER,
+  EMPLOYEE_DASHBOARD,
+  END_EMPLOYEE_SESSION,
+  TOGGLE_EMPLOYEE_DUTY,
+  REFUND_CANCEL_REQUESTS,
+  REVIEW_REFUND_CANCEL_REQUEST,
+  RESET_VENDOR_EMPLOYEE_PIN,
+  VENDOR_EMPLOYEE,
+  VENDOR_EMPLOYEE_BY_ID,
 } from "./apiEndPoint";
 
 /**
@@ -213,6 +222,24 @@ export const removeFoodtruckLocation_API = async ({
   try {
     const URL = REMOVE_LOCATION(foodtruck_id, location_id);
     const response = await apiClient.delete(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const updateLocationOrdering_API = async ({
+  foodtruck_id,
+  location_id,
+  isOrderingOpen,
+}) => {
+  try {
+    const URL = UPDATE_LOCATION_ORDERING(foodtruck_id, location_id);
+    const response = await apiClient.patch(
+      URL,
+      { isOrderingOpen },
+      { skipToken: false },
+    );
     return response?.data;
   } catch (error) {
     throw error?.response?.data || error;
@@ -595,7 +622,7 @@ export const checkPosTax_API = async (params = {}) => {
     const URL = GET_TAX_OF_LOCATION(
       params?.foodTruck_id,
       params?.location_id,
-      params?.amount
+      params?.amount,
     );
     const response = await apiClient.get(URL, { skipToken: false });
     return response?.data;
@@ -615,6 +642,10 @@ export const getEarningByFoodTruckID_API = async ({
   foodTruck_id,
   startDate = null,
   endDate = null,
+  locationId = null,
+  employeeInternalId = null,
+  paymentMethod = null,
+  refundCancelStatus = null,
 }) => {
   try {
     let URL = GET_EARNINGS;
@@ -627,6 +658,18 @@ export const getEarningByFoodTruckID_API = async ({
     }
     if (endDate) {
       queryParams.push(`endDate=${endDate}`);
+    }
+    if (locationId) {
+      queryParams.push(`locationId=${locationId}`);
+    }
+    if (employeeInternalId) {
+      queryParams.push(`employeeInternalId=${employeeInternalId}`);
+    }
+    if (paymentMethod) {
+      queryParams.push(`paymentMethod=${paymentMethod}`);
+    }
+    if (refundCancelStatus) {
+      queryParams.push(`refundCancelStatus=${refundCancelStatus}`);
     }
 
     URL += `?${queryParams.join("&")}`;
@@ -836,6 +879,163 @@ export const getAddOnsPlans_API = async () => {
   try {
     const URL = `${GET_ADD_ONS}?limit=100`;
     const response = await apiClient.get(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const getVendorEmployees_API = async ({
+  includeArchived = false,
+} = {}) => {
+  try {
+    const URL = `${VENDOR_EMPLOYEE}?includeArchived=${includeArchived}`;
+    const response = await apiClient.get(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const createVendorEmployee_API = async (payload) => {
+  try {
+    const response = await apiClient.post(VENDOR_EMPLOYEE, payload, {
+      skipToken: false,
+    });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const updateVendorEmployee_API = async ({ employee_id, payload }) => {
+  try {
+    const response = await apiClient.put(
+      VENDOR_EMPLOYEE_BY_ID(employee_id),
+      payload,
+      {
+        skipToken: false,
+      },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const resetVendorEmployeePin_API = async ({ employee_id, pin }) => {
+  try {
+    const response = await apiClient.put(
+      RESET_VENDOR_EMPLOYEE_PIN(employee_id),
+      { pin },
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const archiveVendorEmployee_API = async (employee_id) => {
+  try {
+    const response = await apiClient.delete(
+      VENDOR_EMPLOYEE_BY_ID(employee_id),
+      {
+        skipToken: false,
+      },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const getEmployeeDashboard_API = async () => {
+  try {
+    const response = await apiClient.get(EMPLOYEE_DASHBOARD, {
+      skipToken: false,
+    });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const endEmployeeSession_API = async () => {
+  try {
+    const response = await apiClient.post(
+      END_EMPLOYEE_SESSION,
+      {},
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const toggleEmployeeDuty_API = async ({ is_working }) => {
+  try {
+    const response = await apiClient.post(
+      TOGGLE_EMPLOYEE_DUTY,
+      { is_working },
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const getRefundCancelRequests_API = async ({
+  foodTruckId = null,
+  orderId = null,
+  status = null,
+  employeeInternalId = null,
+  locationId = null,
+  limit = 50,
+} = {}) => {
+  try {
+    const queryParams = [`limit=${limit}`];
+    if (foodTruckId) queryParams.push(`foodTruckId=${foodTruckId}`);
+    if (orderId) queryParams.push(`orderId=${orderId}`);
+    if (status) queryParams.push(`status=${status}`);
+    if (employeeInternalId) {
+      queryParams.push(`employeeInternalId=${employeeInternalId}`);
+    }
+    if (locationId) queryParams.push(`locationId=${locationId}`);
+
+    const response = await apiClient.get(
+      `${REFUND_CANCEL_REQUESTS}?${queryParams.join("&")}`,
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const submitRefundCancelRequest_API = async (payload) => {
+  try {
+    const response = await apiClient.post(REFUND_CANCEL_REQUESTS, payload, {
+      skipToken: false,
+    });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const reviewRefundCancelRequest_API = async ({
+  request_id,
+  payload,
+}) => {
+  try {
+    const response = await apiClient.put(
+      REVIEW_REFUND_CANCEL_REQUEST(request_id),
+      payload,
+      { skipToken: false },
+    );
     return response?.data;
   } catch (error) {
     throw error?.response?.data || error;

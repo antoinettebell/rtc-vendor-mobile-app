@@ -43,11 +43,7 @@ import {
   updateFooditemByID_API,
 } from "../api/appAPI";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
-import {
-  discountTypeList,
-  dishNewFlagAllowPlanArray,
-  foodTypeStrings,
-} from "../utils/constants";
+import { discountTypeList, foodTypeStrings } from "../utils/constants";
 import AppImage from "../components/AppImage";
 import {
   getDiscountedPrice,
@@ -85,6 +81,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
   const Params = React.useMemo(() => route.params, [route.params]);
 
   const { selectedPlan } = useSelector((state) => state.userReducer);
+  const canHighlightNewDish = !!selectedPlan?.capabilities?.newDishHighlight;
 
   const isMeatDisable = React.useMemo(
     () => !isValidCategoryForMeat(Params?.category?.name),
@@ -983,7 +980,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
         maxQty: parseInt(maxQt, 10) || 1,
         minQty: parseInt(minQt, 10) || 1,
         name: itemName || "",
-        newDish: newDishItemEnabled || false,
+        newDish: canHighlightNewDish ? newDishItemEnabled || false : false,
         preparationTime: parseInt(prepTime || 0, 10) || 0,
         price: parseFloat(parseFloat(itemPrice).toFixed(2)) || 0, // will change after discount check
         ...discountParams,
@@ -2527,9 +2524,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                         </View>
 
                         {/* New Item Container */}
-                        {dishNewFlagAllowPlanArray.includes(
-                          selectedPlan.slug
-                        ) ? (
+                        {canHighlightNewDish ? (
                           <View
                             style={{
                               flexDirection: "row",

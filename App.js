@@ -67,6 +67,9 @@ import EditMailingAddressScreen from "./src/screens/editMailingAddressScreen";
 import EarningListScreen from "./src/screens/earningListScreen";
 import VendorPosMenuScreen from "./src/screens/vendorPosMenuScreen";
 import VendorPosCheckoutScreen from "./src/screens/vendorPosCheckoutScreen";
+import ProfileEmployeeManagementScreen from "./src/screens/profileEmployeeManagementScreen";
+import EmployeeSessionScreen from "./src/screens/employeeSessionScreen";
+import EmployeePosBoardScreen from "./src/screens/employeePosBoardScreen";
 
 const Stack = createNativeStackNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -286,10 +289,32 @@ const MainAppNavigator = ({ insets }) => (
       component={ProfileSubscriptionScreen}
     />
     <Stack.Screen
+      name="profileEmployeeManagementScreen"
+      component={ProfileEmployeeManagementScreen}
+    />
+    <Stack.Screen
       name="deleteOtpVerification"
       component={OtpVerificationScreen}
     />
     <Stack.Screen name="earningListScreen" component={EarningListScreen} />
+    <Stack.Screen name="vendorPosMenuScreen" component={VendorPosMenuScreen} />
+    <Stack.Screen
+      name="vendorPosCheckoutScreen"
+      component={VendorPosCheckoutScreen}
+    />
+  </Stack.Navigator>
+);
+
+const EmployeeAppNavigator = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen
+      name="employeeSessionScreen"
+      component={EmployeeSessionScreen}
+    />
+    <Stack.Screen
+      name="employeePosBoardScreen"
+      component={EmployeePosBoardScreen}
+    />
     <Stack.Screen name="vendorPosMenuScreen" component={VendorPosMenuScreen} />
     <Stack.Screen
       name="vendorPosCheckoutScreen"
@@ -309,8 +334,11 @@ const App = () => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const { isSignedIn, isOnboarded } = useSelector((state) => state.authReducer);
+  const currentUser = useSelector((state) => state.userReducer.user);
+  const isEmployeeSession =
+    currentUser?.userType === "EMPLOYEE" || currentUser?.role === "EMPLOYEE";
   const { showPopup, currentOrderId } = useSelector(
-    (state) => state.pushNotificationReducer
+    (state) => state.pushNotificationReducer,
   );
 
   const handleCloseForCurrentOrder = () => {
@@ -325,13 +353,17 @@ const App = () => {
     <NavigationContainer theme={DefaultTheme} ref={navigationRef}>
       <GlobalSnackbar />
       {isSignedIn ? (
-        <MainAppNavigator insets={insets} />
+        isEmployeeSession ? (
+          <EmployeeAppNavigator />
+        ) : (
+          <MainAppNavigator insets={insets} />
+        )
       ) : isOnboarded ? (
         <FinalSignupStepsNavigator />
       ) : (
         <AuthNavigator />
       )}
-      {showPopup && currentOrderId ? (
+      {!isEmployeeSession && showPopup && currentOrderId ? (
         <NewOrderPopup
           orderId={currentOrderId}
           onCloseCurrentOrder={handleCloseForCurrentOrder}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator as NativeIndicator,
   Alert,
@@ -53,6 +53,23 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
   const [selectedAddOns, setSelectedAddOns] = useState([]);
   const [currentPlanId, setCurrentPlanId] = useState(null);
   const [currentAddOns, setCurrentAddOns] = useState(null);
+  const selectedPlanForAddOns = useMemo(
+    () => plansData.find((plan) => plan._id === selectedPlanId),
+    [plansData, selectedPlanId]
+  );
+  const isEliteSelected = selectedPlanForAddOns?.slug === "SUB_ELITE";
+  const isEventAddOn = (addOn) => /event/i.test(addOn?.name || "");
+  const eventAddOnIds = useMemo(
+    () => addOnsData.filter(isEventAddOn).map((addOn) => addOn._id),
+    [addOnsData]
+  );
+  const visibleAddOns = useMemo(
+    () =>
+      isEliteSelected
+        ? addOnsData.filter((addOn) => !isEventAddOn(addOn))
+        : addOnsData,
+    [addOnsData, isEliteSelected]
+  );
 
   const onUpdatePlanPress = async () => {
     setPlansLoading(true);
@@ -86,13 +103,16 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
   const onUpdateAddOnsPress = async () => {
     setAddOnsLoading(true);
     try {
+      const nextAddOns = isEliteSelected
+        ? selectedAddOns.filter((id) => !eventAddOnIds.includes(id))
+        : selectedAddOns;
       const response = await updateFoodtruckAddons_API({
-        addOns: selectedAddOns,
+        addOns: nextAddOns,
       });
       console.log("response => ", response);
       if (response?.success && response?.data) {
         dispatch(
-          updateFoodTruckKey({ keyName: "addOns", keyValue: selectedAddOns })
+          updateFoodTruckKey({ keyName: "addOns", keyValue: nextAddOns })
         );
         dispatch(
           showSnackbar({
@@ -172,6 +192,11 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
   const onSelectePlan = (item) => {
     setSelectedPlanId(item._id);
     setExpandedPlanId(item._id);
+    if (item.slug === "SUB_ELITE") {
+      setSelectedAddOns((prev) =>
+        prev.filter((id) => !eventAddOnIds.includes(id))
+      );
+    }
   };
 
   const handleAddOnSelection = (id) => {
@@ -195,6 +220,12 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
       >
         <View style={{ flex: 1 }}>
           <Text style={styles.addOnCardName}>{item.name}</Text>
+          {item.priceLabel ? (
+            <Text style={styles.addOnCardPrice}>{item.priceLabel}</Text>
+          ) : null}
+          {item.description ? (
+            <Text style={styles.addOnCardDescription}>{item.description}</Text>
+          ) : null}
         </View>
         <Ionicons
           name={"checkmark-circle"}
@@ -439,15 +470,18 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
               )}
             </TouchableOpacity>
 
-            {addOnsData?.length ? (
+            {visibleAddOns?.length ? (
               <View>
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Add-Ons</Text>
+                  <Text style={styles.sectionSubtitle}>
+                    Event Bookings are optional for Basic and Platinum, and included with Elite.
+                  </Text>
                 </View>
 
                 <FlatList
                   bounces={false}
-                  data={addOnsData}
+                  data={visibleAddOns}
                   renderItem={renderAddOnCard}
                   keyExtractor={(item) => item?._id}
                   showsVerticalScrollIndicator={false}
@@ -687,6 +721,18 @@ const styles = StyleSheet.create({
     fontFamily: Mulish600,
     color: AppColor.text,
     flexWrap: "wrap",
+  },
+  addOnCardPrice: {
+    fontSize: 14,
+    fontFamily: Mulish700,
+    color: AppColor.primary,
+    marginTop: 4,
+  },
+  addOnCardDescription: {
+    fontSize: 12,
+    fontFamily: Mulish400,
+    color: AppColor.textHighlighter,
+    marginTop: 4,
   },
   termsText: {
     flex: 1,
