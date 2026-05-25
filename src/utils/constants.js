@@ -101,7 +101,7 @@ export const foodTypeStrings = {
 };
 
 // This plans can allow to flag a dish to "NEW"
-export const dishNewFlagAllowPlanArray = ["SUB_PLATINUM", "SUB_ELITE"];
+export const dishNewFlagAllowPlanArray = ["SUB_ELITE"];
 
 export const bankAccountTypeList = [
   { label: "Checking", type: "CHECKING" },
