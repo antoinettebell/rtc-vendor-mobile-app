@@ -133,6 +133,9 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
     return benefitText;
   };
 
+  const isUnavailableBenefit = (benefit) =>
+    /^no\b/i.test(String(benefit || "").trim());
+
   const renderAddOnCard = ({ item }) => {
     const isSelected = selectedAddOns.includes(item._id);
 
@@ -272,30 +275,37 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
         {/* Benefits List */}
         {isExpanded && (
           <View style={{ marginTop: 8 }}>
-            {item.details.map((benefit, idx) => (
-              <View
-                key={idx}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "flex-start",
-                  marginVertical: 5,
-                  gap: 10,
-                }}
-              >
-                <FontAwesome6 name="check" size={14} color={item.titleColor} />
-                <Text
+            {item.details.map((benefit, idx) => {
+              const unavailable = isUnavailableBenefit(benefit);
+              return (
+                <View
+                  key={idx}
                   style={{
-                    flex: 1,
-                    color: "#111520",
-                    fontSize: 12,
-                    fontWeight: "600",
-                    flexWrap: "wrap",
+                    flexDirection: "row",
+                    alignItems: "flex-start",
+                    marginVertical: 5,
+                    gap: 10,
                   }}
                 >
-                  {getBenefitLabel(item, benefit)}
-                </Text>
-              </View>
-            ))}
+                  <FontAwesome6
+                    name={unavailable ? "xmark" : "check"}
+                    size={14}
+                    color={unavailable ? "#D92D20" : item.titleColor}
+                  />
+                  <Text
+                    style={{
+                      flex: 1,
+                      color: "#111520",
+                      fontSize: 12,
+                      fontWeight: "600",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {getBenefitLabel(item, benefit)}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
         )}
       </TouchableOpacity>
