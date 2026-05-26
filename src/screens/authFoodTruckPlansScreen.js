@@ -40,23 +40,7 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
   const [expandedPlanId, setExpandedPlanId] = useState(null);
   const [agreed, setAgreed] = useState(false);
   const [selectedAddOns, setSelectedAddOns] = useState([]);
-  const selectedPlanForAddOns = useMemo(
-    () => plansData.find((plan) => plan._id === selectedPlanId),
-    [plansData, selectedPlanId],
-  );
-  const isEliteSelected = selectedPlanForAddOns?.slug === "SUB_ELITE";
-  const isEventAddOn = (addOn) => /event/i.test(addOn?.name || "");
-  const eventAddOnIds = useMemo(
-    () => addOnsData.filter(isEventAddOn).map((addOn) => addOn._id),
-    [addOnsData],
-  );
-  const visibleAddOns = useMemo(
-    () =>
-      isEliteSelected
-        ? addOnsData.filter((addOn) => !isEventAddOn(addOn))
-        : addOnsData,
-    [addOnsData, isEliteSelected],
-  );
+  const visibleAddOns = useMemo(() => addOnsData, [addOnsData]);
 
   const handleContinueBtnPress = async () => {
     setLoading(true);
@@ -67,13 +51,9 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
       // You can now use selectedAddOns in your logic here
       console.log("Selected Add-Ons:", selectedAddOns);
       const temp_plan = plansData.find((plan) => plan._id === selectedPlanId);
-      const nextAddOns =
-        temp_plan?.slug === "SUB_ELITE"
-          ? selectedAddOns.filter((id) => !eventAddOnIds.includes(id))
-          : selectedAddOns;
       dispatch(setSelectedPlan(temp_plan));
       navigation.navigate("authFoodTruckProfileScreen", {
-        addOns: nextAddOns,
+        addOns: selectedAddOns,
       });
     } catch (error) {
       console.error("error => ", error);
@@ -104,11 +84,6 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
   const onSelectePlan = (item) => {
     setSelectedPlanId(item._id);
     setExpandedPlanId(item._id);
-    if (item.slug === "SUB_ELITE") {
-      setSelectedAddOns((prev) =>
-        prev.filter((id) => !eventAddOnIds.includes(id)),
-      );
-    }
   };
 
   const handleAddOnSelection = (id) => {
@@ -435,8 +410,8 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Select Add-Ons</Text>
                     <Text style={styles.sectionSubtitle}>
-                      Event Bookings are optional for Basic and Platinum. Elite
-                      Event Marketplace is coming soon.
+                      Accept Event Bookings is required for Event Marketplace
+                      access.
                     </Text>
                   </View>
 

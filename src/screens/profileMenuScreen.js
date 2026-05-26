@@ -762,6 +762,13 @@ const ProfileMenuScreen = ({ navigation }) => {
             onPress={() => navigation.navigate("profileSubscriptionScreen")}
           />
           <HR />
+          <ItemComponent
+            rightIcon
+            label="Event Marketplace"
+            imageUri={require("../assets/images/global.png")}
+            onPress={() => navigation.navigate("vendorMarketplaceScreen")}
+          />
+          <HR />
           {canManageEmployees && (
             <>
               <ItemComponent

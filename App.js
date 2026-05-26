@@ -70,6 +70,12 @@ import VendorPosCheckoutScreen from "./src/screens/vendorPosCheckoutScreen";
 import ProfileEmployeeManagementScreen from "./src/screens/profileEmployeeManagementScreen";
 import EmployeeSessionScreen from "./src/screens/employeeSessionScreen";
 import EmployeePosBoardScreen from "./src/screens/employeePosBoardScreen";
+import VendorMarketplaceScreen from "./src/screens/vendorMarketplaceScreen";
+import VendorMarketplaceEventDetailsScreen from "./src/screens/vendorMarketplaceEventDetailsScreen";
+import VendorMarketplaceBidResponseScreen from "./src/screens/vendorMarketplaceBidResponseScreen";
+import VendorMarketplaceMyBidsScreen from "./src/screens/vendorMarketplaceMyBidsScreen";
+import VendorMarketplaceAwardedBidsScreen from "./src/screens/vendorMarketplaceAwardedBidsScreen";
+import VendorMarketplacePaymentScreen from "./src/screens/vendorMarketplacePaymentScreen";
 
 const Stack = createNativeStackNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -301,6 +307,30 @@ const MainAppNavigator = ({ insets }) => (
     <Stack.Screen
       name="vendorPosCheckoutScreen"
       component={VendorPosCheckoutScreen}
+    />
+    <Stack.Screen
+      name="vendorMarketplaceScreen"
+      component={VendorMarketplaceScreen}
+    />
+    <Stack.Screen
+      name="vendorMarketplaceEventDetailsScreen"
+      component={VendorMarketplaceEventDetailsScreen}
+    />
+    <Stack.Screen
+      name="vendorMarketplaceBidResponseScreen"
+      component={VendorMarketplaceBidResponseScreen}
+    />
+    <Stack.Screen
+      name="vendorMarketplaceMyBidsScreen"
+      component={VendorMarketplaceMyBidsScreen}
+    />
+    <Stack.Screen
+      name="vendorMarketplaceAwardedBidsScreen"
+      component={VendorMarketplaceAwardedBidsScreen}
+    />
+    <Stack.Screen
+      name="vendorMarketplacePaymentScreen"
+      component={VendorMarketplacePaymentScreen}
     />
   </Stack.Navigator>
 );

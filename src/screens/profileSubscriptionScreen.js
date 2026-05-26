@@ -53,23 +53,7 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
   const [selectedAddOns, setSelectedAddOns] = useState([]);
   const [currentPlanId, setCurrentPlanId] = useState(null);
   const [currentAddOns, setCurrentAddOns] = useState(null);
-  const selectedPlanForAddOns = useMemo(
-    () => plansData.find((plan) => plan._id === selectedPlanId),
-    [plansData, selectedPlanId],
-  );
-  const isEliteSelected = selectedPlanForAddOns?.slug === "SUB_ELITE";
-  const isEventAddOn = (addOn) => /event/i.test(addOn?.name || "");
-  const eventAddOnIds = useMemo(
-    () => addOnsData.filter(isEventAddOn).map((addOn) => addOn._id),
-    [addOnsData],
-  );
-  const visibleAddOns = useMemo(
-    () =>
-      isEliteSelected
-        ? addOnsData.filter((addOn) => !isEventAddOn(addOn))
-        : addOnsData,
-    [addOnsData, isEliteSelected],
-  );
+  const visibleAddOns = useMemo(() => addOnsData, [addOnsData]);
 
   const onUpdatePlanPress = async () => {
     setPlansLoading(true);
@@ -103,16 +87,13 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
   const onUpdateAddOnsPress = async () => {
     setAddOnsLoading(true);
     try {
-      const nextAddOns = isEliteSelected
-        ? selectedAddOns.filter((id) => !eventAddOnIds.includes(id))
-        : selectedAddOns;
       const response = await updateFoodtruckAddons_API({
-        addOns: nextAddOns,
+        addOns: selectedAddOns,
       });
       console.log("response => ", response);
       if (response?.success && response?.data) {
         dispatch(
-          updateFoodTruckKey({ keyName: "addOns", keyValue: nextAddOns }),
+          updateFoodTruckKey({ keyName: "addOns", keyValue: selectedAddOns }),
         );
         dispatch(
           showSnackbar({
@@ -192,11 +173,6 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
   const onSelectePlan = (item) => {
     setSelectedPlanId(item._id);
     setExpandedPlanId(item._id);
-    if (item.slug === "SUB_ELITE") {
-      setSelectedAddOns((prev) =>
-        prev.filter((id) => !eventAddOnIds.includes(id)),
-      );
-    }
   };
 
   const handleAddOnSelection = (id) => {
@@ -493,8 +469,8 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Add-Ons</Text>
                   <Text style={styles.sectionSubtitle}>
-                    Event Bookings are optional for Basic and Platinum. Elite
-                    Event Marketplace is coming soon.
+                    Accept Event Bookings is required for Event Marketplace
+                    access.
                   </Text>
                 </View>
 

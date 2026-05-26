@@ -35,6 +35,21 @@ export const REVIEW_REFUND_CANCEL_REQUEST = (request_id) =>
 // Add-ons
 export const GET_ADD_ONS = "/public/add-ons";
 
+// Event Marketplace
+export const MARKETPLACE_OPEN_EVENTS = "/marketplace/events/open";
+export const MARKETPLACE_EVENT_BY_ID = (event_id) =>
+  `/marketplace/events/${event_id}`;
+export const MARKETPLACE_EVENT_BIDS = (event_id) =>
+  `/marketplace/events/${event_id}/bids`;
+export const MARKETPLACE_BID_ATTACHMENTS = (bid_id) =>
+  `/marketplace/bids/${bid_id}/attachments`;
+export const MARKETPLACE_MY_BIDS = "/marketplace/bids/my";
+export const MARKETPLACE_AWARDED_BIDS = "/marketplace/bids/awarded";
+export const MARKETPLACE_PAYMENT_BY_ID = (payment_id) =>
+  `/marketplace/payments/${payment_id}`;
+export const MARKETPLACE_PAYMENT_CALL = (payment_id) =>
+  `/marketplace/payments/${payment_id}/call`;
+
 // Bank Detail
 export const ADD_BANK_DETAIL = "/user/bank-detail";
 export const GET_BANK_DETAIL = "/user/bank-detail";
