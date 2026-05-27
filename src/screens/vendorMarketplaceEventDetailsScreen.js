@@ -28,6 +28,33 @@ const DetailRow = ({ label, value }) => (
   </View>
 );
 
+const getServiceSpecificRows = (event) => {
+  if (!event) return [];
+
+  if (event.primary_service_style === "Plated") {
+    return [
+      ["Number of Courses", event.plated_number_of_courses],
+      ["Single Entree", event.plated_single_entree ? "Yes" : "No"],
+      ["Choice of 2-3 Entrees", event.plated_choice_entrees ? "Yes" : "No"],
+      ["Tableside Choice", event.plated_tableside_choice ? "Yes" : "No"],
+      [
+        "Bread/Salad/Dessert Included",
+        event.plated_bread_salad_dessert ? "Yes" : "No",
+      ],
+    ];
+  }
+
+  if (event.primary_service_style === "Buffet") {
+    return [["Buffet Options", listText(event.buffet_options)]];
+  }
+
+  if (event.primary_service_style === "Food Truck") {
+    return [["Food Truck Options", listText(event.food_truck_options)]];
+  }
+
+  return [];
+};
+
 const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const eventId = route?.params?.eventId;
@@ -114,6 +141,9 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
               label="Primary Service Style"
               value={event?.primary_service_style}
             />
+            {getServiceSpecificRows(event).map(([label, value]) => (
+              <DetailRow key={label} label={label} value={String(value || "None")} />
+            ))}
             <DetailRow label="Guests" value={`${event?.number_of_guests || 0}`} />
             <DetailRow
               label="Vendors Needed"
@@ -132,7 +162,7 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
               value={event?.insurance_required ? "Yes" : "No"}
             />
             <DetailRow
-              label="Alcohol Required"
+              label="Alcohol Service"
               value={event?.alcohol_required ? "Yes" : "No"}
             />
             <DetailRow

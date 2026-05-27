@@ -764,9 +764,25 @@ const ProfileMenuScreen = ({ navigation }) => {
           <HR />
           <ItemComponent
             rightIcon
-            label="Event Marketplace"
+            label="Marketplace / Near Me"
             imageUri={require("../assets/images/global.png")}
             onPress={() => navigation.navigate("vendorMarketplaceScreen")}
+          />
+          <HR />
+          <ItemComponent
+            rightIcon
+            label="My Bids"
+            imageUri={require("../assets/images/global.png")}
+            onPress={() => navigation.navigate("vendorMarketplaceMyBidsScreen")}
+          />
+          <HR />
+          <ItemComponent
+            rightIcon
+            label="Awarded Bids"
+            imageUri={require("../assets/images/global.png")}
+            onPress={() =>
+              navigation.navigate("vendorMarketplaceAwardedBidsScreen")
+            }
           />
           <HR />
           {canManageEmployees && (
