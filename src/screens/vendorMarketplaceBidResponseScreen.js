@@ -27,8 +27,10 @@ import usePermission from "../hooks/usePermission";
 import { permission } from "../helpers/permission.helper";
 import {
   MarketplaceHeader,
+  formatDate,
   formatMoney,
   getEventLocation,
+  isVendorPaysToAttendEvent,
   styles,
 } from "./vendorMarketplaceShared";
 
@@ -55,6 +57,21 @@ const ToggleRow = ({ label, value, onPress, required }) => (
   </TouchableOpacity>
 );
 
+const ReadOnlyRow = ({ label, value }) => (
+  <View style={{ marginTop: 12 }}>
+    <Text style={styles.label}>{label}</Text>
+    <Text style={styles.meta}>{value || "None"}</Text>
+  </View>
+);
+
+const normalizeCurrencyInput = (value) =>
+  String(value || "").replace(/[^0-9.]/g, "");
+
+const formatCurrencyInput = (value, setter) => {
+  const amount = Number(normalizeCurrencyInput(value));
+  setter(Number.isNaN(amount) ? "" : amount.toFixed(2));
+};
+
 const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const eventId = route?.params?.eventId;
@@ -62,6 +79,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [pricePerGuest, setPricePerGuest] = useState("");
+  const [averagePricePerMeal, setAveragePricePerMeal] = useState("");
   const [fullBidAmount, setFullBidAmount] = useState("");
   const [menuDescription, setMenuDescription] = useState("");
   const [notes, setNotes] = useState("");
@@ -99,37 +117,53 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
 
   const fullBidNumber = Number(fullBidAmount);
   const pricePerGuestNumber = pricePerGuest ? Number(pricePerGuest) : null;
+  const averagePricePerMealNumber = averagePricePerMeal
+    ? Number(averagePricePerMeal)
+    : null;
   const requiresInsurance = !!event?.insurance_required;
   const requiresPermits =
     Array.isArray(event?.permits_required) && event.permits_required.length > 0;
   const requiresLiquor = !!event?.alcohol_required;
-  const vendorFee = Number(event?.vendor_fee || 0);
+  // TODO: Replace fallback once backend provides an event-level NDA flag.
+  const requiresNda = !!event?.nda_required;
+  const requiresPermitUpload = requiresPermits || requiresLiquor;
+  const hasPermitUpload = permitLicenseFiles.length > 0;
+  const isCoordinatorPaysEvent = event ? !isVendorPaysToAttendEvent(event) : true;
 
   const canSubmit = useMemo(
     () =>
       !!eventId &&
+      isCoordinatorPaysEvent &&
       fullBidAmount.trim() &&
       !Number.isNaN(fullBidNumber) &&
       fullBidNumber >= 0 &&
       (!pricePerGuest || (!Number.isNaN(pricePerGuestNumber) && pricePerGuestNumber >= 0)) &&
-      menuDescription.trim() &&
+      (!averagePricePerMeal ||
+        (!Number.isNaN(averagePricePerMealNumber) &&
+          averagePricePerMealNumber >= 0)) &&
       (!requiresInsurance || insuranceConfirmed) &&
       (!requiresPermits || permitsConfirmed) &&
       (!requiresLiquor || liquorConfirmed) &&
-      ndaAcknowledged,
+      (!requiresPermitUpload || hasPermitUpload) &&
+      (!requiresNda || ndaAcknowledged),
     [
+      averagePricePerMeal,
+      averagePricePerMealNumber,
       eventId,
       fullBidAmount,
       fullBidNumber,
+      hasPermitUpload,
       insuranceConfirmed,
+      isCoordinatorPaysEvent,
       liquorConfirmed,
-      menuDescription,
       ndaAcknowledged,
       permitsConfirmed,
       pricePerGuest,
       pricePerGuestNumber,
       requiresInsurance,
       requiresLiquor,
+      requiresNda,
+      requiresPermitUpload,
       requiresPermits,
     ],
   );
@@ -143,13 +177,14 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
         event_id: eventId,
         payload: {
           price_per_guest: pricePerGuestNumber,
+          average_price_per_meal: averagePricePerMealNumber,
           full_bid_amount: fullBidNumber,
           menu_description: menuDescription.trim(),
           notes: notes.trim(),
           insurance_confirmed: insuranceConfirmed,
           permits_confirmed: permitsConfirmed,
           liquor_license_confirmed: liquorConfirmed,
-          nda_required: true,
+          nda_required: requiresNda,
           nda_acknowledged: ndaAcknowledged,
           bid_status: "SUBMITTED",
         },
@@ -157,7 +192,6 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
 
       if (response?.success) {
         const bidId = response.data?.marketplaceBid?.bid_id;
-        const marketplacePayment = response.data?.marketplacePayment;
         let uploadWarning = false;
         if (bidId) {
           try {
@@ -168,27 +202,6 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
           }
         }
 
-        if (response.data?.requires_payment && marketplacePayment) {
-          Alert.alert(
-            "Event Registration Saved",
-            uploadWarning
-              ? "Your bid was saved, but one or more files did not upload. Complete payment after reviewing the status."
-              : "Complete the event registration payment to submit your bid.",
-            [
-              {
-                text: "Continue",
-                onPress: () =>
-                  navigation.navigate("vendorMarketplacePaymentScreen", {
-                    payment: marketplacePayment,
-                    paymentId: marketplacePayment.payment_id,
-                    returnScreen: "vendorMarketplaceMyBidsScreen",
-                  }),
-              },
-            ],
-          );
-          return;
-        }
-
         Alert.alert(
           "Bid Submitted",
           uploadWarning
@@ -197,7 +210,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
           [
             {
               text: "OK",
-              onPress: () => navigation.navigate("vendorMarketplaceMyBidsScreen"),
+              onPress: () => navigation.navigate("VendorMyBidsScreen"),
             },
           ],
         );
@@ -329,33 +342,71 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <ScrollView contentContainerStyle={styles.body}>
-            <View style={styles.card}>
+            <View style={[styles.card, styles.summaryCard]}>
+              <Text style={styles.sectionHeader}>Event Summary</Text>
               <Text style={styles.title}>{event?.event_name || "Event Bid"}</Text>
-              <Text style={styles.meta}>
-                {getEventLocation(event)} | Vendor fee {formatMoney(vendorFee)}
-              </Text>
+              <ReadOnlyRow label="Event Type" value={event?.event_type} />
+              <ReadOnlyRow label="Event Date" value={formatDate(event?.event_date)} />
+              <ReadOnlyRow label="Event Time" value={event?.event_time || "Not set"} />
+              <ReadOnlyRow label="Location" value={getEventLocation(event)} />
+              <ReadOnlyRow
+                label="Estimated Guests"
+                value={
+                  event?.number_of_guests
+                    ? `${event.number_of_guests}`
+                    : "Not provided"
+                }
+              />
+              <ReadOnlyRow
+                label="Event Budget"
+                value={formatMoney(event?.budgeted_amount)}
+              />
             </View>
 
             <View style={styles.card}>
-              <Text style={styles.label}>Price Per Guest</Text>
-              <TextInput
-                value={pricePerGuest}
-                onChangeText={setPricePerGuest}
-                keyboardType="decimal-pad"
-                placeholder="Optional"
-                placeholderTextColor={AppColor.placeholderTextColor}
-                style={styles.input}
-              />
-              <Text style={styles.label}>Full Bid Amount *</Text>
+              <Text style={styles.sectionHeader}>Pricing Details</Text>
+              <Text style={styles.label}>Bid Amount *</Text>
               <TextInput
                 value={fullBidAmount}
-                onChangeText={setFullBidAmount}
+                onChangeText={(value) =>
+                  setFullBidAmount(normalizeCurrencyInput(value))
+                }
+                onBlur={() => formatCurrencyInput(fullBidAmount, setFullBidAmount)}
                 keyboardType="decimal-pad"
                 placeholder="0.00"
                 placeholderTextColor={AppColor.placeholderTextColor}
                 style={styles.input}
               />
-              <Text style={styles.label}>Menu Description *</Text>
+              <Text style={styles.label}>Price Per Guest</Text>
+              <TextInput
+                value={pricePerGuest}
+                onChangeText={(value) =>
+                  setPricePerGuest(normalizeCurrencyInput(value))
+                }
+                onBlur={() => formatCurrencyInput(pricePerGuest, setPricePerGuest)}
+                keyboardType="decimal-pad"
+                placeholder="Optional"
+                placeholderTextColor={AppColor.placeholderTextColor}
+                style={styles.input}
+              />
+              <Text style={styles.label}>Average Price Per Meal</Text>
+              <TextInput
+                value={averagePricePerMeal}
+                onChangeText={(value) =>
+                  setAveragePricePerMeal(normalizeCurrencyInput(value))
+                }
+                onBlur={() =>
+                  formatCurrencyInput(
+                    averagePricePerMeal,
+                    setAveragePricePerMeal,
+                  )
+                }
+                keyboardType="decimal-pad"
+                placeholder="Optional"
+                placeholderTextColor={AppColor.placeholderTextColor}
+                style={styles.input}
+              />
+              <Text style={styles.label}>Menu Description</Text>
               <TextInput
                 value={menuDescription}
                 onChangeText={setMenuDescription}
@@ -364,7 +415,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                 placeholderTextColor={AppColor.placeholderTextColor}
                 style={[styles.input, styles.textarea]}
               />
-              <Text style={styles.label}>Notes/Comments</Text>
+              <Text style={styles.label}>Special Notes to Event Coordinator</Text>
               <TextInput
                 value={notes}
                 onChangeText={setNotes}
@@ -376,45 +427,45 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
             </View>
 
             <View style={styles.card}>
-              <Text style={styles.title}>Requirements</Text>
+              <Text style={styles.sectionHeader}>Requirements</Text>
               <ToggleRow
-                label="Insurance confirmed"
+                label="Insurance response"
                 required={requiresInsurance}
                 value={insuranceConfirmed}
                 onPress={() => setInsuranceConfirmed((value) => !value)}
               />
               <ToggleRow
-                label="Permits/licenses confirmed"
+                label="Permit response"
                 required={requiresPermits}
                 value={permitsConfirmed}
                 onPress={() => setPermitsConfirmed((value) => !value)}
               />
               <ToggleRow
-                label="Liquor license confirmed"
+                label="Liquor license response"
                 required={requiresLiquor}
                 value={liquorConfirmed}
                 onPress={() => setLiquorConfirmed((value) => !value)}
               />
               <ToggleRow
-                label="NDA/agreement acknowledged"
-                required
+                label="NDA agreement response"
+                required={requiresNda}
                 value={ndaAcknowledged}
                 onPress={() => setNdaAcknowledged((value) => !value)}
               />
               <Text style={styles.meta}>
-                Menu PDFs, food images, and permit/license files upload to the
-                marketplace repository. Agreement documents remain placeholders
-                for a future signing phase.
+                Sample menus, food photos, and permit/license files upload to the
+                marketplace repository. Insurance and NDA signing workflows are
+                noted here until dedicated backend routes are available.
               </Text>
             </View>
 
             <View style={styles.card}>
-              <Text style={styles.title}>Bid Files</Text>
+              <Text style={styles.sectionHeader}>Menu / Photos</Text>
               <Text style={styles.meta}>
                 Accepted: PDF, JPG, PNG, HEIC. Maximum file size is 10 MB.
               </Text>
 
-              <Text style={styles.label}>Menu PDF</Text>
+              <Text style={styles.label}>Sample Menu Upload</Text>
               {menuPdf ? (
                 <View style={[styles.row, { alignItems: "center" }]}>
                   <Text style={[styles.meta, styles.flex]} numberOfLines={1}>
@@ -434,10 +485,10 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                 onPress={pickMenuPdf}
                 disabled={submitting}
               >
-                <Text style={styles.secondaryButtonText}>Choose Menu PDF</Text>
+                <Text style={styles.secondaryButtonText}>Choose Sample Menu</Text>
               </TouchableOpacity>
 
-              <Text style={styles.label}>Food/Menu Images</Text>
+              <Text style={styles.label}>Food Photos Upload</Text>
               {bidImages.map((image, index) => (
                 <View
                   key={`${image.uri}-${index}`}
@@ -465,7 +516,9 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                 <Text style={styles.secondaryButtonText}>Add Food Images</Text>
               </TouchableOpacity>
 
-              <Text style={styles.label}>Permit/License Files</Text>
+              <Text style={styles.label}>
+                Permit / Liquor License Upload{requiresPermitUpload ? " *" : ""}
+              </Text>
               {permitLicenseFiles.map((file, index) => (
                 <View
                   key={`${file.uri}-${index}`}
@@ -505,11 +558,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
               {submitting ? (
                 <ActivityIndicator color={AppColor.white} />
               ) : (
-                <Text style={styles.buttonText}>
-                  {vendorFee > 0
-                    ? "Complete Event Registration"
-                    : "Submit Bid"}
-                </Text>
+                <Text style={styles.buttonText}>Submit Bid</Text>
               )}
             </TouchableOpacity>
           </ScrollView>

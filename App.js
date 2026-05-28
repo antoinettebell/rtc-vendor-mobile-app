@@ -13,6 +13,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useDispatch, useSelector } from "react-redux";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { AppColor, Secondary400 } from "./src/utils/theme";
 import GlobalSnackbar from "./src/components/GlobalSnackbar";
 import {
@@ -71,11 +72,18 @@ import ProfileEmployeeManagementScreen from "./src/screens/profileEmployeeManage
 import EmployeeSessionScreen from "./src/screens/employeeSessionScreen";
 import EmployeePosBoardScreen from "./src/screens/employeePosBoardScreen";
 import VendorMarketplaceScreen from "./src/screens/vendorMarketplaceScreen";
+import VendorMarketplaceNearMeScreen from "./src/screens/vendorMarketplaceNearMeScreen";
 import VendorMarketplaceEventDetailsScreen from "./src/screens/vendorMarketplaceEventDetailsScreen";
 import VendorMarketplaceBidResponseScreen from "./src/screens/vendorMarketplaceBidResponseScreen";
+import VendorMarketplaceBidDetailScreen from "./src/screens/vendorMarketplaceBidDetailScreen";
 import VendorMarketplaceMyBidsScreen from "./src/screens/vendorMarketplaceMyBidsScreen";
 import VendorMarketplaceAwardedBidsScreen from "./src/screens/vendorMarketplaceAwardedBidsScreen";
+import VendorMarketplaceAwardedEventDetailsScreen from "./src/screens/vendorMarketplaceAwardedEventDetailsScreen";
 import VendorMarketplacePaymentScreen from "./src/screens/vendorMarketplacePaymentScreen";
+import VendorMarketplaceMyApplicationsScreen from "./src/screens/vendorMarketplaceMyApplicationsScreen";
+import VendorMarketplaceApplicationScreen from "./src/screens/vendorMarketplaceApplicationScreen";
+import VendorMarketplaceApplicationDetailScreen from "./src/screens/vendorMarketplaceApplicationDetailScreen";
+import VendorFeeCheckoutScreen from "./src/screens/vendorFeeCheckoutScreen";
 
 const Stack = createNativeStackNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -213,6 +221,16 @@ const BottomTabNavigator = ({ insets }) => (
       }}
     />
     <BottomTab.Screen
+      name="vendorMarketplaceScreen"
+      component={VendorMarketplaceScreen}
+      options={{
+        tabBarLabel: "Marketplace",
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="storefront" size={size || 24} color={color} />
+        ),
+      }}
+    />
+    <BottomTab.Screen
       name="earningsScreen"
       component={EarningsScreen}
       options={{
@@ -313,6 +331,14 @@ const MainAppNavigator = ({ insets }) => (
       component={VendorMarketplaceScreen}
     />
     <Stack.Screen
+      name="VendorMarketplaceNearMeScreen"
+      component={VendorMarketplaceNearMeScreen}
+    />
+    <Stack.Screen
+      name="vendorMarketplaceNearMeScreen"
+      component={VendorMarketplaceNearMeScreen}
+    />
+    <Stack.Screen
       name="vendorMarketplaceEventDetailsScreen"
       component={VendorMarketplaceEventDetailsScreen}
     />
@@ -321,12 +347,48 @@ const MainAppNavigator = ({ insets }) => (
       component={VendorMarketplaceBidResponseScreen}
     />
     <Stack.Screen
+      name="VendorBidResponseScreen"
+      component={VendorMarketplaceBidResponseScreen}
+    />
+    <Stack.Screen
+      name="VendorBidDetailScreen"
+      component={VendorMarketplaceBidDetailScreen}
+    />
+    <Stack.Screen
       name="vendorMarketplaceMyBidsScreen"
       component={VendorMarketplaceMyBidsScreen}
     />
     <Stack.Screen
+      name="VendorMyBidsScreen"
+      component={VendorMarketplaceMyBidsScreen}
+    />
+    <Stack.Screen
+      name="VendorMyApplicationsScreen"
+      component={VendorMarketplaceMyApplicationsScreen}
+    />
+    <Stack.Screen
+      name="VendorApplicationScreen"
+      component={VendorMarketplaceApplicationScreen}
+    />
+    <Stack.Screen
+      name="VendorApplicationDetailScreen"
+      component={VendorMarketplaceApplicationDetailScreen}
+    />
+    <Stack.Screen
+      name="VendorFeeCheckoutScreen"
+      component={VendorFeeCheckoutScreen}
+    />
+    <Stack.Screen
       name="vendorMarketplaceAwardedBidsScreen"
       component={VendorMarketplaceAwardedBidsScreen}
+    />
+    <Stack.Screen
+      name="VendorAwardedEventsScreen"
+      component={VendorMarketplaceAwardedBidsScreen}
+    />
+    <Stack.Screen
+      name="VendorAwardedEventDetailsScreen"
+      component={VendorMarketplaceAwardedEventDetailsScreen}
     />
     <Stack.Screen
       name="vendorMarketplacePaymentScreen"

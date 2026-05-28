@@ -16,7 +16,13 @@ import {
   MarketplaceHeader,
   formatDate,
   formatMoney,
+  getEventImageUrl,
   getEventLocation,
+  getPaymentAmount,
+  getPaymentAmountLabel,
+  getPaymentTypeLabel,
+  getPrimaryActionLabel,
+  isVendorPaysToAttendEvent,
   listText,
   styles,
 } from "./vendorMarketplaceShared";
@@ -27,6 +33,8 @@ const DetailRow = ({ label, value }) => (
     <Text style={styles.meta}>{value || "None"}</Text>
   </View>
 );
+
+const boolText = (value) => (value ? "Yes" : "No");
 
 const getServiceSpecificRows = (event) => {
   if (!event) return [];
@@ -83,6 +91,11 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
   );
 
   const images = event?.images || [];
+  const primaryImageUrl = getEventImageUrl(event);
+  const vendorPays = isVendorPaysToAttendEvent(event);
+  const primaryActionRoute = vendorPays
+    ? "VendorApplicationScreen"
+    : "VendorBidResponseScreen";
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -94,8 +107,12 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.body}>
+          <AppImage
+            uri={primaryImageUrl}
+            containerStyle={styles.heroImage}
+          />
           <View style={styles.card}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <View style={styles.rowBetween}>
               <Text style={[styles.title, { flex: 1, paddingRight: 8 }]}>
                 {event?.event_name || "Marketplace Event"}
               </Text>
@@ -106,13 +123,9 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
             <Text style={styles.subtitle}>
               {event?.event_description || "No description provided."}
             </Text>
-            <Text style={styles.meta}>
-              {getEventLocation(event)} | {formatDate(event?.event_date)}{" "}
-              {event?.event_time || ""}
-            </Text>
           </View>
 
-          {images.length ? (
+          {images.length > 1 ? (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -134,7 +147,88 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
           ) : null}
 
           <View style={styles.card}>
+            <Text style={styles.sectionHeader}>Event Summary</Text>
             <DetailRow label="Event Type" value={event?.event_type} />
+            <DetailRow
+              label="Date"
+              value={formatDate(event?.event_date)}
+            />
+            <DetailRow
+              label="Time"
+              value={event?.event_time || "Not set"}
+            />
+            <DetailRow
+              label="Location"
+              value={getEventLocation(event)}
+            />
+            <DetailRow label="Estimated Guests" value={`${event?.number_of_guests || 0}`} />
+            <DetailRow
+              label="Application/Bid Deadline"
+              value={formatDate(event?.event_close_date)}
+            />
+          </View>
+
+          <View
+            style={[
+              styles.card,
+              vendorPays ? styles.feeSummaryCard : styles.summaryCard,
+            ]}
+          >
+            <Text style={styles.title}>Payment Type</Text>
+            <View
+              style={[
+                styles.badge,
+                vendorPays ? styles.paymentBadgeOrange : styles.paymentBadgeGreen,
+                { marginTop: 12 },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.badgeText,
+                  vendorPays
+                    ? styles.paymentBadgeTextOrange
+                    : styles.paymentBadgeTextGreen,
+                ]}
+              >
+                {getPaymentTypeLabel(event)}
+              </Text>
+            </View>
+            <DetailRow
+              label={getPaymentAmountLabel(event)}
+              value={formatMoney(getPaymentAmount(event))}
+            />
+            <Text style={styles.meta}>
+              {vendorPays
+                ? "Set by Event Coordinator. Payment required only if accepted."
+                : "Budget set by Event Coordinator"}
+            </Text>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.sectionHeader}>Requirements</Text>
+            <DetailRow
+              label="Insurance Required"
+              value={boolText(event?.insurance_required)}
+            />
+            <DetailRow
+              label="Permit Required"
+              value={
+                Array.isArray(event?.permits_required) &&
+                event.permits_required.length
+                  ? listText(event.permits_required)
+                  : "No"
+              }
+            />
+            <DetailRow
+              label="Liquor License Required"
+              value={boolText(event?.alcohol_required)}
+            />
+            {/* TODO: Replace fallback once backend provides an event-level NDA flag. */}
+            <DetailRow label="NDA Required" value={boolText(event?.nda_required)} />
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.sectionHeader}>Event Needs</Text>
             <DetailRow label="Event Style" value={event?.event_style} />
             <DetailRow label="Service Type" value={event?.service_type} />
             <DetailRow
@@ -144,7 +238,6 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
             {getServiceSpecificRows(event).map(([label, value]) => (
               <DetailRow key={label} label={label} value={String(value || "None")} />
             ))}
-            <DetailRow label="Guests" value={`${event?.number_of_guests || 0}`} />
             <DetailRow
               label="Vendors Needed"
               value={`${event?.number_of_vendors_needed || 0}`}
@@ -152,18 +245,6 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
             <DetailRow
               label="Power Requirements"
               value={listText(event?.power_required)}
-            />
-            <DetailRow
-              label="Permits Required"
-              value={listText(event?.permits_required)}
-            />
-            <DetailRow
-              label="Insurance Required"
-              value={event?.insurance_required ? "Yes" : "No"}
-            />
-            <DetailRow
-              label="Alcohol Service"
-              value={event?.alcohol_required ? "Yes" : "No"}
             />
             <DetailRow
               label="Cuisine Preferences"
@@ -177,31 +258,19 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
               label="Equipment Needed"
               value={listText(event?.equipment_needed)}
             />
-            <DetailRow
-              label="Budget"
-              value={formatMoney(event?.budgeted_amount)}
-            />
-            <DetailRow
-              label="Vendor Fee"
-              value={`${formatMoney(event?.vendor_fee)} - checkout placeholder`}
-            />
-            <DetailRow
-              label="Bid Close Date"
-              value={formatDate(event?.event_close_date)}
-            />
           </View>
 
           <TouchableOpacity
             activeOpacity={0.7}
             style={styles.button}
             onPress={() =>
-              navigation.navigate("vendorMarketplaceBidResponseScreen", {
+              navigation.navigate(primaryActionRoute, {
                 eventId: event?.event_id || eventId,
                 event,
               })
             }
           >
-            <Text style={styles.buttonText}>Submit Bid</Text>
+            <Text style={styles.buttonText}>{getPrimaryActionLabel(event)}</Text>
           </TouchableOpacity>
         </ScrollView>
       )}

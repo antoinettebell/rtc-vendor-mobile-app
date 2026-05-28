@@ -41,14 +41,23 @@ export const MARKETPLACE_EVENT_BY_ID = (event_id) =>
   `/marketplace/events/${event_id}`;
 export const MARKETPLACE_EVENT_BIDS = (event_id) =>
   `/marketplace/events/${event_id}/bids`;
+export const MARKETPLACE_EVENT_APPLICATIONS = (event_id) =>
+  `/marketplace/events/${event_id}/applications`;
 export const MARKETPLACE_BID_ATTACHMENTS = (bid_id) =>
   `/marketplace/bids/${bid_id}/attachments`;
+export const MARKETPLACE_APPLICATION_ATTACHMENTS = (application_id) =>
+  `/marketplace/applications/${application_id}/attachments`;
+export const MARKETPLACE_APPLICATION_VENDOR_FEE_PAYMENT = (application_id) =>
+  `/marketplace/applications/${application_id}/vendor-fee-payment`;
 export const MARKETPLACE_MY_BIDS = "/marketplace/bids/my";
+export const MARKETPLACE_MY_APPLICATIONS = "/marketplace/applications/my";
 export const MARKETPLACE_AWARDED_BIDS = "/marketplace/bids/awarded";
 export const MARKETPLACE_PAYMENT_BY_ID = (payment_id) =>
   `/marketplace/payments/${payment_id}`;
 export const MARKETPLACE_PAYMENT_CALL = (payment_id) =>
   `/marketplace/payments/${payment_id}/call`;
+export const MARKETPLACE_PAYMENT_CHECKOUT = (payment_id) =>
+  `/marketplace/payments/${payment_id}/checkout`;
 
 // Bank Detail
 export const ADD_BANK_DETAIL = "/user/bank-detail";

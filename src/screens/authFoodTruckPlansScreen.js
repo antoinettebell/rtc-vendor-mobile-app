@@ -26,6 +26,26 @@ import StatusBarManager from "../components/StatusBarManager";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
 import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlice";
 
+const EVENT_MARKETPLACE_PATTERN = /event|booking|marketplace/i;
+
+const isEventMarketplaceAddOn = (addOn) =>
+  EVENT_MARKETPLACE_PATTERN.test(
+    `${addOn?.slug || ""} ${addOn?.name || ""} ${addOn?.description || ""}`,
+  );
+
+const isElitePlan = (plan) => {
+  const planText = `${plan?.slug || ""} ${plan?.name || ""} ${
+    plan?.title || ""
+  }`;
+
+  return (
+    plan?.slug === "SUB_ELITE" ||
+    /elite/i.test(planText) ||
+    Number(plan?.rate) === 5.5 ||
+    plan?.capabilities?.eventMarketplace === true
+  );
+};
+
 const AuthFoodTruckPlansScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -40,7 +60,29 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
   const [expandedPlanId, setExpandedPlanId] = useState(null);
   const [agreed, setAgreed] = useState(false);
   const [selectedAddOns, setSelectedAddOns] = useState([]);
-  const visibleAddOns = useMemo(() => addOnsData, [addOnsData]);
+  const selectedPlanObject = useMemo(
+    () =>
+      plansData.find((plan) => plan._id === selectedPlanId) || selectedPlan,
+    [plansData, selectedPlan, selectedPlanId],
+  );
+  const isEliteSelected = isElitePlan(selectedPlanObject);
+  const visibleAddOns = useMemo(
+    () =>
+      isEliteSelected
+        ? addOnsData.filter((addOn) => !isEventMarketplaceAddOn(addOn))
+        : addOnsData,
+    [addOnsData, isEliteSelected],
+  );
+  const getSubmittedAddOns = () => {
+    if (!isEliteSelected) {
+      return selectedAddOns;
+    }
+
+    return selectedAddOns.filter((id) => {
+      const addOn = addOnsData.find((item) => item._id === id);
+      return !isEventMarketplaceAddOn(addOn);
+    });
+  };
 
   const handleContinueBtnPress = async () => {
     setLoading(true);
@@ -49,11 +91,12 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
         return;
       }
       // You can now use selectedAddOns in your logic here
-      console.log("Selected Add-Ons:", selectedAddOns);
+      const submittedAddOns = getSubmittedAddOns();
+      console.log("Selected Add-Ons:", submittedAddOns);
       const temp_plan = plansData.find((plan) => plan._id === selectedPlanId);
       dispatch(setSelectedPlan(temp_plan));
       navigation.navigate("authFoodTruckProfileScreen", {
-        addOns: selectedAddOns,
+        addOns: submittedAddOns,
       });
     } catch (error) {
       console.error("error => ", error);
@@ -84,9 +127,22 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
   const onSelectePlan = (item) => {
     setSelectedPlanId(item._id);
     setExpandedPlanId(item._id);
+    if (isElitePlan(item)) {
+      setSelectedAddOns((prevSelectedAddOns) =>
+        prevSelectedAddOns.filter((id) => {
+          const addOn = addOnsData.find((entry) => entry._id === id);
+          return !isEventMarketplaceAddOn(addOn);
+        }),
+      );
+    }
   };
 
   const handleAddOnSelection = (id) => {
+    const addOn = addOnsData.find((item) => item._id === id);
+    if (isEliteSelected && isEventMarketplaceAddOn(addOn)) {
+      return;
+    }
+
     setSelectedAddOns((prevSelectedAddOns) => {
       if (prevSelectedAddOns.includes(id)) {
         return prevSelectedAddOns.filter((addOnId) => addOnId !== id);
@@ -102,10 +158,10 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
       plan?.slug === "SUB_ELITE" &&
       /event|marketplace|booking/i.test(benefitText)
     ) {
-      return benefitText.replace(/\s*\(coming soon\)$/i, "") + " (Coming Soon)";
+      return "Event Marketplace Access included";
     }
 
-    return benefitText;
+    return benefitText.replace(/\s*\(coming soon\)$/i, "");
   };
 
   const isUnavailableBenefit = (benefit) =>
@@ -405,13 +461,33 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
                 />
               </View>
 
+              {isEliteSelected ? (
+                <View style={styles.includedAccessCard}>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={22}
+                    color="#137333"
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.includedAccessTitle}>
+                      Event Marketplace Access included
+                    </Text>
+                    <Text style={styles.includedAccessText}>
+                      Elite vendors can participate in event marketplace
+                      opportunities without selecting the Event Bookings add-on.
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+
               {visibleAddOns?.length ? (
                 <View>
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Select Add-Ons</Text>
                     <Text style={styles.sectionSubtitle}>
-                      Accept Event Bookings is required for Event Marketplace
-                      access.
+                      {isEliteSelected
+                        ? "Optional add-ons for your current plan."
+                        : "Event Bookings enables Event Marketplace access for Basic and Platinum vendors."}
                     </Text>
                   </View>
 
@@ -699,6 +775,31 @@ const styles = StyleSheet.create({
     fontFamily: Mulish400,
     color: AppColor.textHighlighter,
     marginTop: 4,
+  },
+  includedAccessCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    marginHorizontal: 24,
+    marginTop: 8,
+    marginBottom: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#B7E4C7",
+    borderRadius: 12,
+    backgroundColor: "#F0FFF4",
+  },
+  includedAccessTitle: {
+    color: "#0B5D1E",
+    fontSize: 14,
+    fontFamily: Mulish700,
+    marginBottom: 4,
+  },
+  includedAccessText: {
+    color: "#256D3F",
+    fontSize: 12,
+    fontFamily: Mulish400,
+    lineHeight: 17,
   },
   termsText: {
     flex: 1,

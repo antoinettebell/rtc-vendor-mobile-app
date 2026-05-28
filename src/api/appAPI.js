@@ -29,14 +29,19 @@ import {
   GET_REVIEW_BY_FOODTRUCK_ID,
   GET_REVIEW_STATS_BY_FOODTRUCK_ID,
   GET_USER_DETAILS,
+  MARKETPLACE_APPLICATION_ATTACHMENTS,
+  MARKETPLACE_APPLICATION_VENDOR_FEE_PAYMENT,
   MARKETPLACE_AWARDED_BIDS,
   MARKETPLACE_BID_ATTACHMENTS,
+  MARKETPLACE_EVENT_APPLICATIONS,
   MARKETPLACE_EVENT_BIDS,
   MARKETPLACE_EVENT_BY_ID,
+  MARKETPLACE_MY_APPLICATIONS,
   MARKETPLACE_MY_BIDS,
   MARKETPLACE_OPEN_EVENTS,
   MARKETPLACE_PAYMENT_BY_ID,
   MARKETPLACE_PAYMENT_CALL,
+  MARKETPLACE_PAYMENT_CHECKOUT,
   MEDIA_UPLOAD,
   REGISTER_COMPLETE,
   REMOVE_ACCOUNT,
@@ -168,9 +173,64 @@ export const uploadMarketplaceBidAttachment_API = async ({ bid_id, payload }) =>
   }
 };
 
+export const submitMarketplaceApplication_API = async ({ event_id, payload }) => {
+  try {
+    const response = await apiClient.post(
+      MARKETPLACE_EVENT_APPLICATIONS(event_id),
+      payload,
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const uploadMarketplaceApplicationAttachment_API = async ({
+  application_id,
+  payload,
+}) => {
+  try {
+    const response = await apiClient.post(
+      MARKETPLACE_APPLICATION_ATTACHMENTS(application_id),
+      payload,
+      { formData: true, skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const createMarketplaceApplicationVendorFeePayment_API = async (
+  application_id,
+) => {
+  try {
+    const response = await apiClient.post(
+      MARKETPLACE_APPLICATION_VENDOR_FEE_PAYMENT(application_id),
+      {},
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
 export const getMarketplaceMyBids_API = async () => {
   try {
     const response = await apiClient.get(MARKETPLACE_MY_BIDS, {
+      skipToken: false,
+    });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const getMarketplaceMyApplications_API = async () => {
+  try {
+    const response = await apiClient.get(MARKETPLACE_MY_APPLICATIONS, {
       skipToken: false,
     });
     return response?.data;
@@ -206,6 +266,22 @@ export const callMarketplacePayment_API = async (payment_id) => {
     const response = await apiClient.post(
       MARKETPLACE_PAYMENT_CALL(payment_id),
       {},
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const checkoutMarketplacePayment_API = async ({
+  payment_id,
+  payload,
+}) => {
+  try {
+    const response = await apiClient.post(
+      MARKETPLACE_PAYMENT_CHECKOUT(payment_id),
+      payload,
       { skipToken: false },
     );
     return response?.data;

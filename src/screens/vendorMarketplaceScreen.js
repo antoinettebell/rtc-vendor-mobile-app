@@ -1,267 +1,272 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  RefreshControl,
+  ScrollView,
+  StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
+import { useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import StatusBarManager from "../components/StatusBarManager";
+import { getAddOnsPlans_API } from "../api/appAPI";
 import { AppColor } from "../utils/theme";
-import { getMarketplaceOpenEvents_API } from "../api/appAPI";
-import {
-  CUISINE_OPTIONS,
-  EVENT_TYPES,
-  MarketplaceHeader,
-  formatDate,
-  formatMoney,
-  getEventLocation,
-  isEventAccessError,
-  listText,
-  styles,
-} from "./vendorMarketplaceShared";
+import { MarketplaceHeader, styles } from "./vendorMarketplaceShared";
 
-const LockedMarketplace = ({ navigation }) => (
-  <View style={[styles.body, { justifyContent: "center" }]}>
-    <View style={styles.card}>
-      <Text style={[styles.title, { textAlign: "center" }]}>
-        Event Marketplace Locked
-      </Text>
-      <Text style={styles.emptyText}>
-        Accept Event Bookings is required before you can browse events or submit
-        bids.
-      </Text>
-      <TouchableOpacity
-        activeOpacity={0.7}
-        style={[styles.button, { marginTop: 18 }]}
-        onPress={() => navigation.navigate("profileSubscriptionScreen")}
-      >
-        <Text style={styles.buttonText}>Manage Add-ons</Text>
-      </TouchableOpacity>
+const EVENT_ADD_ON_PATTERN = /event|booking|marketplace/i;
+
+const getPlanLabel = (plan) =>
+  String(plan?.slug || plan?.name || plan?.title || "").toLowerCase();
+
+const getPlanRate = (plan) =>
+  parseFloat(plan?.rate || plan?.feeRate || plan?.saleFee || 0);
+
+const isElitePlan = (plan) => {
+  const label = getPlanLabel(plan);
+  return (
+    label.includes("elite") ||
+    label.includes("sub_elite") ||
+    getPlanRate(plan) === 5.5 ||
+    !!plan?.capabilities?.eventMarketplace
+  );
+};
+
+const hasEventBookingsAddOn = (foodTruck, eventAddOnIds = []) => {
+  const addOns = foodTruck?.addOns || [];
+  return Array.isArray(addOns)
+    ? addOns.some((addOn) => {
+        if (typeof addOn === "string") {
+          return (
+            EVENT_ADD_ON_PATTERN.test(addOn) || eventAddOnIds.includes(addOn)
+          );
+        }
+        if (eventAddOnIds.includes(addOn?._id)) {
+          return true;
+        }
+        return EVENT_ADD_ON_PATTERN.test(
+          `${addOn?.slug || ""} ${addOn?.name || ""} ${addOn?.description || ""}`,
+        );
+      })
+    : false;
+};
+
+const canAccessMarketplace = (foodTruck, eventAddOnIds, selectedPlan) =>
+  isElitePlan(foodTruck?.plan || foodTruck?.planId) ||
+  isElitePlan(selectedPlan) ||
+  hasEventBookingsAddOn(foodTruck, eventAddOnIds);
+
+const MARKETPLACE_CARDS = [
+  {
+    title: "Marketplace / Near Me",
+    subtitle: "View sourcing events and food opportunities near you.",
+    icon: "storefront",
+    route: "VendorMarketplaceNearMeScreen",
+  },
+  {
+    title: "My Bids",
+    subtitle: "Track bids submitted for coordinator-paid events.",
+    icon: "receipt-long",
+    route: "VendorMyBidsScreen",
+  },
+  {
+    title: "My Applications",
+    subtitle: "Track applications submitted for vendor-paid events.",
+    icon: "assignment",
+    route: "VendorMyApplicationsScreen",
+  },
+  {
+    title: "Awarded Events",
+    subtitle: "View events you were accepted or awarded for.",
+    icon: "emoji-events",
+    route: "VendorAwardedEventsScreen",
+  },
+];
+
+const MarketplaceCard = ({ item, onPress }) => (
+  <TouchableOpacity activeOpacity={0.8} style={styles.card} onPress={onPress}>
+    <View style={localStyles.cardRow}>
+      <View style={localStyles.iconWrap}>
+        <MaterialIcons name={item.icon} size={24} color={AppColor.primary} />
+      </View>
+      <View style={styles.flex}>
+        <Text style={styles.title}>{item.title}</Text>
+        <Text style={styles.subtitle}>{item.subtitle}</Text>
+      </View>
+      <MaterialIcons name="chevron-right" size={26} color={AppColor.gray} />
     </View>
+  </TouchableOpacity>
+);
+
+const AccessOption = ({ title, details }) => (
+  <View style={[styles.card, localStyles.optionCard]}>
+    <Text style={[styles.title, localStyles.optionTitle]}>{title}</Text>
+    {details.map((detail) => (
+      <Text key={detail} style={styles.meta}>
+        {detail}
+      </Text>
+    ))}
   </View>
 );
 
-const VendorMarketplaceScreen = ({ navigation }) => {
-  const insets = useSafeAreaInsets();
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [locked, setLocked] = useState(false);
-  const [cityState, setCityState] = useState("");
-  const [eventType, setEventType] = useState("");
-  const [cuisine, setCuisine] = useState("");
-
-  const loadEvents = async () => {
-    setLoading(true);
-    try {
-      const response = await getMarketplaceOpenEvents_API({ limit: 100 });
-      if (response?.success) {
-        setEvents(response.data?.marketplaceEventList || []);
-        setLocked(false);
-      }
-    } catch (error) {
-      if (isEventAccessError(error)) {
-        setLocked(true);
-      } else {
-        console.log("Marketplace events error", error);
-      }
-    } finally {
-      setLoading(false);
+const MarketplaceAccessPrompt = ({ navigation }) => {
+  const onMaybeLater = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate("homeScreen");
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      loadEvents();
-    }, []),
-  );
-
-  const filteredEvents = useMemo(() => {
-    const locationFilter = cityState.trim().toLowerCase();
-    const cuisineFilter = cuisine.trim().toLowerCase();
-
-    return events.filter((event) => {
-      const location = getEventLocation(event).toLowerCase();
-      const eventCuisine = listText(event.cuisine_preferences).toLowerCase();
-
-      return (
-        (!locationFilter || location.includes(locationFilter)) &&
-        (!eventType || event.event_type === eventType) &&
-        (!cuisineFilter || eventCuisine.includes(cuisineFilter))
-      );
-    });
-  }, [cityState, cuisine, eventType, events]);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadEvents();
-    setRefreshing(false);
-  };
-
-  const renderEvent = ({ item }) => (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      style={styles.card}
-      onPress={() =>
-        navigation.navigate("vendorMarketplaceEventDetailsScreen", {
-          eventId: item.event_id,
-        })
-      }
-    >
-      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        <Text style={[styles.title, { flex: 1, paddingRight: 8 }]}>
-          {item.event_name}
+  return (
+    <ScrollView contentContainerStyle={styles.body}>
+      <View style={styles.card}>
+        <Text style={[styles.title, { textAlign: "center" }]}>
+          Marketplace Access
         </Text>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{item.status}</Text>
-        </View>
+        <Text style={styles.emptyText}>
+          Find event opportunities, submit bids, apply for vendor events, and
+          manage awarded events.
+        </Text>
       </View>
-      <Text style={styles.subtitle} numberOfLines={2}>
-        {item.event_description || "No description provided."}
-      </Text>
-      <Text style={styles.meta}>
-        {getEventLocation(item)} | {item.event_type || "Event"} |{" "}
-        {formatDate(item.event_date)} {item.event_time || ""}
-      </Text>
-      <Text style={styles.meta}>
-        {item.number_of_vendors_needed || 0} vendors needed | Budget{" "}
-        {formatMoney(item.budgeted_amount)} | Vendor fee{" "}
-        {formatMoney(item.vendor_fee)}
-      </Text>
-    </TouchableOpacity>
+
+      <AccessOption
+        title="Upgrade to Elite"
+        details={["Includes Marketplace Access", "5.5% per sale fee"]}
+      />
+      <AccessOption
+        title="Add-On Event Bookings - $25/month"
+        details={["Add marketplace access to your current plan."]}
+      />
+
+      <TouchableOpacity
+        activeOpacity={0.8}
+        style={styles.button}
+        onPress={() => navigation.navigate("profileSubscriptionScreen")}
+      >
+        <Text style={styles.buttonText}>Upgrade to Elite</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        activeOpacity={0.8}
+        style={[styles.secondaryButton, { marginTop: 12 }]}
+        onPress={() => navigation.navigate("profileSubscriptionScreen")}
+      >
+        <Text style={styles.secondaryButtonText}>
+          Add-On Event Bookings - $25/month
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        activeOpacity={0.8}
+        style={[styles.secondaryButton, localStyles.maybeLaterButton]}
+        onPress={onMaybeLater}
+      >
+        <Text style={styles.secondaryButtonText}>Maybe Later</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
+};
+
+const VendorMarketplaceScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
+  const { selectedPlan, user } = useSelector((state) => state.userReducer);
+  const foodTruck = user?.foodTruck;
+  const [eventAddOnIds, setEventAddOnIds] = useState([]);
+  const hasAccess = useMemo(
+    () => canAccessMarketplace(foodTruck, eventAddOnIds, selectedPlan),
+    [eventAddOnIds, foodTruck, selectedPlan],
+  );
+
+  useEffect(() => {
+    const loadEventAddOns = async () => {
+      try {
+        const response = await getAddOnsPlans_API();
+        const addOns = response?.data?.addonsList || [];
+        setEventAddOnIds(
+          addOns
+            .filter((addOn) =>
+              EVENT_ADD_ON_PATTERN.test(
+                `${addOn?.slug || ""} ${addOn?.name || ""} ${
+                  addOn?.description || ""
+                }`,
+              ),
+            )
+            .map((addOn) => addOn._id)
+            .filter(Boolean),
+        );
+      } catch (error) {
+        console.log("Marketplace add-ons error", error);
+      }
+    };
+
+    loadEventAddOns();
+  }, []);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBarManager />
-      <MarketplaceHeader
-        title="Event Marketplace"
-        navigation={navigation}
-        right={
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => navigation.navigate("vendorMarketplaceMyBidsScreen")}
-          >
-            <MaterialIcons name="receipt-long" size={24} color={AppColor.primary} />
-          </TouchableOpacity>
-        }
-      />
-      {locked ? (
-        <LockedMarketplace navigation={navigation} />
-      ) : loading && !refreshing ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator color={AppColor.primary} size="large" />
-        </View>
-      ) : (
-        <FlatList
-          data={filteredEvents}
-          keyExtractor={(item) => item.event_id}
-          renderItem={renderEvent}
-          contentContainerStyle={styles.body}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={AppColor.primary}
+      <MarketplaceHeader title="Marketplace" navigation={navigation} />
+      {hasAccess ? (
+        <ScrollView contentContainerStyle={styles.body}>
+          <Text style={localStyles.kicker}>ROUND THE CORNER</Text>
+          <Text style={localStyles.heading}>Vendor Event Marketplace</Text>
+          <Text style={styles.screenIntro}>
+            Discover event opportunities, track bids and applications, and manage
+            awarded events.
+          </Text>
+          {MARKETPLACE_CARDS.map((item) => (
+            <MarketplaceCard
+              key={item.title}
+              item={item}
+              onPress={() => navigation.navigate(item.route)}
             />
-          }
-          ListHeaderComponent={
-            <View style={styles.card}>
-              <Text style={styles.label}>City or State</Text>
-              <TextInput
-                value={cityState}
-                onChangeText={setCityState}
-                placeholder="Filter by city/state"
-                placeholderTextColor={AppColor.placeholderTextColor}
-                style={styles.input}
-              />
-              <Text style={styles.label}>Event Type</Text>
-              <View style={styles.chipWrap}>
-                {["All", ...EVENT_TYPES].map((type) => {
-                  const active = type === "All" ? !eventType : eventType === type;
-                  return (
-                    <TouchableOpacity
-                      key={type}
-                      activeOpacity={0.7}
-                      style={[styles.chip, active && styles.chipActive]}
-                      onPress={() => setEventType(type === "All" ? "" : type)}
-                    >
-                      <Text
-                        style={[
-                          styles.chipText,
-                          active && styles.chipTextActive,
-                        ]}
-                      >
-                        {type}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-              <Text style={styles.label}>Cuisine/Food Type</Text>
-              <View style={styles.chipWrap}>
-                {["All", ...CUISINE_OPTIONS].map((type) => {
-                  const active = type === "All" ? !cuisine : cuisine === type;
-                  return (
-                    <TouchableOpacity
-                      key={type}
-                      activeOpacity={0.7}
-                      style={[styles.chip, active && styles.chipActive]}
-                      onPress={() => setCuisine(type === "All" ? "" : type)}
-                    >
-                      <Text
-                        style={[
-                          styles.chipText,
-                          active && styles.chipTextActive,
-                        ]}
-                      >
-                        {type}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-              <View style={[styles.row, { marginTop: 16 }]}>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  style={[styles.secondaryButton, styles.flex]}
-                  onPress={() => navigation.navigate("vendorMarketplaceMyBidsScreen")}
-                >
-                  <Text style={styles.secondaryButtonText}>My Bids</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  style={[styles.secondaryButton, styles.flex]}
-                  onPress={() =>
-                    navigation.navigate("vendorMarketplaceAwardedBidsScreen")
-                  }
-                >
-                  <Text style={styles.secondaryButtonText}>Awarded</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          }
-          ListEmptyComponent={
-            <View style={styles.card}>
-              <Text style={[styles.title, { textAlign: "center" }]}>
-                No open events found
-              </Text>
-              <Text style={styles.emptyText}>
-                Adjust your filters or check back as coordinators publish new
-                events.
-              </Text>
-            </View>
-          }
-        />
+          ))}
+        </ScrollView>
+      ) : (
+        <MarketplaceAccessPrompt navigation={navigation} />
       )}
     </View>
   );
 };
+
+const localStyles = StyleSheet.create({
+  cardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  iconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF1E6",
+  },
+  kicker: {
+    fontSize: 11,
+    fontFamily: "Mulish-Bold",
+    color: AppColor.primary,
+    letterSpacing: 0,
+  },
+  heading: {
+    fontSize: 22,
+    fontFamily: "Mulish-Bold",
+    color: AppColor.text,
+    marginTop: 2,
+    marginBottom: 4,
+  },
+  optionCard: {
+    borderColor: "#F0D5BD",
+    backgroundColor: "#FFFDF9",
+  },
+  optionTitle: {
+    fontSize: 16,
+  },
+  maybeLaterButton: {
+    marginTop: 12,
+    marginBottom: 12,
+    borderColor: AppColor.border,
+  },
+});
 
 export default VendorMarketplaceScreen;

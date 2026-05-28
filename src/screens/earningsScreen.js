@@ -52,6 +52,11 @@ const REQUEST_STATUS_FILTERS = [
   { label: "Approved", value: "approved" },
   { label: "Rejected", value: "rejected" },
 ];
+const FILTER_LABELS = {
+  location: "Location",
+  employee: "Employee",
+  status: "Refund/Cancel Status",
+};
 
 const getOrdersTotal = (orders) =>
   orders.reduce((total, order) => total + getVendorOrderTotal(order), 0);
@@ -93,12 +98,12 @@ const EarningComponent = memo(({ title, amount, onPress }) => {
   );
 });
 
-const Chip = ({ label, selected, onPress }) => (
+const SegmentButton = ({ label, selected, onPress }) => (
   <Pressable
-    style={[styles.chip, selected && styles.chipSelected]}
+    style={[styles.segmentButton, selected && styles.segmentButtonSelected]}
     onPress={onPress}
   >
-    <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
+    <Text style={[styles.segmentText, selected && styles.segmentTextSelected]}>
       {label}
     </Text>
   </Pressable>
@@ -152,6 +157,7 @@ const EarningsScreen = ({ navigation }) => {
   const [reviewStatus, setReviewStatus] = useState("APPROVED");
   const [vendorResponseNotes, setVendorResponseNotes] = useState("");
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [filterPicker, setFilterPicker] = useState(null);
 
   const canTapToPay = !!user?.foodTruck?.plan?.capabilities?.tapToPay;
   const locations = user?.foodTruck?.locations || [];
@@ -164,6 +170,70 @@ const EarningsScreen = ({ navigation }) => {
         : PAYMENT_FILTERS.filter((item) => item.value !== "TAP_TO_PAY"),
     [canTapToPay]
   );
+  const analyticsSummary = useMemo(() => {
+    const totals = employees.reduce(
+      (acc, employee) => {
+        const metrics = employee.metrics || {};
+        const orders = Number(metrics.orders_processed || 0);
+        const sales = Number(metrics.gross_sales || 0);
+        const requests = Number(metrics.refund_cancel_requests_submitted || 0);
+
+        return {
+          sales: acc.sales + sales,
+          orders: acc.orders + orders,
+          requests: acc.requests + requests,
+        };
+      },
+      { sales: 0, orders: 0, requests: 0 }
+    );
+
+    return {
+      ...totals,
+      averageTicket: totals.orders ? totals.sales / totals.orders : 0,
+    };
+  }, [employees]);
+  const locationOptions = useMemo(
+    () => [
+      { label: "All Locations", value: null },
+      ...locations.map((location) => ({
+        label: location.title || location.address || "Location",
+        value: location._id,
+      })),
+    ],
+    [locations]
+  );
+  const employeeOptions = useMemo(
+    () => [
+      { label: "All Employees", value: null },
+      ...employees.map((employee) => ({
+        label: employee.employee_name || "Employee",
+        value: employee.employee_internal_id,
+      })),
+    ],
+    [employees]
+  );
+  const statusOptions = useMemo(
+    () =>
+      REQUEST_STATUS_FILTERS.map((item) => ({
+        ...item,
+        label: item.value ? item.label : "All Statuses",
+      })),
+    []
+  );
+  const filterOptions = {
+    location: locationOptions,
+    employee: employeeOptions,
+    status: statusOptions,
+  };
+  const selectedFilterLabel = (options, value, fallback) =>
+    options.find((item) => item.value === value)?.label || fallback;
+  const resetEmployeeFilters = () => {
+    setDateFilter("today");
+    setLocationFilter(null);
+    setEmployeeFilter(null);
+    setPaymentFilter(null);
+    setRequestStatusFilter(null);
+  };
 
   const fetchPastOrders = async () => {
     let page = 1;
@@ -343,6 +413,64 @@ const EarningsScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+      <Modal
+        animationType="fade"
+        transparent
+        visible={!!filterPicker}
+        onRequestClose={() => setFilterPicker(null)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setFilterPicker(null)}
+        >
+          <Pressable style={styles.filterPickerCard}>
+            <Text style={styles.modalTitle}>
+              {FILTER_LABELS[filterPicker] || "Filter"}
+            </Text>
+            {(filterOptions[filterPicker] || []).map((item) => {
+              const selected =
+                (filterPicker === "location" && locationFilter === item.value) ||
+                (filterPicker === "employee" && employeeFilter === item.value) ||
+                (filterPicker === "status" &&
+                  requestStatusFilter === item.value);
+              return (
+                <Pressable
+                  key={`${filterPicker}-${item.label}-${item.value || "all"}`}
+                  style={styles.filterPickerOption}
+                  onPress={() => {
+                    if (filterPicker === "location") {
+                      setLocationFilter(item.value);
+                    }
+                    if (filterPicker === "employee") {
+                      setEmployeeFilter(item.value);
+                    }
+                    if (filterPicker === "status") {
+                      setRequestStatusFilter(item.value);
+                    }
+                    setFilterPicker(null);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.filterPickerText,
+                      selected && styles.filterPickerTextSelected,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                  {selected ? (
+                    <FontAwesome6
+                      name="check"
+                      size={14}
+                      color={AppColor.primary}
+                    />
+                  ) : null}
+                </Pressable>
+              );
+            })}
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
@@ -404,49 +532,41 @@ const EarningsScreen = ({ navigation }) => {
 
               <View style={styles.analyticsPanel}>
                 <Text style={styles.sectionTitle}>Employee Analytics</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Track employee sales, refunds, and order activity.
+                </Text>
 
-                <Text style={styles.subsectionTitle}>Pending Requests</Text>
-                {pendingRequests.length ? (
-                  pendingRequests.map((request) => (
-                    <View key={request.request_id} style={styles.requestCard}>
-                      <Text style={styles.requestTitle}>
-                        Order #{request.order_id?.orderNumber || request.order_id}
-                      </Text>
-                      <Text style={styles.requestMeta}>
-                        {request.request_type} | {request.reason_code}
-                      </Text>
-                      <Text style={styles.requestMeta}>
-                        {request.employee_login_id}
-                        {request.employee_notes
-                          ? ` | ${request.employee_notes}`
-                          : ""}
-                      </Text>
-                      <View style={styles.reviewActions}>
-                        <Pressable
-                          style={styles.approveButton}
-                          onPress={() => openReviewModal(request, "APPROVED")}
-                        >
-                          <Text style={styles.approveButtonText}>Approve</Text>
-                        </Pressable>
-                        <Pressable
-                          style={styles.rejectButton}
-                          onPress={() => openReviewModal(request, "REJECTED")}
-                        >
-                          <Text style={styles.rejectButtonText}>Reject</Text>
-                        </Pressable>
-                      </View>
-                    </View>
-                  ))
-                ) : (
-                  <Text style={styles.emptyAnalyticsText}>
-                    No pending refund/cancel requests.
-                  </Text>
-                )}
+                <View style={styles.summaryGrid}>
+                  <View style={styles.summaryCard}>
+                    <Text style={styles.summaryLabel}>Total Sales</Text>
+                    <Text style={styles.summaryValue}>
+                      ${formatMoney(analyticsSummary.sales)}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryCard}>
+                    <Text style={styles.summaryLabel}>Orders</Text>
+                    <Text style={styles.summaryValue}>
+                      {analyticsSummary.orders}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryCard}>
+                    <Text style={styles.summaryLabel}>Refunds/Cancels</Text>
+                    <Text style={styles.summaryValue}>
+                      {analyticsSummary.requests}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryCard}>
+                    <Text style={styles.summaryLabel}>Avg. Ticket</Text>
+                    <Text style={styles.summaryValue}>
+                      ${formatMoney(analyticsSummary.averageTicket)}
+                    </Text>
+                  </View>
+                </View>
 
-                <Text style={styles.filterLabel}>Date range</Text>
-                <View style={styles.chipRow}>
+                <Text style={styles.filterLabel}>Date Range</Text>
+                <View style={styles.segmentedControl}>
                   {DATE_FILTERS.map((item) => (
-                    <Chip
+                    <SegmentButton
                       key={item.value}
                       label={item.label}
                       selected={dateFilter === item.value}
@@ -455,189 +575,210 @@ const EarningsScreen = ({ navigation }) => {
                   ))}
                 </View>
 
-                <Text style={styles.filterLabel}>Location</Text>
-                <View style={styles.chipRow}>
-                  <Chip
-                    label="All"
-                    selected={!locationFilter}
-                    onPress={() => setLocationFilter(null)}
-                  />
-                  {locations.map((location) => (
-                    <Chip
-                      key={location._id}
-                      label={location.title || location.address || "Location"}
-                      selected={locationFilter === location._id}
-                      onPress={() => setLocationFilter(location._id)}
+                <Text style={styles.filterLabel}>Filters</Text>
+                <View style={styles.filterGrid}>
+                  <Pressable
+                    style={styles.selectControl}
+                    onPress={() => setFilterPicker("location")}
+                  >
+                    <Text style={styles.selectLabel} numberOfLines={1}>
+                      {selectedFilterLabel(
+                        locationOptions,
+                        locationFilter,
+                        "All Locations"
+                      )}
+                    </Text>
+                    <Entypo
+                      name="chevron-small-down"
+                      size={22}
+                      color={AppColor.textHighlighter}
                     />
-                  ))}
-                </View>
-
-                <Text style={styles.filterLabel}>Employee</Text>
-                <View style={styles.chipRow}>
-                  <Chip
-                    label="All"
-                    selected={!employeeFilter}
-                    onPress={() => setEmployeeFilter(null)}
-                  />
-                  {employees.map((employee) => (
-                    <Chip
-                      key={employee.employee_internal_id}
-                      label={employee.employee_name}
-                      selected={employeeFilter === employee.employee_internal_id}
-                      onPress={() =>
-                        setEmployeeFilter(employee.employee_internal_id)
-                      }
+                  </Pressable>
+                  <Pressable
+                    style={styles.selectControl}
+                    onPress={() => setFilterPicker("employee")}
+                  >
+                    <Text style={styles.selectLabel} numberOfLines={1}>
+                      {selectedFilterLabel(
+                        employeeOptions,
+                        employeeFilter,
+                        "All Employees"
+                      )}
+                    </Text>
+                    <Entypo
+                      name="chevron-small-down"
+                      size={22}
+                      color={AppColor.textHighlighter}
                     />
-                  ))}
-                </View>
-
-                <Text style={styles.filterLabel}>Payment method</Text>
-                <View style={styles.chipRow}>
-                  {paymentFilters.map((item) => (
-                    <Chip
-                      key={item.label}
-                      label={item.label}
-                      selected={paymentFilter === item.value}
-                      onPress={() => setPaymentFilter(item.value)}
+                  </Pressable>
+                  <View style={[styles.segmentedControl, styles.paymentSegment]}>
+                    {paymentFilters.map((item) => (
+                      <SegmentButton
+                        key={item.label}
+                        label={item.label}
+                        selected={paymentFilter === item.value}
+                        onPress={() => setPaymentFilter(item.value)}
+                      />
+                    ))}
+                  </View>
+                  <Pressable
+                    style={styles.selectControl}
+                    onPress={() => setFilterPicker("status")}
+                  >
+                    <Text style={styles.selectLabel} numberOfLines={1}>
+                      {selectedFilterLabel(
+                        statusOptions,
+                        requestStatusFilter,
+                        "All Statuses"
+                      )}
+                    </Text>
+                    <Entypo
+                      name="chevron-small-down"
+                      size={22}
+                      color={AppColor.textHighlighter}
                     />
-                  ))}
+                  </Pressable>
                 </View>
+                <Pressable style={styles.resetButton} onPress={resetEmployeeFilters}>
+                  <Text style={styles.resetButtonText}>Reset Filters</Text>
+                </Pressable>
 
-                <Text style={styles.filterLabel}>Refund/cancel status</Text>
-                <View style={styles.chipRow}>
-                  {REQUEST_STATUS_FILTERS.map((item) => (
-                    <Chip
-                      key={item.label}
-                      label={item.label}
-                      selected={requestStatusFilter === item.value}
-                      onPress={() => setRequestStatusFilter(item.value)}
-                    />
-                  ))}
-                </View>
-
-                {employees.length ? (
-                  employees.map((employee) => (
-                    <View
-                      key={employee.employee_internal_id}
-                      style={styles.employeeCard}
-                    >
-                      <View style={styles.employeeHeader}>
-                        <View style={styles.employeeTitleWrap}>
-                          <Text style={styles.employeeName}>
-                            {employee.employee_name}
-                          </Text>
-                          <Text style={styles.employeeLocation}>
-                            {employee.assigned_location?.title ||
-                              employee.assigned_location?.address ||
-                              "Assigned location"}
-                          </Text>
-                        </View>
-                        <View style={styles.statusColumn}>
-                          <Text
-                            style={[
-                              styles.statusBadge,
-                              employee.is_active && styles.statusBadgeActive,
-                            ]}
+                <View style={styles.subsectionCard}>
+                  <Text style={styles.subsectionTitle}>Pending Requests</Text>
+                  {pendingRequests.length ? (
+                    pendingRequests.map((request) => (
+                      <View key={request.request_id} style={styles.requestCard}>
+                        <Text style={styles.requestTitle}>
+                          Order #{request.order_id?.orderNumber || request.order_id}
+                        </Text>
+                        <Text style={styles.requestMeta}>
+                          {request.request_type || "Request"} |{" "}
+                          {request.reason_code || "Reason not provided"}
+                        </Text>
+                        <Text style={styles.requestMeta}>
+                          {request.employee_login_id || "Employee"}
+                          {request.employee_notes
+                            ? ` | ${request.employee_notes}`
+                            : ""}
+                        </Text>
+                        <View style={styles.reviewActions}>
+                          <Pressable
+                            style={styles.approveButton}
+                            onPress={() => openReviewModal(request, "APPROVED")}
                           >
-                            {employee.is_active ? "Active" : "Inactive"}
-                          </Text>
+                            <Text style={styles.approveButtonText}>Approve</Text>
+                          </Pressable>
+                          <Pressable
+                            style={styles.rejectButton}
+                            onPress={() => openReviewModal(request, "REJECTED")}
+                          >
+                            <Text style={styles.rejectButtonText}>Reject</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.emptyInlineText}>
+                      No pending refund or cancel requests.
+                    </Text>
+                  )}
+                </View>
+
+                <View style={styles.activityHeader}>
+                  <Text style={styles.subsectionTitle}>Activity</Text>
+                </View>
+                {employees.length ? (
+                  employees.map((employee) => {
+                    const metrics = employee.metrics || {};
+                    const locationName =
+                      employee.assigned_location?.title ||
+                      employee.assigned_location?.address ||
+                      "All locations";
+                    const paymentSummary = canTapToPay
+                      ? `Cash ${metrics.cash_orders || 0} / Tap ${
+                          metrics.tap_orders || 0
+                        }`
+                      : `Cash ${metrics.cash_orders || 0}`;
+                    const statusText = employee.is_working
+                      ? "Working"
+                      : employee.is_active
+                        ? "Active"
+                        : "Inactive";
+
+                    return (
+                      <View
+                        key={employee.employee_internal_id}
+                        style={styles.activityCard}
+                      >
+                        <View style={styles.employeeHeader}>
+                          <View style={styles.employeeTitleWrap}>
+                            <Text style={styles.employeeName}>
+                              {employee.employee_name || "Employee"}
+                            </Text>
+                            <Text style={styles.employeeLocation}>
+                              {locationName}
+                            </Text>
+                          </View>
                           <Text
                             style={[
                               styles.statusBadge,
                               employee.is_working && styles.statusBadgeWorking,
+                              !employee.is_working &&
+                                employee.is_active &&
+                                styles.statusBadgeActive,
                             ]}
                           >
-                            {employee.is_working ? "Working" : "Off duty"}
+                            {statusText}
                           </Text>
                         </View>
-                      </View>
 
-                      <View style={styles.metaRow}>
-                        <Text style={styles.metaLabel}>Last activity</Text>
-                        <Text style={styles.metaValue}>
-                          {formatDateTime(employee.last_activity_at)}
-                        </Text>
-                      </View>
-                      <View style={styles.metaRow}>
-                        <Text style={styles.metaLabel}>Shift start</Text>
-                        <Text style={styles.metaValue}>
-                          {formatDateTime(employee.shift?.started_at)}
-                        </Text>
-                      </View>
-                      <View style={styles.metaRow}>
-                        <Text style={styles.metaLabel}>Shift end</Text>
-                        <Text style={styles.metaValue}>
-                          {employee.shift?.is_active
-                            ? "Active"
-                            : formatDateTime(employee.shift?.ended_at)}
-                        </Text>
-                      </View>
-
-                      <View style={styles.metricGrid}>
-                        <View style={styles.metricBox}>
-                          <Text style={styles.metricValue}>
-                            {employee.metrics?.orders_processed || 0}
-                          </Text>
-                          <Text style={styles.metricLabel}>Orders</Text>
-                        </View>
-                        <View style={styles.metricBox}>
-                          <Text style={styles.metricValue}>
-                            {employee.metrics?.completed_orders || 0}
-                          </Text>
-                          <Text style={styles.metricLabel}>Completed</Text>
-                        </View>
-                        <View style={styles.metricBox}>
-                          <Text style={styles.metricValue}>
-                            ${formatMoney(employee.metrics?.gross_sales || 0)}
-                          </Text>
-                          <Text style={styles.metricLabel}>Gross sales</Text>
-                        </View>
-                        <View style={styles.metricBox}>
-                          <Text style={styles.metricValue}>
-                            {employee.metrics?.cash_orders || 0}
-                          </Text>
-                          <Text style={styles.metricLabel}>Cash</Text>
-                        </View>
-                        {canTapToPay ? (
-                          <View style={styles.metricBox}>
-                            <Text style={styles.metricValue}>
-                              {employee.metrics?.tap_orders || 0}
+                        <View style={styles.activityDetails}>
+                          <View style={styles.activityMetric}>
+                            <Text style={styles.metaLabel}>Order amount</Text>
+                            <Text style={styles.metaValue}>
+                              ${formatMoney(metrics.gross_sales || 0)}
                             </Text>
-                            <Text style={styles.metricLabel}>Tap</Text>
                           </View>
-                        ) : null}
-                        <View style={styles.metricBox}>
-                          <Text style={styles.metricValue}>
-                            {employee.metrics?.refund_cancel_requests_submitted ||
-                              0}
+                          <View style={styles.activityMetric}>
+                            <Text style={styles.metaLabel}>Orders</Text>
+                            <Text style={styles.metaValue}>
+                              {metrics.orders_processed || 0}
+                            </Text>
+                          </View>
+                          <View style={styles.activityMetric}>
+                            <Text style={styles.metaLabel}>Payment</Text>
+                            <Text style={styles.metaValue}>{paymentSummary}</Text>
+                          </View>
+                          <View style={styles.activityMetric}>
+                            <Text style={styles.metaLabel}>Refund/Cancel</Text>
+                            <Text style={styles.metaValue}>
+                              {metrics.refund_cancel_requests_submitted || 0}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.metaRow}>
+                          <Text style={styles.metaLabel}>Date/time</Text>
+                          <Text style={styles.metaValue}>
+                            {formatDateTime(employee.last_activity_at)}
                           </Text>
-                          <Text style={styles.metricLabel}>Requests</Text>
                         </View>
                       </View>
-
-                      <View style={styles.requestStatusRow}>
-                        <Text style={styles.requestStatusText}>
-                          Pending:{" "}
-                          {employee.metrics
-                            ?.refund_cancel_request_status_counts?.pending || 0}
-                        </Text>
-                        <Text style={styles.requestStatusText}>
-                          Approved:{" "}
-                          {employee.metrics
-                            ?.refund_cancel_request_status_counts?.approved || 0}
-                        </Text>
-                        <Text style={styles.requestStatusText}>
-                          Rejected:{" "}
-                          {employee.metrics
-                            ?.refund_cancel_request_status_counts?.rejected || 0}
-                        </Text>
-                      </View>
-                    </View>
-                  ))
+                    );
+                  })
                 ) : (
-                  <Text style={styles.emptyAnalyticsText}>
-                    No employee activity found for these filters.
-                  </Text>
+                  <View style={styles.emptyActivityCard}>
+                    <FontAwesome6
+                      name="receipt"
+                      size={24}
+                      color={AppColor.primary}
+                    />
+                    <Text style={styles.emptyActivityTitle}>
+                      No activity found
+                    </Text>
+                    <Text style={styles.emptyActivityText}>
+                      Try changing the filters or selecting a wider date range.
+                    </Text>
+                  </View>
                 )}
               </View>
             </>
@@ -744,16 +885,55 @@ const styles = StyleSheet.create({
   analyticsPanel: {
     backgroundColor: AppColor.white,
     borderColor: AppColor.border,
-    borderRadius: 8,
+    borderRadius: 14,
     borderWidth: 1,
     margin: 16,
     padding: 16,
+    shadowColor: AppColor.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   },
   sectionTitle: {
     color: AppColor.black,
     fontFamily: Mulish700,
     fontSize: 18,
-    marginBottom: 12,
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 14,
+  },
+  summaryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 14,
+  },
+  summaryCard: {
+    backgroundColor: "#F9FAFB",
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    borderWidth: 1,
+    flexBasis: "47%",
+    flexGrow: 1,
+    minHeight: 76,
+    padding: 12,
+  },
+  summaryLabel: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 12,
+  },
+  summaryValue: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 19,
+    marginTop: 8,
   },
   subsectionTitle: {
     color: AppColor.black,
@@ -761,9 +941,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginBottom: 8,
   },
+  subsectionCard: {
+    backgroundColor: "#F9FAFB",
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 14,
+    padding: 12,
+  },
+  activityHeader: {
+    marginTop: 16,
+  },
   requestCard: {
-    borderColor: AppColor.border,
-    borderRadius: 8,
+    backgroundColor: AppColor.white,
+    borderColor: "#E5E7EB",
+    borderRadius: 10,
     borderWidth: 1,
     marginBottom: 10,
     padding: 12,
@@ -817,7 +1009,96 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
     fontSize: 13,
     marginBottom: 8,
-    marginTop: 10,
+    marginTop: 12,
+  },
+  segmentedControl: {
+    backgroundColor: "#F9FAFB",
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: "row",
+    overflow: "hidden",
+  },
+  segmentButton: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 42,
+    paddingHorizontal: 8,
+  },
+  segmentButtonSelected: {
+    backgroundColor: AppColor.primary,
+  },
+  segmentText: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish700,
+    fontSize: 12,
+  },
+  segmentTextSelected: {
+    color: AppColor.white,
+  },
+  filterGrid: {
+    gap: 10,
+  },
+  selectControl: {
+    alignItems: "center",
+    backgroundColor: AppColor.white,
+    borderColor: "#DADFE8",
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    minHeight: 44,
+    paddingHorizontal: 12,
+  },
+  selectLabel: {
+    color: AppColor.black,
+    flex: 1,
+    fontFamily: Mulish700,
+    fontSize: 13,
+  },
+  paymentSegment: {
+    minHeight: 44,
+  },
+  resetButton: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    borderColor: AppColor.primary,
+    borderRadius: 10,
+    borderWidth: 1,
+    justifyContent: "center",
+    marginTop: 12,
+    minHeight: 38,
+    paddingHorizontal: 14,
+  },
+  resetButtonText: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
+    fontSize: 13,
+  },
+  filterPickerCard: {
+    backgroundColor: AppColor.white,
+    borderRadius: 14,
+    padding: 16,
+    width: "100%",
+  },
+  filterPickerOption: {
+    alignItems: "center",
+    borderBottomColor: "#EEF0F4",
+    borderBottomWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    minHeight: 46,
+  },
+  filterPickerText: {
+    color: AppColor.black,
+    flex: 1,
+    fontFamily: Mulish400,
+    fontSize: 14,
+  },
+  filterPickerTextSelected: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
   },
   chipRow: {
     flexDirection: "row",
@@ -850,6 +1131,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     marginTop: 14,
+    padding: 14,
+  },
+  activityCard: {
+    backgroundColor: AppColor.white,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 10,
     padding: 14,
   },
   employeeHeader: {
@@ -898,7 +1187,7 @@ const styles = StyleSheet.create({
   },
   metaRow: {
     alignItems: "center",
-    borderTopColor: AppColor.border,
+    borderTopColor: "#EEF0F4",
     borderTopWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
@@ -916,6 +1205,22 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
     fontSize: 12,
     textAlign: "right",
+  },
+  activityDetails: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
+  },
+  activityMetric: {
+    backgroundColor: "#F9FAFB",
+    borderColor: "#EEF0F4",
+    borderRadius: 10,
+    borderWidth: 1,
+    flexBasis: "47%",
+    flexGrow: 1,
+    minHeight: 62,
+    padding: 10,
   },
   metricGrid: {
     flexDirection: "row",
@@ -960,6 +1265,35 @@ const styles = StyleSheet.create({
     fontFamily: Mulish400,
     fontSize: 14,
     marginTop: 16,
+    textAlign: "center",
+  },
+  emptyInlineText: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  emptyActivityCard: {
+    alignItems: "center",
+    backgroundColor: "#F9FAFB",
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 10,
+    padding: 20,
+  },
+  emptyActivityTitle: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 15,
+    marginTop: 10,
+  },
+  emptyActivityText: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 4,
     textAlign: "center",
   },
   modalOverlay: {

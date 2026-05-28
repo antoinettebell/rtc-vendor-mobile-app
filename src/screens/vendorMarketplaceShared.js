@@ -3,6 +3,11 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Entypo from "react-native-vector-icons/Entypo";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 
+export const MARKETPLACE_PAYMENT_TYPES = {
+  COORDINATOR_PAYS_VENDOR: "COORDINATOR_PAYS_VENDOR",
+  VENDOR_PAYS_TO_ATTEND: "VENDOR_PAYS_TO_ATTEND",
+};
+
 export const EVENT_TYPES = [
   "Festival",
   "Wedding",
@@ -41,6 +46,12 @@ export const formatMoney = (value) => {
   return `$${amount.toFixed(2)}`;
 };
 
+export const formatStatusLabel = (value) =>
+  String(value || "DRAFT")
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
 export const listText = (value) => {
   if (Array.isArray(value)) return value.filter(Boolean).join(", ") || "None";
   return value || "None";
@@ -52,9 +63,66 @@ export const getEventLocation = (event) =>
 
 export const getBidEvent = (bid) => bid?.marketplaceEvent || bid?.event || {};
 
+export const getApplicationEvent = (application) =>
+  application?.marketplaceEvent || application?.event || {};
+
 export const isEventAccessError = (error) =>
   Number(error?.code || error?.statusCode || error?.status) === 403 ||
   /accept event bookings/i.test(error?.message || "");
+
+export const getEventImageUrl = (event) =>
+  event?.image_url ||
+  event?.event_image_url ||
+  event?.images?.find((image) => image?.image_url)?.image_url ||
+  null;
+
+export const getEventPaymentType = (event = {}) => {
+  const explicitType = String(
+    event.paymentType ||
+      event.payment_type ||
+      event.event_payment_type ||
+      event.marketplace_payment_type ||
+      "",
+  ).toUpperCase();
+
+  if (
+    explicitType.includes("VENDOR_PAYS") ||
+    explicitType.includes("VENDOR_PAYS_TO_ATTEND") ||
+    explicitType.includes("APPLICATION")
+  ) {
+    return MARKETPLACE_PAYMENT_TYPES.VENDOR_PAYS_TO_ATTEND;
+  }
+
+  if (
+    explicitType.includes("COORDINATOR") ||
+    explicitType.includes("BID") ||
+    explicitType.includes("COORDINATOR_PAYS_VENDOR")
+  ) {
+    return MARKETPLACE_PAYMENT_TYPES.COORDINATOR_PAYS_VENDOR;
+  }
+
+  // TODO: Replace this fallback once backend sends an explicit event payment type.
+  return Number(event.vendor_fee || 0) > 0
+    ? MARKETPLACE_PAYMENT_TYPES.VENDOR_PAYS_TO_ATTEND
+    : MARKETPLACE_PAYMENT_TYPES.COORDINATOR_PAYS_VENDOR;
+};
+
+export const isVendorPaysToAttendEvent = (event) =>
+  getEventPaymentType(event) === MARKETPLACE_PAYMENT_TYPES.VENDOR_PAYS_TO_ATTEND;
+
+export const getPaymentTypeLabel = (event) =>
+  isVendorPaysToAttendEvent(event)
+    ? "Vendor Pays to Attend"
+    : "Coordinator Pays Vendor";
+
+export const getPaymentAmountLabel = (event) =>
+  isVendorPaysToAttendEvent(event) ? "Vendor Fee" : "Event Budget";
+
+export const getPaymentAmount = (event) =>
+  isVendorPaysToAttendEvent(event) ? event?.vendor_fee : event?.budgeted_amount;
+
+export const getPrimaryActionLabel = (event) =>
+  isVendorPaysToAttendEvent(event) ? "Submit Application" : "Submit Bid";
 
 export const MarketplaceHeader = ({ title, navigation, right }) => (
   <View style={styles.header}>
@@ -75,14 +143,13 @@ export const MarketplaceHeader = ({ title, navigation, right }) => (
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#FFFFFF",
   },
   header: {
-    minHeight: 58,
+    minHeight: 60,
     alignItems: "center",
     justifyContent: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E5EA",
+    borderBottomWidth: 0,
     backgroundColor: AppColor.white,
     paddingHorizontal: 48,
   },
@@ -103,25 +170,32 @@ export const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: Mulish700,
-    fontSize: 19,
+    fontSize: 17,
     color: AppColor.black,
     textAlign: "center",
   },
   body: {
     flexGrow: 1,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
   },
   card: {
     backgroundColor: AppColor.white,
     borderWidth: 1,
-    borderColor: "#E5E5EA",
-    borderRadius: 10,
+    borderColor: "#E7EAEF",
+    borderRadius: 8,
     padding: 16,
-    marginBottom: 14,
+    marginBottom: 12,
+    shadowColor: "#111827",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   title: {
     fontFamily: Mulish700,
-    fontSize: 18,
+    fontSize: 17,
     color: AppColor.text,
   },
   subtitle: {
@@ -133,7 +207,7 @@ export const styles = StyleSheet.create({
   },
   label: {
     fontFamily: Mulish600,
-    fontSize: 14,
+    fontSize: 13,
     color: AppColor.text,
     marginBottom: 8,
     marginTop: 14,
@@ -146,9 +220,9 @@ export const styles = StyleSheet.create({
     lineHeight: 19,
   },
   input: {
-    minHeight: 46,
+    minHeight: 44,
     borderWidth: 1,
-    borderColor: AppColor.border,
+    borderColor: "#DDE2EA",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -175,8 +249,8 @@ export const styles = StyleSheet.create({
   },
   chip: {
     borderWidth: 1,
-    borderColor: AppColor.border,
-    borderRadius: 18,
+    borderColor: "#DDE2EA",
+    borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
     backgroundColor: AppColor.white,
@@ -210,7 +284,7 @@ export const styles = StyleSheet.create({
     fontSize: 15,
   },
   secondaryButton: {
-    minHeight: 46,
+    minHeight: 44,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
@@ -226,15 +300,77 @@ export const styles = StyleSheet.create({
   },
   badge: {
     alignSelf: "flex-start",
-    borderRadius: 12,
+    borderRadius: 6,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     backgroundColor: "#FFF1E6",
   },
   badgeText: {
     fontFamily: Mulish700,
     color: AppColor.primary,
     fontSize: 11,
+  },
+  paymentBadgeGreen: {
+    backgroundColor: "#EAF7EE",
+    borderColor: "#B8E2C3",
+    borderWidth: 1,
+  },
+  paymentBadgeOrange: {
+    backgroundColor: "#FFF1E6",
+    borderColor: "#FFD1B0",
+    borderWidth: 1,
+  },
+  paymentBadgeTextGreen: {
+    color: "#168A46",
+  },
+  paymentBadgeTextOrange: {
+    color: AppColor.primary,
+  },
+  cardImage: {
+    height: 132,
+    width: "100%",
+    borderRadius: 8,
+    marginBottom: 12,
+    backgroundColor: "#F2F2F7",
+  },
+  sectionHeader: {
+    fontFamily: Mulish700,
+    fontSize: 14,
+    color: AppColor.text,
+    marginBottom: 10,
+  },
+  summaryCard: {
+    borderColor: "#B8E2C3",
+    backgroundColor: "#F4FBF6",
+  },
+  feeSummaryCard: {
+    borderColor: "#FFD1B0",
+    backgroundColor: "#FFF8F2",
+  },
+  rowBetween: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  amountText: {
+    fontFamily: Mulish700,
+    fontSize: 16,
+    color: AppColor.text,
+  },
+  heroImage: {
+    height: 170,
+    width: "100%",
+    borderRadius: 8,
+    marginBottom: 12,
+    backgroundColor: "#F2F2F7",
+  },
+  screenIntro: {
+    fontFamily: Mulish400,
+    fontSize: 13,
+    color: AppColor.textHighlighter,
+    lineHeight: 19,
+    marginBottom: 12,
   },
   emptyText: {
     fontFamily: Mulish400,

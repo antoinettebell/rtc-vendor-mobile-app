@@ -11,44 +11,65 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StatusBarManager from "../components/StatusBarManager";
 import { AppColor } from "../utils/theme";
-import { getMarketplaceMyBids_API } from "../api/appAPI";
+import { getMarketplaceMyApplications_API } from "../api/appAPI";
 import {
   MarketplaceHeader,
   formatDate,
   formatMoney,
   formatStatusLabel,
-  getBidEvent,
+  getApplicationEvent,
   getEventLocation,
   isVendorPaysToAttendEvent,
   styles,
 } from "./vendorMarketplaceShared";
 
-const BID_STATUS_FILTERS = [
+const APPLICATION_STATUS_FILTERS = [
   { label: "All", value: "ALL" },
   { label: "Draft", value: "DRAFT" },
   { label: "Submitted", value: "SUBMITTED" },
   { label: "Under Review", value: "UNDER_REVIEW" },
-  { label: "Awarded", value: "AWARDED" },
-  { label: "Not Selected", value: "NOT_AWARDED" },
+  { label: "Accepted", value: "ACCEPTED" },
+  { label: "Payment Due", value: "PAYMENT_DUE" },
+  { label: "Paid", value: "PAID" },
+  { label: "Confirmed", value: "CONFIRMED" },
+  { label: "Not Selected", value: "NOT_SELECTED" },
   { label: "Withdrawn", value: "WITHDRAWN" },
 ];
 
-const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
+const getActionLabel = (status) => {
+  switch (status) {
+    case "DRAFT":
+      return "Continue Application";
+    case "ACCEPTED":
+    case "PAYMENT_DUE":
+      return "Pay Vendor Fee";
+    case "PAID":
+    case "CONFIRMED":
+      return "View Confirmation";
+    case "SUBMITTED":
+    case "UNDER_REVIEW":
+      return "View Application";
+    default:
+      return "View Details";
+  }
+};
+
+const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const [bids, setBids] = useState([]);
+  const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState("ALL");
 
-  const loadBids = async () => {
+  const loadApplications = async () => {
     setLoading(true);
     try {
-      const response = await getMarketplaceMyBids_API();
+      const response = await getMarketplaceMyApplications_API();
       if (response?.success) {
-        setBids(response.data?.marketplaceBidList || []);
+        setApplications(response.data?.marketplaceApplicationList || []);
       }
     } catch (error) {
-      console.log("Marketplace my bids error", error);
+      console.log("Marketplace my applications error", error);
     } finally {
       setLoading(false);
     }
@@ -56,30 +77,34 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
 
   useFocusEffect(
     useCallback(() => {
-      loadBids();
+      loadApplications();
     }, []),
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadBids();
+    await loadApplications();
     setRefreshing(false);
   };
 
-  const filteredBids = useMemo(
+  const filteredApplications = useMemo(
     () =>
-      bids.filter((bid) => {
-        const event = getBidEvent(bid);
-        if (isVendorPaysToAttendEvent(event)) {
+      applications.filter((application) => {
+        const event = getApplicationEvent(application);
+        if (!isVendorPaysToAttendEvent(event)) {
           return false;
         }
-        return statusFilter === "ALL" || bid.bid_status === statusFilter;
+        return (
+          statusFilter === "ALL" ||
+          application.application_status === statusFilter
+        );
       }),
-    [bids, statusFilter],
+    [applications, statusFilter],
   );
 
-  const renderBid = ({ item }) => {
-    const event = getBidEvent(item);
+  const renderApplication = ({ item }) => {
+    const event = getApplicationEvent(item);
+    const status = item.application_status || "DRAFT";
     return (
       <View style={styles.card}>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
@@ -87,19 +112,14 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
             {event?.event_name || item.event_id}
           </Text>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {formatStatusLabel(item.bid_status)}
-            </Text>
+            <Text style={styles.badgeText}>{formatStatusLabel(status)}</Text>
           </View>
         </View>
         <Text style={styles.meta}>
           {getEventLocation(event)} | {formatDate(event?.event_date)}
         </Text>
         <Text style={styles.meta}>
-          Event Budget: {formatMoney(event?.budgeted_amount)}
-        </Text>
-        <Text style={styles.meta}>
-          Bid Amount: {formatMoney(item.full_bid_amount)}
+          Vendor Fee: {formatMoney(event?.vendor_fee)}
         </Text>
         <Text style={styles.meta}>
           Submitted Date:{" "}
@@ -108,16 +128,18 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
         <TouchableOpacity
           activeOpacity={0.7}
           style={[styles.secondaryButton, { marginTop: 14 }]}
-          onPress={() =>
-            event?.event_id
-              ? navigation.navigate("VendorBidDetailScreen", {
-                  bid: item,
-                  event,
-                })
-              : null
-          }
+          onPress={() => {
+            const routeName =
+              status === "ACCEPTED" || status === "PAYMENT_DUE"
+                ? "VendorFeeCheckoutScreen"
+                : "VendorApplicationDetailScreen";
+            navigation.navigate(routeName, {
+              application: item,
+              event,
+            });
+          }}
         >
-          <Text style={styles.secondaryButtonText}>View Details</Text>
+          <Text style={styles.secondaryButtonText}>{getActionLabel(status)}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -126,16 +148,16 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBarManager />
-      <MarketplaceHeader title="My Bids" navigation={navigation} />
+      <MarketplaceHeader title="My Applications" navigation={navigation} />
       {loading && !refreshing ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator color={AppColor.primary} size="large" />
         </View>
       ) : (
         <FlatList
-          data={filteredBids}
-          keyExtractor={(item) => item.bid_id}
-          renderItem={renderBid}
+          data={filteredApplications}
+          keyExtractor={(item) => item.application_id}
+          renderItem={renderApplication}
           contentContainerStyle={styles.body}
           refreshControl={
             <RefreshControl
@@ -148,7 +170,7 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
             <View style={styles.card}>
               <Text style={styles.label}>Status</Text>
               <View style={styles.chipWrap}>
-                {BID_STATUS_FILTERS.map((filter) => {
+                {APPLICATION_STATUS_FILTERS.map((filter) => {
                   const active = statusFilter === filter.value;
                   return (
                     <TouchableOpacity
@@ -174,18 +196,11 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
           ListEmptyComponent={
             <View style={styles.card}>
               <Text style={[styles.title, { textAlign: "center" }]}>
-                No bids yet
+                No applications yet
               </Text>
               <Text style={styles.emptyText}>
-                Browse open marketplace events and submit your first bid.
+                Vendor-paid event applications will appear here after you apply.
               </Text>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                style={[styles.button, { marginTop: 18 }]}
-                onPress={() => navigation.navigate("vendorMarketplaceScreen")}
-              >
-                <Text style={styles.buttonText}>Browse Events</Text>
-              </TouchableOpacity>
             </View>
           }
         />
@@ -194,4 +209,4 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
   );
 };
 
-export default VendorMarketplaceMyBidsScreen;
+export default VendorMarketplaceMyApplicationsScreen;
