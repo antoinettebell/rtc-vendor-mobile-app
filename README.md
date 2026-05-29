@@ -83,7 +83,7 @@ TAP_TO_PAY_CURRENCY=USD
 
 `TAP_TO_PAY_MERCHANT_ID` and `TAP_TO_PAY_TERMINAL_ID` are optional overrides. When blank, Tap to Pay uses the same Apple Pay merchant id, Android gateway merchant id, and backend Authorize.Net credentials as the normal wallet payment flow.
 
-Android requires an NFC-capable supported device and the Authorize.net/Cybersource Tap to Pay SDK bridge to resolve `RTCTapToPay.startSale`. iOS production builds require the Apple Tap to Pay entitlement in the provisioning profile and `com.apple.developer.proximity-reader.payment.acceptance` in the app entitlements.
+Android requires an NFC-capable supported device and the Authorize.net/Cybersource Tap to Pay SDK bridge to resolve `RTCTapToPay.startSale`. iOS production builds require the Apple Tap to Pay entitlement in the provisioning profile and `com.apple.developer.proximity-reader.payment.acceptance` in the app entitlements. Keep this entitlement in both `app.json` under `expo.ios.entitlements` for Expo prebuild/EAS config sync and `ios/FoodtruckVendor/FoodtruckVendor.entitlements` for direct Xcode builds.
 
 React Native calls `NativeModules.RTCTapToPay.startSale(options)` from `src/services/tapToPay-service.js`. The payload includes `amount`, `currency`, `orderNumber`, `orderId`, `platform`, `provider`, `environment`, `merchantId`, `terminalId`, and `sdkConfigId`. A provider SDK implementation must resolve with either `opaqueToken` / `opaqueData` containing `dataValue` and optional `dataDescriptor`, or a processed transaction result containing `transactionId` / `transId`. Until the Authorize.net/Cybersource Tap to Pay on iPhone SDK is installed and mapped, the native bridge rejects with `E_TAP_TO_PAY_NOT_CONFIGURED`.
 

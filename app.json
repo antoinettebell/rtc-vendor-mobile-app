@@ -6,6 +6,9 @@
     "ios": {
       "bundleIdentifier": "com.rounddacorner.dev.vendor",
       "buildNumber": "33",
+      "entitlements": {
+        "com.apple.developer.proximity-reader.payment.acceptance": true
+      },
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
