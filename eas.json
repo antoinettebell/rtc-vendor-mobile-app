@@ -1,66 +1,37 @@
 {
   "cli": {
-    "version": ">= 18.8.1",
-    "appVersionSource": "local"
+    "version": ">= 14.0.0"
   },
   "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "env": {
-        "API_URL": "http://157.245.6.61:8000",
-        "API_PREFIX": "/api/v1"
+      "ios": {
+        "simulator": true,
+        "buildConfiguration": "Debug"
+      },
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
       }
     },
     "preview": {
       "distribution": "internal",
-      "env": {
-        "API_URL": "http://157.245.6.61:8000",
-        "API_PREFIX": "/api/v1"
-      }
-    },
-    "tapToPayTest": {
-      "developmentClient": true,
-      "distribution": "internal",
-      "env": {
-        "API_URL": "http://157.245.6.61:8000",
-        "API_PREFIX": "/api/v1",
-        "TAP_TO_PAY_ENABLED": "true",
-        "TAP_TO_PAY_PROVIDER": "AUTHORIZE_NET",
-        "TAP_TO_PAY_ENVIRONMENT": "production",
-        "TAP_TO_PAY_CURRENCY": "USD"
-      },
       "ios": {
-        "image": "latest"
-      }
-    },
-    "tapToPayMock": {
-      "distribution": "internal",
-      "env": {
-        "API_URL": "http://157.245.6.61:8000",
-        "API_PREFIX": "/api/v1",
-        "TAP_TO_PAY_ENABLED": "true",
-        "TAP_TO_PAY_MOCK": "true",
-        "TAP_TO_PAY_PROVIDER": "AUTHORIZE_NET",
-        "TAP_TO_PAY_ENVIRONMENT": "mock",
-        "TAP_TO_PAY_CURRENCY": "USD"
+        "simulator": false,
+        "buildConfiguration": "Release"
       },
-      "ios": {
-        "image": "latest"
+      "android": {
+        "buildType": "apk"
       }
     },
     "production": {
-      "autoIncrement": true,
-      "env": {
-        "API_URL": "http://157.245.6.61:8000",
-        "API_PREFIX": "/api/v1",
-        "TAP_TO_PAY_ENABLED": "true",
-        "TAP_TO_PAY_PROVIDER": "AUTHORIZE_NET",
-        "TAP_TO_PAY_ENVIRONMENT": "production",
-        "TAP_TO_PAY_CURRENCY": "USD"
-      },
       "ios": {
-        "image": "latest"
+        "simulator": false,
+        "buildConfiguration": "Release"
+      },
+      "android": {
+        "buildType": "apk"
       }
     }
   },
