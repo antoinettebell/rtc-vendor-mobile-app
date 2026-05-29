@@ -10,6 +10,15 @@ const normalizeBoolean = (value, defaultValue = false) => {
 };
 
 const defaultTapToPayEnabled = Platform.OS === "ios";
+const defaultApplePayMerchantId = "merchant.roundthecorner.vendor";
+const defaultAndroidGatewayMerchantId = "2794197";
+const applePayMerchantId =
+  Config.APPLE_PAY_MERCHANT_ID || defaultApplePayMerchantId;
+const androidGatewayMerchantId =
+  Config.ANDROID_PAYMENT_GATEWAY_MERCHANT_ID ||
+  defaultAndroidGatewayMerchantId;
+const defaultTapToPayMerchantId =
+  Platform.OS === "ios" ? applePayMerchantId : androidGatewayMerchantId;
 
 const tapToPayConfig = {
   enabled: normalizeBoolean(Config.TAP_TO_PAY_ENABLED, defaultTapToPayEnabled),
@@ -20,8 +29,8 @@ const tapToPayConfig = {
     Config.AUTHORIZE_NET_ENV ||
     Config.PAYMENT_MODE ||
     "production",
-  merchantId: Config.TAP_TO_PAY_MERCHANT_ID || "",
-  terminalId: Config.TAP_TO_PAY_TERMINAL_ID || "",
+  merchantId: Config.TAP_TO_PAY_MERCHANT_ID || defaultTapToPayMerchantId,
+  terminalId: Config.TAP_TO_PAY_TERMINAL_ID || androidGatewayMerchantId,
   sdkConfigId: Config.TAP_TO_PAY_SDK_CONFIG_ID || "",
   currency: Config.TAP_TO_PAY_CURRENCY || "USD",
 };

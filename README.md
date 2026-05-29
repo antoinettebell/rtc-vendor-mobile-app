@@ -69,6 +69,9 @@ The vendor POS checkout uses the existing backend `/order/payment-checkout` flow
 Required environment values are documented in `.env.example`:
 
 ```sh
+APPLE_PAY_MERCHANT_ID=merchant.roundthecorner.vendor
+ANDROID_PAYMENT_GATEWAY=authorizenet
+ANDROID_PAYMENT_GATEWAY_MERCHANT_ID=2794197
 TAP_TO_PAY_ENABLED=true
 TAP_TO_PAY_PROVIDER=AUTHORIZE_NET
 TAP_TO_PAY_ENVIRONMENT=production
@@ -77,6 +80,8 @@ TAP_TO_PAY_TERMINAL_ID=
 TAP_TO_PAY_SDK_CONFIG_ID=
 TAP_TO_PAY_CURRENCY=USD
 ```
+
+`TAP_TO_PAY_MERCHANT_ID` and `TAP_TO_PAY_TERMINAL_ID` are optional overrides. When blank, Tap to Pay uses the same Apple Pay merchant id, Android gateway merchant id, and backend Authorize.Net credentials as the normal wallet payment flow.
 
 Android requires an NFC-capable supported device and the Authorize.net/Cybersource Tap to Pay SDK bridge to resolve `RTCTapToPay.startSale`. iOS production builds require the Apple Tap to Pay entitlement in the provisioning profile and `com.apple.developer.proximity-reader.payment.acceptance` in the app entitlements.
 
