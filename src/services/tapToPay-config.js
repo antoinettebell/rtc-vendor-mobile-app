@@ -1,9 +1,18 @@
 import Config from "react-native-config";
+import { Platform } from "react-native";
 
-const normalizeBoolean = value => String(value || "").toLowerCase() === "true";
+const normalizeBoolean = (value, defaultValue = false) => {
+  if (value === undefined || value === null || value === "") {
+    return defaultValue;
+  }
+
+  return String(value).toLowerCase() === "true";
+};
+
+const defaultTapToPayEnabled = Platform.OS === "ios";
 
 const tapToPayConfig = {
-  enabled: normalizeBoolean(Config.TAP_TO_PAY_ENABLED),
+  enabled: normalizeBoolean(Config.TAP_TO_PAY_ENABLED, defaultTapToPayEnabled),
   mockMode: normalizeBoolean(Config.TAP_TO_PAY_MOCK),
   provider: Config.TAP_TO_PAY_PROVIDER || "AUTHORIZE_NET",
   environment:

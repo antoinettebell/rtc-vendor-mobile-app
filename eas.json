@@ -53,7 +53,11 @@
       "autoIncrement": true,
       "env": {
         "API_URL": "http://157.245.6.61:8000",
-        "API_PREFIX": "/api/v1"
+        "API_PREFIX": "/api/v1",
+        "TAP_TO_PAY_ENABLED": "true",
+        "TAP_TO_PAY_PROVIDER": "AUTHORIZE_NET",
+        "TAP_TO_PAY_ENVIRONMENT": "production",
+        "TAP_TO_PAY_CURRENCY": "USD"
       },
       "ios": {
         "image": "latest"
