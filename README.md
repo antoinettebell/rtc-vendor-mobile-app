@@ -85,6 +85,8 @@ TAP_TO_PAY_CURRENCY=USD
 
 Android requires an NFC-capable supported device and the Authorize.net/Cybersource Tap to Pay SDK bridge to resolve `RTCTapToPay.startSale`. iOS production builds require the Apple Tap to Pay entitlement in the provisioning profile and `com.apple.developer.proximity-reader.payment.acceptance` in the app entitlements.
 
+React Native calls `NativeModules.RTCTapToPay.startSale(options)` from `src/services/tapToPay-service.js`. The payload includes `amount`, `currency`, `orderNumber`, `orderId`, `platform`, `provider`, `environment`, `merchantId`, `terminalId`, and `sdkConfigId`. A provider SDK implementation must resolve with either `opaqueToken` / `opaqueData` containing `dataValue` and optional `dataDescriptor`, or a processed transaction result containing `transactionId` / `transId`. Until the Authorize.net/Cybersource Tap to Pay on iPhone SDK is installed and mapped, the native bridge rejects with `E_TAP_TO_PAY_NOT_CONFIGURED`.
+
 ## Step 3: Modify your app
 
 Now that you have successfully run the app, let's make changes!
