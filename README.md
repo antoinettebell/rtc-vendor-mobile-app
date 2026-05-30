@@ -73,19 +73,20 @@ APPLE_PAY_MERCHANT_ID=merchant.roundthecorner.vendor
 ANDROID_PAYMENT_GATEWAY=authorizenet
 ANDROID_PAYMENT_GATEWAY_MERCHANT_ID=2794197
 TAP_TO_PAY_ENABLED=true
-TAP_TO_PAY_PROVIDER=AUTHORIZE_NET
+TAP_TO_PAY_PROVIDER=CYBERSOURCE
 TAP_TO_PAY_ENVIRONMENT=production
 TAP_TO_PAY_MERCHANT_ID=
 TAP_TO_PAY_TERMINAL_ID=
+TAP_TO_PAY_APPLE_TEAM_ID=
 TAP_TO_PAY_SDK_CONFIG_ID=
 TAP_TO_PAY_CURRENCY=USD
 ```
 
-`TAP_TO_PAY_MERCHANT_ID` and `TAP_TO_PAY_TERMINAL_ID` are optional overrides. When blank, Tap to Pay uses the same Apple Pay merchant id, Android gateway merchant id, and backend Authorize.Net credentials as the normal wallet payment flow.
+`TAP_TO_PAY_MERCHANT_ID` is the Cybersource/Visa vMID, `TAP_TO_PAY_TERMINAL_ID` is the TID, and `TAP_TO_PAY_APPLE_TEAM_ID` is the Apple Developer Team ID approved for Tap to Pay on iPhone.
 
 Android requires an NFC-capable supported device and the Authorize.net/Cybersource Tap to Pay SDK bridge to resolve `RTCTapToPay.startSale`. iOS production builds require the Apple Tap to Pay entitlement in the provisioning profile and `com.apple.developer.proximity-reader.payment.acceptance` in the app entitlements. Keep this entitlement in both `app.json` under `expo.ios.entitlements` for Expo prebuild/EAS config sync and `ios/FoodtruckVendor/FoodtruckVendor.entitlements` for direct Xcode builds.
 
-React Native calls `NativeModules.RTCTapToPay.startSale(options)` from `src/services/tapToPay-service.js`. The payload includes `amount`, `currency`, `orderNumber`, `orderId`, `platform`, `provider`, `environment`, `merchantId`, `terminalId`, and `sdkConfigId`. A provider SDK implementation must resolve with either `opaqueToken` / `opaqueData` containing `dataValue` and optional `dataDescriptor`, or a processed transaction result containing `transactionId` / `transId`. Until the Authorize.net/Cybersource Tap to Pay on iPhone SDK is installed and mapped, the native bridge rejects with `E_TAP_TO_PAY_NOT_CONFIGURED`.
+React Native calls `NativeModules.RTCTapToPay.startSale(options)` from `src/services/tapToPay-service.js`. The payload includes `amount`, `currency`, `orderNumber`, `orderId`, `platform`, `provider`, `environment`, `merchantId`, `terminalId`, `appleTeamId`, and `sdkConfigId`. iOS now routes through `TapToPayManager`, which prepares Apple's `ProximityReader` session and contains the Cybersource/Visa Acceptance Devices adapter boundary. Map the exact SDK token calls in `CybersourceAcceptanceDevicesClient` after the SDK package is installed; until then the native bridge rejects with `E_TAP_TO_PAY_NOT_CONFIGURED` instead of running a fake sale.
 
 ## Step 3: Modify your app
 

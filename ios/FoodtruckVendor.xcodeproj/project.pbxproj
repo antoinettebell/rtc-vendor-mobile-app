@@ -22,6 +22,10 @@
 		74AD18CCB9EB4E898495D7ED /* IMFellEnglish-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 899C85C7676A4EC78F325C0F /* IMFellEnglish-Regular.ttf */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		7C3F0A9E2D9B41D58B2A1C6F /* RTCTapToPay.m in Sources */ = {isa = PBXBuildFile; fileRef = 7C3F0A9D2D9B41D58B2A1C6F /* RTCTapToPay.m */; };
+		7C3F0AA22D9B41D58B2A1C6F /* RTCTapToPay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C3F0AA12D9B41D58B2A1C6F /* RTCTapToPay.swift */; };
+		7C3F0AA42D9B41D58B2A1C6F /* TapToPayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C3F0AA32D9B41D58B2A1C6F /* TapToPayManager.swift */; };
+		7C3F0AA62D9B41D58B2A1C6F /* TapToPayBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 7C3F0AA52D9B41D58B2A1C6F /* TapToPayBridge.m */; };
+		7C3F0AA82D9B41D58B2A1C6F /* TapToPayBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C3F0AA72D9B41D58B2A1C6F /* TapToPayBridge.swift */; };
 		7EA6688B72864ED9AF8BF1AE /* Inter-Light-BETA.otf in Resources */ = {isa = PBXBuildFile; fileRef = C2BA5A4BE34D4A75ACE1D2F6 /* Inter-Light-BETA.otf */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		8DBFD917BC034E009D64535F /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7054D7892E36422A8989DFBB /* Colors.xcassets */; };
@@ -57,6 +61,10 @@
 		7054D7892E36422A8989DFBB /* Colors.xcassets */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = folder.assetcatalog; name = Colors.xcassets; path = FoodtruckVendor/Colors.xcassets; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = FoodtruckVendor/AppDelegate.swift; sourceTree = "<group>"; };
 		7C3F0A9D2D9B41D58B2A1C6F /* RTCTapToPay.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RTCTapToPay.m; path = FoodtruckVendor/RTCTapToPay.m; sourceTree = "<group>"; };
+		7C3F0AA12D9B41D58B2A1C6F /* RTCTapToPay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RTCTapToPay.swift; path = FoodtruckVendor/RTCTapToPay.swift; sourceTree = "<group>"; };
+		7C3F0AA32D9B41D58B2A1C6F /* TapToPayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TapToPayManager.swift; path = FoodtruckVendor/TapToPayManager.swift; sourceTree = "<group>"; };
+		7C3F0AA52D9B41D58B2A1C6F /* TapToPayBridge.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TapToPayBridge.m; path = FoodtruckVendor/TapToPayBridge.m; sourceTree = "<group>"; };
+		7C3F0AA72D9B41D58B2A1C6F /* TapToPayBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TapToPayBridge.swift; path = FoodtruckVendor/TapToPayBridge.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = FoodtruckVendor/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		899C85C7676A4EC78F325C0F /* IMFellEnglish-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "IMFellEnglish-Regular.ttf"; path = "../src/assets/fonts/IMFellEnglish-Regular.ttf"; sourceTree = "<group>"; };
 		95C1DA858A63407A84644FFC /* Inter-Medium.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Medium.otf"; path = "../src/assets/fonts/Inter-Medium.otf"; sourceTree = "<group>"; };
@@ -93,6 +101,10 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
 				7C3F0A9D2D9B41D58B2A1C6F /* RTCTapToPay.m */,
+				7C3F0AA12D9B41D58B2A1C6F /* RTCTapToPay.swift */,
+				7C3F0AA32D9B41D58B2A1C6F /* TapToPayManager.swift */,
+				7C3F0AA52D9B41D58B2A1C6F /* TapToPayBridge.m */,
+				7C3F0AA72D9B41D58B2A1C6F /* TapToPayBridge.swift */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
@@ -363,6 +375,10 @@
 			files = (
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
 				7C3F0A9E2D9B41D58B2A1C6F /* RTCTapToPay.m in Sources */,
+				7C3F0AA22D9B41D58B2A1C6F /* RTCTapToPay.swift in Sources */,
+				7C3F0AA42D9B41D58B2A1C6F /* TapToPayManager.swift in Sources */,
+				7C3F0AA62D9B41D58B2A1C6F /* TapToPayBridge.m in Sources */,
+				7C3F0AA82D9B41D58B2A1C6F /* TapToPayBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

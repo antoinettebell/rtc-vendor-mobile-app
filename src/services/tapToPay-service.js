@@ -86,6 +86,7 @@ export const startTapToPaySale = async ({
     environment: tapToPayConfig.environment,
     merchantId: tapToPayConfig.merchantId,
     terminalId: tapToPayConfig.terminalId,
+    appleTeamId: tapToPayConfig.appleTeamId,
     sdkConfigId: tapToPayConfig.sdkConfigId,
   });
 
