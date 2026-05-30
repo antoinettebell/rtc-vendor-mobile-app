@@ -123,7 +123,7 @@ import AcceptanceDevicesSDK
     }
 
     print("[TapToPayManager] Simulated NFC chip collection successful.")
-    return "MOCK_TOKEN_SUCCESS_SANDBOX"
+    return "MOCK_TOKEN_SUCCESS_SANDBOX_ABELL_DEV"
     #endif
   }
 }
