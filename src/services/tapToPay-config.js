@@ -10,6 +10,7 @@ const normalizeBoolean = (value, defaultValue = false) => {
 };
 
 const defaultTapToPayEnabled = Platform.OS === "ios";
+const defaultAppleTeamId = "5G26GFF98P";
 
 const tapToPayConfig = {
   enabled: normalizeBoolean(Config.TAP_TO_PAY_ENABLED, defaultTapToPayEnabled),
@@ -22,7 +23,7 @@ const tapToPayConfig = {
     "production",
   merchantId: Config.TAP_TO_PAY_MERCHANT_ID || "",
   terminalId: Config.TAP_TO_PAY_TERMINAL_ID || "",
-  appleTeamId: Config.TAP_TO_PAY_APPLE_TEAM_ID || "",
+  appleTeamId: Config.TAP_TO_PAY_APPLE_TEAM_ID || defaultAppleTeamId,
   sdkConfigId: Config.TAP_TO_PAY_SDK_CONFIG_ID || "",
   currency: Config.TAP_TO_PAY_CURRENCY || "USD",
 };
