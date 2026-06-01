@@ -36,6 +36,11 @@ const toMoneyNumber = (value) => {
   return Number.isFinite(n) ? Number(n.toFixed(2)) : 0;
 };
 
+const toCents = (value) => Math.round(Math.max(0, Number(value) || 0) * 100);
+const centsToMoney = (value) => Number((Math.max(0, value) / 100).toFixed(2));
+const calculateProcessingFeeAmount = (baseAmount, rate) =>
+  centsToMoney(Math.round(toCents(baseAmount) * rate));
+
 const TIP_OPTIONS = [
   { label: "10%", value: "10" },
   { label: "15%", value: "15" },
@@ -359,10 +364,14 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
     total: order.subtotal + taxAmount + tipAmount,
   };
   const tapFeeFromValidation = Number(tapOrder?.paymentProcessingFee || 0);
+  const tapFeeBase = toMoneyNumber(
+    Number(tapOrder?.totalAfterDiscount ?? summary.subTotal ?? order.subtotal) +
+      Number(tapOrder?.tipsAmount ?? summary.tipsAmount ?? tipAmount),
+  );
   const tapPaymentProcessingFee =
     tapFeeFromValidation > 0
       ? toMoneyNumber(tapFeeFromValidation)
-      : toMoneyNumber(summary.total * TAP_TO_PAY_PROCESSING_FEE_RATE);
+      : calculateProcessingFeeAmount(tapFeeBase, TAP_TO_PAY_PROCESSING_FEE_RATE);
   const tapSummary = {
     ...(tapOrder || summary),
     paymentProcessingFee: tapPaymentProcessingFee,
