@@ -1071,9 +1071,10 @@ export const getAddOnsPlans_API = async () => {
 
 export const getVendorEmployees_API = async ({
   includeArchived = false,
+  archivedOnly = false,
 } = {}) => {
   try {
-    const URL = `${VENDOR_EMPLOYEE}?includeArchived=${includeArchived}`;
+    const URL = `${VENDOR_EMPLOYEE}?includeArchived=${includeArchived}&archivedOnly=${archivedOnly}`;
     const response = await apiClient.get(URL, { skipToken: false });
     return response?.data;
   } catch (error) {

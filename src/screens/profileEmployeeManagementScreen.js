@@ -54,6 +54,7 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
   const [resetPin, setResetPin] = useState("");
   const [expandedEmployeeId, setExpandedEmployeeId] = useState(null);
   const [employeeLocationDrafts, setEmployeeLocationDrafts] = useState({});
+  const [activeTab, setActiveTab] = useState("current");
 
   const locationOptions = useMemo(
     () =>
@@ -77,7 +78,9 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
   const fetchEmployees = async () => {
     setLoading(true);
     try {
-      const response = await getVendorEmployees_API();
+      const response = await getVendorEmployees_API({
+        archivedOnly: activeTab === "archived",
+      });
       if (response?.success && response?.data) {
         setEmployees(response.data.vendoremployeeList || []);
       }
@@ -218,9 +221,7 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
           onPress: async () => {
             try {
               await archiveVendorEmployee_API(employee._id);
-              setEmployees((current) =>
-                current.filter((item) => item._id !== employee._id)
-              );
+              fetchEmployees();
             } catch (error) {
               Alert.alert("Archive failed", error?.message || "Please try again.");
             }
@@ -242,9 +243,7 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
           onPress: async () => {
             try {
               await deleteVendorEmployee_API(employee._id);
-              setEmployees((current) =>
-                current.filter((item) => item._id !== employee._id)
-              );
+              fetchEmployees();
             } catch (error) {
               Alert.alert("Delete failed", error?.message || "Please try again.");
             }
@@ -256,7 +255,7 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
 
   useEffect(() => {
     fetchEmployees();
-  }, []);
+  }, [activeTab]);
 
   return (
     <View style={styles.container}>
@@ -275,83 +274,126 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>Create Employee</Text>
+        {activeTab === "current" ? (
+          <View style={styles.formSection}>
+            <Text style={styles.sectionTitle}>Create Employee</Text>
 
-          <View style={styles.row}>
-            <View style={styles.halfField}>
-              <Text style={styles.label}>First Name</Text>
-              <TextInput
-                value={form.first_name}
-                onChangeText={(text) => setFormValue("first_name", text)}
-                style={styles.input}
-              />
+            <View style={styles.row}>
+              <View style={styles.halfField}>
+                <Text style={styles.label}>First Name</Text>
+                <TextInput
+                  value={form.first_name}
+                  onChangeText={(text) => setFormValue("first_name", text)}
+                  style={styles.input}
+                />
+              </View>
+              <View style={styles.halfField}>
+                <Text style={styles.label}>Last Name</Text>
+                <TextInput
+                  value={form.last_name}
+                  onChangeText={(text) => setFormValue("last_name", text)}
+                  style={styles.input}
+                />
+              </View>
             </View>
-            <View style={styles.halfField}>
-              <Text style={styles.label}>Last Name</Text>
-              <TextInput
-                value={form.last_name}
-                onChangeText={(text) => setFormValue("last_name", text)}
-                style={styles.input}
-              />
-            </View>
+
+            <Text style={styles.label}>Zip Code</Text>
+            <TextInput
+              value={form.zip_code}
+              onChangeText={(text) => setFormValue("zip_code", text)}
+              keyboardType="number-pad"
+              style={styles.input}
+            />
+
+            <Text style={styles.label}>Assigned Location</Text>
+            <Dropdown
+              data={locationOptions}
+              labelField="label"
+              valueField="value"
+              value={form.assigned_location_id}
+              onChange={(item) => setFormValue("assigned_location_id", item.value)}
+              placeholder="Select location"
+              style={styles.dropdown}
+              selectedTextStyle={styles.dropdownText}
+              placeholderStyle={styles.placeholderText}
+              itemTextStyle={styles.dropdownText}
+            />
+
+            <Text style={styles.label}>Employee Login ID</Text>
+            <TextInput value={loginPreview} editable={false} style={styles.readOnlyInput} />
+            <Text style={styles.helperText}>
+              If this ID is already taken, the system will add -2, -3, and so on.
+            </Text>
+
+            <Text style={styles.label}>PIN</Text>
+            <TextInput
+              value={form.pin}
+              onChangeText={(text) => setFormValue("pin", text)}
+              secureTextEntry
+              keyboardType="number-pad"
+              style={styles.input}
+            />
+
+            <TouchableOpacity
+              onPress={createEmployee}
+              disabled={saving}
+              style={[styles.primaryButton, saving && styles.disabledButton]}
+            >
+              {saving ? (
+                <ActivityIndicator color={AppColor.white} />
+              ) : (
+                <Text style={styles.primaryButtonText}>Create Employee</Text>
+              )}
+            </TouchableOpacity>
           </View>
+        ) : null}
 
-          <Text style={styles.label}>Zip Code</Text>
-          <TextInput
-            value={form.zip_code}
-            onChangeText={(text) => setFormValue("zip_code", text)}
-            keyboardType="number-pad"
-            style={styles.input}
-          />
-
-          <Text style={styles.label}>Assigned Location</Text>
-          <Dropdown
-            data={locationOptions}
-            labelField="label"
-            valueField="value"
-            value={form.assigned_location_id}
-            onChange={(item) => setFormValue("assigned_location_id", item.value)}
-            placeholder="Select location"
-            style={styles.dropdown}
-            selectedTextStyle={styles.dropdownText}
-            placeholderStyle={styles.placeholderText}
-            itemTextStyle={styles.dropdownText}
-          />
-
-          <Text style={styles.label}>Employee Login ID</Text>
-          <TextInput value={loginPreview} editable={false} style={styles.readOnlyInput} />
-          <Text style={styles.helperText}>
-            If this ID is already taken, the system will add -2, -3, and so on.
-          </Text>
-
-          <Text style={styles.label}>PIN</Text>
-          <TextInput
-            value={form.pin}
-            onChangeText={(text) => setFormValue("pin", text)}
-            secureTextEntry
-            keyboardType="number-pad"
-            style={styles.input}
-          />
-
+        <View style={styles.tabRow}>
           <TouchableOpacity
-            onPress={createEmployee}
-            disabled={saving}
-            style={[styles.primaryButton, saving && styles.disabledButton]}
+            onPress={() => setActiveTab("current")}
+            style={[
+              styles.tabButton,
+              activeTab === "current" && styles.tabButtonActive,
+            ]}
           >
-            {saving ? (
-              <ActivityIndicator color={AppColor.white} />
-            ) : (
-              <Text style={styles.primaryButtonText}>Create Employee</Text>
-            )}
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "current" && styles.tabTextActive,
+              ]}
+            >
+              Current Employees
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setActiveTab("archived")}
+            style={[
+              styles.tabButton,
+              activeTab === "archived" && styles.tabButtonActive,
+            ]}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "archived" && styles.tabTextActive,
+              ]}
+            >
+              Archived Employees
+            </Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionTitle}>Active Employees</Text>
+        <Text style={styles.sectionTitle}>
+          {activeTab === "archived" ? "Archived Employees" : "Current Employees"}
+        </Text>
         {loading ? (
           <ActivityIndicator color={AppColor.primary} style={{ marginTop: 24 }} />
         ) : employees.length === 0 ? (
-          <Text style={styles.emptyText}>No active employees.</Text>
+          <Text style={styles.emptyText}>
+            {activeTab === "archived"
+              ? "No archived employees."
+              : "No current employees."}
+          </Text>
         ) : (
           employees.map((employee) => (
             <View key={employee._id} style={styles.employeeCard}>
@@ -383,12 +425,14 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
                     onPress={() => toggleEmployeeDetails(employee)}
                     accessibilityLabel={`Manage ${employee.first_name} ${employee.last_name}`}
                   />
-                  <TouchableOpacity
-                    onPress={() => archiveEmployee(employee)}
-                    style={styles.archivePill}
-                  >
-                    <Text style={styles.archiveText}>Archive</Text>
-                  </TouchableOpacity>
+                  {activeTab === "current" ? (
+                    <TouchableOpacity
+                      onPress={() => archiveEmployee(employee)}
+                      style={styles.archivePill}
+                    >
+                      <Text style={styles.archiveText}>Archive</Text>
+                    </TouchableOpacity>
+                  ) : null}
                   <IconButton
                     icon="trash-can-outline"
                     iconColor={AppColor.red}
@@ -400,7 +444,7 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
                 </View>
               </View>
 
-              {expandedEmployeeId === employee._id ? (
+              {activeTab === "current" && expandedEmployeeId === employee._id ? (
                 <View style={styles.submenu}>
                   <Text style={styles.submenuTitle}>Location Assignment</Text>
                   <Text style={styles.helperText}>
@@ -441,6 +485,7 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
                 style={styles.readOnlyInput}
               />
 
+              {activeTab === "current" ? (
               <View style={styles.toggleRow}>
                 <View>
                   <Text style={styles.toggleLabel}>Login Access</Text>
@@ -459,7 +504,9 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
                   trackColor={{ false: AppColor.border, true: AppColor.primary }}
                 />
               </View>
+              ) : null}
 
+              {activeTab === "current" ? (
               <View style={styles.toggleRow}>
                 <View>
                   <Text style={styles.toggleLabel}>Operational Status</Text>
@@ -476,8 +523,9 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
                   trackColor={{ false: AppColor.border, true: AppColor.primary }}
                 />
               </View>
+              ) : null}
 
-              {resetEmployeeId === employee._id ? (
+              {activeTab === "current" && resetEmployeeId === employee._id ? (
                 <View style={styles.resetBox}>
                   <Text style={styles.label}>New PIN</Text>
                   <TextInput
@@ -505,14 +553,14 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
                     </TouchableOpacity>
                   </View>
                 </View>
-              ) : (
+              ) : activeTab === "current" ? (
                 <TouchableOpacity
                   onPress={() => setResetEmployeeId(employee._id)}
                   style={styles.secondaryButton}
                 >
                   <Text style={styles.secondaryButtonText}>Reset PIN</Text>
                 </TouchableOpacity>
-              )}
+              ) : null}
             </View>
           ))
         )}
@@ -551,6 +599,34 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
     color: AppColor.text,
     marginBottom: 12,
+  },
+  tabRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 16,
+  },
+  tabButton: {
+    flex: 1,
+    minHeight: 42,
+    borderWidth: 1,
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: AppColor.white,
+  },
+  tabButtonActive: {
+    borderColor: AppColor.primary,
+    backgroundColor: "#FFF5EE",
+  },
+  tabText: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish600,
+    fontSize: 13,
+  },
+  tabTextActive: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
   },
   row: { flexDirection: "row", gap: 10 },
   halfField: { flex: 1 },
