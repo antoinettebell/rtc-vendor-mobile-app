@@ -21,8 +21,6 @@ import AppImage from "../components/AppImage";
 import { onSignOut } from "../redux/slices/authSlice";
 import {
   clearUserSlice,
-  setAuthToken,
-  setUser,
 } from "../redux/slices/userSlice";
 import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlice";
 import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlice";
@@ -34,14 +32,11 @@ import {
 } from "../redux/slices/posOrderSlice";
 import {
   endEmployeeSession_API,
+  getEmployeeOrders_API,
   getAllFoodItem_API,
   getEmployeeDashboard_API,
-  getOrderList_API,
   getRefundCancelRequests_API,
   submitRefundCancelRequest_API,
-  toggleEmployeeDuty_API,
-  updateFooditemAvailabilityByID_API,
-  updateLocationOrdering_API,
   updateOrderStatusByID_API,
 } from "../api/appAPI";
 import { printOrderTickets } from "../helpers/print.helper";
@@ -51,7 +46,7 @@ import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 
 const ORDER_TABS = [
   {
-    label: "Pending",
+    label: "Open",
     value: "PENDING",
     statuses: [orderStatusStrings.placed, orderStatusStrings.accepted],
   },
@@ -61,9 +56,14 @@ const ORDER_TABS = [
     statuses: [orderStatusStrings.preparing],
   },
   {
-    label: "Ready",
+    label: "Pending Pickup",
     value: orderStatusStrings.ready_for_pickup,
     statuses: [orderStatusStrings.ready_for_pickup],
+  },
+  {
+    label: "Picked Up",
+    value: orderStatusStrings.driver_picked_up,
+    statuses: [orderStatusStrings.driver_picked_up],
   },
   {
     label: "Completed",
@@ -97,19 +97,6 @@ const formatDateTime = (value) => {
     hour: "numeric",
     minute: "2-digit",
   });
-};
-
-const formatShiftDuration = (startedAt, endedAt) => {
-  if (!startedAt) return "Not started";
-  const start = new Date(startedAt);
-  const end = endedAt ? new Date(endedAt) : new Date();
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    return "Not available";
-  }
-  const diffMinutes = Math.max(0, Math.floor((end - start) / 60000));
-  const hours = Math.floor(diffMinutes / 60);
-  const minutes = diffMinutes % 60;
-  return hours <= 0 ? `${minutes}m` : `${hours}h ${minutes}m`;
 };
 
 const getOptions = (item, type) => {
@@ -175,9 +162,6 @@ const EmployeePosBoardScreen = ({ navigation }) => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedOrderTab, setSelectedOrderTab] = useState(ORDER_TABS[1].value);
   const [loading, setLoading] = useState(false);
-  const [locationLoading, setLocationLoading] = useState(false);
-  const [dutyLoading, setDutyLoading] = useState(false);
-  const [itemLoadingId, setItemLoadingId] = useState(null);
   const [actionLoadingId, setActionLoadingId] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [customizationInput, setCustomizationInput] = useState("");
@@ -202,13 +186,6 @@ const EmployeePosBoardScreen = ({ navigation }) => {
     !!user?.employee_session_id && dashboard?.shift?.is_active !== false;
 
   const displayedLocation = dashboard?.assignedLocation || assignedLocation;
-  const locationIsOpen =
-    dashboard?.location?.is_open !== undefined
-      ? dashboard.location.is_open
-      : foodTruck?.currentLocation?.toString() ===
-          assignedLocation?._id?.toString() ||
-        !!assignedLocation?.isOrderingOpen;
-
   const employeeName =
     [user?.first_name, user?.last_name].filter(Boolean).join(" ") || "Employee";
 
@@ -219,9 +196,10 @@ const EmployeePosBoardScreen = ({ navigation }) => {
 
   const visibleItems = useMemo(
     () =>
-      selectedCategory === "All"
+      (selectedCategory === "All"
         ? items
-        : items.filter((item) => getItemCategory(item) === selectedCategory),
+        : items.filter((item) => getItemCategory(item) === selectedCategory)
+      ).filter((item) => item.available !== false),
     [items, selectedCategory],
   );
 
@@ -239,6 +217,49 @@ const EmployeePosBoardScreen = ({ navigation }) => {
   const filteredOrders = orders.filter((item) =>
     selectedTabStatuses.includes(item.orderStatus),
   );
+  const dailyStatusGroups = useMemo(
+    () =>
+      [
+        {
+          label: "Open",
+          orders: orders.filter(
+            (item) =>
+              ![
+                orderStatusStrings.completed,
+                orderStatusStrings.driver_picked_up,
+              ].includes(item.orderStatus) && item.paymentStatus !== "REFUNDED",
+          ),
+        },
+        {
+          label: "Completed",
+          orders: orders.filter(
+            (item) => item.orderStatus === orderStatusStrings.completed,
+          ),
+        },
+        {
+          label: "Pending Pickup",
+          orders: orders.filter(
+            (item) => item.orderStatus === orderStatusStrings.ready_for_pickup,
+          ),
+        },
+        {
+          label: "Picked Up",
+          orders: orders.filter(
+            (item) => item.orderStatus === orderStatusStrings.driver_picked_up,
+          ),
+        },
+        {
+          label: "Refunds",
+          orders: orders.filter((item) => item.paymentStatus === "REFUNDED"),
+        },
+      ].map((group) => ({
+        ...group,
+        ticketNumbers: group.orders
+          .map((item) => item?.orderNumber || item?._id)
+          .filter(Boolean),
+      })),
+    [orders],
+  );
 
   const loadDashboard = useCallback(async () => {
     const response = await getEmployeeDashboard_API();
@@ -250,18 +271,12 @@ const EmployeePosBoardScreen = ({ navigation }) => {
   const loadMenu = useCallback(async () => {
     const response = await getAllFoodItem_API();
     if (response?.success && response?.data?.menuList) {
-      setItems(response.data.menuList);
+      setItems(response.data.menuList.filter((item) => item.available !== false));
     }
   }, []);
 
   const loadOrders = useCallback(async () => {
-    const status = ORDER_TABS.flatMap((tab) => tab.statuses).join(",");
-    const response = await getOrderList_API({
-      page: 1,
-      limit: 50,
-      status,
-      advance: false,
-    });
+    const response = await getEmployeeOrders_API();
     if (response?.success && response?.data?.orderList) {
       setOrders(response.data.orderList);
     }
@@ -319,73 +334,6 @@ const EmployeePosBoardScreen = ({ navigation }) => {
     dispatch(clearFoodTruckProfileSlice());
     dispatch(clearPushNotificationRedux());
     dispatch(onSignOut());
-  };
-
-  const handleToggleDuty = async () => {
-    setDutyLoading(true);
-    try {
-      const response = await toggleEmployeeDuty_API({ is_working: !isWorking });
-      const nextEmployee = response?.data?.employee;
-      if (nextEmployee) {
-        dispatch(
-          setUser({
-            ...user,
-            ...nextEmployee,
-            foodTruck,
-            assignedLocation:
-              response?.data?.assignedLocation || assignedLocation,
-          }),
-        );
-      }
-      if (response?.data?.authToken) {
-        dispatch(setAuthToken(response.data.authToken));
-      }
-      if (isWorking) {
-        dispatch(clearPosOrder());
-      }
-      await refreshBoard();
-    } catch (error) {
-      Alert.alert(
-        "Duty update failed",
-        error?.message || "Could not update shift.",
-      );
-    } finally {
-      setDutyLoading(false);
-    }
-  };
-
-  const handleToggleLocation = async () => {
-    if (!foodTruck?._id || !assignedLocation?._id) return;
-    setLocationLoading(true);
-    try {
-      const response = await updateLocationOrdering_API({
-        foodtruck_id: foodTruck._id,
-        location_id: assignedLocation._id,
-        isOrderingOpen: !locationIsOpen,
-      });
-
-      const updatedFoodTruck = response?.data?.foodtruck;
-      const updatedLocation = updatedFoodTruck?.locations?.find(
-        (location) => location._id === assignedLocation._id,
-      );
-      if (updatedFoodTruck) {
-        dispatch(
-          setUser({
-            ...user,
-            foodTruck: { ...foodTruck, ...updatedFoodTruck },
-            assignedLocation: updatedLocation || assignedLocation,
-          }),
-        );
-      }
-      await loadDashboard();
-    } catch (error) {
-      Alert.alert(
-        "Location update failed",
-        error?.message || "Could not update location.",
-      );
-    } finally {
-      setLocationLoading(false);
-    }
   };
 
   const addItem = (item) => {
@@ -479,34 +427,6 @@ const EmployeePosBoardScreen = ({ navigation }) => {
       );
     });
     setSelectedItem(null);
-  };
-
-  const handleToggleItemAvailability = async (item) => {
-    setItemLoadingId(item._id);
-    try {
-      const response = await updateFooditemAvailabilityByID_API({
-        fooditem_id: item._id,
-        payload: { available: !item.available },
-      });
-      const updatedItem = response?.data?.menu;
-      setItems((current) =>
-        current.map((menuItem) =>
-          menuItem._id === item._id
-            ? {
-                ...menuItem,
-                available: updatedItem?.available ?? !item.available,
-              }
-            : menuItem,
-        ),
-      );
-    } catch (error) {
-      Alert.alert(
-        "Item update failed",
-        error?.message || "Could not update item.",
-      );
-    } finally {
-      setItemLoadingId(null);
-    }
   };
 
   const goToCheckout = () => {
@@ -638,27 +558,6 @@ const EmployeePosBoardScreen = ({ navigation }) => {
             {item.description ? ` | ${item.description}` : ""}
           </Text>
           <View style={styles.itemActions}>
-            <TouchableOpacity
-              style={[
-                styles.pillButton,
-                item.available && styles.pillButtonActive,
-              ]}
-              disabled={!isWorking || itemLoadingId === item._id}
-              onPress={() => handleToggleItemAvailability(item)}
-            >
-              <Text
-                style={[
-                  styles.pillButtonText,
-                  item.available && styles.pillButtonTextActive,
-                ]}
-              >
-                {itemLoadingId === item._id
-                  ? "Updating..."
-                  : item.available
-                    ? "Active"
-                    : "Inactive"}
-              </Text>
-            </TouchableOpacity>
             {hasOptions ? (
               <TouchableOpacity
                 style={styles.optionButton}
@@ -1031,7 +930,14 @@ const EmployeePosBoardScreen = ({ navigation }) => {
         </View>
       </Modal>
 
-      <View style={styles.header}>
+        <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <MaterialCommunityIcons
+            name="arrow-left"
+            size={22}
+            color={AppColor.black}
+          />
+        </TouchableOpacity>
         <View style={styles.headerTextBlock}>
           <Text style={styles.kicker}>Employee POS</Text>
           <Text style={styles.title}>{employeeName}</Text>
@@ -1053,70 +959,18 @@ const EmployeePosBoardScreen = ({ navigation }) => {
         contentContainerStyle={styles.content}
       >
         <View style={styles.shiftBar}>
-          <View style={styles.shiftMeta}>
-            <Text style={styles.shiftLabel}>Location</Text>
-            <Text style={styles.shiftValue}>
-              {locationIsOpen ? "Open" : "Closed"}
-            </Text>
-          </View>
-          <View style={styles.shiftMeta}>
-            <Text style={styles.shiftLabel}>Shift</Text>
-            <Text style={styles.shiftValue}>
-              {formatShiftDuration(
-                dashboard?.shift?.started_at,
-                dashboard?.shift?.ended_at,
-              )}
-            </Text>
-          </View>
-          <View style={styles.shiftMeta}>
-            <Text style={styles.shiftLabel}>Last Activity</Text>
-            <Text style={styles.shiftValue}>
-              {formatDateTime(dashboard?.shift?.last_active_at)}
-            </Text>
-          </View>
-          <View style={styles.shiftActions}>
-            <TouchableOpacity
-              style={[
-                styles.shiftButton,
-                isWorking && styles.shiftButtonActive,
-              ]}
-              disabled={dutyLoading}
-              onPress={handleToggleDuty}
-            >
-              <Text
-                style={[
-                  styles.shiftButtonText,
-                  isWorking && styles.shiftButtonTextActive,
-                ]}
-              >
-                {dutyLoading
-                  ? "Updating..."
-                  : isWorking
-                    ? "Working"
-                    : "Off Duty"}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.shiftButton,
-                locationIsOpen && styles.shiftButtonActive,
-              ]}
-              disabled={locationLoading}
-              onPress={handleToggleLocation}
-            >
-              <Text
-                style={[
-                  styles.shiftButtonText,
-                  locationIsOpen && styles.shiftButtonTextActive,
-                ]}
-              >
-                {locationLoading
-                  ? "Updating..."
-                  : locationIsOpen
-                    ? "Open"
-                    : "Closed"}
-              </Text>
-            </TouchableOpacity>
+          <View style={styles.statusGrid}>
+            {dailyStatusGroups.map((group) => (
+              <View key={group.label} style={styles.statusCard}>
+                <Text style={styles.shiftLabel}>{group.label}</Text>
+                <Text style={styles.statusCount}>{group.orders.length}</Text>
+                <Text style={styles.ticketText} numberOfLines={2}>
+                  {group.ticketNumbers.length
+                    ? group.ticketNumbers.map((number) => `#${number}`).join(", ")
+                    : "No tickets"}
+                </Text>
+              </View>
+            ))}
           </View>
         </View>
 
@@ -1229,7 +1083,7 @@ const EmployeePosBoardScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Active Order Queue</Text>
+          <Text style={styles.sectionTitle}>Daily Order Status</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {ORDER_TABS.map((tab) => (
               <TouchableOpacity
@@ -1282,6 +1136,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
+  backButton: {
+    alignItems: "center",
+    borderColor: AppColor.border,
+    borderRadius: 6,
+    borderWidth: 1,
+    height: 38,
+    justifyContent: "center",
+    marginRight: 10,
+    width: 38,
+  },
   headerTextBlock: { flex: 1, marginRight: 12 },
   kicker: { color: AppColor.primary, fontFamily: Mulish700, fontSize: 12 },
   title: {
@@ -1312,6 +1176,32 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 14,
     padding: 14,
+  },
+  statusGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  statusCard: {
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexBasis: "48%",
+    flexGrow: 1,
+    minHeight: 92,
+    padding: 10,
+  },
+  statusCount: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 24,
+    marginTop: 4,
+  },
+  ticketText: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 11,
+    marginTop: 4,
   },
   shiftMeta: {
     borderBottomColor: AppColor.border,

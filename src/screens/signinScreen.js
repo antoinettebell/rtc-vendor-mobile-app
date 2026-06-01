@@ -43,7 +43,6 @@ import {
 } from "../helpers/notification.helper";
 import { setFcmToken_API } from "../api/appAPI";
 import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
-import runtimeConfig from "../config/runtimeConfig";
 
 const SignInScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -184,11 +183,15 @@ const SignInScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleEmployeeSignIn = async () => {
+  const handleEmployeeSignIn = async (
+    passedAccessCode = null,
+    passedLoginId = null,
+    passedPin = null,
+  ) => {
     let isValid = true;
-    const currentAccessCode = vendorAccessCode.trim();
-    const currentLoginId = employeeLoginId.trim().toLowerCase();
-    const currentPin = pin.trim();
+    const currentAccessCode = (passedAccessCode || vendorAccessCode).trim();
+    const currentLoginId = (passedLoginId || employeeLoginId).trim().toLowerCase();
+    const currentPin = (passedPin || pin).trim();
 
     if (currentAccessCode.length !== 6) {
       setVendorAccessCodeError("Enter the 6-character vendor access code.");
@@ -224,6 +227,10 @@ const SignInScreen = ({ navigation, route }) => {
       });
 
       if (response?.success && response?.data) {
+        const employeeName =
+          [response.data.employee?.first_name, response.data.employee?.last_name]
+            .filter(Boolean)
+            .join(" ") || "Employee";
         dispatch(
           setUser({
             ...response.data.employee,
@@ -232,6 +239,21 @@ const SignInScreen = ({ navigation, route }) => {
           })
         );
         dispatch(setAuthToken(response.data.authToken));
+        dispatch(
+          addOrUpdateUser({
+            emailid: `employee:${currentAccessCode}:${currentLoginId}`,
+            userData: {
+              emailid: `employee:${currentAccessCode}:${currentLoginId}`,
+              password: currentPin,
+              username: employeeName,
+              imageUrl: response?.data?.foodTruck?.logo || null,
+              loginMode: "EMPLOYEE",
+              vendorAccessCode: currentAccessCode,
+              employeeLoginId: currentLoginId,
+              pin: currentPin,
+            },
+          })
+        );
         dispatch(onSignin(true));
       }
     } catch (error) {
@@ -252,6 +274,19 @@ const SignInScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     if (route?.params?.savedUser) {
+      if (route.params.savedUser.loginMode === "EMPLOYEE") {
+        const savedAccessCode = route.params.savedUser.vendorAccessCode || "";
+        const savedLoginId = route.params.savedUser.employeeLoginId || "";
+        const savedPin =
+          route.params.savedUser.pin || route.params.savedUser.password || "";
+        setLoginMode("EMPLOYEE");
+        setVendorAccessCode(savedAccessCode);
+        setEmployeeLoginId(savedLoginId);
+        setPin(savedPin);
+        handleEmployeeSignIn(savedAccessCode, savedLoginId, savedPin);
+        return;
+      }
+
       setEmail(route?.params?.savedUser?.emailid);
       setPassword(route?.params?.savedUser?.password);
 
@@ -308,21 +343,6 @@ const SignInScreen = ({ navigation, route }) => {
             {/* Sign In Form */}
             <Text style={styles.title}>{"Sign In"}</Text>
             <Text style={styles.subtitle}>{"Sign in your account"}</Text>
-            <View style={styles.debugConfigContainer}>
-              <Text style={styles.debugConfigText}>
-                {`API_URL: ${runtimeConfig.apiUrl}`}
-              </Text>
-              <Text style={styles.debugConfigText}>
-                {`API_PREFIX: ${runtimeConfig.apiPrefix}`}
-              </Text>
-              <Text style={styles.debugConfigText}>
-                {`Environment: ${runtimeConfig.environment}`}
-              </Text>
-              <Text style={styles.debugConfigText}>
-                {`API source: ${runtimeConfig.apiUrlSource}`}
-              </Text>
-            </View>
-
             <View style={styles.modeSelector}>
               <TouchableOpacity
                 activeOpacity={0.8}
@@ -659,21 +679,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: AppColor.textHighlighter,
     marginBottom: 14,
-  },
-  debugConfigContainer: {
-    backgroundColor: "#FFF7E6",
-    borderColor: "#D9822B",
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginBottom: 28,
-  },
-  debugConfigText: {
-    color: "#7A3E00",
-    fontFamily: Mulish600,
-    fontSize: 12,
-    marginBottom: 2,
   },
   modeSelector: {
     backgroundColor: AppColor.lightGray || "#F5F5F5",

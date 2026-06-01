@@ -16,16 +16,15 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { onSignOut } from "../redux/slices/authSlice";
-import { clearUserSlice, setUser } from "../redux/slices/userSlice";
+import { clearUserSlice } from "../redux/slices/userSlice";
 import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlice";
 import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlice";
 import {
   endEmployeeSession_API,
   getEmployeeDashboard_API,
-  getOrderList_API,
+  getEmployeeOrders_API,
   getRefundCancelRequests_API,
   submitRefundCancelRequest_API,
-  updateLocationOrdering_API,
   updateOrderStatusByID_API,
 } from "../api/appAPI";
 import { printOrderTickets } from "../helpers/print.helper";
@@ -56,46 +55,6 @@ const formatMoney = (value) => {
   return `$${(Number.isFinite(amount) ? amount : 0).toFixed(2)}`;
 };
 
-const formatDateTime = (value) => {
-  if (!value) {
-    return "Not available";
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "Not available";
-  }
-
-  return date.toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-};
-
-const formatShiftDuration = (startedAt, endedAt) => {
-  if (!startedAt) {
-    return "Not started";
-  }
-
-  const start = new Date(startedAt);
-  const end = endedAt ? new Date(endedAt) : new Date();
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    return "Not available";
-  }
-
-  const diffMinutes = Math.max(0, Math.floor((end - start) / 60000));
-  const hours = Math.floor(diffMinutes / 60);
-  const minutes = diffMinutes % 60;
-
-  if (hours <= 0) {
-    return `${minutes}m`;
-  }
-
-  return `${hours}h ${minutes}m`;
-};
-
 const StatCard = ({ label, value }) => (
   <View style={styles.statCard}>
     <Text style={styles.statValue}>{value}</Text>
@@ -110,7 +69,6 @@ const EmployeeSessionScreen = ({ navigation }) => {
   const [requests, setRequests] = useState([]);
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [locationLoading, setLocationLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState(null);
   const [requestModalOrder, setRequestModalOrder] = useState(null);
   const [requestType, setRequestType] = useState("REFUND");
@@ -135,11 +93,8 @@ const EmployeeSessionScreen = ({ navigation }) => {
 
   const loadOrders = useCallback(async () => {
     try {
-      const response = await getOrderList_API({
-        page: 1,
-        limit: 25,
+      const response = await getEmployeeOrders_API({
         status: ACTIVE_ORDER_STATUSES.join(","),
-        advance: false,
       });
 
       if (response?.success && response?.data?.orderList) {
@@ -196,47 +151,6 @@ const EmployeeSessionScreen = ({ navigation }) => {
     dispatch(clearFoodTruckProfileSlice());
     dispatch(clearPushNotificationRedux());
     dispatch(onSignOut());
-  };
-
-  const handleToggleLocation = async () => {
-    if (!foodTruck?._id || !assignedLocation?._id) {
-      return;
-    }
-
-    setLocationLoading(true);
-    try {
-      const response = await updateLocationOrdering_API({
-        foodtruck_id: foodTruck._id,
-        location_id: assignedLocation._id,
-        isOrderingOpen: !locationIsOpen,
-      });
-
-      const updatedFoodTruck = response?.data?.foodtruck;
-      const updatedLocation = updatedFoodTruck?.locations?.find(
-        (location) => location._id === assignedLocation._id,
-      );
-
-      if (updatedFoodTruck) {
-        dispatch(
-          setUser({
-            ...user,
-            foodTruck: {
-              ...foodTruck,
-              ...updatedFoodTruck,
-            },
-            assignedLocation: updatedLocation || assignedLocation,
-          }),
-        );
-      }
-      await loadDashboard();
-    } catch (error) {
-      Alert.alert(
-        "Location update failed",
-        error?.message || "Could not update this location.",
-      );
-    } finally {
-      setLocationLoading(false);
-    }
   };
 
   const handleCompleteOrder = async (order) => {
@@ -391,7 +305,6 @@ const EmployeeSessionScreen = ({ navigation }) => {
   );
 
   const metrics = dashboard?.metrics || {};
-  const shift = dashboard?.shift || {};
   const displayedLocation = dashboard?.assignedLocation || assignedLocation;
   const displayedLocationOpen =
     dashboard?.location?.is_open !== undefined
@@ -521,60 +434,14 @@ const EmployeeSessionScreen = ({ navigation }) => {
                 {displayedLocation?.address || ""}
               </Text>
 
-              <TouchableOpacity
-                activeOpacity={0.8}
+              <Text
                 style={[
-                  styles.locationToggle,
-                  displayedLocationOpen && styles.locationToggleOpen,
+                  styles.locationStatus,
+                  displayedLocationOpen && styles.locationStatusOpen,
                 ]}
-                disabled={locationLoading}
-                onPress={handleToggleLocation}
               >
-                <Text
-                  style={[
-                    styles.locationToggleText,
-                    displayedLocationOpen && styles.locationToggleTextOpen,
-                  ]}
-                >
-                  {locationLoading
-                    ? "Updating..."
-                    : displayedLocationOpen
-                      ? "Location Open"
-                      : "Location Closed"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.panel}>
-              <View style={styles.panelHeaderRow}>
-                <Text style={styles.panelTitle}>My Shift</Text>
-                <Text
-                  style={[
-                    styles.statusPill,
-                    displayedLocationOpen && styles.statusPillOpen,
-                  ]}
-                >
-                  {displayedLocationOpen ? "Open" : "Closed"}
-                </Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Current shift</Text>
-                <Text style={styles.detailValue}>
-                  {formatShiftDuration(shift.started_at, shift.ended_at)}
-                </Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Started</Text>
-                <Text style={styles.detailValue}>
-                  {formatDateTime(shift.started_at)}
-                </Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Last activity</Text>
-                <Text style={styles.detailValue}>
-                  {formatDateTime(shift.last_active_at)}
-                </Text>
-              </View>
+                {displayedLocationOpen ? "Location Open" : "Location Closed"}
+              </Text>
             </View>
 
             <View style={styles.panel}>
@@ -595,6 +462,10 @@ const EmployeeSessionScreen = ({ navigation }) => {
                 <StatCard
                   label="Cash orders"
                   value={metrics.cash_orders_today || 0}
+                />
+                <StatCard
+                  label="Cash drawer"
+                  value={formatMoney(metrics.cash_drawer_total)}
                 />
                 {canTapToPay ? (
                   <StatCard
@@ -655,10 +526,17 @@ const EmployeeSessionScreen = ({ navigation }) => {
               </View>
               <TouchableOpacity
                 activeOpacity={0.8}
+                style={[styles.primaryButton, styles.stackedAction]}
+                onPress={() => navigation.navigate("employeeShiftScreen")}
+              >
+                <Text style={styles.primaryButtonText}>My Shift</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.8}
                 style={styles.primaryButton}
                 onPress={() => navigation.navigate("employeePosBoardScreen")}
               >
-                <Text style={styles.primaryButtonText}>Open POS Board</Text>
+                <Text style={styles.primaryButtonText}>Open POS</Text>
               </TouchableOpacity>
             </View>
 
@@ -837,26 +715,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 4,
   },
-  locationToggle: {
-    alignItems: "center",
+  locationStatus: {
+    alignSelf: "flex-start",
     borderColor: AppColor.border,
-    borderRadius: 6,
+    borderRadius: 12,
     borderWidth: 1,
-    marginTop: 14,
-    minHeight: 44,
-    justifyContent: "center",
-  },
-  locationToggleOpen: {
-    backgroundColor: AppColor.primary,
-    borderColor: AppColor.primary,
-  },
-  locationToggleText: {
-    color: AppColor.black,
+    color: AppColor.textHighlighter,
     fontFamily: Mulish700,
-    fontSize: 15,
+    fontSize: 12,
+    marginTop: 12,
+    overflow: "hidden",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
-  locationToggleTextOpen: {
-    color: AppColor.white,
+  locationStatusOpen: {
+    borderColor: AppColor.primary,
+    color: AppColor.primary,
   },
   paymentRow: {
     flexDirection: "row",
@@ -888,6 +762,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     minHeight: 48,
     justifyContent: "center",
+  },
+  stackedAction: {
+    marginBottom: 10,
   },
   primaryButtonText: {
     color: AppColor.white,

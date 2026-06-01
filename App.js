@@ -71,6 +71,7 @@ import VendorPosCheckoutScreen from "./src/screens/vendorPosCheckoutScreen";
 import ProfileEmployeeManagementScreen from "./src/screens/profileEmployeeManagementScreen";
 import EmployeeSessionScreen from "./src/screens/employeeSessionScreen";
 import EmployeePosBoardScreen from "./src/screens/employeePosBoardScreen";
+import EmployeeShiftScreen from "./src/screens/employeeShiftScreen";
 import VendorMarketplaceScreen from "./src/screens/vendorMarketplaceScreen";
 import VendorMarketplaceNearMeScreen from "./src/screens/vendorMarketplaceNearMeScreen";
 import VendorMarketplaceEventDetailsScreen from "./src/screens/vendorMarketplaceEventDetailsScreen";
@@ -406,6 +407,10 @@ const EmployeeAppNavigator = () => (
     <Stack.Screen
       name="employeePosBoardScreen"
       component={EmployeePosBoardScreen}
+    />
+    <Stack.Screen
+      name="employeeShiftScreen"
+      component={EmployeeShiftScreen}
     />
     <Stack.Screen name="vendorPosMenuScreen" component={VendorPosMenuScreen} />
     <Stack.Screen

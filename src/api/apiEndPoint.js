@@ -28,6 +28,8 @@ export const RESET_VENDOR_EMPLOYEE_PIN = (employee_id) =>
 export const EMPLOYEE_DASHBOARD = "/vendor-employee/dashboard";
 export const END_EMPLOYEE_SESSION = "/vendor-employee/session/end";
 export const TOGGLE_EMPLOYEE_DUTY = "/vendor-employee/session/duty";
+export const EMPLOYEE_SHIFT_ACTION = "/vendor-employee/session/action";
+export const EMPLOYEE_ORDERS = "/vendor-employee/orders";
 export const REFUND_CANCEL_REQUESTS = "/vendor-employee/refund-cancel-requests";
 export const REVIEW_REFUND_CANCEL_REQUEST = (request_id) =>
   `/vendor-employee/refund-cancel-requests/${request_id}/review`;

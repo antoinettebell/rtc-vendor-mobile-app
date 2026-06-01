@@ -64,6 +64,8 @@ import {
   UPDATE_USER_DETAILS,
   VALIDATE_ORDER,
   EMPLOYEE_DASHBOARD,
+  EMPLOYEE_ORDERS,
+  EMPLOYEE_SHIFT_ACTION,
   END_EMPLOYEE_SESSION,
   TOGGLE_EMPLOYEE_DUTY,
   REFUND_CANCEL_REQUESTS,
@@ -1181,6 +1183,31 @@ export const toggleEmployeeDuty_API = async ({ is_working }) => {
       { is_working },
       { skipToken: false },
     );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const employeeShiftAction_API = async ({ action }) => {
+  try {
+    const response = await apiClient.post(
+      EMPLOYEE_SHIFT_ACTION,
+      { action },
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const getEmployeeOrders_API = async ({ status = null } = {}) => {
+  try {
+    const query = status ? `?status=${status}` : "";
+    const response = await apiClient.get(`${EMPLOYEE_ORDERS}${query}`, {
+      skipToken: false,
+    });
     return response?.data;
   } catch (error) {
     throw error?.response?.data || error;

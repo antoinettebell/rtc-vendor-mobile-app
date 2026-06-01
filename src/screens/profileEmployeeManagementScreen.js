@@ -509,7 +509,7 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
               {activeTab === "current" ? (
               <View style={styles.toggleRow}>
                 <View>
-                  <Text style={styles.toggleLabel}>Operational Status</Text>
+                  <Text style={styles.toggleLabel}>On/Off Duty</Text>
                   <Text style={styles.employeeMeta}>
                     {employee.is_working ? "Working" : "Off duty"}
                   </Text>
