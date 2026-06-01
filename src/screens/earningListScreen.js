@@ -79,7 +79,9 @@ const EarningListScreen = ({ navigation, route }) => {
           </Text>
         </View>
         <View>
-          <Text style={styles.totalText}>{`$${getVendorOrderTotal(item).toFixed(2)}`}</Text>
+          <Text style={styles.totalText}>{`$${Number(
+            item?.vendorEarning ?? getVendorOrderTotal(item)
+          ).toFixed(2)}`}</Text>
         </View>
       </Pressable>
     );

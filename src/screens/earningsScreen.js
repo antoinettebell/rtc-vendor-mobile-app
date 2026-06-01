@@ -21,23 +21,18 @@ import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { vendorProfileStatus } from "../utils/constants";
 import {
   getEarningByFoodTruckID_API,
-  getOrderList_API,
   getRefundCancelRequests_API,
   reviewRefundCancelRequest_API,
 } from "../api/appAPI";
-import {
-  formatMoney,
-  getPastOrderDate,
-  getVendorOrderTotal,
-} from "../helpers/order.helper";
+import { formatMoney } from "../helpers/order.helper";
 import StatusBarManager from "../components/StatusBarManager";
 
-const PAST_ORDER_STATUSES = "DELIVERED, COMPLETED";
+const EARNINGS_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 const DATE_FILTERS = [
   { label: "Today", value: "today" },
-  { label: "7 days", value: "week" },
-  { label: "30 days", value: "month" },
+  { label: "This Week", value: "week" },
+  { label: "This Month", value: "month" },
 ];
 
 const PAYMENT_FILTERS = [
@@ -56,21 +51,6 @@ const FILTER_LABELS = {
   location: "Location",
   employee: "Employee",
   status: "Refund/Cancel Status",
-};
-
-const getOrdersTotal = (orders) =>
-  orders.reduce((total, order) => total + getVendorOrderTotal(order), 0);
-
-const getOrdersForPeriod = (orders, period) => {
-  const periodStart = moment().startOf(period);
-  const periodEnd = moment().endOf(period);
-
-  return orders.filter((order) => {
-    const orderDate = getPastOrderDate(order);
-    if (!orderDate) return false;
-
-    return moment(orderDate).isBetween(periodStart, periodEnd, null, "[]");
-  });
 };
 
 const EarningComponent = memo(({ title, amount, onPress }) => {
@@ -128,13 +108,10 @@ const formatDateTime = (value) => {
 };
 
 const getDateRange = (dateFilter) => {
-  const end = moment().format("YYYY-MM-DD");
-  const start =
-    dateFilter === "month"
-      ? moment().subtract(29, "days").format("YYYY-MM-DD")
-      : dateFilter === "week"
-        ? moment().subtract(6, "days").format("YYYY-MM-DD")
-        : moment().format("YYYY-MM-DD");
+  const period =
+    dateFilter === "month" ? "month" : dateFilter === "week" ? "week" : "day";
+  const start = moment().startOf(period).format("YYYY-MM-DD");
+  const end = moment().endOf(period).format("YYYY-MM-DD");
 
   return { startDate: start, endDate: end };
 };
@@ -235,28 +212,6 @@ const EarningsScreen = ({ navigation }) => {
     setRequestStatusFilter(null);
   };
 
-  const fetchPastOrders = async () => {
-    let page = 1;
-    let totalPages = 1;
-    let orders = [];
-
-    do {
-      const response = await getOrderList_API({
-        page,
-        limit: 100,
-        status: PAST_ORDER_STATUSES,
-      });
-
-      if (!response?.success || !response?.data) break;
-
-      orders = [...orders, ...(response.data.orderList || [])];
-      totalPages = response.data.totalPages || 1;
-      page += 1;
-    } while (page <= totalPages);
-
-    return orders;
-  };
-
   const onRefresh = async ({ isInitialLoad = false }) => {
     if (isInitialLoad) {
       setDataLoading(true);
@@ -264,10 +219,6 @@ const EarningsScreen = ({ navigation }) => {
       setIsRefreshing(true);
     }
     try {
-      const pastOrders = await fetchPastOrders();
-      const todayOrders = getOrdersForPeriod(pastOrders, "day");
-      const weeklyOrders = getOrdersForPeriod(pastOrders, "week");
-      const monthlyOrders = getOrdersForPeriod(pastOrders, "month");
       const { startDate, endDate } = getDateRange(dateFilter);
       const analyticsResponse = await getEarningByFoodTruckID_API({
         foodTruck_id: user.foodTruck._id,
@@ -283,12 +234,13 @@ const EarningsScreen = ({ navigation }) => {
         status: "PENDING",
         limit: 25,
       });
+      const backendEarnings = analyticsResponse?.data?.earningsFulldata || {};
 
       setEarnings({
-        totalEarning: getOrdersTotal(pastOrders),
-        todayEarning: getOrdersTotal(todayOrders),
-        weeklyEarning: getOrdersTotal(weeklyOrders),
-        monthlyEarning: getOrdersTotal(monthlyOrders),
+        totalEarning: Number(backendEarnings.totalEarning || 0),
+        todayEarning: Number(backendEarnings.todayEarning || 0),
+        weeklyEarning: Number(backendEarnings.weeklyEarning || 0),
+        monthlyEarning: Number(backendEarnings.monthlyEarning || 0),
       });
       setEmployeeAnalytics(analyticsResponse?.data?.employeeAnalytics || null);
       setPendingRequests(requestsResponse?.data?.requests || []);
@@ -352,6 +304,12 @@ const EarningsScreen = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       onRefresh({ isInitialLoad: true });
+
+      const refreshTimer = setInterval(() => {
+        onRefresh({ isInitialLoad: false });
+      }, EARNINGS_REFRESH_INTERVAL_MS);
+
+      return () => clearInterval(refreshTimer);
     }, [
       dateFilter,
       locationFilter,
