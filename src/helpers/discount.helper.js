@@ -48,6 +48,15 @@ export const getRewardItemsDisplay = (item, quantityToUseArg) => {
   const selectedDiscountToppings = Array.isArray(safeItem.selectedDiscountToppings)
     ? safeItem.selectedDiscountToppings
     : [];
+  const selectedDiscountCustomization =
+    safeItem.selectedDiscountCustomization ||
+    safeItem.selectedDiscountCustomizationInput ||
+    "";
+  const selectedDiscountComboSides = Array.isArray(
+    safeItem.selectedDiscountComboSides
+  )
+    ? safeItem.selectedDiscountComboSides
+    : [];
   let rewardItems = [];
 
   if (discountRules && discountRules.discount > 0) {
@@ -75,15 +84,19 @@ export const getRewardItemsDisplay = (item, quantityToUseArg) => {
           return {
             ...bi,
             displayQty,
-            displayName: bi.isSameItem ? safeItem.name : bi.itemId?.name,
+            displayName: bi.isSameItem ? safeItem.name : bi.itemId?.name || bi.name,
             displayImg: bi.isSameItem
               ? safeItem.imgUrls?.[0]
-              : bi.itemId?.imgUrls?.[0],
+              : bi.itemId?.imgUrls?.[0] || bi.imgUrls?.[0],
             displayDesc: bi.isSameItem
               ? safeItem.description
-              : bi.itemId?.description,
-            displayFlavors: bi.isSameItem ? selectedDiscountFlavors : [],
-            displayToppings: bi.isSameItem ? selectedDiscountToppings : [],
+              : bi.itemId?.description || bi.description,
+            displayFlavors: selectedDiscountFlavors,
+            displayToppings: selectedDiscountToppings,
+            displayCustomization: bi.allowCustomize
+              ? selectedDiscountCustomization
+              : null,
+            displayComboSides: selectedDiscountComboSides,
             displayPrice:
               rewardDisplayPrice <= 0
                 ? "Free"
@@ -99,6 +112,10 @@ export const getRewardItemsDisplay = (item, quantityToUseArg) => {
             displayDesc: safeItem.description,
             displayFlavors: selectedDiscountFlavors,
             displayToppings: selectedDiscountToppings,
+            displayCustomization: safeItem.allowCustomize
+              ? selectedDiscountCustomization
+              : null,
+            displayComboSides: selectedDiscountComboSides,
             displayQty: rewardQty,
             displayPrice:
               discountVal === 1
@@ -115,8 +132,12 @@ export const getRewardItemsDisplay = (item, quantityToUseArg) => {
       displayName: bi.itemId?.name || bi.name,
       displayImg: bi.itemId?.imgUrls?.[0] || bi.imgUrls?.[0],
       displayDesc: bi.itemId?.description || bi.description,
-      displayFlavors: bi.isSameItem ? selectedDiscountFlavors : [],
-      displayToppings: bi.isSameItem ? selectedDiscountToppings : [],
+      displayFlavors: selectedDiscountFlavors,
+      displayToppings: selectedDiscountToppings,
+      displayCustomization: bi.allowCustomize
+        ? selectedDiscountCustomization
+        : null,
+      displayComboSides: selectedDiscountComboSides,
       displayPrice:
         discountType === "BOGO" && bi.isSameItem && Number(bi.price) > 0
           ? `$${Number(bi.price).toFixed(2)}`

@@ -305,12 +305,14 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
       ? getApplicationEvent(application)
       : getBidEvent(bid));
   const vendorPays = isVendorPaysToAttendEvent(event);
+  const unlockState =
+    record?.marketplace_unlock || event?.marketplace_unlock || {};
   const contactUnlocked =
-    itemType === "BID"
-      ? bid?.bid_status === "AWARDED"
-      : ["ACCEPTED", "PAYMENT_DUE", "PAID", "CONFIRMED"].includes(
-          application?.application_status,
-        );
+    unlockState.details_unlocked === true ||
+    (unlockState.details_unlocked == null &&
+      (itemType === "BID"
+        ? bid?.bid_status === "AWARDED"
+        : isPaidApplication(application)));
   const coordinatorContact = getCoordinatorContact(record, event);
   const hasCoordinatorContact =
     hasDisplayValue(coordinatorContact.businessName) ||
@@ -440,7 +442,7 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
             </Text>
           ) : (
             <Text style={styles.emptyText}>
-              Coordinator contact is unlocked for awarded or accepted events.
+              Coordinator contact unlocks after the required payment or match condition.
             </Text>
           )}
           {/* TODO: Replace the fallback copy when backend returns coordinator

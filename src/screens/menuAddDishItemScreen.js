@@ -102,9 +102,12 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
       const categoryName = String(Params?.category?.name || "")
         .trim()
         .toLowerCase();
-      return flavorCategoryNames.some((name) => categoryName.includes(name));
+      return (
+        foodType === foodTypeStrings.combo ||
+        flavorCategoryNames.some((name) => categoryName.includes(name))
+      );
     },
-    [Params?.category?.name]
+    [Params?.category?.name, foodType]
   );
 
   const { checkAndRequestPermission: photosPermissionStatus } = usePermission(
@@ -133,6 +136,9 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
   const [menuList, setMenuList] = useState([]);
   const [bogoItems, setBogoItems] = useState([]);
   const [comboItems, setComboItems] = useState([]);
+  const [comboSideOptionCount, setComboSideOptionCount] = useState(1);
+  const [comboSidesPerOrder, setComboSidesPerOrder] = useState(1);
+  const [comboSideOptions, setComboSideOptions] = useState([""]);
   const [customization, setCustomization] = useState(false);
   const [hasFlavors, setHasFlavors] = useState(false);
   const [flavorCount, setFlavorCount] = useState(1);
@@ -174,6 +180,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     prepTime: "",
     flavors: "",
     toppings: "",
+    comboSideOptions: "",
   });
 
   const memoizedMenuList = React.useMemo(() => menuList, [menuList]);
@@ -439,6 +446,25 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     setErrors((prev) => ({ ...prev, toppings: "" }));
   };
 
+  const handleComboSideOptionCountChange = (selected) => {
+    const nextCount = selected.value;
+    setComboSideOptionCount(nextCount);
+    setComboSidesPerOrder((currentValue) => Math.min(currentValue, nextCount, 5));
+    setComboSideOptions((currentOptions) =>
+      Array.from({ length: nextCount }, (_, index) => currentOptions[index] || "")
+    );
+    setErrors((prev) => ({ ...prev, comboSideOptions: "" }));
+  };
+
+  const handleComboSideOptionNameChange = (text, index) => {
+    setComboSideOptions((currentOptions) => {
+      const nextOptions = [...currentOptions];
+      nextOptions[index] = text;
+      return nextOptions;
+    });
+    setErrors((prev) => ({ ...prev, comboSideOptions: "" }));
+  };
+
   const handleOptionCostToggle = (setter, index) => {
     setter((currentValues) => {
       const nextValues = [...currentValues];
@@ -523,6 +549,34 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     );
     if (missingCostIndex !== -1) {
       return `Topping ${missingCostIndex + 1} cost must be greater than 0`;
+    }
+
+    return "";
+  };
+
+  const validateComboSideOptions = () => {
+    if (foodType !== foodTypeStrings.combo) {
+      return "";
+    }
+
+    const requiredOptions = comboSideOptions.slice(0, comboSideOptionCount);
+    const missingOptionIndex = requiredOptions.findIndex(
+      (option) => !String(option || "").trim()
+    );
+
+    if (missingOptionIndex !== -1) {
+      return `Side option ${missingOptionIndex + 1} is required`;
+    }
+
+    const normalizedOptions = requiredOptions.map((option) =>
+      String(option || "").trim().toLowerCase()
+    );
+    if (new Set(normalizedOptions).size !== normalizedOptions.length) {
+      return "Side option names must be unique";
+    }
+
+    if (comboSidesPerOrder > comboSideOptionCount) {
+      return "# of Sides per Order cannot exceed # of Side Options";
     }
 
     return "";
@@ -830,8 +884,28 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
       } else {
         setComboItems([]);
       }
+      const itemComboSideOptions =
+        Array.isArray(item.comboSideOptions) && item.comboSideOptions.length > 0
+          ? item.comboSideOptions
+          : [""];
+      const nextComboSideOptionCount = Math.min(
+        Math.max(itemComboSideOptions.length, 1),
+        15
+      );
+      setComboSideOptionCount(nextComboSideOptionCount);
+      setComboSideOptions(itemComboSideOptions.slice(0, 15));
+      setComboSidesPerOrder(
+        Math.min(
+          Math.max(item.comboSidesPerOrder || 1, 1),
+          nextComboSideOptionCount,
+          5
+        )
+      );
     } else {
       setComboItems([]);
+      setComboSideOptionCount(1);
+      setComboSideOptions([""]);
+      setComboSidesPerOrder(1);
     }
   };
 
@@ -959,6 +1033,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 	    }
 	    newErrors.flavors = validateFlavors();
 	    newErrors.toppings = validateToppings();
+	    newErrors.comboSideOptions = validateComboSideOptions();
 
 	    setErrors(newErrors);
 
@@ -1072,6 +1147,14 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
           menuItem: item._id || "",
           qty: 1,
         }));
+        payload.comboSideOptions = comboSideOptions
+          .slice(0, comboSideOptionCount)
+          .map((option) => toTitleCase(option));
+        payload.comboSidesPerOrder = Math.min(
+          comboSidesPerOrder,
+          comboSideOptionCount,
+          5
+        );
       }
 
       console.log("Food Item API request payload => ", payload);
@@ -2705,7 +2788,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                       {foodType === foodTypeStrings.combo ? (
                         <View style={styles.section}>
                           <Text style={[styles.inputLabel, { marginTop: 10 }]}>
-                            {"Combo Sides *"}
+                            {"Combo Details *"}
                           </Text>
 
                           {/* Display Combo Items if available */}
@@ -2759,13 +2842,96 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                               size={20}
                               color={AppColor.primary}
                             />
-                            <Text style={styles.bogoToggleText}>
-                              {`Add Item for Combo Sides`}
-                            </Text>
-                          </TouchableOpacity>
+	                            <Text style={styles.bogoToggleText}>
+	                              {`Add Item for Combo Sides`}
+	                            </Text>
+	                          </TouchableOpacity>
 
-                          {!!errors.comboItems && (
-                            <HelperText
+	                          <View style={[styles.flavorPanel, { marginTop: 14 }]}>
+	                            <View style={styles.flavorPickerRow}>
+	                              <View style={{ flex: 1 }}>
+	                                <Text style={styles.inputLabel}>
+	                                  {"# of Side Options"}
+	                                </Text>
+	                                <Dropdown
+	                                  data={flavorCountOptions}
+	                                  labelField="label"
+	                                  valueField="value"
+	                                  value={comboSideOptionCount}
+	                                  onChange={handleComboSideOptionCountChange}
+	                                  placeholder="Select"
+	                                  style={styles.dropdown}
+	                                  containerStyle={styles.dropdownContainer}
+	                                  placeholderStyle={styles.dropdownPlaceholder}
+	                                  itemTextStyle={{ fontFamily: Mulish400 }}
+	                                  selectedTextStyle={{ fontFamily: Mulish400 }}
+	                                />
+	                              </View>
+	                              <View style={{ flex: 1 }}>
+	                                <Text style={styles.inputLabel}>
+	                                  {"# of Sides per Order"}
+	                                </Text>
+	                                <Dropdown
+	                                  data={flavorsPerOrderOptions.filter(
+	                                    (option) => option.value <= comboSideOptionCount
+	                                  )}
+	                                  labelField="label"
+	                                  valueField="value"
+	                                  value={comboSidesPerOrder}
+	                                  onChange={(selected) =>
+	                                    setComboSidesPerOrder(selected.value)
+	                                  }
+	                                  placeholder="Select"
+	                                  style={styles.dropdown}
+	                                  containerStyle={styles.dropdownContainer}
+	                                  placeholderStyle={styles.dropdownPlaceholder}
+	                                  itemTextStyle={{ fontFamily: Mulish400 }}
+	                                  selectedTextStyle={{ fontFamily: Mulish400 }}
+	                                />
+	                              </View>
+	                            </View>
+
+	                            {comboSideOptions
+	                              .slice(0, comboSideOptionCount)
+	                              .map((sideOption, index) => (
+	                                <TextInput
+	                                  key={`combo-side-option-${index}`}
+	                                  dense
+	                                  value={sideOption}
+	                                  onChangeText={(text) =>
+	                                    handleComboSideOptionNameChange(text, index)
+	                                  }
+	                                  style={styles.input}
+	                                  contentStyle={styles.inputText}
+	                                  placeholder={`Side Option ${index + 1}`}
+	                                  placeholderTextColor={
+	                                    AppColor.placeholderTextColor
+	                                  }
+	                                  mode="outlined"
+	                                  error={!!errors.comboSideOptions}
+	                                  outlineColor={AppColor.border}
+	                                  activeOutlineColor={AppColor.primary}
+	                                  outlineStyle={{ borderRadius: 8 }}
+	                                  autoCapitalize="words"
+	                                  theme={{
+	                                    colors: { onSurfaceVariant: "#777" },
+	                                  }}
+	                                />
+	                              ))}
+
+	                            {!!errors.comboSideOptions && (
+	                              <HelperText
+	                                type="error"
+	                                visible={!!errors.comboSideOptions}
+	                                style={styles.helper}
+	                              >
+	                                {errors.comboSideOptions}
+	                              </HelperText>
+	                            )}
+	                          </View>
+
+	                          {!!errors.comboItems && (
+	                            <HelperText
                               type="error"
                               visible={!!errors.comboItems}
                               style={styles.helper}

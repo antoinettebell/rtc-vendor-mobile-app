@@ -93,6 +93,9 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
   const images = event?.images || [];
   const primaryImageUrl = getEventImageUrl(event);
   const vendorPays = isVendorPaysToAttendEvent(event);
+  const isClosed =
+    !["OPEN", "REOPENED"].includes(event?.status) ||
+    (event?.event_close_date && new Date(event.event_close_date) <= new Date());
   const primaryActionRoute = vendorPays
     ? "VendorApplicationScreen"
     : "VendorBidResponseScreen";
@@ -166,6 +169,11 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
               label="Application/Bid Deadline"
               value={formatDate(event?.event_close_date)}
             />
+            {isClosed ? (
+              <Text style={[styles.meta, { marginTop: 10 }]}>
+                This event is closed to new submissions.
+              </Text>
+            ) : null}
           </View>
 
           <View
@@ -262,7 +270,8 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
 
           <TouchableOpacity
             activeOpacity={0.7}
-            style={styles.button}
+            style={[styles.button, isClosed && { opacity: 0.55 }]}
+            disabled={isClosed}
             onPress={() =>
               navigation.navigate(primaryActionRoute, {
                 eventId: event?.event_id || eventId,
@@ -270,7 +279,9 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
               })
             }
           >
-            <Text style={styles.buttonText}>{getPrimaryActionLabel(event)}</Text>
+            <Text style={styles.buttonText}>
+              {isClosed ? "Closed to Submissions" : getPrimaryActionLabel(event)}
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       )}

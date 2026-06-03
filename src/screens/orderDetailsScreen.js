@@ -607,6 +607,10 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                   description: raw?.description ?? itm?.description,
                   selectedDiscountFlavors: itm?.selectedDiscountFlavors || [],
                   selectedDiscountToppings: itm?.selectedDiscountToppings || [],
+                  selectedDiscountCustomization:
+                    itm?.selectedDiscountCustomization || "",
+                  selectedDiscountComboSides:
+                    itm?.selectedDiscountComboSides || [],
                 };
                 const comboItemsList =
                   menuItem?.comboItems?.length > 0
@@ -713,6 +717,22 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                                   numberOfLines={2}
                                 >
                                   {`Toppings: ${rewardItem.displayToppings.join(", ")}`}
+                                </Text>
+                              ) : null}
+                              {rewardItem.displayComboSides?.length > 0 ? (
+                                <Text
+                                  style={styles.nestedItemDesc}
+                                  numberOfLines={2}
+                                >
+                                  {`Sides: ${rewardItem.displayComboSides.join(", ")}`}
+                                </Text>
+                              ) : null}
+                              {rewardItem.displayCustomization ? (
+                                <Text
+                                  style={styles.nestedItemDesc}
+                                  numberOfLines={2}
+                                >
+                                  {rewardItem.displayCustomization}
                                 </Text>
                               ) : null}
                             </View>
