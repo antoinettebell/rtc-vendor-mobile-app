@@ -36,6 +36,7 @@ import {
   MARKETPLACE_EVENT_APPLICATIONS,
   MARKETPLACE_EVENT_BIDS,
   MARKETPLACE_EVENT_BY_ID,
+  MARKETPLACE_EVENT_QUESTIONS,
   MARKETPLACE_MY_APPLICATIONS,
   MARKETPLACE_MY_BIDS,
   MARKETPLACE_OPEN_EVENTS,
@@ -143,6 +144,30 @@ export const getMarketplaceEventById_API = async (event_id) => {
     const response = await apiClient.get(MARKETPLACE_EVENT_BY_ID(event_id), {
       skipToken: false,
     });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const getMarketplaceEventQuestions_API = async (event_id) => {
+  try {
+    const response = await apiClient.get(MARKETPLACE_EVENT_QUESTIONS(event_id), {
+      skipToken: false,
+    });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const askMarketplaceEventQuestion_API = async ({ event_id, question_text }) => {
+  try {
+    const response = await apiClient.post(
+      MARKETPLACE_EVENT_QUESTIONS(event_id),
+      { question_text },
+      { skipToken: false },
+    );
     return response?.data;
   } catch (error) {
     throw error?.response?.data || error;

@@ -1,8 +1,10 @@
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -11,7 +13,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StatusBarManager from "../components/StatusBarManager";
 import AppImage from "../components/AppImage";
 import { AppColor } from "../utils/theme";
-import { getMarketplaceEventById_API } from "../api/appAPI";
+import {
+  askMarketplaceEventQuestion_API,
+  getMarketplaceEventById_API,
+  getMarketplaceEventQuestions_API,
+} from "../api/appAPI";
 import {
   MarketplaceHeader,
   formatDate,
@@ -68,6 +74,27 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
   const eventId = route?.params?.eventId;
   const [event, setEvent] = useState(route?.params?.event || null);
   const [loading, setLoading] = useState(false);
+  const [questions, setQuestions] = useState([]);
+  const [qaArchived, setQaArchived] = useState(false);
+  const [qaLoading, setQaLoading] = useState(false);
+  const [questionText, setQuestionText] = useState("");
+  const [questionSubmitting, setQuestionSubmitting] = useState(false);
+
+  const loadQuestions = async () => {
+    if (!eventId) return;
+    setQaLoading(true);
+    try {
+      const response = await getMarketplaceEventQuestions_API(eventId);
+      if (response?.success) {
+        setQuestions(response.data?.marketplaceQuestionList || []);
+        setQaArchived(!!response.data?.qa_archived);
+      }
+    } catch (error) {
+      console.log("Marketplace messages error", error);
+    } finally {
+      setQaLoading(false);
+    }
+  };
 
   const loadEvent = async () => {
     if (!eventId) return;
@@ -77,6 +104,7 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
       if (response?.success) {
         setEvent(response.data?.marketplaceEvent);
       }
+      await loadQuestions();
     } catch (error) {
       console.log("Marketplace event detail error", error);
     } finally {
@@ -99,6 +127,101 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
   const primaryActionRoute = vendorPays
     ? "VendorApplicationScreen"
     : "VendorBidResponseScreen";
+
+  const handleAskQuestion = async () => {
+    const trimmedQuestion = questionText.trim();
+    if (!trimmedQuestion) {
+      Alert.alert("Messages", "Enter a question before posting.");
+      return;
+    }
+
+    setQuestionSubmitting(true);
+    try {
+      const response = await askMarketplaceEventQuestion_API({
+        event_id: event?.event_id || eventId,
+        question_text: trimmedQuestion,
+      });
+      if (response?.success) {
+        setQuestionText("");
+        await loadQuestions();
+        if (response.data?.blocked) {
+          Alert.alert("Messages", "This question was blocked by RTC moderation.");
+        }
+      } else if (response?.message) {
+        Alert.alert("Messages", response.message);
+      }
+    } catch (error) {
+      Alert.alert("Messages", error?.message || "Unable to post question.");
+    } finally {
+      setQuestionSubmitting(false);
+    }
+  };
+
+  const renderMessages = () => (
+    <View style={styles.card}>
+      <View style={styles.rowBetween}>
+        <Text style={styles.title}>Messages</Text>
+        {qaArchived ? (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>ARCHIVED</Text>
+          </View>
+        ) : null}
+      </View>
+      {qaLoading ? (
+        <ActivityIndicator
+          color={AppColor.primary}
+          size="small"
+          style={{ marginTop: 16 }}
+        />
+      ) : questions.length ? (
+        questions.map((question) => (
+          <View
+            key={question.question_id}
+            style={{
+              borderTopWidth: 1,
+              borderTopColor: "#E7EAEF",
+              marginTop: 14,
+              paddingTop: 14,
+            }}
+          >
+            <Text style={styles.label}>{question.vendor_display_id}</Text>
+            <Text style={styles.meta}>{question.question_text}</Text>
+            {question.answer_text ? (
+              <>
+                <Text style={styles.label}>Coordinator Response</Text>
+                <Text style={styles.meta}>{question.answer_text}</Text>
+              </>
+            ) : null}
+          </View>
+        ))
+      ) : (
+        <Text style={styles.emptyText}>No messages yet.</Text>
+      )}
+
+      {!qaArchived && !isClosed ? (
+        <>
+          <TextInput
+            value={questionText}
+            onChangeText={setQuestionText}
+            placeholder="Question"
+            placeholderTextColor={AppColor.textHighlighter}
+            multiline
+            style={[styles.input, styles.textarea, { marginTop: 14 }]}
+          />
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={[styles.button, { marginTop: 10 }]}
+            disabled={questionSubmitting}
+            onPress={handleAskQuestion}
+          >
+            <Text style={styles.buttonText}>
+              {questionSubmitting ? "Posting..." : "Ask Question"}
+            </Text>
+          </TouchableOpacity>
+        </>
+      ) : null}
+    </View>
+  );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -283,6 +406,8 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
               {isClosed ? "Closed to Submissions" : getPrimaryActionLabel(event)}
             </Text>
           </TouchableOpacity>
+
+          {renderMessages()}
         </ScrollView>
       )}
     </View>

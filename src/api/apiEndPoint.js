@@ -45,6 +45,8 @@ export const MARKETPLACE_EVENT_BIDS = (event_id) =>
   `/marketplace/events/${event_id}/bids`;
 export const MARKETPLACE_EVENT_APPLICATIONS = (event_id) =>
   `/marketplace/events/${event_id}/applications`;
+export const MARKETPLACE_EVENT_QUESTIONS = (event_id) =>
+  `/marketplace/events/${event_id}/questions`;
 export const MARKETPLACE_BID_ATTACHMENTS = (bid_id) =>
   `/marketplace/bids/${bid_id}/attachments`;
 export const MARKETPLACE_APPLICATION_ATTACHMENTS = (application_id) =>
