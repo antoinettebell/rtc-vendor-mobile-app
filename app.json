@@ -16,7 +16,7 @@
       }
     },
     "android": {
-      "package": "com.rounddacorner.dev.vendor"
+      "package": "com.rounddacorner.dev.vendor",
       "versionCode": 34
     },
     "extra": {
