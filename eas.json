@@ -11,7 +11,7 @@
         "buildConfiguration": "Debug"
       },
       "android": {
-        "buildType": "apk",
+        "buildType": "app-bundle",
         "gradleCommand": ":app:assembleDebug"
       }
     },
@@ -31,7 +31,7 @@
         "buildConfiguration": "Release"
       },
       "android": {
-        "buildType": "apk"
+        "buildType": "app-bundle"
       }
     }
   },
