@@ -28,6 +28,7 @@ import { permission } from "../helpers/permission.helper";
 import {
   MarketplaceHeader,
   formatDate,
+  formatDuration,
   formatMoney,
   getEventLocation,
   isVendorPaysToAttendEvent,
@@ -348,6 +349,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
               <ReadOnlyRow label="Event Type" value={event?.event_type} />
               <ReadOnlyRow label="Event Date" value={formatDate(event?.event_date)} />
               <ReadOnlyRow label="Event Time" value={event?.event_time || "Not set"} />
+              <ReadOnlyRow label="Duration" value={formatDuration(event)} />
               <ReadOnlyRow label="Location" value={getEventLocation(event)} />
               <ReadOnlyRow
                 label="Estimated Guests"

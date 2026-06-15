@@ -5,6 +5,7 @@ import StatusBarManager from "../components/StatusBarManager";
 import {
   MarketplaceHeader,
   formatDate,
+  formatDuration,
   formatMoney,
   formatStatusLabel,
   getApplicationEvent,
@@ -344,6 +345,7 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
           </Text>
           <DetailRow label="Event Date" value={formatDate(event?.event_date)} />
           <DetailRow label="Event Time" value={event?.event_time || "Not set"} />
+          <DetailRow label="Duration" value={formatDuration(event)} />
           <DetailRow label="Location" value={getEventLocation(event)} />
           <DetailRow
             label="Event Description"

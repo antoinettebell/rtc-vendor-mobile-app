@@ -46,6 +46,24 @@ export const formatMoney = (value) => {
   return `$${amount.toFixed(2)}`;
 };
 
+export const formatDuration = (event = {}) => {
+  const rawMinutes = Number(event.event_duration_minutes || 0);
+  const legacyHours = Number(event.event_duration_hours || 0);
+  const totalMinutes = rawMinutes > 59
+    ? rawMinutes
+    : legacyHours > 0
+    ? legacyHours * 60 + rawMinutes
+    : rawMinutes;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const parts = [];
+
+  if (hours > 0) parts.push(`${hours} hr${hours === 1 ? "" : "s"}`);
+  if (minutes > 0) parts.push(`${minutes} min`);
+
+  return parts.join(" ") || "Not set";
+};
+
 export const formatStatusLabel = (value) =>
   String(value || "DRAFT")
     .replaceAll("_", " ")

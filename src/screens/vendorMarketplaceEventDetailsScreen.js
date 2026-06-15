@@ -21,6 +21,7 @@ import {
 import {
   MarketplaceHeader,
   formatDate,
+  formatDuration,
   formatMoney,
   getEventImageUrl,
   getEventLocation,
@@ -283,6 +284,7 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
               label="Time"
               value={event?.event_time || "Not set"}
             />
+            <DetailRow label="Duration" value={formatDuration(event)} />
             <DetailRow
               label="Location"
               value={getEventLocation(event)}

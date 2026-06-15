@@ -7,6 +7,7 @@ import { createMarketplaceApplicationVendorFeePayment_API } from "../api/appAPI"
 import {
   MarketplaceHeader,
   formatDate,
+  formatDuration,
   formatMoney,
   getApplicationEvent,
   getEventLocation,
@@ -92,6 +93,7 @@ const VendorFeeCheckoutScreen = ({ navigation, route }) => {
         <View style={styles.card}>
           <Text style={styles.title}>{event?.event_name || "Vendor Fee"}</Text>
           <SummaryRow label="Event Date" value={formatDate(event?.event_date)} />
+          <SummaryRow label="Duration" value={formatDuration(event)} />
           <SummaryRow label="Location" value={getEventLocation(event)} />
         </View>
 
