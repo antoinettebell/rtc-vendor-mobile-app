@@ -195,6 +195,21 @@ const VendorPosMenuScreen = ({ navigation }) => {
       : foodTruck?.locations?.find(
           (location) => location._id === foodTruck?.currentLocation
         ) || foodTruck?.locations?.[0];
+    const activeTruckUnits = (foodTruck?.truck_units || []).filter(
+      (unit) => !unit.is_archived
+    );
+    const currentTruckUnit = isEmployeeSession
+      ? user?.assignedTruckUnit || null
+      : activeTruckUnits.find((unit) =>
+          (unit.open_locations || []).some(
+            (openLocation) =>
+              openLocation.locationId?.toString() ===
+                currentLocation?._id?.toString() && openLocation.isOrderingOpen
+          )
+        ) ||
+        activeTruckUnits.find((unit) => unit.is_primary) ||
+        activeTruckUnits[0] ||
+        null;
 
     if (!currentLocation?._id) {
       Alert.alert(
@@ -207,6 +222,7 @@ const VendorPosMenuScreen = ({ navigation }) => {
     navigation.navigate("vendorPosCheckoutScreen", {
       foodTruck,
       location: currentLocation,
+      truckUnit: currentTruckUnit,
       guestPhone: guestPhone.trim(),
     });
   };

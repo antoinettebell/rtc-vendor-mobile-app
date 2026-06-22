@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -23,8 +23,8 @@ import {
   getEarningForHomeByFoodTruckID_API,
   getOrderList_API,
   getUserDetail_API,
+  updateLocationOrdering_API,
   updateFcmToken_API,
-  updateFoodTruckProfile_API,
   updateOrderStatusByID_API,
 } from "../api/appAPI";
 import {
@@ -83,6 +83,7 @@ const HomeScreen = ({ navigation }) => {
   const [bannerLoading, setBannerLoading] = useState(false);
   const [locations, setLocations] = useState([]);
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [selectedTruckUnit, setSelectedTruckUnit] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [newOrderLoading, setNewOrderLoading] = useState(false);
   const [newOrderData, setNewOrderData] = useState(null);
@@ -92,6 +93,57 @@ const HomeScreen = ({ navigation }) => {
   const [locationTimeAdvanceData, setLocationTimeAdvanceData] = useState(null);
 
   const isOn = useSharedValue(false);
+  const activeTruckUnits = useMemo(() => {
+    const units = (user?.foodTruck?.truck_units || []).filter(
+      (unit) => !unit.is_archived
+    );
+
+    if (units.length) {
+      return units.map((unit, index) => ({
+        ...unit,
+        label: unit.name || `Truck ${index + 1}`,
+        value: unit._id,
+      }));
+    }
+
+    return [
+      {
+        _id: null,
+        value: null,
+        label: user?.foodTruck?.name || "Truck 1",
+        name: user?.foodTruck?.name || "Truck 1",
+        is_primary: true,
+        open_locations: user?.foodTruck?.currentLocation
+          ? [
+              {
+                locationId: user.foodTruck.currentLocation,
+                isOrderingOpen: true,
+              },
+            ]
+          : [],
+      },
+    ];
+  }, [user?.foodTruck]);
+
+  const selectedTruck = useMemo(
+    () =>
+      activeTruckUnits.find(
+        (unit) => unit.value?.toString() === selectedTruckUnit?.toString()
+      ) || activeTruckUnits[0],
+    [activeTruckUnits, selectedTruckUnit]
+  );
+
+  const isSelectedPairOpen = useCallback(
+    (truck = selectedTruck, locationId = selectedLocation) =>
+      !!truck &&
+      !!locationId &&
+      (truck.open_locations || []).some(
+        (loc) =>
+          loc.locationId?.toString() === locationId?.toString() &&
+          loc.isOrderingOpen
+      ),
+    [selectedLocation, selectedTruck]
+  );
 
   // Location Switch
   const handlePress = async () => {
@@ -100,20 +152,19 @@ const HomeScreen = ({ navigation }) => {
       return;
     }
 
-    let temp_isOn = isOn.value;
-    let temp_isOpen = isOpen;
+    const temp_isOn = isOn.value;
+    const temp_isOpen = isOpen;
 
     isOn.value = !temp_isOn;
     setIsOpen(!temp_isOpen);
 
     try {
       const foodtruck_id = user?.foodTruck?._id;
-      const payload = {
-        currentLocation: !isOn.value ? selectedLocation : null,
-      };
-      const response = await updateFoodTruckProfile_API({
-        payload,
-        foodTruckId: foodtruck_id,
+      const response = await updateLocationOrdering_API({
+        foodtruck_id,
+        location_id: selectedLocation,
+        truck_unit_id: selectedTruck?._id || null,
+        isOrderingOpen: !temp_isOpen,
       });
       if (response?.success && response.data) {
         console.log("response => ", response);
@@ -121,7 +172,9 @@ const HomeScreen = ({ navigation }) => {
 
         dispatch(
           showSnackbar({
-            message: "Currentlocation Status Updated!",
+            message: `${selectedTruck?.label || "Truck"} is ${
+              !temp_isOpen ? "open" : "closed"
+            }`,
             type: "success",
           })
         );
@@ -184,6 +237,10 @@ const HomeScreen = ({ navigation }) => {
   const handleLocationChange = (selected) => {
     console.log("selected => ", selected);
     setSelectedLocation(selected?._id);
+  };
+
+  const handleTruckUnitChange = (selected) => {
+    setSelectedTruckUnit(selected?.value || null);
   };
 
   // Handle "accept" press
@@ -353,15 +410,35 @@ const HomeScreen = ({ navigation }) => {
 
   useEffect(() => {
     setLocations(user?.foodTruck?.locations || []);
-    setSelectedLocation(user?.foodTruck?.currentLocation);
-    if (user?.foodTruck?.currentLocation) {
-      isOn.value = true;
-      setIsOpen(true);
-    } else {
-      isOn.value = false;
-      setIsOpen(false);
+    const activeUnit =
+      activeTruckUnits.find(
+        (unit) => unit.value?.toString() === selectedTruckUnit?.toString()
+      ) || activeTruckUnits[0];
+    const openLocation = (activeUnit?.open_locations || []).find(
+      (loc) => loc.isOrderingOpen
+    );
+
+    if (
+      activeUnit &&
+      activeUnit.value?.toString() !== selectedTruckUnit?.toString()
+    ) {
+      setSelectedTruckUnit(activeUnit.value || null);
     }
-  }, [user?.foodTruck?.locations]);
+
+    setSelectedLocation((current) => {
+      const stillExists = (user?.foodTruck?.locations || []).some(
+        (location) => location._id?.toString() === current?.toString()
+      );
+      if (stillExists) return current;
+      return openLocation?.locationId || user?.foodTruck?.currentLocation || null;
+    });
+  }, [user?.foodTruck, activeTruckUnits]);
+
+  useEffect(() => {
+    const pairOpen = isSelectedPairOpen();
+    isOn.value = pairOpen;
+    setIsOpen(pairOpen);
+  }, [isSelectedPairOpen]);
 
   return (
     <View style={styles.container}>
@@ -439,10 +516,26 @@ const HomeScreen = ({ navigation }) => {
         {profileStatus === vendorProfileStatus.approved ? (
           <>
             {/* Location and Switch */}
-            <View style={styles.locationSwitchContainer}>
-              <View style={styles.dropdownContainer}>
-                <Dropdown
-                  data={locations}
+              <View style={styles.locationSwitchContainer}>
+                {activeTruckUnits.length > 1 ? (
+                  <View style={styles.dropdownContainer}>
+                    <Dropdown
+                      data={activeTruckUnits}
+                      labelField="label"
+                      valueField="value"
+                      value={selectedTruckUnit}
+                      onChange={handleTruckUnitChange}
+                      placeholder="Select Truck"
+                      style={styles.dropdown}
+                      placeholderStyle={styles.dropdownPlaceholder}
+                      itemTextStyle={styles.dropdownItemText}
+                      selectedTextStyle={styles.dropdownSelectedText}
+                    />
+                  </View>
+                ) : null}
+                <View style={styles.dropdownContainer}>
+                  <Dropdown
+                    data={locations}
                   labelField="title"
                   valueField="_id"
                   value={selectedLocation}

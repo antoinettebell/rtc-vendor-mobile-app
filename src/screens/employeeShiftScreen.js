@@ -60,6 +60,8 @@ const EmployeeShiftScreen = ({ navigation }) => {
 
   const foodTruck = user?.foodTruck;
   const assignedLocation = dashboard?.assignedLocation || user?.assignedLocation;
+  const assignedTruckUnit =
+    dashboard?.assignedTruckUnit || user?.assignedTruckUnit || null;
   const shift = dashboard?.shift || {};
   const isOnDuty = !!user?.is_working;
   const isShiftActive = !!user?.employee_session_id && shift?.is_active !== false;
@@ -138,6 +140,7 @@ const EmployeeShiftScreen = ({ navigation }) => {
       const response = await updateLocationOrdering_API({
         foodtruck_id: foodTruck._id,
         location_id: assignedLocation._id,
+        truck_unit_id: assignedTruckUnit?._id || user?.assigned_truck_unit_id || null,
         isOrderingOpen: !locationIsOpen,
       });
       const updatedFoodTruck = response?.data?.foodtruck;
@@ -225,7 +228,11 @@ const EmployeeShiftScreen = ({ navigation }) => {
             <View>
               <Text style={styles.panelTitle}>Open/Close Store</Text>
               <Text style={styles.caption}>
-                {locationIsOpen ? "Store is open" : "Store is closed"}
+                {assignedTruckUnit?.name
+                  ? `${assignedTruckUnit.name} is ${locationIsOpen ? "open" : "closed"}`
+                  : locationIsOpen
+                    ? "Store is open"
+                    : "Store is closed"}
               </Text>
             </View>
             <Switch

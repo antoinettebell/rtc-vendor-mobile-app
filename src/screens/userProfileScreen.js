@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
+  Modal,
+  TextInput,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -17,15 +19,24 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
-import { getUserDetail_API } from "../api/appAPI";
+import {
+  getUserDetail_API,
+  updateFoodTruckUnit_API,
+  updateFoodTruckUnits_API,
+} from "../api/appAPI";
 import { Divider, IconButton } from "react-native-paper";
-import { setSelectedPlan, setUser } from "../redux/slices/userSlice";
+import { setSelectedPlan, setUser, updateFoodTruck } from "../redux/slices/userSlice";
 import FastImage from "@d11/react-native-fast-image";
 import {
   setSelectedCuisine,
   setSelectedLocations,
 } from "../redux/slices/foodTruckProfileSlice";
-import { formatEIN, formatSSN } from "../helpers/profile.helper";
+import {
+  formatEIN,
+  formatPhoneNumber,
+  formatSSN,
+  getPhoneDigits,
+} from "../helpers/profile.helper";
 import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
 import AppImage from "../components/AppImage";
 
@@ -43,11 +54,33 @@ const UserProfileScreen = ({ navigation }) => {
 
   const [getUserDetailLoading, setGetUserDetailLoading] = useState(false);
   const [socialMedia, setSocialMedia] = useState([]);
+  const [truckSaving, setTruckSaving] = useState(false);
+  const [truckNameModal, setTruckNameModal] = useState(null);
+  const [truckNameInput, setTruckNameInput] = useState("");
+  const [truckPhoneInput, setTruckPhoneInput] = useState("");
   const canUseEmployeeLogin =
     !!user?.foodTruck?.plan?.capabilities?.employeeLogin;
   const vendorAccessCode = user?.foodTruck?._id
     ? user.foodTruck._id.toString().slice(-6).toUpperCase()
     : "";
+  const mainPhoneNumber = formatPhoneNumber(
+    `${user?.countryCode || ""}${user?.mobileNumber || ""}`
+  );
+  const activeTruckUnits = (user?.foodTruck?.truck_units || []).filter(
+    (unit) => !unit.is_archived
+  );
+  const archivedTruckUnits = (user?.foodTruck?.truck_units || []).filter(
+    (unit) => unit.is_archived && !unit.is_primary
+  );
+  const visibleTruckUnits = activeTruckUnits.length
+    ? activeTruckUnits
+    : [
+        {
+          _id: null,
+          name: user?.foodTruck?.name || "Truck 1",
+          is_primary: true,
+        },
+      ];
 
   const updateStateOnDataFetch = (USER_DATA, FOOD_TRUCK_DATA) => {
     setSocialMedia(FOOD_TRUCK_DATA?.socialMedia || []);
@@ -104,6 +137,130 @@ const UserProfileScreen = ({ navigation }) => {
       console.log("error => ", error);
     } finally {
       setGetUserDetailLoading(false);
+    }
+  };
+
+  const applyFoodTruckResponse = (response) => {
+    const nextFoodTruck = response?.data?.foodtruck;
+    if (!nextFoodTruck) return;
+    dispatch(updateFoodTruck(nextFoodTruck));
+  };
+
+  const openTruckNameModal = (mode, truckUnit = null) => {
+    setTruckNameModal({ mode, truckUnit });
+    setTruckNameInput(mode === "edit" ? truckUnit?.name || "" : "");
+    setTruckPhoneInput(mode === "edit" ? formatPhoneNumber(truckUnit?.phone || "") : "");
+  };
+
+  const closeTruckNameModal = () => {
+    setTruckNameModal(null);
+    setTruckNameInput("");
+    setTruckPhoneInput("");
+  };
+
+  const createTruckUnit = async () => {
+    if (!truckNameInput.trim()) {
+      Alert.alert("Truck name required", "Enter a truck name.");
+      return;
+    }
+
+    const phoneDigits = getPhoneDigits(truckPhoneInput);
+    if (!phoneDigits) {
+      Alert.alert("Phone required", "Enter a phone number for this truck.");
+      return;
+    }
+
+    setTruckSaving(true);
+    try {
+      const response = await updateFoodTruckUnits_API({
+        foodtruck_id: user?.foodTruck?._id,
+        payload: {
+          food_truck_count: visibleTruckUnits.length + 1,
+          create_name: truckNameInput.trim(),
+          phone: phoneDigits,
+        },
+      });
+      applyFoodTruckResponse(response);
+      closeTruckNameModal();
+    } catch (error) {
+      Alert.alert("Truck not saved", error?.message || "Please try again.");
+    } finally {
+      setTruckSaving(false);
+    }
+  };
+
+  const renameTruckUnit = async () => {
+    if (!truckNameInput.trim() || !truckNameModal?.truckUnit?._id) return;
+
+    const phoneDigits = getPhoneDigits(truckPhoneInput);
+    if (!phoneDigits) {
+      Alert.alert("Phone required", "Enter a phone number for this truck.");
+      return;
+    }
+
+    setTruckSaving(true);
+    try {
+      const response = await updateFoodTruckUnit_API({
+        foodtruck_id: user?.foodTruck?._id,
+        truck_unit_id: truckNameModal.truckUnit._id,
+        payload: {
+          name: truckNameInput.trim(),
+          phone: phoneDigits,
+        },
+      });
+      applyFoodTruckResponse(response);
+      closeTruckNameModal();
+    } catch (error) {
+      Alert.alert("Truck not saved", error?.message || "Please try again.");
+    } finally {
+      setTruckSaving(false);
+    }
+  };
+
+  const archiveTruckUnit = (truckUnit) => {
+    Alert.alert(
+      "Archive truck?",
+      `${truckUnit.name} can be reactivated later from this profile.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Archive",
+          style: "destructive",
+          onPress: async () => {
+            setTruckSaving(true);
+            try {
+              const response = await updateFoodTruckUnit_API({
+                foodtruck_id: user?.foodTruck?._id,
+                truck_unit_id: truckUnit._id,
+                payload: { is_archived: true },
+              });
+              applyFoodTruckResponse(response);
+            } catch (error) {
+              Alert.alert("Truck not archived", error?.message || "Please try again.");
+            } finally {
+              setTruckSaving(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const reactivateTruckUnit = async (truckUnit) => {
+    setTruckSaving(true);
+    try {
+      const response = await updateFoodTruckUnits_API({
+        foodtruck_id: user?.foodTruck?._id,
+        payload: {
+          food_truck_count: visibleTruckUnits.length + 1,
+          reactivate_truck_unit_id: truckUnit._id,
+        },
+      });
+      applyFoodTruckResponse(response);
+    } catch (error) {
+      Alert.alert("Truck not reactivated", error?.message || "Please try again.");
+    } finally {
+      setTruckSaving(false);
     }
   };
 
@@ -227,39 +384,79 @@ const UserProfileScreen = ({ navigation }) => {
               </View>
             ) : null}
 
-            <Divider />
-
-            {/* Mobile Number */}
-            <View style={styles.itemContainer}>
-              <View style={styles.itemIconContiner}>
-                <Ionicons name="call-outline" size={24} color={AppColor.gray} />
+            <View style={styles.truckSection}>
+              <View style={styles.truckSectionHeader}>
+                <View>
+                  <Text style={styles.socialMediaTitle}>Food Trucks</Text>
+                  <Text style={styles.accessCodeHelper}>
+                    {visibleTruckUnits.length} active
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => openTruckNameModal("create")}
+                  disabled={truckSaving}
+                  style={styles.truckAddButton}
+                >
+                  <Ionicons name="add" size={18} color={AppColor.primary} />
+                  <Text style={styles.truckAddText}>Add</Text>
+                </TouchableOpacity>
               </View>
-              <Text style={styles.itemText}>
-                {user?.countryCode} {user?.mobileNumber}
-              </Text>
-            </View>
-            <Divider />
 
-            {/* EIN/SSN Number */}
-            <View style={styles.itemContainer}>
-              <View style={styles.itemIconContiner}>
-                {user?.foodTruck?.ein ? (
-                  <AntDesign name="idcard" size={24} color={AppColor.gray} />
-                ) : (
-                  <Ionicons
-                    name="shield-checkmark-outline"
-                    size={24}
-                    color={AppColor.gray}
-                  />
-                )}
-              </View>
-              <Text style={styles.itemText}>
-                {user?.foodTruck?.ein
-                  ? `EIN: ${formatEIN(user?.foodTruck?.ein || "") || "N/A"}`
-                  : `SSN: ${formatSSN(user?.foodTruck?.ssn || "") || "N/A"}`}
-              </Text>
+              {visibleTruckUnits.map((truck, index) => (
+                <View key={truck._id || "primary-truck"} style={styles.truckRow}>
+                  <View style={styles.truckTextBlock}>
+                    <Text style={styles.itemText} numberOfLines={1}>
+                      {truck.name || `Truck ${index + 1}`}
+                    </Text>
+                    {truck.phone ? (
+                      <Text style={styles.truckPhoneText} numberOfLines={1}>
+                        {formatPhoneNumber(truck.phone)}
+                      </Text>
+                    ) : null}
+                  </View>
+                  {truck.is_primary ? (
+                    <Text style={styles.lockedText}>Locked</Text>
+                  ) : (
+                    <View style={styles.truckActions}>
+                      <IconButton
+                        icon="pencil"
+                        iconColor={AppColor.black}
+                        size={18}
+                        onPress={() => openTruckNameModal("edit", truck)}
+                      />
+                      <IconButton
+                        icon="archive-outline"
+                        iconColor={AppColor.red}
+                        size={18}
+                        onPress={() => archiveTruckUnit(truck)}
+                      />
+                    </View>
+                  )}
+                </View>
+              ))}
+
+              {archivedTruckUnits.map((truck) => (
+                <View key={truck._id} style={styles.truckRow}>
+                  <View style={styles.truckTextBlock}>
+                    <Text style={styles.itemText} numberOfLines={1}>
+                      {truck.name}
+                    </Text>
+                    {truck.phone ? (
+                      <Text style={styles.truckPhoneText} numberOfLines={1}>
+                        {formatPhoneNumber(truck.phone)}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => reactivateTruckUnit(truck)}
+                    disabled={truckSaving}
+                    style={styles.reactivateButton}
+                  >
+                    <Text style={styles.reactivateText}>Reactivate</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
             </View>
-            <Divider />
 
             {/* Email - Removed as it's now in the profile header */}
 
@@ -328,6 +525,34 @@ const UserProfileScreen = ({ navigation }) => {
                 <Text style={styles.itemText}>{user?.addressCountry}</Text>
               </View>
 
+              <View style={[styles.itemContainer, styles.profileDetailRow]}>
+                <View style={styles.itemIconContiner}>
+                  <Ionicons name="call-outline" size={24} color={AppColor.gray} />
+                </View>
+                <Text style={styles.itemText}>
+                  Main Phone: {mainPhoneNumber || "N/A"}
+                </Text>
+              </View>
+
+              <View style={[styles.itemContainer, styles.profileDetailRow]}>
+                <View style={styles.itemIconContiner}>
+                  {user?.foodTruck?.ein ? (
+                    <AntDesign name="idcard" size={24} color={AppColor.gray} />
+                  ) : (
+                    <Ionicons
+                      name="shield-checkmark-outline"
+                      size={24}
+                      color={AppColor.gray}
+                    />
+                  )}
+                </View>
+                <Text style={styles.itemText}>
+                  {user?.foodTruck?.ein
+                    ? `EIN: ${formatEIN(user?.foodTruck?.ein || "") || "N/A"}`
+                    : `SSN: ${formatSSN(user?.foodTruck?.ssn || "") || "N/A"}`}
+                </Text>
+              </View>
+
               {/* Edit Button */}
               <IconButton
                 icon="pencil"
@@ -345,6 +570,50 @@ const UserProfileScreen = ({ navigation }) => {
           </View>
         </ScrollView>
       )}
+      <Modal transparent visible={!!truckNameModal} animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalPanel}>
+            <Text style={styles.socialMediaTitle}>
+              {truckNameModal?.mode === "edit" ? "Rename Truck" : "New Truck"}
+            </Text>
+            <TextInput
+              value={truckNameInput}
+              onChangeText={setTruckNameInput}
+              placeholder="Truck name"
+              style={styles.truckNameInput}
+            />
+            <TextInput
+              value={truckPhoneInput}
+              onChangeText={(text) => setTruckPhoneInput(formatPhoneNumber(text))}
+              placeholder="Phone number"
+              keyboardType="phone-pad"
+              style={[styles.truckNameInput, styles.truckPhoneInput]}
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                onPress={closeTruckNameModal}
+                disabled={truckSaving}
+                style={styles.cancelButton}
+              >
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={
+                  truckNameModal?.mode === "edit" ? renameTruckUnit : createTruckUnit
+                }
+                disabled={truckSaving}
+                style={styles.saveButton}
+              >
+                {truckSaving ? (
+                  <ActivityIndicator color={AppColor.white} />
+                ) : (
+                  <Text style={styles.saveText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -382,6 +651,10 @@ const styles = StyleSheet.create({
     fontFamily: Mulish400,
     color: AppColor.black,
     marginRight: 40, // padding of container + image width
+  },
+  profileDetailRow: {
+    paddingBottom: 0,
+    paddingTop: 12,
   },
 
   profileHeaderContainer: {
@@ -477,6 +750,129 @@ const styles = StyleSheet.create({
     fontFamily: Mulish400,
     color: "#0066cc",
     flex: 1,
+  },
+  truckSection: {
+    paddingVertical: 16,
+  },
+  truckSectionHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  truckAddButton: {
+    alignItems: "center",
+    borderColor: AppColor.primary,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 4,
+    minHeight: 36,
+    paddingHorizontal: 12,
+  },
+  truckAddText: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
+    fontSize: 14,
+  },
+  truckRow: {
+    alignItems: "center",
+    borderTopColor: AppColor.border,
+    borderTopWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    minHeight: 48,
+    paddingVertical: 6,
+  },
+  truckTextBlock: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  truckPhoneText: {
+    color: AppColor.subText,
+    fontFamily: Mulish400,
+    fontSize: 13,
+    marginTop: 2,
+  },
+  truckActions: {
+    alignItems: "center",
+    flexDirection: "row",
+  },
+  lockedText: {
+    color: AppColor.subText,
+    fontFamily: Mulish700,
+    fontSize: 13,
+  },
+  reactivateButton: {
+    borderColor: AppColor.primary,
+    borderRadius: 8,
+    borderWidth: 1,
+    minHeight: 34,
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  reactivateText: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
+    fontSize: 13,
+  },
+  modalBackdrop: {
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.35)",
+    flex: 1,
+    justifyContent: "center",
+    padding: 20,
+  },
+  modalPanel: {
+    backgroundColor: AppColor.white,
+    borderRadius: 8,
+    padding: 16,
+    width: "100%",
+  },
+  truckNameInput: {
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    color: AppColor.black,
+    fontFamily: Mulish400,
+    fontSize: 16,
+    minHeight: 48,
+    paddingHorizontal: 12,
+  },
+  truckPhoneInput: {
+    marginTop: 10,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 16,
+  },
+  cancelButton: {
+    alignItems: "center",
+    borderColor: AppColor.primary,
+    borderRadius: 8,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 44,
+  },
+  cancelText: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
+    fontSize: 15,
+  },
+  saveButton: {
+    alignItems: "center",
+    backgroundColor: AppColor.primary,
+    borderRadius: 8,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 44,
+  },
+  saveText: {
+    color: AppColor.white,
+    fontFamily: Mulish700,
+    fontSize: 15,
   },
 
   addressContainer: {

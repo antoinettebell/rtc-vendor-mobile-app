@@ -22,3 +22,16 @@ export const formatSSN = (text) => {
   }
   return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 5)}-${cleaned.slice(5, 9)}`;
 };
+
+export const getPhoneDigits = (text = "") => text.replace(/\D/g, "").slice(-10);
+
+export const formatPhoneNumber = (text = "") => {
+  const cleaned = getPhoneDigits(text);
+  if (cleaned.length <= 3) {
+    return cleaned;
+  }
+  if (cleaned.length <= 6) {
+    return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+  }
+  return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+};

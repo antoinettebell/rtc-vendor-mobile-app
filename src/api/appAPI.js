@@ -54,6 +54,8 @@ import {
   REVERSE_LOCATION,
   SET_FCM_TOKEN,
   UPDATE_FCM_TOKEN,
+  UPDATE_FOOD_TRUCK_UNIT,
+  UPDATE_FOOD_TRUCK_UNITS,
   UPDATE_FOODTRUCK,
   UPDATE_FOOD_CATEGORY,
   UPDATE_FOOD_ITEM,
@@ -443,14 +445,39 @@ export const updateLocationOrdering_API = async ({
   foodtruck_id,
   location_id,
   isOrderingOpen,
+  truck_unit_id = null,
 }) => {
   try {
     const URL = UPDATE_LOCATION_ORDERING(foodtruck_id, location_id);
     const response = await apiClient.patch(
       URL,
-      { isOrderingOpen },
+      { isOrderingOpen, truck_unit_id },
       { skipToken: false },
     );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const updateFoodTruckUnits_API = async ({ foodtruck_id, payload }) => {
+  try {
+    const URL = UPDATE_FOOD_TRUCK_UNITS(foodtruck_id);
+    const response = await apiClient.put(URL, payload, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const updateFoodTruckUnit_API = async ({
+  foodtruck_id,
+  truck_unit_id,
+  payload,
+}) => {
+  try {
+    const URL = UPDATE_FOOD_TRUCK_UNIT(foodtruck_id, truck_unit_id);
+    const response = await apiClient.patch(URL, payload, { skipToken: false });
     return response?.data;
   } catch (error) {
     throw error?.response?.data || error;

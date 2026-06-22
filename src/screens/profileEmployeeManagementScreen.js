@@ -30,6 +30,7 @@ const initialForm = {
   last_name: "",
   zip_code: "",
   assigned_location_id: "",
+  assigned_truck_unit_id: "",
   pin: "",
 };
 
@@ -54,6 +55,7 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
   const [resetPin, setResetPin] = useState("");
   const [expandedEmployeeId, setExpandedEmployeeId] = useState(null);
   const [employeeLocationDrafts, setEmployeeLocationDrafts] = useState({});
+  const [employeeTruckDrafts, setEmployeeTruckDrafts] = useState({});
   const [activeTab, setActiveTab] = useState("current");
 
   const locationOptions = useMemo(
@@ -65,11 +67,34 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
     [foodTruck?.locations]
   );
 
+  const truckOptions = useMemo(() => {
+    const units = (foodTruck?.truck_units || []).filter((unit) => !unit.is_archived);
+    if (units.length) {
+      return units.map((unit, index) => ({
+        label: unit.name || `Truck ${index + 1}`,
+        value: unit._id,
+      }));
+    }
+
+    return [
+      {
+        label: foodTruck?.name || "Truck 1",
+        value: "",
+      },
+    ];
+  }, [foodTruck]);
+
   const loginPreview = getGeneratedLoginPreview(form);
 
   const getLocationLabel = (locationId) =>
     locationOptions.find((location) => location.value === locationId)?.label ||
     "Unassigned location";
+
+  const getTruckLabel = (truckUnitId, truckUnitName) =>
+    truckOptions.find((truck) => truck.value === truckUnitId)?.label ||
+    truckUnitName ||
+    foodTruck?.name ||
+    "Truck 1";
 
   const setFormValue = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -104,6 +129,11 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
 
     if (!form.assigned_location_id) {
       Alert.alert("Location required", "Assign the employee to a saved location.");
+      return false;
+    }
+
+    if (!form.assigned_truck_unit_id && truckOptions.length > 1) {
+      Alert.alert("Truck required", "Assign the employee to a truck name.");
       return false;
     }
 
@@ -162,6 +192,11 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
       ...current,
       [employee._id]: current[employee._id] || employee.assigned_location_id,
     }));
+    setEmployeeTruckDrafts((current) => ({
+      ...current,
+      [employee._id]:
+        current[employee._id] || employee.assigned_truck_unit_id || "",
+    }));
   };
 
   const setEmployeeLocationDraft = (employeeId, locationId) => {
@@ -171,21 +206,38 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
     }));
   };
 
+  const setEmployeeTruckDraft = (employeeId, truckUnitId) => {
+    setEmployeeTruckDrafts((current) => ({
+      ...current,
+      [employeeId]: truckUnitId,
+    }));
+  };
+
   const assignEmployeeLocation = async (employee) => {
     const assignedLocationId = employeeLocationDrafts[employee._id];
+    const assignedTruckUnitId = employeeTruckDrafts[employee._id] || "";
 
     if (!assignedLocationId) {
       Alert.alert("Location required", "Select a saved location.");
       return;
     }
 
-    if (assignedLocationId === employee.assigned_location_id) {
+    if (!assignedTruckUnitId && truckOptions.length > 1) {
+      Alert.alert("Truck required", "Select a truck name.");
+      return;
+    }
+
+    if (
+      assignedLocationId === employee.assigned_location_id &&
+      assignedTruckUnitId === (employee.assigned_truck_unit_id || "")
+    ) {
       Alert.alert("No change", "This employee is already assigned there.");
       return;
     }
 
     await updateEmployee(employee, {
       assigned_location_id: assignedLocationId,
+      assigned_truck_unit_id: assignedTruckUnitId || null,
       is_working: false,
     });
   };
@@ -319,6 +371,20 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
               itemTextStyle={styles.dropdownText}
             />
 
+            <Text style={styles.label}>Assigned Truck</Text>
+            <Dropdown
+              data={truckOptions}
+              labelField="label"
+              valueField="value"
+              value={form.assigned_truck_unit_id}
+              onChange={(item) => setFormValue("assigned_truck_unit_id", item.value)}
+              placeholder="Select truck"
+              style={styles.dropdown}
+              selectedTextStyle={styles.dropdownText}
+              placeholderStyle={styles.placeholderText}
+              itemTextStyle={styles.dropdownText}
+            />
+
             <Text style={styles.label}>Employee Login ID</Text>
             <TextInput value={loginPreview} editable={false} style={styles.readOnlyInput} />
             <Text style={styles.helperText}>
@@ -411,6 +477,13 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
                   <Text style={styles.employeeMeta}>
                     Assigned: {getLocationLabel(employee.assigned_location_id)}
                   </Text>
+                  <Text style={styles.employeeMeta}>
+                    Truck:{" "}
+                    {getTruckLabel(
+                      employee.assigned_truck_unit_id,
+                      employee.assigned_truck_unit_name
+                    )}
+                  </Text>
                 </TouchableOpacity>
                 <View style={styles.employeeActions}>
                   <IconButton
@@ -446,11 +519,30 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
 
               {activeTab === "current" && expandedEmployeeId === employee._id ? (
                 <View style={styles.submenu}>
-                  <Text style={styles.submenuTitle}>Location Assignment</Text>
+                  <Text style={styles.submenuTitle}>Truck Assignment</Text>
                   <Text style={styles.helperText}>
-                    Moving an employee to another location sets them off duty and
-                    ends any active session.
+                    Moving an employee to another truck or location sets them off
+                    duty and ends any active session.
                   </Text>
+                  <Text style={styles.label}>Assigned Truck</Text>
+                  <Dropdown
+                    data={truckOptions}
+                    labelField="label"
+                    valueField="value"
+                    value={
+                      employeeTruckDrafts[employee._id] ||
+                      employee.assigned_truck_unit_id ||
+                      ""
+                    }
+                    onChange={(item) =>
+                      setEmployeeTruckDraft(employee._id, item.value)
+                    }
+                    placeholder="Select truck"
+                    style={styles.dropdown}
+                    selectedTextStyle={styles.dropdownText}
+                    placeholderStyle={styles.placeholderText}
+                    itemTextStyle={styles.dropdownText}
+                  />
                   <Text style={styles.label}>Assigned Location</Text>
                   <Dropdown
                     data={locationOptions}
@@ -469,12 +561,12 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
                     placeholderStyle={styles.placeholderText}
                     itemTextStyle={styles.dropdownText}
                   />
-                  <TouchableOpacity
-                    onPress={() => assignEmployeeLocation(employee)}
-                    style={styles.secondaryButton}
-                  >
-                    <Text style={styles.secondaryButtonText}>Save Location</Text>
-                  </TouchableOpacity>
+	                  <TouchableOpacity
+	                    onPress={() => assignEmployeeLocation(employee)}
+	                    style={styles.secondaryButton}
+	                  >
+	                    <Text style={styles.secondaryButtonText}>Save Assignment</Text>
+	                  </TouchableOpacity>
                 </View>
               ) : null}
 

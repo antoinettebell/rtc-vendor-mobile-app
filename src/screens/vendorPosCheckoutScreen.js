@@ -56,7 +56,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
   const order = useSelector((state) => state.posOrderReducer.currentOrder);
   const { user } = useSelector((state) => state.userReducer);
 
-  const { foodTruck, location, guestPhone } = route.params || {};
+  const { foodTruck, location, truckUnit, guestPhone } = route.params || {};
   const isEmployeeSession =
     user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
   const canUseTapToPay =
@@ -83,6 +83,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
     return {
       foodTruckId: foodTruck?._id || order.foodTruckId,
       locationId: location?._id,
+      truckUnitId: truckUnit?._id || user?.assigned_truck_unit_id || null,
       orderSource: isEmployeeSession ? "WALK_UP_EMPLOYEE" : "VENDOR_POS",
       fulfillmentType: "PICKUP",
       guestCustomer: {
@@ -138,6 +139,8 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
     order.foodTruckId,
     order.items,
     taxAmount,
+    truckUnit?._id,
+    user?.assigned_truck_unit_id,
     tipAmount,
   ]);
 

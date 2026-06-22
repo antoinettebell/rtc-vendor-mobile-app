@@ -14,6 +14,10 @@ export const MEDIA_UPLOAD = "/file";
 export const UPDATE_FOODTRUCK = "/food-truck";
 export const GET_FOODTRUCK_DETAILS = "/food-truck";
 export const REGISTER_COMPLETE = "/food-truck/complete";
+export const UPDATE_FOOD_TRUCK_UNITS = (foodtruck_id) =>
+  `/food-truck/${foodtruck_id}/truck-units`;
+export const UPDATE_FOOD_TRUCK_UNIT = (foodtruck_id, truck_unit_id) =>
+  `/food-truck/${foodtruck_id}/truck-units/${truck_unit_id}`;
 
 // Subscription
 export const UPDATE_SUBSCRIPTION_PLAN = "/food-truck/change-plan";
