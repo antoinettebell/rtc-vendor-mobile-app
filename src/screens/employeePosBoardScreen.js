@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +18,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import AppImage from "../components/AppImage";
+import DishItemDetailsModal from "../components/DishItemDetailsModal";
 import { onSignOut } from "../redux/slices/authSlice";
 import {
   clearUserSlice,
@@ -41,7 +42,7 @@ import {
 } from "../api/appAPI";
 import { printOrderTickets } from "../helpers/print.helper";
 import { getVendorOrderTotal } from "../helpers/order.helper";
-import { orderStatusStrings } from "../utils/constants";
+import { foodTypeStrings, orderStatusStrings } from "../utils/constants";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 
 const ORDER_TABS = [
@@ -148,7 +149,33 @@ const getSelectionError = ({
   return null;
 };
 
-const hasRequiredOptions = (item) => !!item?.hasFlavors || !!item?.hasToppings;
+const hasDiscountOptions = (item) => {
+  const bogoItems = Array.isArray(item?.bogoItems) ? item.bogoItems : [];
+  const hasDiscountItem = bogoItems.some((bogoItem) => {
+    const menuItem = bogoItem?.menuItem || bogoItem;
+    return (
+      menuItem?.allowCustomize ||
+      menuItem?.hasFlavors ||
+      menuItem?.hasToppings ||
+      menuItem?.itemType === foodTypeStrings.combo
+    );
+  });
+
+  return (
+    ["BOGO", "BOGOHO"].includes(item?.discountType) ||
+    Number(item?.discountRules?.discount || 0) > 0 ||
+    hasDiscountItem
+  );
+};
+
+const menuItemRequiresOptions = (item) =>
+  !!(
+    item?.allowCustomize ||
+    item?.hasFlavors ||
+    item?.hasToppings ||
+    item?.itemType === foodTypeStrings.combo ||
+    hasDiscountOptions(item)
+  );
 
 const getItemCategory = (item) =>
   item?.category?.name ||
@@ -205,6 +232,7 @@ const EmployeePosBoardScreen = ({ navigation }) => {
   const [reasonCode, setReasonCode] = useState(REQUEST_REASONS[0]);
   const [employeeNotes, setEmployeeNotes] = useState("");
   const [requestSubmitting, setRequestSubmitting] = useState(false);
+  const itemDetailsActionSheetRef = useRef(null);
 
   const foodTruck = user?.foodTruck;
   const assignedLocation = user?.assignedLocation;
@@ -396,16 +424,7 @@ const EmployeePosBoardScreen = ({ navigation }) => {
 
   const addOrConfigureItem = (item) => {
     const existing = cartItemById[item._id];
-    if (
-      hasRequiredOptions(item) &&
-      getSelectionError({
-        item,
-        selectedFlavors: existing?.selectedFlavors || [],
-        selectedToppings: existing?.selectedToppings || [],
-        selectedDiscountFlavors: existing?.selectedDiscountFlavors || [],
-        selectedDiscountToppings: existing?.selectedDiscountToppings || [],
-      })
-    ) {
+    if (menuItemRequiresOptions(existing || item)) {
       openOptions(item);
       return;
     }
@@ -415,13 +434,16 @@ const EmployeePosBoardScreen = ({ navigation }) => {
 
   const openOptions = (item) => {
     const existing = cartItemById[item._id] || item;
-    setSelectedItem(item);
+    setSelectedItem(existing ? { ...item, ...existing } : item);
     setCustomizationInput(existing?.customizationInput || "");
     setSelectedFlavors(existing?.selectedFlavors || []);
     setSelectedToppings(existing?.selectedToppings || []);
     setSelectedDiscountFlavors(existing?.selectedDiscountFlavors || []);
     setSelectedDiscountToppings(existing?.selectedDiscountToppings || []);
     setSelectedSubItems(existing?.selectedSubItems || []);
+    requestAnimationFrame(() => {
+      itemDetailsActionSheetRef.current?.show();
+    });
   };
 
   const toggleSelection = (
@@ -540,6 +562,29 @@ const EmployeePosBoardScreen = ({ navigation }) => {
       returnScreen: "employeePosBoardScreen",
     });
   };
+
+  const handleRemoveItem = (menuItem) => {
+    dispatch(removeItemFromPosOrder({ itemId: menuItem._id }));
+  };
+
+  const getItemQuantity = (itemId) => {
+    const orderItem = order.items.find((item) => item._id === itemId);
+    return orderItem ? orderItem.quantity : 0;
+  };
+
+  const updateSelectedItemProperty = useCallback(
+    (keyName, value) => {
+      if (!selectedItem?._id) return;
+      dispatch(
+        updatePosItemProperty({
+          itemId: selectedItem._id,
+          keyName,
+          value,
+        })
+      );
+    },
+    [dispatch, selectedItem?._id]
+  );
 
   const updateOrderStatus = async (orderItem, nextStatus) => {
     setActionLoadingId(orderItem?._id);
@@ -786,7 +831,7 @@ const EmployeePosBoardScreen = ({ navigation }) => {
       <Modal
         animationType="slide"
         transparent
-        visible={!!selectedItem}
+        visible={false}
         onRequestClose={() => setSelectedItem(null)}
       >
         <View style={styles.modalBackdrop}>
@@ -955,6 +1000,46 @@ const EmployeePosBoardScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+
+      <DishItemDetailsModal
+        actionSheetRef={itemDetailsActionSheetRef}
+        selectedMenuItem={selectedItem}
+        onClose={() => setSelectedItem(null)}
+        handleAddItem={addItem}
+        handleRemoveItem={handleRemoveItem}
+        getItemQuantity={getItemQuantity}
+        insets={insets}
+        onSelectedSubItemsChange={(value) =>
+          updateSelectedItemProperty("selectedSubItems", value)
+        }
+        onCustomizationInputChange={(value) =>
+          updateSelectedItemProperty("customizationInput", value)
+        }
+        onSelectedFlavorsChange={(value) =>
+          updateSelectedItemProperty("selectedFlavors", value)
+        }
+        onSelectedToppingsChange={(value) =>
+          updateSelectedItemProperty("selectedToppings", value)
+        }
+        onSelectedDiscountFlavorsChange={(value) =>
+          updateSelectedItemProperty("selectedDiscountFlavors", value)
+        }
+        onSelectedDiscountToppingsChange={(value) =>
+          updateSelectedItemProperty("selectedDiscountToppings", value)
+        }
+        onSelectedDiscountCustomizationInputChange={(value) =>
+          updateSelectedItemProperty("selectedDiscountCustomizationInput", value)
+        }
+        onSelectedDiscountComboSidesChange={(value) =>
+          updateSelectedItemProperty("selectedDiscountComboSides", value)
+        }
+        onSelectedDiscountSubItemsChange={(value) =>
+          updateSelectedItemProperty("selectedDiscountSubItems", value)
+        }
+        onSelectedComboSidesChange={(value) =>
+          updateSelectedItemProperty("selectedComboSides", value)
+        }
+      />
 
       <Modal
         animationType="slide"

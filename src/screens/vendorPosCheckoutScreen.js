@@ -64,6 +64,40 @@ const resolveCheckoutTruckUnit = ({ foodTruck, location, truckUnit, user }) => {
   );
 };
 
+const buildComboItemPayload = (subItem, fallbackQty = 1) => {
+  const menuItem = subItem?.menuItem || subItem;
+  const comboMenuItemId = subItem?.comboMenuItemId || menuItem?._id;
+
+  if (!comboMenuItemId) {
+    return null;
+  }
+
+  const payload = {
+    comboMenuItemId,
+    qty: Number(subItem?.qty || fallbackQty || 1),
+  };
+
+  const customization =
+    subItem?.customization || subItem?.customizationInput || "";
+  if (typeof customization === "string" && customization.trim()) {
+    payload.customization = customization.trim();
+  }
+
+  if (subItem?.selectedFlavors?.length > 0) {
+    payload.selectedFlavors = subItem.selectedFlavors;
+  }
+
+  if (subItem?.selectedToppings?.length > 0) {
+    payload.selectedToppings = subItem.selectedToppings;
+  }
+
+  if (subItem?.selectedComboSides?.length > 0) {
+    payload.selectedComboSides = subItem.selectedComboSides;
+  }
+
+  return payload;
+};
+
 const TIP_OPTIONS = [
   { label: "10%", value: "10" },
   { label: "15%", value: "15" },
@@ -144,15 +178,41 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
           itemPayload.selectedDiscountToppings = item.selectedDiscountToppings;
         }
 
+        const discountCustomization =
+          item.selectedDiscountCustomization ||
+          item.selectedDiscountCustomizationInput ||
+          "";
+        if (
+          typeof discountCustomization === "string" &&
+          discountCustomization.trim()
+        ) {
+          itemPayload.selectedDiscountCustomization =
+            discountCustomization.trim();
+        }
+
+        if (item.selectedDiscountComboSides?.length > 0) {
+          itemPayload.selectedDiscountComboSides =
+            item.selectedDiscountComboSides;
+        }
+
+        if (item.selectedComboSides?.length > 0) {
+          itemPayload.selectedComboSides = item.selectedComboSides;
+        }
+
+        if (item.selectedDiscountSubItems?.length > 0) {
+          itemPayload.selectedDiscountSubItems = item.selectedDiscountSubItems
+            .map((subItem) => buildComboItemPayload(subItem, item.quantity))
+            .filter(Boolean);
+        }
+
         if (
           item.itemType === foodTypeStrings.combo &&
           item.selectedSubItems &&
           item.selectedSubItems.length > 0
         ) {
-          itemPayload.comboItems = item.selectedSubItems.map((subItem) => ({
-            comboMenuItemId: subItem._id,
-            qty: item.quantity,
-          }));
+          itemPayload.comboItems = item.selectedSubItems
+            .map((subItem) => buildComboItemPayload(subItem, item.quantity))
+            .filter(Boolean);
         }
 
         return itemPayload;

@@ -15,22 +15,133 @@ export const calculateRewardQty = (quantity, discountRules) => {
   return eligibleSets * normalizedGetQty;
 };
 
+export const normalizeMenuOptions = (item, type) => {
+  const optionsKey = `${type}Options`;
+  const legacyKey = type === "flavor" ? "flavors" : "toppings";
+  const rawOptions =
+    Array.isArray(item?.[optionsKey]) && item[optionsKey].length > 0
+      ? item[optionsKey]
+      : item?.[legacyKey];
+
+  if (!Array.isArray(rawOptions)) {
+    return [];
+  }
+
+  return rawOptions
+    .map((option) => {
+      if (typeof option === "string") {
+        return { name: option, cost: 0, hasCost: false };
+      }
+
+      const name = option?.name || option?.label || "";
+      const cost =
+        Number(
+          option?.cost ??
+            option?.price ??
+            option?.additionalCost ??
+            option?.extraCost ??
+            option?.optionCost ??
+            0
+        ) || 0;
+
+      return {
+        name,
+        cost,
+        hasCost: cost > 0 && option?.hasCost !== false,
+      };
+    })
+    .filter((option) => option.name);
+};
+
+export const calculateSelectedOptionCost = (
+  item,
+  flavorKey = "selectedFlavors",
+  toppingKey = "selectedToppings",
+  optionSourceItem = item
+) => {
+  const selectedFlavors = Array.isArray(item?.[flavorKey])
+    ? item[flavorKey]
+    : [];
+  const selectedToppings = Array.isArray(item?.[toppingKey])
+    ? item[toppingKey]
+    : [];
+
+  const selectedCost = (type, selectedNames) => {
+    const options = normalizeMenuOptions(optionSourceItem, type);
+    return selectedNames.reduce((sum, selectedOption) => {
+      const selectedName =
+        typeof selectedOption === "string"
+          ? selectedOption
+          : selectedOption?.name || selectedOption?.label || "";
+      const match = options.find((option) => option.name === selectedName);
+      return sum + (match?.hasCost ? Number(match.cost) || 0 : 0);
+    }, 0);
+  };
+
+  return (
+    selectedCost("flavor", selectedFlavors) +
+    selectedCost("topping", selectedToppings)
+  );
+};
+
+export const getDiscountSourceItem = (item) => {
+  const safeItem = item || {};
+  const bogoItems = Array.isArray(safeItem.bogoItems) ? safeItem.bogoItems : [];
+  const sameItemReward = bogoItems.find((bi) => bi?.isSameItem);
+  const differentItemReward = bogoItems.find((bi) => !bi?.isSameItem);
+
+  if (
+    sameItemReward ||
+    (!bogoItems.length && safeItem?.discountRules?.discount > 0)
+  ) {
+    return safeItem;
+  }
+
+  return differentItemReward || safeItem;
+};
+
 export const calculateItemTotalWithDiscount = (item) => {
   const { price, quantity, discountType, discountRules } = item;
-  let total = price * quantity;
+  const unitPrice = (Number(price) || 0) + calculateSelectedOptionCost(item);
+  let total = unitPrice * quantity;
+  const discountSourceItem = getDiscountSourceItem(item);
 
   if (discountRules && discountRules.discount > 0) {
     const { discount: discountVal = 0 } = discountRules;
     const rewardQty = calculateRewardQty(quantity, discountRules);
+    const basePrice = Number(price) || 0;
+    const rewardOptionsCost = calculateSelectedOptionCost(
+      item,
+      "selectedDiscountFlavors",
+      "selectedDiscountToppings",
+      discountSourceItem
+    );
 
-    const rewardTotal = rewardQty * price;
-    const discountAmount = rewardTotal * discountVal;
+    const rewardTotal = rewardQty * (basePrice + rewardOptionsCost);
+    const discountAmount = rewardQty * basePrice * discountVal;
 
-    total = price * quantity + rewardTotal - discountAmount;
+    total = unitPrice * quantity + rewardTotal - discountAmount;
+  } else if (discountType === "BOGO") {
+    const rewardOptionsCost = calculateSelectedOptionCost(
+      item,
+      "selectedDiscountFlavors",
+      "selectedDiscountToppings",
+      discountSourceItem
+    );
+    total = unitPrice * quantity + rewardOptionsCost * quantity;
   } else if (discountType === "BOGOHO") {
-    const effectivePrice =
-      item.bogoHoPrice != null ? item.bogoHoPrice : price * 1.5;
-    total = effectivePrice * quantity;
+    const basePrice = Number(price) || 0;
+    const rewardOptionsCost = calculateSelectedOptionCost(
+      item,
+      "selectedDiscountFlavors",
+      "selectedDiscountToppings",
+      discountSourceItem
+    );
+    total =
+      item.bogoHoPrice != null
+        ? item.bogoHoPrice * quantity + rewardOptionsCost * quantity
+        : unitPrice * quantity +
+          (basePrice * 0.5 + rewardOptionsCost) * quantity;
   }
 
   return total;

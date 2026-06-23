@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator as NativeIndicator,
   Alert,
@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IconButton } from "react-native-paper";
 import StatusBarManager from "../components/StatusBarManager";
 import AppImage from "../components/AppImage";
+import DishItemDetailsModal from "../components/DishItemDetailsModal";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 import { getAllFoodItem_API, getFoodtruckDetail_API } from "../api/appAPI";
 import {
@@ -25,6 +26,7 @@ import {
   removeItemFromPosOrder,
   updatePosItemProperty,
 } from "../redux/slices/posOrderSlice";
+import { foodTypeStrings } from "../utils/constants";
 
 const getOptions = (item, type) => {
   const optionsKey = `${type}Options`;
@@ -67,7 +69,33 @@ const getSelectionError = ({
   return null;
 };
 
-const hasRequiredOptions = (item) => !!item?.hasFlavors || !!item?.hasToppings;
+const hasDiscountOptions = (item) => {
+  const bogoItems = Array.isArray(item?.bogoItems) ? item.bogoItems : [];
+  const hasDiscountItem = bogoItems.some((bogoItem) => {
+    const menuItem = bogoItem?.menuItem || bogoItem;
+    return (
+      menuItem?.allowCustomize ||
+      menuItem?.hasFlavors ||
+      menuItem?.hasToppings ||
+      menuItem?.itemType === foodTypeStrings.combo
+    );
+  });
+
+  return (
+    ["BOGO", "BOGOHO"].includes(item?.discountType) ||
+    Number(item?.discountRules?.discount || 0) > 0 ||
+    hasDiscountItem
+  );
+};
+
+const menuItemRequiresOptions = (item) =>
+  !!(
+    item?.allowCustomize ||
+    item?.hasFlavors ||
+    item?.hasToppings ||
+    item?.itemType === foodTypeStrings.combo ||
+    hasDiscountOptions(item)
+  );
 
 const VendorPosMenuScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -83,6 +111,7 @@ const VendorPosMenuScreen = ({ navigation }) => {
   const [selectedFlavors, setSelectedFlavors] = useState([]);
   const [selectedToppings, setSelectedToppings] = useState([]);
   const [guestPhone, setGuestPhone] = useState("");
+  const itemDetailsActionSheetRef = useRef(null);
 
   const foodTruckId = user?.foodTruck?._id;
   const isEmployeeSession =
@@ -149,14 +178,7 @@ const VendorPosMenuScreen = ({ navigation }) => {
 
   const addOrConfigureItem = (item) => {
     const existing = cartItemById[item._id];
-    if (
-      hasRequiredOptions(item) &&
-      getSelectionError({
-        item,
-        selectedFlavors: existing?.selectedFlavors || [],
-        selectedToppings: existing?.selectedToppings || [],
-      })
-    ) {
+    if (menuItemRequiresOptions(existing || item)) {
       openOptions(item);
       return;
     }
@@ -166,10 +188,13 @@ const VendorPosMenuScreen = ({ navigation }) => {
 
   const openOptions = (item) => {
     const existing = cartItemById[item._id];
-    setSelectedItem(item);
+    setSelectedItem(existing ? { ...item, ...existing } : item);
     setCustomizationInput(existing?.customizationInput || "");
     setSelectedFlavors(existing?.selectedFlavors || []);
     setSelectedToppings(existing?.selectedToppings || []);
+    requestAnimationFrame(() => {
+      itemDetailsActionSheetRef.current?.show();
+    });
   };
 
   const toggleSelection = (value, selectedValues, setSelectedValues, maxCount) => {
@@ -295,6 +320,29 @@ const VendorPosMenuScreen = ({ navigation }) => {
     });
   };
 
+  const handleRemoveItem = (menuItem) => {
+    dispatch(removeItemFromPosOrder({ itemId: menuItem._id }));
+  };
+
+  const getItemQuantity = (itemId) => {
+    const orderItem = order.items.find((item) => item._id === itemId);
+    return orderItem ? orderItem.quantity : 0;
+  };
+
+  const updateSelectedItemProperty = useCallback(
+    (keyName, value) => {
+      if (!selectedItem?._id) return;
+      dispatch(
+        updatePosItemProperty({
+          itemId: selectedItem._id,
+          keyName,
+          value,
+        })
+      );
+    },
+    [dispatch, selectedItem?._id]
+  );
+
   const renderItem = ({ item }) => {
     const cartItem = cartItemById[item._id];
     const quantity = cartItem?.quantity || 0;
@@ -405,7 +453,7 @@ const VendorPosMenuScreen = ({ navigation }) => {
       )}
 
       <Modal
-        visible={!!selectedItem}
+        visible={false}
         transparent
         animationType="slide"
         onRequestClose={() => setSelectedItem(null)}
@@ -498,6 +546,46 @@ const VendorPosMenuScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+
+      <DishItemDetailsModal
+        actionSheetRef={itemDetailsActionSheetRef}
+        selectedMenuItem={selectedItem}
+        onClose={() => setSelectedItem(null)}
+        handleAddItem={addItem}
+        handleRemoveItem={handleRemoveItem}
+        getItemQuantity={getItemQuantity}
+        insets={insets}
+        onSelectedSubItemsChange={(value) =>
+          updateSelectedItemProperty("selectedSubItems", value)
+        }
+        onCustomizationInputChange={(value) =>
+          updateSelectedItemProperty("customizationInput", value)
+        }
+        onSelectedFlavorsChange={(value) =>
+          updateSelectedItemProperty("selectedFlavors", value)
+        }
+        onSelectedToppingsChange={(value) =>
+          updateSelectedItemProperty("selectedToppings", value)
+        }
+        onSelectedDiscountFlavorsChange={(value) =>
+          updateSelectedItemProperty("selectedDiscountFlavors", value)
+        }
+        onSelectedDiscountToppingsChange={(value) =>
+          updateSelectedItemProperty("selectedDiscountToppings", value)
+        }
+        onSelectedDiscountCustomizationInputChange={(value) =>
+          updateSelectedItemProperty("selectedDiscountCustomizationInput", value)
+        }
+        onSelectedDiscountComboSidesChange={(value) =>
+          updateSelectedItemProperty("selectedDiscountComboSides", value)
+        }
+        onSelectedDiscountSubItemsChange={(value) =>
+          updateSelectedItemProperty("selectedDiscountSubItems", value)
+        }
+        onSelectedComboSidesChange={(value) =>
+          updateSelectedItemProperty("selectedComboSides", value)
+        }
+      />
     </View>
   );
 };

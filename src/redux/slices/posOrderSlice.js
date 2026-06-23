@@ -47,7 +47,11 @@ const posOrderSlice = createSlice({
           quantity: 1,
         });
       } else {
-        state.currentOrder.items[existingItemIndex].quantity += 1;
+        state.currentOrder.items[existingItemIndex] = {
+          ...state.currentOrder.items[existingItemIndex],
+          ...item,
+          quantity: state.currentOrder.items[existingItemIndex].quantity + 1,
+        };
       }
 
       state.currentOrder.totalItems = state.currentOrder.items.reduce(
