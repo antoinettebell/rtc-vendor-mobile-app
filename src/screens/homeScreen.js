@@ -153,6 +153,16 @@ const HomeScreen = ({ navigation }) => {
     return openLocation?.locationId || null;
   }, []);
 
+  const getLocationTitleById = useCallback(
+    (locationId) => {
+      const location = (user?.foodTruck?.locations || []).find(
+        (loc) => loc._id?.toString() === locationId?.toString()
+      );
+      return location?.title || "the current open location";
+    },
+    [user?.foodTruck?.locations]
+  );
+
   const getTruckDefaultLocationId = useCallback(
     (truck) =>
       getTruckOpenLocationId(truck) ||
@@ -172,6 +182,21 @@ const HomeScreen = ({ navigation }) => {
 
     const temp_isOn = isOn.value;
     const temp_isOpen = isOpen;
+    const openLocationId = getTruckOpenLocationId(selectedTruck);
+
+    if (
+      !temp_isOpen &&
+      openLocationId &&
+      openLocationId?.toString() !== selectedLocation?.toString()
+    ) {
+      Alert.alert(
+        "Close Current Location",
+        `${selectedTruck?.label || "This truck"} is already open at ${getLocationTitleById(
+          openLocationId
+        )}. Please close that location before opening a new one.`
+      );
+      return;
+    }
 
     isOn.value = !temp_isOn;
     setIsOpen(!temp_isOpen);
