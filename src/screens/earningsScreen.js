@@ -42,14 +42,23 @@ const PAYMENT_FILTERS = [
 ];
 
 const REQUEST_STATUS_FILTERS = [
-  { label: "All", value: null },
   { label: "Pending", value: "pending" },
   { label: "Approved", value: "approved" },
   { label: "Rejected", value: "rejected" },
+  { label: "All", value: null },
+];
+
+const EMPLOYEE_STATUS_FILTERS = [
+  { label: "Active", value: "active" },
+  { label: "Working", value: "working" },
+  { label: "Inactive", value: "inactive" },
+  { label: "All", value: null },
 ];
 const FILTER_LABELS = {
   location: "Location",
+  truckUnit: "Food Truck",
   employee: "Employee",
+  employeeStatus: "Status",
   status: "Refunds",
 };
 
@@ -116,9 +125,10 @@ const getDateRange = (dateFilter) => {
   return { startDate: start, endDate: end };
 };
 
-const EarningsScreen = ({ navigation }) => {
+const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
   const insets = useSafeAreaInsets();
   const { profileStatus, user } = useSelector((state) => state.userReducer);
+  const isEmployeesScreen = screenMode === "employees";
 
   const [dataLoading, setDataLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -126,10 +136,12 @@ const EarningsScreen = ({ navigation }) => {
   const [employeeAnalytics, setEmployeeAnalytics] = useState(null);
   const [dateFilter, setDateFilter] = useState("today");
   const [locationFilter, setLocationFilter] = useState(null);
+  const [truckUnitFilter, setTruckUnitFilter] = useState(null);
   const [employeeFilter, setEmployeeFilter] = useState(null);
+  const [employeeStatusFilter, setEmployeeStatusFilter] = useState("active");
   const [paymentFilter, setPaymentFilter] = useState(null);
-  const [requestStatusFilter, setRequestStatusFilter] = useState(null);
-  const [pendingRequests, setPendingRequests] = useState([]);
+  const [requestStatusFilter, setRequestStatusFilter] = useState("pending");
+  const [refundRequests, setRefundRequests] = useState([]);
   const [reviewRequest, setReviewRequest] = useState(null);
   const [reviewStatus, setReviewStatus] = useState("APPROVED");
   const [vendorResponseNotes, setVendorResponseNotes] = useState("");
@@ -139,12 +151,25 @@ const EarningsScreen = ({ navigation }) => {
 
   const canTapToPay = false;
   const locations = user?.foodTruck?.locations || [];
-  const employees = employeeAnalytics?.employees || [];
-  const workingEmployees = useMemo(
-    () => employees.filter((employee) => employee.is_working),
-    [employees]
+  const truckUnits = (user?.foodTruck?.truck_units || []).filter(
+    (unit) => !unit.is_archived
   );
-  const visibleEmployees = activityExpanded ? employees : workingEmployees;
+  const employees = employeeAnalytics?.employees || [];
+  const statusFilteredEmployees = useMemo(() => {
+    if (employeeStatusFilter === "working") {
+      return employees.filter((employee) => employee.is_working);
+    }
+    if (employeeStatusFilter === "active") {
+      return employees.filter((employee) => employee.is_active);
+    }
+    if (employeeStatusFilter === "inactive") {
+      return employees.filter((employee) => !employee.is_active);
+    }
+    return employees;
+  }, [employeeStatusFilter, employees]);
+  const visibleEmployees = activityExpanded
+    ? statusFilteredEmployees
+    : statusFilteredEmployees.filter((employee) => employee.is_working);
 
   const paymentFilters = useMemo(
     () =>
@@ -153,8 +178,9 @@ const EarningsScreen = ({ navigation }) => {
         : PAYMENT_FILTERS.filter((item) => item.value !== "TAP_TO_PAY"),
     [canTapToPay]
   );
+  const analyticsEmployees = isEmployeesScreen ? statusFilteredEmployees : employees;
   const analyticsSummary = useMemo(() => {
-    const totals = employees.reduce(
+    const totals = analyticsEmployees.reduce(
       (acc, employee) => {
         const metrics = employee.metrics || {};
         const orders = Number(metrics.orders_processed || 0);
@@ -174,7 +200,22 @@ const EarningsScreen = ({ navigation }) => {
       ...totals,
       averageTicket: totals.orders ? totals.sales / totals.orders : 0,
     };
-  }, [employees]);
+  }, [analyticsEmployees]);
+  const refundStatusCounts = useMemo(
+    () =>
+      refundRequests.reduce(
+        (counts, request) => {
+          const status = String(request.request_status || "").toLowerCase();
+          if (status === "pending") counts.pending += 1;
+          if (status === "approved") counts.approved += 1;
+          if (status === "rejected") counts.rejected += 1;
+          counts.all += 1;
+          return counts;
+        },
+        { pending: 0, approved: 0, rejected: 0, all: 0 }
+      ),
+    [refundRequests]
+  );
   const locationOptions = useMemo(
     () => [
       { label: "All Locations", value: null },
@@ -195,17 +236,30 @@ const EarningsScreen = ({ navigation }) => {
     ],
     [employees]
   );
+  const truckUnitOptions = useMemo(
+    () => [
+      { label: "All Food Trucks", value: null },
+      ...truckUnits.map((truckUnit, index) => ({
+        label: truckUnit.name || `Truck ${index + 1}`,
+        value: truckUnit._id,
+      })),
+    ],
+    [truckUnits]
+  );
   const statusOptions = useMemo(
     () =>
       REQUEST_STATUS_FILTERS.map((item) => ({
         ...item,
-        label: item.value ? item.label : "All Statuses",
+        label: item.value ? item.label : "All",
       })),
     []
   );
+  const employeeStatusOptions = useMemo(() => EMPLOYEE_STATUS_FILTERS, []);
   const filterOptions = {
     location: locationOptions,
+    truckUnit: truckUnitOptions,
     employee: employeeOptions,
+    employeeStatus: employeeStatusOptions,
     status: statusOptions,
   };
   const selectedFilterLabel = (options, value, fallback) =>
@@ -213,9 +267,11 @@ const EarningsScreen = ({ navigation }) => {
   const resetEmployeeFilters = () => {
     setDateFilter("today");
     setLocationFilter(null);
+    setTruckUnitFilter(null);
     setEmployeeFilter(null);
+    setEmployeeStatusFilter("active");
     setPaymentFilter(null);
-    setRequestStatusFilter(null);
+    setRequestStatusFilter("pending");
   };
 
   const onRefresh = async ({ isInitialLoad = false }) => {
@@ -230,16 +286,20 @@ const EarningsScreen = ({ navigation }) => {
         foodTruck_id: user.foodTruck._id,
         startDate,
         endDate,
-        locationId: locationFilter,
-        employeeInternalId: employeeFilter,
-        paymentMethod: paymentFilter,
-        refundCancelStatus: requestStatusFilter,
-      });
-      const requestsResponse = await getRefundCancelRequests_API({
-        foodTruckId: user.foodTruck._id,
-        status: "PENDING",
-        limit: 25,
-      });
+	        locationId: locationFilter,
+	        truckUnitId: truckUnitFilter,
+	        employeeInternalId: employeeFilter,
+	        paymentMethod: paymentFilter,
+	        refundCancelStatus: null,
+	      });
+	      const requestsResponse = await getRefundCancelRequests_API({
+	        foodTruckId: user.foodTruck._id,
+	        status: requestStatusFilter?.toUpperCase() || null,
+	        employeeInternalId: isEmployeesScreen ? employeeFilter : null,
+	        locationId: isEmployeesScreen ? locationFilter : null,
+	        truckUnitId: truckUnitFilter,
+	        limit: 25,
+	      });
       const backendEarnings = analyticsResponse?.data?.earningsFulldata || {};
 
       setEarnings({
@@ -249,7 +309,7 @@ const EarningsScreen = ({ navigation }) => {
         monthlyEarning: Number(backendEarnings.monthlyEarning || 0),
       });
       setEmployeeAnalytics(analyticsResponse?.data?.employeeAnalytics || null);
-      setPendingRequests(requestsResponse?.data?.requests || []);
+	      setRefundRequests(requestsResponse?.data?.requests || []);
     } catch (error) {
       console.error("Error refreshing data:", error);
     } finally {
@@ -318,12 +378,15 @@ const EarningsScreen = ({ navigation }) => {
       return () => clearInterval(refreshTimer);
     }, [
       dateFilter,
-      locationFilter,
-      employeeFilter,
-      paymentFilter,
-      requestStatusFilter,
-    ])
-  );
+	      locationFilter,
+	      truckUnitFilter,
+	      employeeFilter,
+	      employeeStatusFilter,
+	      paymentFilter,
+	      requestStatusFilter,
+	      isEmployeesScreen,
+	    ])
+	  );
 
   return (
     <View style={styles.container}>
@@ -337,7 +400,7 @@ const EarningsScreen = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>
-              {reviewStatus === "APPROVED" ? "Approve Request" : "Reject Request"}
+	              {reviewStatus === "APPROVED" ? "Approve Request" : "Reject Request"}
             </Text>
             <Text style={styles.modalMeta}>
               Order #{reviewRequest?.order_id?.orderNumber || reviewRequest?.order_id}
@@ -389,25 +452,35 @@ const EarningsScreen = ({ navigation }) => {
         >
           <Pressable style={styles.filterPickerCard}>
             <Text style={styles.modalTitle}>
-              {FILTER_LABELS[filterPicker] || "Filter"}
+	              {FILTER_LABELS[filterPicker] || "Filter"}
             </Text>
             {(filterOptions[filterPicker] || []).map((item) => {
               const selected =
-                (filterPicker === "location" && locationFilter === item.value) ||
-                (filterPicker === "employee" && employeeFilter === item.value) ||
-                (filterPicker === "status" &&
-                  requestStatusFilter === item.value);
+	                (filterPicker === "location" && locationFilter === item.value) ||
+	                (filterPicker === "truckUnit" &&
+	                  truckUnitFilter === item.value) ||
+	                (filterPicker === "employee" && employeeFilter === item.value) ||
+	                (filterPicker === "employeeStatus" &&
+	                  employeeStatusFilter === item.value) ||
+	                (filterPicker === "status" &&
+	                  requestStatusFilter === item.value);
               return (
                 <Pressable
                   key={`${filterPicker}-${item.label}-${item.value || "all"}`}
                   style={styles.filterPickerOption}
                   onPress={() => {
-                    if (filterPicker === "location") {
-                      setLocationFilter(item.value);
-                    }
-                    if (filterPicker === "employee") {
-                      setEmployeeFilter(item.value);
-                    }
+	                    if (filterPicker === "location") {
+	                      setLocationFilter(item.value);
+	                    }
+	                    if (filterPicker === "truckUnit") {
+	                      setTruckUnitFilter(item.value);
+	                    }
+	                    if (filterPicker === "employee") {
+	                      setEmployeeFilter(item.value);
+	                    }
+	                    if (filterPicker === "employeeStatus") {
+	                      setEmployeeStatusFilter(item.value);
+	                    }
                     if (filterPicker === "status") {
                       setRequestStatusFilter(item.value);
                     }
@@ -439,7 +512,7 @@ const EarningsScreen = ({ navigation }) => {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <Text numberOfLines={1} style={styles.headerTitle}>
-          {"Earnings"}
+          {isEmployeesScreen ? "Employees" : "Earnings"}
         </Text>
       </View>
 
@@ -463,52 +536,102 @@ const EarningsScreen = ({ navigation }) => {
             </View>
           ) : (
             <>
-              <View style={styles.earningsRow}>
-                <EarningComponent
-                  title={"Total Earnings"}
-                  amount={formatMoney(earnings?.totalEarning || 0)}
-                  onPress={() => onPressNavigationHandler({})}
-                />
-                <EarningComponent
-                  title={"Today's Earning"}
-                  amount={formatMoney(earnings?.todayEarning || 0)}
-                  onPress={() =>
-                    onPressNavigationHandler({ durationType: "daily" })
-                  }
-                />
-              </View>
-              <View style={styles.earningsRow}>
-                <EarningComponent
-                  title={"Weekly Earning"}
-                  amount={formatMoney(earnings?.weeklyEarning || 0)}
-                  onPress={() =>
-                    onPressNavigationHandler({ durationType: "weekly" })
-                  }
-                />
-                <EarningComponent
-                  title={"Monthly Earning"}
-                  amount={formatMoney(earnings?.monthlyEarning || 0)}
-                  onPress={() =>
-                    onPressNavigationHandler({ durationType: "monthly" })
-                  }
-                />
-              </View>
+              {!isEmployeesScreen ? (
+                <>
+                  <View style={styles.earningsRow}>
+                    <EarningComponent
+                      title={"Total Earnings"}
+                      amount={formatMoney(earnings?.totalEarning || 0)}
+                      onPress={() => onPressNavigationHandler({})}
+                    />
+                    <EarningComponent
+                      title={"Today's Earnings"}
+                      amount={formatMoney(earnings?.todayEarning || 0)}
+                      onPress={() =>
+                        onPressNavigationHandler({ durationType: "daily" })
+                      }
+                    />
+                  </View>
+                  <View style={styles.earningsRow}>
+                    <EarningComponent
+                      title={"Weekly Earnings"}
+                      amount={formatMoney(earnings?.weeklyEarning || 0)}
+                      onPress={() =>
+                        onPressNavigationHandler({ durationType: "weekly" })
+                      }
+                    />
+                    <EarningComponent
+                      title={"Monthly Earnings"}
+                      amount={formatMoney(earnings?.monthlyEarning || 0)}
+                      onPress={() =>
+                        onPressNavigationHandler({ durationType: "monthly" })
+                      }
+                    />
+                  </View>
+                </>
+              ) : null}
 
               <View style={styles.analyticsPanel}>
-                <Text style={styles.sectionTitle}>Employee Analytics</Text>
-                <Text style={styles.sectionSubtitle}>
-                  Track employee sales, refunds, and order activity.
-                </Text>
+                {isEmployeesScreen ? null : (
+                  <>
+                    <Text style={styles.filterLabel}>Date Range</Text>
+                    <View style={styles.segmentedControl}>
+                      {DATE_FILTERS.map((item) => (
+                        <SegmentButton
+                          key={item.value}
+                          label={item.label}
+                          selected={dateFilter === item.value}
+                          onPress={() => setDateFilter(item.value)}
+                        />
+                      ))}
+                    </View>
+
+                    <Text style={styles.filterLabel}>Filters</Text>
+                    <View style={styles.filterGrid}>
+                      <Pressable
+                        style={styles.selectControl}
+                        onPress={() => setFilterPicker("truckUnit")}
+                      >
+                        <Text style={styles.selectLabel} numberOfLines={1}>
+                          {selectedFilterLabel(
+                            truckUnitOptions,
+                            truckUnitFilter,
+                            "All Food Trucks"
+                          )}
+                        </Text>
+                        <Entypo
+                          name="chevron-small-down"
+                          size={22}
+                          color={AppColor.textHighlighter}
+                        />
+                      </Pressable>
+                      <View style={[styles.segmentedControl, styles.paymentSegment]}>
+                        {paymentFilters.map((item) => (
+                          <SegmentButton
+                            key={item.label}
+                            label={item.label}
+                            selected={paymentFilter === item.value}
+                            onPress={() => setPaymentFilter(item.value)}
+                          />
+                        ))}
+                      </View>
+                    </View>
+                  </>
+                )}
 
                 <View style={styles.summaryGrid}>
                   <View style={styles.summaryCard}>
-                    <Text style={styles.summaryLabel}>Total Sales</Text>
+                    <Text style={styles.summaryLabel}>
+                      {isEmployeesScreen ? "Employee Sales" : "Gross Sales"}
+                    </Text>
                     <Text style={styles.summaryValue}>
                       ${formatMoney(analyticsSummary.sales)}
                     </Text>
                   </View>
                   <View style={styles.summaryCard}>
-                    <Text style={styles.summaryLabel}>Orders</Text>
+                    <Text style={styles.summaryLabel}>
+                      {isEmployeesScreen ? "Orders Handled" : "Orders"}
+                    </Text>
                     <Text style={styles.summaryValue}>
                       {analyticsSummary.orders}
                     </Text>
@@ -527,237 +650,344 @@ const EarningsScreen = ({ navigation }) => {
                   </View>
                 </View>
 
-                <Text style={styles.filterLabel}>Date Range</Text>
-                <View style={styles.segmentedControl}>
-                  {DATE_FILTERS.map((item) => (
-                    <SegmentButton
-                      key={item.value}
-                      label={item.label}
-                      selected={dateFilter === item.value}
-                      onPress={() => setDateFilter(item.value)}
-                    />
-                  ))}
-                </View>
+                {isEmployeesScreen ? (
+                  <>
+                    <Text style={styles.filterLabel}>Date Range</Text>
+                    <View style={styles.segmentedControl}>
+                      {DATE_FILTERS.map((item) => (
+                        <SegmentButton
+                          key={item.value}
+                          label={item.label}
+                          selected={dateFilter === item.value}
+                          onPress={() => setDateFilter(item.value)}
+                        />
+                      ))}
+                    </View>
 
-                <Text style={styles.filterLabel}>Filters</Text>
-                <View style={styles.filterGrid}>
-                  <Pressable
-                    style={styles.selectControl}
-                    onPress={() => setFilterPicker("location")}
-                  >
-                    <Text style={styles.selectLabel} numberOfLines={1}>
-                      {selectedFilterLabel(
-                        locationOptions,
-                        locationFilter,
-                        "All Locations"
-                      )}
-                    </Text>
-                    <Entypo
-                      name="chevron-small-down"
-                      size={22}
-                      color={AppColor.textHighlighter}
-                    />
-                  </Pressable>
-                  <Pressable
-                    style={styles.selectControl}
-                    onPress={() => setFilterPicker("employee")}
-                  >
-                    <Text style={styles.selectLabel} numberOfLines={1}>
-                      {selectedFilterLabel(
-                        employeeOptions,
-                        employeeFilter,
-                        "All Employees"
-                      )}
-                    </Text>
-                    <Entypo
-                      name="chevron-small-down"
-                      size={22}
-                      color={AppColor.textHighlighter}
-                    />
-                  </Pressable>
-                  <View style={[styles.segmentedControl, styles.paymentSegment]}>
-                    {paymentFilters.map((item) => (
-                      <SegmentButton
-                        key={item.label}
-                        label={item.label}
-                        selected={paymentFilter === item.value}
-                        onPress={() => setPaymentFilter(item.value)}
-                      />
-                    ))}
-                  </View>
-                  <Pressable
-                    style={styles.selectControl}
-                    onPress={() => setFilterPicker("status")}
-                  >
-                    <Text style={styles.selectLabel} numberOfLines={1}>
-                      {selectedFilterLabel(
-                        statusOptions,
-                        requestStatusFilter,
-                        "All Statuses"
-                      )}
-                    </Text>
-                    <Entypo
-                      name="chevron-small-down"
-                      size={22}
-                      color={AppColor.textHighlighter}
-                    />
-                  </Pressable>
-                </View>
+                    <Text style={styles.filterLabel}>Filters</Text>
+                    <View style={styles.filterGrid}>
+                      <Pressable
+                        style={styles.selectControl}
+                        onPress={() => setFilterPicker("truckUnit")}
+                      >
+                        <Text style={styles.selectLabel} numberOfLines={1}>
+                          {selectedFilterLabel(
+                            truckUnitOptions,
+                            truckUnitFilter,
+                            "All Food Trucks"
+                          )}
+                        </Text>
+                        <Entypo
+                          name="chevron-small-down"
+                          size={22}
+                          color={AppColor.textHighlighter}
+                        />
+                      </Pressable>
+                      <Pressable
+                        style={styles.selectControl}
+                        onPress={() => setFilterPicker("employee")}
+                      >
+                        <Text style={styles.selectLabel} numberOfLines={1}>
+                          {selectedFilterLabel(
+                            employeeOptions,
+                            employeeFilter,
+                            "All Employees"
+                          )}
+                        </Text>
+                        <Entypo
+                          name="chevron-small-down"
+                          size={22}
+                          color={AppColor.textHighlighter}
+                        />
+                      </Pressable>
+                      <Pressable
+                        style={styles.selectControl}
+                        onPress={() => setFilterPicker("employeeStatus")}
+                      >
+                        <Text style={styles.selectLabel} numberOfLines={1}>
+                          {selectedFilterLabel(
+                            employeeStatusOptions,
+                            employeeStatusFilter,
+                            "All Statuses"
+                          )}
+                        </Text>
+                        <Entypo
+                          name="chevron-small-down"
+                          size={22}
+                          color={AppColor.textHighlighter}
+                        />
+                      </Pressable>
+                      <View style={[styles.segmentedControl, styles.paymentSegment]}>
+                        {paymentFilters.map((item) => (
+                          <SegmentButton
+                            key={item.label}
+                            label={item.label}
+                            selected={paymentFilter === item.value}
+                            onPress={() => setPaymentFilter(item.value)}
+                          />
+                        ))}
+                      </View>
+                    </View>
+                  </>
+                ) : null}
+
                 <Pressable style={styles.resetButton} onPress={resetEmployeeFilters}>
                   <Text style={styles.resetButtonText}>Reset Filters</Text>
                 </Pressable>
 
-                <View style={styles.subsectionCard}>
-                  <Text style={styles.subsectionTitle}>Pending Requests</Text>
-                  {pendingRequests.length ? (
-                    pendingRequests.map((request) => (
-                      <View key={request.request_id} style={styles.requestCard}>
-                        <Text style={styles.requestTitle}>
-                          Order #{request.order_id?.orderNumber || request.order_id}
-                        </Text>
-                        <Text style={styles.requestMeta}>
-                          {request.request_type || "Request"} |{" "}
-                          {request.reason_code || "Reason not provided"}
-                        </Text>
-                        <Text style={styles.requestMeta}>
-                          {request.employee_login_id || "Employee"}
-                          {request.employee_notes
-                            ? ` | ${request.employee_notes}`
-                            : ""}
-                        </Text>
-                        <View style={styles.reviewActions}>
-                          <Pressable
-                            style={styles.approveButton}
-                            onPress={() => openReviewModal(request, "APPROVED")}
-                          >
-                            <Text style={styles.approveButtonText}>Approve</Text>
-                          </Pressable>
-                          <Pressable
-                            style={styles.rejectButton}
-                            onPress={() => openReviewModal(request, "REJECTED")}
-                          >
-                            <Text style={styles.rejectButtonText}>Reject</Text>
-                          </Pressable>
-                        </View>
-                      </View>
-                    ))
-                  ) : (
-                    <Text style={styles.emptyInlineText}>
-                      No pending refund or cancel requests.
-                    </Text>
-                  )}
-                </View>
-
-                <View style={styles.activityHeader}>
-                  <Text style={styles.subsectionTitle}>Employee Activity</Text>
-                  {employees.length ? (
-                    <Pressable
-                      style={styles.expandButton}
-                      onPress={() => setActivityExpanded((current) => !current)}
-                    >
-                      <Text style={styles.expandButtonText}>
-                        {activityExpanded ? "Show Working" : "Show All"}
-                      </Text>
-                    </Pressable>
-                  ) : null}
-                </View>
-                {visibleEmployees.length ? (
-                  visibleEmployees.map((employee) => {
-                    const metrics = employee.metrics || {};
-                    const locationName =
-                      employee.assigned_location?.title ||
-                      employee.assigned_location?.address ||
-                      "All locations";
-                    const paymentSummary = canTapToPay
-                      ? `Cash ${metrics.cash_orders || 0} / Tap ${
-                          metrics.tap_orders || 0
-                        }`
-                      : `Cash ${metrics.cash_orders || 0}`;
-                    const statusText = employee.is_working
-                      ? "Working"
-                      : employee.is_active
-                        ? "Active"
-                        : "Inactive";
-
-                    return (
-                      <View
-                        key={employee.employee_internal_id}
-                        style={styles.activityCard}
+                {!isEmployeesScreen ? (
+                  <View style={styles.subsectionCard}>
+                    <View style={styles.activityHeader}>
+                      <Text style={styles.subsectionTitle}>Refund Requests</Text>
+                      <Pressable
+                        style={styles.compactSelect}
+                        onPress={() => setFilterPicker("status")}
                       >
-                        <View style={styles.employeeHeader}>
-                          <View style={styles.employeeTitleWrap}>
-                            <Text style={styles.employeeName}>
-                              {employee.employee_name || "Employee"}
+                        <Text style={styles.compactSelectText}>
+                          {selectedFilterLabel(
+                            statusOptions,
+                            requestStatusFilter,
+                            "All"
+                          )}
+                        </Text>
+                      </Pressable>
+                    </View>
+                    {refundRequests.length ? (
+                      refundRequests.map((request) => {
+                        const isPending =
+                          String(request.request_status || "").toUpperCase() ===
+                          "PENDING";
+                        return (
+                          <View key={request.request_id} style={styles.requestCard}>
+                            <Text style={styles.requestTitle}>
+                              Order #{request.order_id?.orderNumber || request.order_id}
                             </Text>
-                            <Text style={styles.employeeLocation}>
-                              {locationName}
+                            <Text style={styles.requestMeta}>
+                              {request.request_type || "Request"} |{" "}
+                              {request.reason_code || "Reason not provided"}
                             </Text>
-                          </View>
-                          <Text
-                            style={[
-                              styles.statusBadge,
-                              employee.is_working && styles.statusBadgeWorking,
-                              !employee.is_working &&
-                                employee.is_active &&
-                                styles.statusBadgeActive,
-                            ]}
-                          >
-                            {statusText}
-                          </Text>
-                        </View>
-
-                        <View style={styles.activityDetails}>
-                          <View style={styles.activityMetric}>
-                            <Text style={styles.metaLabel}>Order amount</Text>
-                            <Text style={styles.metaValue}>
-                              ${formatMoney(metrics.gross_sales || 0)}
+                            <Text style={styles.requestMeta}>
+                              {request.employee_login_id || "Employee"}
+                              {request.employee_notes
+                                ? ` | ${request.employee_notes}`
+                                : ""}
                             </Text>
+                            {isPending ? (
+                              <View style={styles.reviewActions}>
+                                <Pressable
+                                  style={styles.rejectButton}
+                                  onPress={() =>
+                                    openReviewModal(request, "REJECTED")
+                                  }
+                                >
+                                  <Text style={styles.rejectButtonText}>Reject</Text>
+                                </Pressable>
+                                <Pressable
+                                  style={styles.approveButton}
+                                  onPress={() =>
+                                    openReviewModal(request, "APPROVED")
+                                  }
+                                >
+                                  <Text style={styles.approveButtonText}>Approve</Text>
+                                </Pressable>
+                              </View>
+                            ) : (
+                              <Text style={styles.requestMeta}>
+                                Status: {request.request_status || "Not available"}
+                              </Text>
+                            )}
                           </View>
-                          <View style={styles.activityMetric}>
-                            <Text style={styles.metaLabel}>Orders</Text>
-                            <Text style={styles.metaValue}>
-                              {metrics.orders_processed || 0}
-                            </Text>
-                          </View>
-                          <View style={styles.activityMetric}>
-                            <Text style={styles.metaLabel}>Payment</Text>
-                            <Text style={styles.metaValue}>{paymentSummary}</Text>
-                          </View>
-                          <View style={styles.activityMetric}>
-                            <Text style={styles.metaLabel}>Refund/Cancel</Text>
-                            <Text style={styles.metaValue}>
-                              {metrics.refund_cancel_requests_submitted || 0}
-                            </Text>
-                          </View>
-                        </View>
-                        <View style={styles.metaRow}>
-                          <Text style={styles.metaLabel}>Date/time</Text>
-                          <Text style={styles.metaValue}>
-                            {formatDateTime(employee.last_activity_at)}
-                          </Text>
-                        </View>
-                      </View>
-                    );
-                  })
-                ) : (
-                  <View style={styles.emptyActivityCard}>
-                    <FontAwesome6
-                      name="receipt"
-                      size={24}
-                      color={AppColor.primary}
-                    />
-                    <Text style={styles.emptyActivityTitle}>
-                      {employees.length
-                        ? "No employees working"
-                        : "No activity found"}
-                    </Text>
-                    <Text style={styles.emptyActivityText}>
-                      {employees.length
-                        ? "Tap Show All to view inactive employee activity."
-                        : "Try changing the filters or selecting a wider date range."}
-                    </Text>
+                        );
+                      })
+                    ) : (
+                      <Text style={styles.emptyInlineText}>
+                        No refund or cancel requests found.
+                      </Text>
+                    )}
                   </View>
-                )}
+                ) : null}
+
+                {isEmployeesScreen ? (
+                  <>
+                    <View style={styles.activityHeader}>
+                      <Text style={styles.subsectionTitle}>Employee Activity</Text>
+                      {employees.length ? (
+                        <Pressable
+                          style={styles.expandButton}
+                          onPress={() => setActivityExpanded((current) => !current)}
+                        >
+                          <Text style={styles.expandButtonText}>
+                            {activityExpanded ? "Working Only" : "View All"}
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                    {visibleEmployees.length ? (
+                      visibleEmployees.map((employee) => {
+                        const metrics = employee.metrics || {};
+                        const truckName =
+                          employee.assigned_truck_unit_name ||
+                          "All Food Trucks";
+                        const locationName =
+                          employee.assigned_location?.title ||
+                          employee.assigned_location?.address ||
+                          "All locations";
+                        const paymentSummary = canTapToPay
+                          ? `Cash ${metrics.cash_orders || 0} / Tap ${
+                              metrics.tap_orders || 0
+                            }`
+                          : `Cash ${metrics.cash_orders || 0}`;
+                        const statusText = employee.is_working
+                          ? "Working"
+                          : employee.is_active
+                            ? "Active"
+                            : "Inactive";
+
+                        return (
+                          <View
+                            key={employee.employee_internal_id}
+                            style={styles.activityCard}
+                          >
+                            <View style={styles.employeeHeader}>
+                              <View style={styles.employeeTitleWrap}>
+                                <Text style={styles.employeeName}>
+                                  {employee.employee_name || "Employee"}
+                                </Text>
+                                <Text style={styles.employeeLocation}>
+                                  {truckName} | {locationName}
+                                </Text>
+                              </View>
+                              <Text
+                                style={[
+                                  styles.statusBadge,
+                                  employee.is_working && styles.statusBadgeWorking,
+                                  !employee.is_working &&
+                                    employee.is_active &&
+                                    styles.statusBadgeActive,
+                                ]}
+                              >
+                                {statusText}
+                              </Text>
+                            </View>
+
+                            <View style={styles.activityDetails}>
+                              <View style={styles.activityMetric}>
+                                <Text style={styles.metaLabel}>Sales</Text>
+                                <Text style={styles.metaValue}>
+                                  ${formatMoney(metrics.gross_sales || 0)}
+                                </Text>
+                              </View>
+                              <View style={styles.activityMetric}>
+                                <Text style={styles.metaLabel}>Orders</Text>
+                                <Text style={styles.metaValue}>
+                                  {metrics.orders_processed || 0}
+                                </Text>
+                              </View>
+                              <View style={styles.activityMetric}>
+                                <Text style={styles.metaLabel}>Payment</Text>
+                                <Text style={styles.metaValue}>
+                                  {paymentSummary}
+                                </Text>
+                              </View>
+                              <View style={styles.activityMetric}>
+                                <Text style={styles.metaLabel}>Refund/Cancel</Text>
+                                <Text style={styles.metaValue}>
+                                  {metrics.refund_cancel_requests_submitted || 0}
+                                </Text>
+                              </View>
+                            </View>
+                            <View style={styles.metaRow}>
+                              <Text style={styles.metaLabel}>Date/time</Text>
+                              <Text style={styles.metaValue}>
+                                {formatDateTime(employee.last_activity_at)}
+                              </Text>
+                            </View>
+                          </View>
+                        );
+                      })
+                    ) : (
+                      <View style={styles.emptyActivityCard}>
+                        <FontAwesome6
+                          name="receipt"
+                          size={24}
+                          color={AppColor.primary}
+                        />
+                        <Text style={styles.emptyActivityTitle}>
+                          {employees.length
+                            ? "No employees currently working"
+                            : "No activity found"}
+                        </Text>
+                        <Text style={styles.emptyActivityText}>
+                          {employees.length
+                            ? "Tap View All to view inactive employee activity."
+                            : "Try changing the filters or selecting a wider date range."}
+                        </Text>
+                      </View>
+                    )}
+
+                    <View style={styles.subsectionCard}>
+                      <View style={styles.activityHeader}>
+                        <View>
+                          <Text style={styles.subsectionTitle}>
+                            Employee Refund Activity
+                          </Text>
+                          <Text style={styles.emptyInlineText}>
+                            View refund/cancel activity by employee.
+                          </Text>
+                        </View>
+                        <Pressable
+                          style={styles.compactSelect}
+                          onPress={() => setFilterPicker("status")}
+                        >
+                          <Text style={styles.compactSelectText}>
+                            {selectedFilterLabel(
+                              statusOptions,
+                              requestStatusFilter,
+                              "All"
+                            )}
+                          </Text>
+                        </Pressable>
+                      </View>
+                      <View style={styles.requestStatusRow}>
+                        <Text style={styles.requestStatusText}>
+                          Pending {refundStatusCounts.pending}
+                        </Text>
+                        <Text style={styles.requestStatusText}>
+                          Approved {refundStatusCounts.approved}
+                        </Text>
+                        <Text style={styles.requestStatusText}>
+                          Rejected {refundStatusCounts.rejected}
+                        </Text>
+                        <Text style={styles.requestStatusText}>
+                          All {refundStatusCounts.all}
+                        </Text>
+                      </View>
+                      {refundRequests.length ? (
+                        refundRequests.map((request) => (
+                          <View key={request.request_id} style={styles.requestCard}>
+                            <Text style={styles.requestTitle}>
+                              Order #{request.order_id?.orderNumber || request.order_id}
+                            </Text>
+                            <Text style={styles.requestMeta}>
+                              Employee: {request.employee_login_id || "Employee"}
+                            </Text>
+                            <Text style={styles.requestMeta}>
+                              Amount: ${formatMoney(request.order_id?.total || 0)} | Status:{" "}
+                              {request.request_status || "Not available"}
+                            </Text>
+                            <Text style={styles.requestMeta}>
+                              {formatDateTime(request.requested_at)}
+                            </Text>
+                          </View>
+                        ))
+                      ) : (
+                        <Text style={styles.emptyInlineText}>
+                          No employee refund or cancel activity found.
+                        </Text>
+                      )}
+                    </View>
+                  </>
+                ) : null}
               </View>
             </>
           )}

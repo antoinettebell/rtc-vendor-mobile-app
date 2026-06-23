@@ -41,6 +41,7 @@ import HomeScreen from "./src/screens/homeScreen";
 import OrderScreen from "./src/screens/orderScreen";
 import MenuScreen from "./src/screens/menuScreen";
 import EarningsScreen from "./src/screens/earningsScreen";
+import EmployeesScreen from "./src/screens/employeesScreen";
 import ProfileMenuScreen from "./src/screens/profileMenuScreen";
 import EditProfileScreen from "./src/screens/editProfileScreen";
 import ProfileSelectCuisineScreen from "./src/screens/profileSelectCuisineScreen";
@@ -243,6 +244,16 @@ const BottomTabNavigator = ({ insets }) => (
             source={focused ? earningsActive : earningsInactive}
             style={{ height: 24, width: 24 }}
           />
+        ),
+      }}
+    />
+    <BottomTab.Screen
+      name="employeesScreen"
+      component={EmployeesScreen}
+      options={{
+        tabBarLabel: "Employees",
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="people-alt" size={size || 24} color={color} />
         ),
       }}
     />

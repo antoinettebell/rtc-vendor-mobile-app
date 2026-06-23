@@ -881,6 +881,7 @@ export const getEarningByFoodTruckID_API = async ({
   startDate = null,
   endDate = null,
   locationId = null,
+  truckUnitId = null,
   employeeInternalId = null,
   paymentMethod = null,
   refundCancelStatus = null,
@@ -899,6 +900,9 @@ export const getEarningByFoodTruckID_API = async ({
     }
     if (locationId) {
       queryParams.push(`locationId=${locationId}`);
+    }
+    if (truckUnitId) {
+      queryParams.push(`truckUnitId=${truckUnitId}`);
     }
     if (employeeInternalId) {
       queryParams.push(`employeeInternalId=${employeeInternalId}`);
@@ -1272,6 +1276,7 @@ export const getRefundCancelRequests_API = async ({
   status = null,
   employeeInternalId = null,
   locationId = null,
+  truckUnitId = null,
   limit = 50,
 } = {}) => {
   try {
@@ -1283,6 +1288,7 @@ export const getRefundCancelRequests_API = async ({
       queryParams.push(`employeeInternalId=${employeeInternalId}`);
     }
     if (locationId) queryParams.push(`locationId=${locationId}`);
+    if (truckUnitId) queryParams.push(`truckUnitId=${truckUnitId}`);
 
     const response = await apiClient.get(
       `${REFUND_CANCEL_REQUESTS}?${queryParams.join("&")}`,
