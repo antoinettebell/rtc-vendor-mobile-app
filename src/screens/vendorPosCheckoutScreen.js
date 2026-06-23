@@ -648,8 +648,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   cashPaymentButton: {
-    borderColor: "#88300e",
-    backgroundColor: "#88300e",
+    borderColor: AppColor.primary,
+    backgroundColor: AppColor.primary,
   },
   paymentButtonDisabled: {
     opacity: 0.6,
