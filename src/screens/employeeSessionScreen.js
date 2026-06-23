@@ -79,7 +79,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
   const foodTruck = user?.foodTruck;
   const assignedLocation = user?.assignedLocation;
   const capabilities = user?.employeeCapabilities || {};
-  const canTapToPay = !!capabilities.tapToPay;
+  const canTapToPay = false;
   const locationIsOpen =
     foodTruck?.currentLocation?.toString() ===
       assignedLocation?._id?.toString() || !!assignedLocation?.isOrderingOpen;

@@ -229,7 +229,8 @@ export const getNextOrderStatus = (currentStatus, order = null) => {
   return null;
 };
 
-export const isVendorPosOrder = (order) => order?.orderSource === "VENDOR_POS";
+export const isVendorPosOrder = (order) =>
+  ["VENDOR_POS", "WALK_UP_EMPLOYEE"].includes(order?.orderSource);
 
 const toMoneyNumber = (value) => {
   const n = Number(value);

@@ -24,7 +24,6 @@ import {
 import { clearPosOrder } from "../redux/slices/posOrderSlice";
 import { foodTypeStrings } from "../utils/constants";
 import { startTapToPaySale } from "../services/tapToPay-service";
-import tapToPayConfig from "../services/tapToPay-config";
 
 const toAmount = (value) => {
   const n = Number(value);
@@ -40,6 +39,30 @@ const toCents = (value) => Math.round(Math.max(0, Number(value) || 0) * 100);
 const centsToMoney = (value) => Number((Math.max(0, value) / 100).toFixed(2));
 const calculateProcessingFeeAmount = (baseAmount, rate) =>
   centsToMoney(Math.round(toCents(baseAmount) * rate));
+
+const getActiveTruckUnits = (foodTruck) =>
+  (foodTruck?.truck_units || []).filter((unit) => !unit.is_archived);
+
+const resolveCheckoutTruckUnit = ({ foodTruck, location, truckUnit, user }) => {
+  const activeTruckUnits = getActiveTruckUnits(foodTruck);
+  const assignedTruckUnitId = user?.assigned_truck_unit_id?.toString();
+  const locationId = location?._id?.toString();
+
+  return (
+    truckUnit ||
+    activeTruckUnits.find((unit) => unit._id?.toString() === assignedTruckUnitId) ||
+    activeTruckUnits.find((unit) =>
+      (unit.open_locations || []).some(
+        (openLocation) =>
+          openLocation.locationId?.toString() === locationId &&
+          openLocation.isOrderingOpen
+      )
+    ) ||
+    activeTruckUnits.find((unit) => unit.is_primary) ||
+    activeTruckUnits[0] ||
+    null
+  );
+};
 
 const TIP_OPTIONS = [
   { label: "10%", value: "10" },
@@ -59,9 +82,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
   const { foodTruck, location, truckUnit, guestPhone } = route.params || {};
   const isEmployeeSession =
     user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
-  const canUseTapToPay =
-    tapToPayConfig.enabled &&
-    (!isEmployeeSession || !!user?.employeeCapabilities?.tapToPay);
+  const canUseTapToPay = false;
 
   const [loading, setLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState(null);
@@ -70,6 +91,10 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
   const [tapOrder, setTapOrder] = useState(null);
   const [selectedTipOption, setSelectedTipOption] = useState("10");
   const [customTipInput, setCustomTipInput] = useState("");
+  const checkoutTruckUnit = useMemo(
+    () => resolveCheckoutTruckUnit({ foodTruck, location, truckUnit, user }),
+    [foodTruck, location, truckUnit, user]
+  );
 
   const tipAmount = useMemo(() => {
     if (selectedTipOption === "custom") {
@@ -83,7 +108,8 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
     return {
       foodTruckId: foodTruck?._id || order.foodTruckId,
       locationId: location?._id,
-      truckUnitId: truckUnit?._id || user?.assigned_truck_unit_id || null,
+      truckUnitId:
+        checkoutTruckUnit?._id || user?.assigned_truck_unit_id || null,
       orderSource: isEmployeeSession ? "WALK_UP_EMPLOYEE" : "VENDOR_POS",
       fulfillmentType: "PICKUP",
       guestCustomer: {
@@ -139,7 +165,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
     order.foodTruckId,
     order.items,
     taxAmount,
-    truckUnit?._id,
+    checkoutTruckUnit?._id,
     user?.assigned_truck_unit_id,
     tipAmount,
   ]);
@@ -209,6 +235,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
   }, [
     basePayload.foodTruckId,
     basePayload.locationId,
+    basePayload.truckUnitId,
     canUseTapToPay,
     navigation,
     order.items.length,
@@ -417,21 +444,25 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
               label="Tip"
               value={`$${toAmount(summary.tipsAmount)}`}
             />
-            <SummaryRow
-              label="Payment Processing Fee"
-              value={`$${toAmount(tapSummary.paymentProcessingFee)}`}
-            />
+            {canUseTapToPay ? (
+              <SummaryRow
+                label="Payment Processing Fee"
+                value={`$${toAmount(tapSummary.paymentProcessingFee)}`}
+              />
+            ) : null}
             <View style={styles.divider} />
             <SummaryRow
               label="Cash Total"
               value={`$${toAmount(summary.total)}`}
               bold
             />
-            <SummaryRow
-              label="Tap to Pay Total"
-              value={`$${toAmount(tapSummary.total)}`}
-              bold
-            />
+            {canUseTapToPay ? (
+              <SummaryRow
+                label="Tap to Pay Total"
+                value={`$${toAmount(tapSummary.total)}`}
+                bold
+              />
+            ) : null}
             {guestPhone ? (
               <Text style={styles.guestText}>Guest phone: {guestPhone}</Text>
             ) : null}
@@ -483,39 +514,34 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
           </View>
 
           <Text style={styles.sectionTitle}>Payment method</Text>
-          <TouchableOpacity
-            style={[
-              styles.paymentButton,
-              !canUseTapToPay && styles.paymentButtonDisabled,
-            ]}
-            onPress={handleTapToPay}
-            disabled={!!paymentLoading || !canUseTapToPay}
-          >
-            <Text style={styles.paymentButtonText}>
-              {paymentLoading === "tap"
-                ? "Processing..."
-                : `Tap to Pay $${toAmount(tapSummary.total)}`}
-            </Text>
-            <Text style={styles.paymentButtonSubText}>
-              {canUseTapToPay
-                ? "Card-present gateway payment"
-                : isEmployeeSession
-                  ? "Available for Elite employees only"
-                  : "Requires Tap to Pay merchant setup"}
-            </Text>
-          </TouchableOpacity>
+          {canUseTapToPay ? (
+            <TouchableOpacity
+              style={styles.paymentButton}
+              onPress={handleTapToPay}
+              disabled={!!paymentLoading}
+            >
+              <Text style={styles.paymentButtonText}>
+                {paymentLoading === "tap"
+                  ? "Processing..."
+                  : `Tap to Pay $${toAmount(tapSummary.total)}`}
+              </Text>
+              <Text style={styles.paymentButtonSubText}>
+                Card-present gateway payment
+              </Text>
+            </TouchableOpacity>
+          ) : null}
 
           <TouchableOpacity
-            style={styles.paymentButton}
+            style={[styles.paymentButton, styles.cashPaymentButton]}
             onPress={handleCash}
             disabled={!!paymentLoading}
           >
-            <Text style={styles.paymentButtonText}>
+            <Text style={[styles.paymentButtonText, styles.cashPaymentButtonText]}>
               {paymentLoading === "cash"
                 ? "Completing..."
                 : `Cash $${toAmount(summary.total)}`}
             </Text>
-            <Text style={styles.paymentButtonSubText}>
+            <Text style={[styles.paymentButtonSubText, styles.cashPaymentButtonSubText]}>
               No payment processing fee or gateway call
             </Text>
           </TouchableOpacity>
@@ -621,6 +647,10 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
   },
+  cashPaymentButton: {
+    borderColor: "#88300e",
+    backgroundColor: "#88300e",
+  },
   paymentButtonDisabled: {
     opacity: 0.6,
   },
@@ -629,9 +659,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: AppColor.black,
   },
+  cashPaymentButtonText: {
+    color: AppColor.white,
+  },
   paymentButtonSubText: {
     fontFamily: Mulish400,
     color: AppColor.gray,
     marginTop: 4,
+  },
+  cashPaymentButtonSubText: {
+    color: AppColor.white,
+    opacity: 0.85,
   },
 });

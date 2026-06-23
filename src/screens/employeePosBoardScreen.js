@@ -179,8 +179,9 @@ const EmployeePosBoardScreen = ({ navigation }) => {
 
   const foodTruck = user?.foodTruck;
   const assignedLocation = user?.assignedLocation;
+  const assignedTruckUnit = dashboard?.assignedTruckUnit || user?.assignedTruckUnit;
   const capabilities = user?.employeeCapabilities || {};
-  const canTapToPay = !!capabilities.tapToPay;
+  const canTapToPay = false;
   const canUsePos = !!capabilities.employeeWalkUpPos;
   const isWorking =
     !!user?.employee_session_id && dashboard?.shift?.is_active !== false;
@@ -448,6 +449,7 @@ const EmployeePosBoardScreen = ({ navigation }) => {
     navigation.navigate("vendorPosCheckoutScreen", {
       foodTruck,
       location: assignedLocation,
+      truckUnit: assignedTruckUnit,
       guestPhone: guestPhone.trim(),
       returnScreen: "employeePosBoardScreen",
     });

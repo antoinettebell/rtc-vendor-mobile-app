@@ -150,7 +150,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
   const [hasToppings, setHasToppings] = useState(false);
   const [toppingCount, setToppingCount] = useState(1);
   const [toppingsPerOrder, setToppingsPerOrder] = useState(1);
-  const [toppings, setToppings] = useState([""]);
+  const [toppings, setToppings] = useState(["Plain"]);
   const [hasToppingCosts, setHasToppingCosts] = useState(false);
   const [toppingCostEnabled, setToppingCostEnabled] = useState([false]);
   const [toppingCosts, setToppingCosts] = useState(["0"]);
@@ -425,9 +425,13 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     const nextCount = selected.value;
     setToppingCount(nextCount);
     setToppingsPerOrder((currentValue) => Math.min(currentValue, nextCount));
-    setToppings((currentToppings) =>
-      Array.from({ length: nextCount }, (_, index) => currentToppings[index] || "")
-    );
+    setToppings((currentToppings) => {
+      const nextToppings = ["Plain"];
+      for (let index = 1; index < nextCount; index += 1) {
+        nextToppings[index] = currentToppings[index] || "";
+      }
+      return nextToppings;
+    });
     setToppingCostEnabled((currentValues) =>
       Array.from({ length: nextCount }, (_, index) => currentValues[index] || false)
     );
@@ -803,42 +807,45 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 	      Array.isArray(item.flavorOptions) && item.flavorOptions.length > 0
 	        ? item.flavorOptions
 	        : itemFlavors.map((name) => ({ name, hasCost: false, cost: 0 }));
-	    const nextFlavorCount = Math.min(Math.max(itemFlavors.length, 1), 15);
+    const orderedFlavorOptions = [
+      { name: "Plain", hasCost: false, cost: 0 },
+      ...itemFlavorOptions.filter((option) => option?.name !== "Plain"),
+    ].slice(0, 15);
+	    const nextFlavorCount = Math.min(Math.max(orderedFlavorOptions.length, 1), 15);
 	    setFlavorCount(nextFlavorCount);
-	    setFlavors(
-	      ["Plain", ...itemFlavors.filter((flavor) => flavor !== "Plain")].slice(
-	        0,
-	        15
-	      )
-	    );
-	    setHasFlavorCosts(itemFlavorOptions.some((option) => option.hasCost));
+	    setFlavors(orderedFlavorOptions.map((option) => option.name));
+	    setHasFlavorCosts(orderedFlavorOptions.some((option) => option.hasCost));
 	    setFlavorCostEnabled(
-	      itemFlavorOptions.slice(0, 15).map((option) => !!option.hasCost)
+	      orderedFlavorOptions.map((option) => !!option.hasCost)
 	    );
 	    setFlavorCosts(
-	      itemFlavorOptions.slice(0, 15).map((option) => `${option.cost || 0}`)
+	      orderedFlavorOptions.map((option) => `${option.cost || 0}`)
 	    );
 	    setFlavorsPerOrder(
 	      Math.min(Math.max(item.flavorsPerOrder || 1, 1), nextFlavorCount, 5)
 	    );
-	    const itemToppings =
-	      Array.isArray(item.toppings) && item.toppings.length > 0
-	        ? item.toppings
-	        : [""];
+    const itemToppings =
+      Array.isArray(item.toppings) && item.toppings.length > 0
+        ? item.toppings
+        : ["Plain"];
 	    const itemToppingOptions =
 	      Array.isArray(item.toppingOptions) && item.toppingOptions.length > 0
 	        ? item.toppingOptions
 	        : itemToppings.map((name) => ({ name, hasCost: false, cost: 0 }));
-	    const nextToppingCount = Math.min(Math.max(itemToppings.length, 1), 15);
+    const orderedToppingOptions = [
+      { name: "Plain", hasCost: false, cost: 0 },
+      ...itemToppingOptions.filter((option) => option?.name !== "Plain"),
+    ].slice(0, 15);
+	    const nextToppingCount = Math.min(Math.max(orderedToppingOptions.length, 1), 15);
 	    setHasToppings(item.hasToppings || false);
 	    setToppingCount(nextToppingCount);
-	    setToppings(itemToppings.slice(0, 15));
-	    setHasToppingCosts(itemToppingOptions.some((option) => option.hasCost));
+    setToppings(orderedToppingOptions.map((option) => option.name));
+	    setHasToppingCosts(orderedToppingOptions.some((option) => option.hasCost));
 	    setToppingCostEnabled(
-	      itemToppingOptions.slice(0, 15).map((option) => !!option.hasCost)
+	      orderedToppingOptions.map((option) => !!option.hasCost)
 	    );
 	    setToppingCosts(
-	      itemToppingOptions.slice(0, 15).map((option) => `${option.cost || 0}`)
+	      orderedToppingOptions.map((option) => `${option.cost || 0}`)
 	    );
 	    setToppingsPerOrder(
 	      Math.min(Math.max(item.toppingsPerOrder || 1, 1), nextToppingCount)
@@ -1068,14 +1075,14 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 		          .map((flavor, index) =>
 		            index === 0 ? "Plain" : toTitleCase(flavor)
 		          );
-	        payload.flavorOptions = payload.flavors.map((name, index) => ({
-	          name,
-	          hasCost: !!(hasFlavorCosts && flavorCostEnabled[index]),
-	          cost:
-	            hasFlavorCosts && flavorCostEnabled[index]
-	              ? parseFloat(flavorCosts[index] || "0") || 0
-	              : 0,
-	        }));
+		        payload.flavorOptions = payload.flavors.map((name, index) => ({
+		          name,
+		          hasCost: index > 0 && !!(hasFlavorCosts && flavorCostEnabled[index]),
+		          cost:
+		            index > 0 && hasFlavorCosts && flavorCostEnabled[index]
+		              ? parseFloat(flavorCosts[index] || "0") || 0
+		              : 0,
+		        }));
 	        payload.flavorsPerOrder = Math.min(flavorsPerOrder, flavorCount, 5);
 	      } else {
 	        payload.hasFlavors = false;
@@ -1088,15 +1095,17 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 	        payload.hasToppings = true;
 		        payload.toppings = toppings
 		          .slice(0, toppingCount)
-		          .map((topping) => toTitleCase(topping));
-	        payload.toppingOptions = payload.toppings.map((name, index) => ({
-	          name,
-	          hasCost: !!(hasToppingCosts && toppingCostEnabled[index]),
-	          cost:
-	            hasToppingCosts && toppingCostEnabled[index]
-	              ? parseFloat(toppingCosts[index] || "0") || 0
-	              : 0,
-	        }));
+	          .map((topping, index) =>
+	            index === 0 ? "Plain" : toTitleCase(topping)
+	          );
+		        payload.toppingOptions = payload.toppings.map((name, index) => ({
+		          name,
+		          hasCost: index > 0 && !!(hasToppingCosts && toppingCostEnabled[index]),
+		          cost:
+		            index > 0 && hasToppingCosts && toppingCostEnabled[index]
+		              ? parseFloat(toppingCosts[index] || "0") || 0
+		              : 0,
+		        }));
 	        payload.toppingsPerOrder = Math.min(toppingsPerOrder, toppingCount);
 	      } else {
 	        payload.hasToppings = false;
@@ -1656,7 +1665,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                                   </View>
                                   <View style={{ flex: 1 }}>
                                     <Text style={styles.inputLabel}>
-                                      {"Flavors per order"}
+                                      {"Max # of Flavors per Order"}
                                     </Text>
                                     <Dropdown
                                       data={flavorsPerOrderOptions.filter(
@@ -1707,7 +1716,10 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 	                                      <>
 	                                        <Switch
 	                                          color={AppColor.primary}
-	                                          value={!!flavorCostEnabled[index]}
+		                                          value={
+		                                            index > 0 && !!flavorCostEnabled[index]
+		                                          }
+		                                          disabled={index === 0}
 	                                          onValueChange={() =>
 	                                            handleOptionCostToggle(
 	                                              setFlavorCostEnabled,
@@ -1810,7 +1822,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 	                                </View>
 	                                <View style={{ flex: 1 }}>
 	                                  <Text style={styles.inputLabel}>
-	                                    {"Toppings per order"}
+		                                    {"Max # of Toppings per Order"}
 	                                  </Text>
 	                                  <Dropdown
 	                                    data={flavorCountOptions.filter(
@@ -1836,7 +1848,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 	                                <View key={`topping-${index}`} style={styles.optionCostRow}>
 	                                  <TextInput
 	                                    dense
-	                                    value={topping}
+		                                    value={index === 0 ? "Plain" : topping}
 	                                    onChangeText={(text) =>
 	                                      handleToppingNameChange(text, index)
 	                                    }
@@ -1847,7 +1859,8 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 	                                      AppColor.placeholderTextColor
 	                                    }
 	                                    mode="outlined"
-	                                    error={!!errors.toppings}
+		                                    disabled={index === 0}
+		                                    error={!!errors.toppings && index > 0}
 	                                    outlineColor={AppColor.border}
 	                                    activeOutlineColor={AppColor.primary}
 	                                    outlineStyle={{ borderRadius: 8 }}
@@ -1857,7 +1870,10 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 	                                    <>
 	                                      <Switch
 	                                        color={AppColor.primary}
-	                                        value={!!toppingCostEnabled[index]}
+		                                        value={
+		                                          index > 0 && !!toppingCostEnabled[index]
+		                                        }
+		                                        disabled={index === 0}
 	                                        onValueChange={() =>
 	                                          handleOptionCostToggle(
 	                                            setToppingCostEnabled,

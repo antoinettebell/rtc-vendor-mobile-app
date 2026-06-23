@@ -50,7 +50,7 @@ const REQUEST_STATUS_FILTERS = [
 const FILTER_LABELS = {
   location: "Location",
   employee: "Employee",
-  status: "Refund/Cancel Status",
+  status: "Refunds",
 };
 
 const EarningComponent = memo(({ title, amount, onPress }) => {
@@ -135,10 +135,16 @@ const EarningsScreen = ({ navigation }) => {
   const [vendorResponseNotes, setVendorResponseNotes] = useState("");
   const [reviewLoading, setReviewLoading] = useState(false);
   const [filterPicker, setFilterPicker] = useState(null);
+  const [activityExpanded, setActivityExpanded] = useState(false);
 
-  const canTapToPay = !!user?.foodTruck?.plan?.capabilities?.tapToPay;
+  const canTapToPay = false;
   const locations = user?.foodTruck?.locations || [];
   const employees = employeeAnalytics?.employees || [];
+  const workingEmployees = useMemo(
+    () => employees.filter((employee) => employee.is_working),
+    [employees]
+  );
+  const visibleEmployees = activityExpanded ? employees : workingEmployees;
 
   const paymentFilters = useMemo(
     () =>
@@ -643,10 +649,20 @@ const EarningsScreen = ({ navigation }) => {
                 </View>
 
                 <View style={styles.activityHeader}>
-                  <Text style={styles.subsectionTitle}>Activity</Text>
+                  <Text style={styles.subsectionTitle}>Employee Activity</Text>
+                  {employees.length ? (
+                    <Pressable
+                      style={styles.expandButton}
+                      onPress={() => setActivityExpanded((current) => !current)}
+                    >
+                      <Text style={styles.expandButtonText}>
+                        {activityExpanded ? "Show Working" : "Show All"}
+                      </Text>
+                    </Pressable>
+                  ) : null}
                 </View>
-                {employees.length ? (
-                  employees.map((employee) => {
+                {visibleEmployees.length ? (
+                  visibleEmployees.map((employee) => {
                     const metrics = employee.metrics || {};
                     const locationName =
                       employee.assigned_location?.title ||
@@ -731,10 +747,14 @@ const EarningsScreen = ({ navigation }) => {
                       color={AppColor.primary}
                     />
                     <Text style={styles.emptyActivityTitle}>
-                      No activity found
+                      {employees.length
+                        ? "No employees working"
+                        : "No activity found"}
                     </Text>
                     <Text style={styles.emptyActivityText}>
-                      Try changing the filters or selecting a wider date range.
+                      {employees.length
+                        ? "Tap Show All to view inactive employee activity."
+                        : "Try changing the filters or selecting a wider date range."}
                     </Text>
                   </View>
                 )}
@@ -908,7 +928,22 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   activityHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 16,
+  },
+  expandButton: {
+    borderColor: AppColor.primary,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  expandButtonText: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
+    fontSize: 12,
   },
   requestCard: {
     backgroundColor: AppColor.white,

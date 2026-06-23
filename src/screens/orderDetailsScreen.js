@@ -26,7 +26,6 @@ import { showSnackbar } from "../redux/slices/snackbarSlice";
 import {
   orderNextStatusNames,
   orderCurrentStatusNames,
-  PROFILE_AVATAR,
   orderStatusStrings,
   PaymentMethodNames,
   foodTypeStrings,
@@ -352,7 +351,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
       orderStatusStrings.rejected
     );
   const canRefundPosOrder =
-    orderData?.orderSource === "VENDOR_POS" &&
+    isVendorPosOrder(orderData) &&
     ["CASH", "TAP_TO_PAY"].includes(orderData?.paymentMethod) &&
     orderData?.paymentStatus !== "REFUNDED" &&
     [orderStatusStrings.preparing, orderStatusStrings.ready_for_pickup].includes(
@@ -374,6 +373,17 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     !!nextOrderStatus &&
     !orderIsTerminal &&
     (canShowLeftAction || canShowRightAction);
+  const customerName =
+    [orderData?.user?.firstName, orderData?.user?.lastName]
+      .filter(Boolean)
+      .join(" ") ||
+    orderData?.guestCustomer?.phone ||
+    "Walk-up Guest";
+  const hasCustomerProfileImage = !!orderData?.user?.profilePic;
+  const terminalStatusLabel =
+    orderData?.paymentStatus === "REFUNDED"
+      ? "Refunded"
+      : orderCurrentStatusNames[orderData?.orderStatus];
 
   return (
     <View style={styles.container}>
@@ -564,15 +574,19 @@ const OrderDetailsScreen = ({ navigation, route }) => {
             </View>
             <View style={styles.orderHeader}>
               <View style={styles.orderUserImageContainer}>
-                <AppImage
-                  uri={orderData?.user?.profilePic || PROFILE_AVATAR}
-                  containerStyle={styles.orderUserImage}
-                />
+                {hasCustomerProfileImage ? (
+                  <AppImage
+                    uri={orderData.user.profilePic}
+                    containerStyle={styles.orderUserImage}
+                  />
+                ) : (
+                  <View style={[styles.orderUserImage, styles.plateAvatar]}>
+                    <Text style={styles.plateAvatarText}>🍽️</Text>
+                  </View>
+                )}
               </View>
               <View style={styles.orderUserInfo}>
-                <Text
-                  style={styles.orderUserName}
-                >{`${orderData?.user?.firstName} ${orderData?.user?.lastName}`}</Text>
+                <Text style={styles.orderUserName}>{customerName}</Text>
                 <Text
                   style={styles.orderItemCount}
                 >{`${orderData?.items?.length} Items`}</Text>
@@ -1184,7 +1198,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
               <View style={{ marginVertical: 16 }}>
                 <View style={styles.orderStatusInfoView}>
                   <Text style={styles.orderStatusInfoText} numberOfLines={1}>
-                    {orderCurrentStatusNames[orderData?.orderStatus]}
+                    {terminalStatusLabel}
                   </Text>
                 </View>
               </View>
@@ -1302,6 +1316,14 @@ const styles = StyleSheet.create({
     height: 48,
     width: 48,
     borderRadius: 24,
+  },
+  plateAvatar: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF5EE",
+  },
+  plateAvatarText: {
+    fontSize: 24,
   },
   orderUserInfo: {
     flex: 1,

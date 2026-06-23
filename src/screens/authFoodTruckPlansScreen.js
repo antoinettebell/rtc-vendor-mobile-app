@@ -27,6 +27,7 @@ import { showSnackbar } from "../redux/slices/snackbarSlice";
 import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlice";
 
 const EVENT_MARKETPLACE_PATTERN = /event|booking|marketplace/i;
+const EVENT_MARKETPLACE_ENABLED = false;
 
 const isEventMarketplaceAddOn = (addOn) =>
   EVENT_MARKETPLACE_PATTERN.test(
@@ -68,14 +69,19 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
   const isEliteSelected = isElitePlan(selectedPlanObject);
   const visibleAddOns = useMemo(
     () =>
-      isEliteSelected
-        ? addOnsData.filter((addOn) => !isEventMarketplaceAddOn(addOn))
-        : addOnsData,
-    [addOnsData, isEliteSelected],
+      EVENT_MARKETPLACE_ENABLED
+        ? addOnsData
+        : addOnsData.filter((addOn) => !isEventMarketplaceAddOn(addOn)),
+    [addOnsData],
   );
   const getSubmittedAddOns = () => {
-    if (!isEliteSelected) {
-      return selectedAddOns;
+    if (EVENT_MARKETPLACE_ENABLED) {
+      return isEliteSelected
+        ? selectedAddOns.filter((id) => {
+            const addOn = addOnsData.find((item) => item._id === id);
+            return !isEventMarketplaceAddOn(addOn);
+          })
+        : selectedAddOns;
     }
 
     return selectedAddOns.filter((id) => {
@@ -139,7 +145,7 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
 
   const handleAddOnSelection = (id) => {
     const addOn = addOnsData.find((item) => item._id === id);
-    if (isEliteSelected && isEventMarketplaceAddOn(addOn)) {
+    if (!EVENT_MARKETPLACE_ENABLED && isEventMarketplaceAddOn(addOn)) {
       return;
     }
 
@@ -154,13 +160,6 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
 
   const getBenefitLabel = (plan, benefit) => {
     const benefitText = String(benefit || "");
-    if (
-      plan?.slug === "SUB_ELITE" &&
-      /event|marketplace|booking/i.test(benefitText)
-    ) {
-      return "Event Marketplace Access included";
-    }
-
     return benefitText.replace(/\s*\(coming soon\)$/i, "");
   };
 
@@ -302,7 +301,13 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
         {/* Benefits List */}
         {isExpanded && (
           <View style={{ marginTop: 8 }}>
-            {item.details.map((benefit, idx) => {
+            {item.details
+              .filter(
+                (benefit) =>
+                  EVENT_MARKETPLACE_ENABLED ||
+                  !EVENT_MARKETPLACE_PATTERN.test(String(benefit || "")),
+              )
+              .map((benefit, idx) => {
               const unavailable = isUnavailableBenefit(benefit);
               return (
                 <View
@@ -461,7 +466,7 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
                 />
               </View>
 
-              {isEliteSelected ? (
+              {EVENT_MARKETPLACE_ENABLED && isEliteSelected ? (
                 <View style={styles.includedAccessCard}>
                   <Ionicons
                     name="checkmark-circle"
@@ -487,7 +492,7 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
                     <Text style={styles.sectionSubtitle}>
                       {isEliteSelected
                         ? "Optional add-ons for your current plan."
-                        : "Event Bookings enables Event Marketplace access for Basic and Platinum vendors."}
+                        : "Optional add-ons for your current plan."}
                     </Text>
                   </View>
 

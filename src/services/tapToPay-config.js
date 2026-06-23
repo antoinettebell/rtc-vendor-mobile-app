@@ -1,5 +1,4 @@
 import Config from "react-native-config";
-import { Platform } from "react-native";
 
 const normalizeBoolean = (value, defaultValue = false) => {
   if (value === undefined || value === null || value === "") {
@@ -9,7 +8,7 @@ const normalizeBoolean = (value, defaultValue = false) => {
   return String(value).toLowerCase() === "true";
 };
 
-const defaultTapToPayEnabled = Platform.OS === "ios";
+const defaultTapToPayEnabled = false;
 const defaultAppleTeamId = "5G26GFF98P";
 
 const tapToPayConfig = {

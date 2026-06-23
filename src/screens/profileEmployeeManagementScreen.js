@@ -42,6 +42,9 @@ const getGeneratedLoginPreview = ({ first_name, last_name, zip_code }) => {
   return value || "Generated after save";
 };
 
+const normalizePin = (value) => value.replace(/\D/g, "").slice(0, 4);
+const isFourDigitPin = (value) => /^\d{4}$/.test(value);
+
 const ProfileEmployeeManagementScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const user = useSelector((state) => state.userReducer.user);
@@ -137,8 +140,8 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
       return false;
     }
 
-    if (!form.pin.trim()) {
-      Alert.alert("PIN required", "Set an employee PIN.");
+    if (!isFourDigitPin(form.pin)) {
+      Alert.alert("PIN required", "Set a 4 digit employee PIN.");
       return false;
     }
 
@@ -156,7 +159,8 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
       });
       if (response?.success) {
         setForm(initialForm);
-        fetchEmployees();
+        await fetchEmployees();
+        Alert.alert("Employee saved", "The employee was added to Current Employees.");
       }
     } catch (error) {
       Alert.alert("Could not create employee", error?.message || "Please try again.");
@@ -243,8 +247,8 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
   };
 
   const resetEmployeePin = async (employee) => {
-    if (!resetPin.trim()) {
-      Alert.alert("PIN required", "Enter a new PIN.");
+    if (!isFourDigitPin(resetPin)) {
+      Alert.alert("PIN required", "Enter a 4 digit PIN.");
       return;
     }
 
@@ -394,9 +398,10 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
             <Text style={styles.label}>PIN</Text>
             <TextInput
               value={form.pin}
-              onChangeText={(text) => setFormValue("pin", text)}
+              onChangeText={(text) => setFormValue("pin", normalizePin(text))}
               secureTextEntry
               keyboardType="number-pad"
+              maxLength={4}
               style={styles.input}
             />
 
@@ -622,9 +627,10 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
                   <Text style={styles.label}>New PIN</Text>
                   <TextInput
                     value={resetPin}
-                    onChangeText={setResetPin}
+                    onChangeText={(text) => setResetPin(normalizePin(text))}
                     secureTextEntry
                     keyboardType="number-pad"
+                    maxLength={4}
                     style={styles.input}
                   />
                   <View style={styles.buttonRow}>

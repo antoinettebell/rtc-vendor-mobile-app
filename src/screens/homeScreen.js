@@ -93,6 +93,8 @@ const HomeScreen = ({ navigation }) => {
   const [locationTimeAdvanceData, setLocationTimeAdvanceData] = useState(null);
 
   const isOn = useSharedValue(false);
+  const isEmployeeSession =
+    user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
   const activeTruckUnits = useMemo(() => {
     const units = (user?.foodTruck?.truck_units || []).filter(
       (unit) => !unit.is_archived
@@ -143,6 +145,22 @@ const HomeScreen = ({ navigation }) => {
           loc.isOrderingOpen
       ),
     [selectedLocation, selectedTruck]
+  );
+  const getTruckOpenLocationId = useCallback((truck) => {
+    const openLocation = (truck?.open_locations || []).find(
+      (loc) => loc.isOrderingOpen
+    );
+    return openLocation?.locationId || null;
+  }, []);
+
+  const getTruckDefaultLocationId = useCallback(
+    (truck) =>
+      getTruckOpenLocationId(truck) ||
+      selectedLocation ||
+      user?.foodTruck?.currentLocation ||
+      (user?.foodTruck?.locations || [])[0]?._id ||
+      null,
+    [getTruckOpenLocationId, selectedLocation, user?.foodTruck]
   );
 
   // Location Switch
@@ -240,7 +258,12 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handleTruckUnitChange = (selected) => {
+    const nextTruck =
+      activeTruckUnits.find(
+        (unit) => unit.value?.toString() === selected?.value?.toString()
+      ) || activeTruckUnits[0];
     setSelectedTruckUnit(selected?.value || null);
+    setSelectedLocation(getTruckDefaultLocationId(nextTruck));
   };
 
   // Handle "accept" press
@@ -414,9 +437,7 @@ const HomeScreen = ({ navigation }) => {
       activeTruckUnits.find(
         (unit) => unit.value?.toString() === selectedTruckUnit?.toString()
       ) || activeTruckUnits[0];
-    const openLocation = (activeUnit?.open_locations || []).find(
-      (loc) => loc.isOrderingOpen
-    );
+    const openLocationId = getTruckOpenLocationId(activeUnit);
 
     if (
       activeUnit &&
@@ -430,9 +451,9 @@ const HomeScreen = ({ navigation }) => {
         (location) => location._id?.toString() === current?.toString()
       );
       if (stillExists) return current;
-      return openLocation?.locationId || user?.foodTruck?.currentLocation || null;
+      return openLocationId || user?.foodTruck?.currentLocation || null;
     });
-  }, [user?.foodTruck, activeTruckUnits]);
+  }, [user?.foodTruck, activeTruckUnits, getTruckOpenLocationId]);
 
   useEffect(() => {
     const pairOpen = isSelectedPairOpen();
@@ -545,11 +566,11 @@ const HomeScreen = ({ navigation }) => {
                   placeholderStyle={styles.dropdownPlaceholder}
                   itemTextStyle={styles.dropdownItemText}
                   selectedTextStyle={styles.dropdownSelectedText}
-                  disable={isOpen}
+                  disable={isEmployeeSession && isOpen}
                 />
                 <Pressable
                   onPress={() => {
-                    if (isOpen) {
+                    if (isEmployeeSession && isOpen) {
                       Alert.alert(
                         "Cannot Change Location",
                         "Please close the food truck first to change location"
@@ -558,7 +579,7 @@ const HomeScreen = ({ navigation }) => {
                   }}
                   style={[
                     styles.dropdownOverlay,
-                    { display: isOpen ? "flex" : "none" },
+                    { display: isEmployeeSession && isOpen ? "flex" : "none" },
                   ]}
                 />
               </View>
