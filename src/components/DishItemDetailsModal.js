@@ -1485,6 +1485,33 @@ const DishItemDetailsModal = ({
               </View>
             )}
 
+            {selectedMenuItem?.allowCustomize && (
+              <View style={styles.actionSheetSection}>
+                <Text style={styles.sectionTitle}>
+                  Primary Item Customizations
+                </Text>
+                <TextInput
+                  dense
+                  value={customizationInput}
+                  onChangeText={setCustomizationInput}
+                  style={{ backgroundColor: AppColor.white, marginTop: 8 }}
+                  contentStyle={{
+                    minHeight: 100,
+                    fontFamily: Mulish400,
+                    fontSize: 15,
+                  }}
+                  placeholder="Enter special instructions"
+                  placeholderTextColor={AppColor.textPlaceholder}
+                  mode="outlined"
+                  multiline={true}
+                  outlineColor={AppColor.border}
+                  activeOutlineColor={AppColor.primary}
+                  outlineStyle={{ borderRadius: 8 }}
+                  autoCapitalize="sentences"
+                />
+              </View>
+            )}
+
             {hasDiscountFlavorChoices && (
               <View style={styles.actionSheetSection}>
                 <Text style={styles.sectionTitle}>
@@ -1629,38 +1656,12 @@ const DishItemDetailsModal = ({
             {hasDiscountCustomization && (
               <View style={styles.actionSheetSection}>
                 <Text style={styles.sectionTitle}>
-                  Discount item customization:
+                  Discount Item Customization
                 </Text>
                 <TextInput
                   dense
                   value={selectedDiscountCustomizationInput}
                   onChangeText={setSelectedDiscountCustomizationInput}
-                  style={{ backgroundColor: AppColor.white, marginTop: 8 }}
-                  contentStyle={{
-                    minHeight: 100,
-                    fontFamily: Mulish400,
-                    fontSize: 15,
-                  }}
-                  placeholder="Enter special instructions"
-                  placeholderTextColor={AppColor.textPlaceholder}
-                  mode="outlined"
-                  multiline={true}
-                  outlineColor={AppColor.border}
-                  activeOutlineColor={AppColor.primary}
-                  outlineStyle={{ borderRadius: 8 }}
-                  autoCapitalize="sentences"
-                />
-              </View>
-            )}
-
-            {/* Customization Button */}
-            {selectedMenuItem?.allowCustomize && (
-              <View style={styles.actionSheetSection}>
-                <Text style={styles.sectionTitle}>Customization:</Text>
-                <TextInput
-                  dense
-                  value={customizationInput}
-                  onChangeText={setCustomizationInput}
                   style={{ backgroundColor: AppColor.white, marginTop: 8 }}
                   contentStyle={{
                     minHeight: 100,
