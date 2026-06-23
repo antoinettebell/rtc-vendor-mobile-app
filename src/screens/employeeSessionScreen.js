@@ -177,15 +177,27 @@ const EmployeeSessionScreen = ({ navigation }) => {
     }
   };
 
-  const handlePrintOrder = async (order) => {
-    try {
-      await printOrderTickets([order]);
-    } catch (error) {
-      Alert.alert(
-        "Print unavailable",
-        error?.message || "Could not print receipt.",
-      );
-    }
+  const handlePrintOrder = (order) => {
+    Alert.alert(
+      "Print order?",
+      `Open printer options for order #${order?.orderNumber || order?._id}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Print",
+          onPress: async () => {
+            try {
+              await printOrderTickets([order]);
+            } catch (error) {
+              Alert.alert(
+                "Print unavailable",
+                error?.message || "Could not print receipt.",
+              );
+            }
+          },
+        },
+      ],
+    );
   };
 
   const getOrderRequest = useCallback(
