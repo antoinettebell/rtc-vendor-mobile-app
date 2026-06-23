@@ -121,6 +121,35 @@ const getOptions = (item, type) => {
     .filter((option) => option.name);
 };
 
+const getSelectionError = ({
+  item,
+  selectedFlavors = [],
+  selectedToppings = [],
+  selectedDiscountFlavors = [],
+  selectedDiscountToppings = [],
+}) => {
+  if (item?.hasFlavors && selectedFlavors.length < 1) {
+    return `Select at least 1 flavor for ${item.name}.`;
+  }
+
+  if (item?.hasToppings && selectedToppings.length < 1) {
+    return `Select at least 1 topping for ${item.name}.`;
+  }
+
+  const hasDiscountSelections = ["BOGO", "BOGOHO"].includes(item?.discountType);
+  if (hasDiscountSelections && item?.hasFlavors && selectedDiscountFlavors.length < 1) {
+    return `Select at least 1 discount item flavor for ${item.name}.`;
+  }
+
+  if (hasDiscountSelections && item?.hasToppings && selectedDiscountToppings.length < 1) {
+    return `Select at least 1 discount item topping for ${item.name}.`;
+  }
+
+  return null;
+};
+
+const hasRequiredOptions = (item) => !!item?.hasFlavors || !!item?.hasToppings;
+
 const getItemCategory = (item) =>
   item?.category?.name ||
   item?.categoryId?.name ||
@@ -365,6 +394,25 @@ const EmployeePosBoardScreen = ({ navigation }) => {
     );
   };
 
+  const addOrConfigureItem = (item) => {
+    const existing = cartItemById[item._id];
+    if (
+      hasRequiredOptions(item) &&
+      getSelectionError({
+        item,
+        selectedFlavors: existing?.selectedFlavors || [],
+        selectedToppings: existing?.selectedToppings || [],
+        selectedDiscountFlavors: existing?.selectedDiscountFlavors || [],
+        selectedDiscountToppings: existing?.selectedDiscountToppings || [],
+      })
+    ) {
+      openOptions(item);
+      return;
+    }
+
+    addItem(item);
+  };
+
   const openOptions = (item) => {
     const existing = cartItemById[item._id] || item;
     setSelectedItem(item);
@@ -412,6 +460,19 @@ const EmployeePosBoardScreen = ({ navigation }) => {
 
   const saveOptions = () => {
     if (!selectedItem) return;
+    const selectionError = getSelectionError({
+      item: selectedItem,
+      selectedFlavors,
+      selectedToppings,
+      selectedDiscountFlavors,
+      selectedDiscountToppings,
+    });
+
+    if (selectionError) {
+      Alert.alert("Required selection", selectionError);
+      return;
+    }
+
     if (!cartItemById[selectedItem._id]) {
       addItem(selectedItem);
     }
@@ -439,6 +500,31 @@ const EmployeePosBoardScreen = ({ navigation }) => {
       Alert.alert("Empty cart", "Add at least one item.");
       return;
     }
+    const invalidItem = order.items.find((item) =>
+      getSelectionError({
+        item,
+        selectedFlavors: item.selectedFlavors || [],
+        selectedToppings: item.selectedToppings || [],
+        selectedDiscountFlavors: item.selectedDiscountFlavors || [],
+        selectedDiscountToppings: item.selectedDiscountToppings || [],
+      })
+    );
+
+    if (invalidItem) {
+      Alert.alert(
+        "Required selection",
+        getSelectionError({
+          item: invalidItem,
+          selectedFlavors: invalidItem.selectedFlavors || [],
+          selectedToppings: invalidItem.selectedToppings || [],
+          selectedDiscountFlavors: invalidItem.selectedDiscountFlavors || [],
+          selectedDiscountToppings: invalidItem.selectedDiscountToppings || [],
+        })
+      );
+      openOptions(invalidItem);
+      return;
+    }
+
     if (!assignedLocation?._id) {
       Alert.alert(
         "Location required",
@@ -609,7 +695,7 @@ const EmployeePosBoardScreen = ({ navigation }) => {
               !item.available && styles.quantityDisabled,
             ]}
             disabled={!item.available}
-            onPress={() => addItem(item)}
+            onPress={() => addOrConfigureItem(item)}
           >
             <Text style={styles.quantityButtonText}>+</Text>
           </TouchableOpacity>

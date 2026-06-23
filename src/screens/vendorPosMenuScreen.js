@@ -50,6 +50,25 @@ const getOptions = (item, type) => {
     .filter((option) => option.name);
 };
 
+const getSelectionError = ({
+  item,
+  selectedFlavors = [],
+  selectedToppings = [],
+  prefix = "",
+}) => {
+  if (item?.hasFlavors && selectedFlavors.length < 1) {
+    return `Select at least 1 flavor for ${prefix}${item.name}.`;
+  }
+
+  if (item?.hasToppings && selectedToppings.length < 1) {
+    return `Select at least 1 topping for ${prefix}${item.name}.`;
+  }
+
+  return null;
+};
+
+const hasRequiredOptions = (item) => !!item?.hasFlavors || !!item?.hasToppings;
+
 const VendorPosMenuScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -128,6 +147,23 @@ const VendorPosMenuScreen = ({ navigation }) => {
     );
   };
 
+  const addOrConfigureItem = (item) => {
+    const existing = cartItemById[item._id];
+    if (
+      hasRequiredOptions(item) &&
+      getSelectionError({
+        item,
+        selectedFlavors: existing?.selectedFlavors || [],
+        selectedToppings: existing?.selectedToppings || [],
+      })
+    ) {
+      openOptions(item);
+      return;
+    }
+
+    addItem(item);
+  };
+
   const openOptions = (item) => {
     const existing = cartItemById[item._id];
     setSelectedItem(item);
@@ -152,6 +188,17 @@ const VendorPosMenuScreen = ({ navigation }) => {
 
   const saveOptions = () => {
     if (!selectedItem) {
+      return;
+    }
+
+    const selectionError = getSelectionError({
+      item: selectedItem,
+      selectedFlavors,
+      selectedToppings,
+    });
+
+    if (selectionError) {
+      Alert.alert("Required selection", selectionError);
       return;
     }
 
@@ -187,6 +234,27 @@ const VendorPosMenuScreen = ({ navigation }) => {
   const goToCheckout = () => {
     if (order.items.length === 0) {
       Alert.alert("Empty cart", "Add at least one item.");
+      return;
+    }
+
+    const invalidItem = order.items.find((item) =>
+      getSelectionError({
+        item,
+        selectedFlavors: item.selectedFlavors || [],
+        selectedToppings: item.selectedToppings || [],
+      })
+    );
+
+    if (invalidItem) {
+      Alert.alert(
+        "Required selection",
+        getSelectionError({
+          item: invalidItem,
+          selectedFlavors: invalidItem.selectedFlavors || [],
+          selectedToppings: invalidItem.selectedToppings || [],
+        })
+      );
+      openOptions(invalidItem);
       return;
     }
 
@@ -261,7 +329,7 @@ const VendorPosMenuScreen = ({ navigation }) => {
           <Text style={styles.quantityText}>{quantity}</Text>
           <TouchableOpacity
             style={styles.quantityButton}
-            onPress={() => addItem(item)}
+            onPress={() => addOrConfigureItem(item)}
           >
             <Text style={styles.quantityButtonText}>+</Text>
           </TouchableOpacity>

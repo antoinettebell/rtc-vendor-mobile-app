@@ -182,6 +182,8 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
       }
 
       setLoading(true);
+      setCashOrder(null);
+      setTapOrder(null);
       try {
         const taxResponse = await checkPosTax_API({
           foodTruck_id: basePayload.foodTruckId,
@@ -222,6 +224,8 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
           setTapOrder(null);
         }
       } catch (error) {
+        setCashOrder(null);
+        setTapOrder(null);
         Alert.alert(
           "Checkout unavailable",
           error?.message || "Could not validate order.",
@@ -273,6 +277,14 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
   };
 
   const handleCash = async () => {
+    if (!cashOrder) {
+      Alert.alert(
+        "Checkout unavailable",
+        "Please resolve the required order selections before checkout.",
+      );
+      return;
+    }
+
     Alert.alert(
       "Confirm cash collected",
       "Mark this walk-up order as paid by cash?",
@@ -532,9 +544,13 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
           ) : null}
 
           <TouchableOpacity
-            style={[styles.paymentButton, styles.cashPaymentButton]}
+            style={[
+              styles.paymentButton,
+              styles.cashPaymentButton,
+              (!cashOrder || !!paymentLoading) && styles.paymentButtonDisabled,
+            ]}
             onPress={handleCash}
-            disabled={!!paymentLoading}
+            disabled={!cashOrder || !!paymentLoading}
           >
             <Text style={[styles.paymentButtonText, styles.cashPaymentButtonText]}>
               {paymentLoading === "cash"
