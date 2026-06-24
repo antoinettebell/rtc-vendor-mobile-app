@@ -548,7 +548,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
                 style={styles.primaryButton}
                 onPress={() => navigation.navigate("employeePosBoardScreen")}
               >
-                <Text style={styles.primaryButtonText}>Open POS</Text>
+                <Text style={styles.primaryButtonText}>Walk-up Orders</Text>
               </TouchableOpacity>
             </View>
 

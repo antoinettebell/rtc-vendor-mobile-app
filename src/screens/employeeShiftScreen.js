@@ -72,6 +72,18 @@ const EmployeeShiftScreen = ({ navigation }) => {
       : foodTruck?.currentLocation?.toString() ===
           assignedLocation?._id?.toString() ||
         !!assignedLocation?.isOrderingOpen;
+  const hasShiftAssignment = !!assignedLocation?._id && !!assignedTruckUnit?.name;
+  const dutyDisabled = dutyLoading || !hasShiftAssignment;
+  const locationToggleDisabled =
+    locationLoading || !hasShiftAssignment || !isOnDuty;
+
+  const handleBack = useCallback(() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate("employeeSessionScreen");
+  }, [navigation]);
 
   const loadDashboard = useCallback(async () => {
     const response = await getEmployeeDashboard_API();
@@ -118,6 +130,14 @@ const EmployeeShiftScreen = ({ navigation }) => {
   };
 
   const handleToggleDuty = async () => {
+    if (!hasShiftAssignment) {
+      Alert.alert(
+        "Assignment required",
+        "This employee must be assigned to a truck and location before going on duty.",
+      );
+      return;
+    }
+
     setDutyLoading(true);
     try {
       const response = await toggleEmployeeDuty_API({ is_working: !isOnDuty });
@@ -134,6 +154,17 @@ const EmployeeShiftScreen = ({ navigation }) => {
   };
 
   const handleToggleLocation = async () => {
+    if (!hasShiftAssignment) {
+      Alert.alert(
+        "Assignment required",
+        "This employee must be assigned to a truck and location before opening the store.",
+      );
+      return;
+    }
+    if (!isOnDuty) {
+      Alert.alert("Off duty", "Go on duty before opening or closing the store.");
+      return;
+    }
     if (!foodTruck?._id || !assignedLocation?._id) return;
     setLocationLoading(true);
     try {
@@ -186,7 +217,7 @@ const EmployeeShiftScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <MaterialCommunityIcons name="arrow-left" size={22} color={AppColor.black} />
         </TouchableOpacity>
         <View style={styles.headerTextBlock}>
@@ -211,12 +242,16 @@ const EmployeeShiftScreen = ({ navigation }) => {
             <View>
               <Text style={styles.panelTitle}>On/Off Duty</Text>
               <Text style={styles.caption}>
-                {isOnDuty ? "Available to work" : "Not available for shifts"}
+                {!hasShiftAssignment
+                  ? "Truck and location assignment required"
+                  : isOnDuty
+                    ? "Available to work"
+                    : "Not available for shifts"}
               </Text>
             </View>
             <Switch
               value={isOnDuty}
-              disabled={dutyLoading}
+              disabled={dutyDisabled}
               onValueChange={handleToggleDuty}
               trackColor={{ false: AppColor.border, true: AppColor.primary }}
             />
@@ -228,7 +263,11 @@ const EmployeeShiftScreen = ({ navigation }) => {
             <View>
               <Text style={styles.panelTitle}>Open/Close Store</Text>
               <Text style={styles.caption}>
-                {assignedTruckUnit?.name
+                {!hasShiftAssignment
+                  ? "Truck and location assignment required"
+                  : !isOnDuty
+                    ? "Go on duty before changing store status"
+                    : assignedTruckUnit?.name
                   ? `${assignedTruckUnit.name} is ${locationIsOpen ? "open" : "closed"}`
                   : locationIsOpen
                     ? "Store is open"
@@ -237,7 +276,7 @@ const EmployeeShiftScreen = ({ navigation }) => {
             </View>
             <Switch
               value={locationIsOpen}
-              disabled={locationLoading}
+              disabled={locationToggleDisabled}
               onValueChange={handleToggleLocation}
               trackColor={{ false: AppColor.border, true: AppColor.primary }}
             />

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import FastImage from "@d11/react-native-fast-image";
 import { AppColor } from "../utils/theme";
@@ -16,8 +16,13 @@ const AppImage = ({
   cache = FastImage.cacheControl.immutable,
   ...props
 }) => {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!!uri);
   const [error, setError] = useState(false);
+
+  useEffect(() => {
+    setError(false);
+    setLoading(!!uri);
+  }, [uri]);
 
   return (
     <View
@@ -27,7 +32,7 @@ const AppImage = ({
         (error || !uri) && { justifyContent: "center", alignItems: "center" },
       ]}
     >
-      {loading && (
+      {loading && !!uri && (
         <ActivityIndicator
           size="small"
           color={AppColor.primary}
@@ -47,7 +52,7 @@ const AppImage = ({
             : { uri, priority, cache }
         }
         resizeMode={resizeMode}
-        onLoadStart={() => setLoading(true)}
+        onLoadStart={() => setLoading(!!uri)}
         onLoadEnd={() => setLoading(false)}
         onError={() => {
           setLoading(false);

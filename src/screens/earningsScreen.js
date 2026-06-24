@@ -844,6 +844,21 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                       <Text style={styles.subsectionTitle}>Employee Activity</Text>
                       <View style={styles.headerActions}>
                         <Pressable
+                          style={styles.manageEmployeesIconButton}
+                          onPress={() =>
+                            navigation.navigate("profileEmployeeManagementScreen", {
+                              mode: "manage",
+                            })
+                          }
+                          accessibilityLabel="Manage all employees"
+                        >
+                          <FontAwesome6
+                            name="users-gear"
+                            size={14}
+                            color={AppColor.primary}
+                          />
+                        </Pressable>
+                        <Pressable
                           style={styles.addEmployeeButton}
                           onPress={() =>
                             navigation.navigate("profileEmployeeManagementScreen", {
@@ -1211,6 +1226,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: AppColor.primary,
     borderRadius: 16,
+    height: 32,
+    justifyContent: "center",
+    width: 32,
+  },
+  manageEmployeesIconButton: {
+    alignItems: "center",
+    backgroundColor: "#FFF5EE",
+    borderColor: AppColor.primary,
+    borderRadius: 16,
+    borderWidth: 1,
     height: 32,
     justifyContent: "center",
     width: 32,

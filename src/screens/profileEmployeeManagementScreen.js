@@ -421,12 +421,22 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
         />
         <Text style={styles.headerTitle}>Employees</Text>
         <IconButton
-          icon={managementMode === "create" ? "account-group" : "plus"}
+          icon={managementMode === "create" ? "account-multiple" : "plus"}
           iconColor={AppColor.primary}
-          onPress={() =>
-            setManagementMode((current) =>
-              current === "create" ? "manage" : "create"
-            )
+          onPress={() => {
+            if (managementMode === "create") {
+              setManagementMode("manage");
+              setActiveTab("current");
+              setExpandedEmployeeId(null);
+              return;
+            }
+            setManagementMode("create");
+            setActiveTab("current");
+          }}
+          accessibilityLabel={
+            managementMode === "create"
+              ? "Manage all employees"
+              : "Add employee"
           }
         />
       </View>

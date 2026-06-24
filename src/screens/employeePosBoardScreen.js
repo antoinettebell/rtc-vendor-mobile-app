@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import AppImage from "../components/AppImage";
@@ -207,6 +208,7 @@ const getNextStatusLabel = (status) => {
 };
 
 const EmployeePosBoardScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const user = useSelector((state) => state.userReducer.user);
   const order = useSelector((state) => state.posOrderReducer.currentOrder);
@@ -246,6 +248,14 @@ const EmployeePosBoardScreen = ({ navigation }) => {
   const displayedLocation = dashboard?.assignedLocation || assignedLocation;
   const employeeName =
     [user?.first_name, user?.last_name].filter(Boolean).join(" ") || "Employee";
+
+  const handleBack = useCallback(() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate("employeeSessionScreen");
+  }, [navigation]);
 
   const categories = useMemo(() => {
     const names = Array.from(new Set(items.map(getItemCategory))).sort();
@@ -377,10 +387,10 @@ const EmployeePosBoardScreen = ({ navigation }) => {
       Alert.alert(
         "POS unavailable",
         "This vendor plan does not include employee walk-up POS.",
-        [{ text: "OK", onPress: () => navigation.goBack() }],
+        [{ text: "OK", onPress: handleBack }],
       );
     }
-  }, [canUsePos, navigation]);
+  }, [canUsePos, handleBack]);
 
   const handleSignOut = async () => {
     try {
@@ -1127,7 +1137,7 @@ const EmployeePosBoardScreen = ({ navigation }) => {
       </Modal>
 
         <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <MaterialCommunityIcons
             name="arrow-left"
             size={22}
