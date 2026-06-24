@@ -811,16 +811,33 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                   <>
                     <View style={styles.activityHeader}>
                       <Text style={styles.subsectionTitle}>Employee Activity</Text>
-                      {employees.length ? (
+                      <View style={styles.headerActions}>
                         <Pressable
-                          style={styles.expandButton}
-                          onPress={() => setActivityExpanded((current) => !current)}
+                          style={styles.addEmployeeButton}
+                          onPress={() =>
+                            navigation.navigate("profileEmployeeManagementScreen")
+                          }
+                          accessibilityLabel="Add employee"
                         >
-                          <Text style={styles.expandButtonText}>
-                            {activityExpanded ? "Working Only" : "View All"}
-                          </Text>
+                          <FontAwesome6
+                            name="plus"
+                            size={14}
+                            color={AppColor.white}
+                          />
                         </Pressable>
-                      ) : null}
+                        {employees.length ? (
+                          <Pressable
+                            style={styles.expandButton}
+                            onPress={() =>
+                              setActivityExpanded((current) => !current)
+                            }
+                          >
+                            <Text style={styles.expandButtonText}>
+                              {activityExpanded ? "Working Only" : "View All"}
+                            </Text>
+                          </Pressable>
+                        ) : null}
+                      </View>
                     </View>
                     {visibleEmployees.length ? (
                       visibleEmployees.map((employee) => {
@@ -902,6 +919,16 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                                 {formatDateTime(employee.last_activity_at)}
                               </Text>
                             </View>
+                            <Pressable
+                              style={styles.manageButton}
+                              onPress={() =>
+                                navigation.navigate(
+                                  "profileEmployeeManagementScreen"
+                                )
+                              }
+                            >
+                              <Text style={styles.manageButtonText}>Manage</Text>
+                            </Pressable>
                           </View>
                         );
                       })
@@ -1163,6 +1190,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 16,
   },
+  headerActions: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  addEmployeeButton: {
+    alignItems: "center",
+    backgroundColor: AppColor.primary,
+    borderRadius: 16,
+    height: 32,
+    justifyContent: "center",
+    width: 32,
+  },
   expandButton: {
     borderColor: AppColor.primary,
     borderRadius: 16,
@@ -1416,6 +1456,22 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 10,
     paddingTop: 10,
+  },
+  manageButton: {
+    alignItems: "center",
+    alignSelf: "flex-end",
+    borderColor: AppColor.primary,
+    borderRadius: 14,
+    borderWidth: 1,
+    justifyContent: "center",
+    marginTop: 12,
+    minHeight: 32,
+    paddingHorizontal: 14,
+  },
+  manageButtonText: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
+    fontSize: 12,
   },
   metaLabel: {
     color: AppColor.textHighlighter,
