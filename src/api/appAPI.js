@@ -76,6 +76,7 @@ import {
   RESET_VENDOR_EMPLOYEE_PIN,
   VENDOR_EMPLOYEE,
   VENDOR_EMPLOYEE_BY_ID,
+  VENDOR_EMPLOYEE_SHIFT_HISTORY,
 } from "./apiEndPoint";
 
 /**
@@ -1132,7 +1133,16 @@ export const getVendorEmployees_API = async ({
   archivedOnly = false,
 } = {}) => {
   try {
-    const URL = `${VENDOR_EMPLOYEE}?includeArchived=${includeArchived}&archivedOnly=${archivedOnly}`;
+    const params = [];
+    if (includeArchived) {
+      params.push("includeArchived=true");
+    }
+    if (archivedOnly) {
+      params.push("archivedOnly=true");
+    }
+    const URL = params.length
+      ? `${VENDOR_EMPLOYEE}?${params.join("&")}`
+      : VENDOR_EMPLOYEE;
     const response = await apiClient.get(URL, { skipToken: false });
     return response?.data;
   } catch (error) {
@@ -1201,6 +1211,21 @@ export const deleteVendorEmployee_API = async (employee_id) => {
       {
         skipToken: false,
       },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const getVendorEmployeeShiftHistory_API = async ({
+  employee_id,
+  range = "week",
+}) => {
+  try {
+    const response = await apiClient.get(
+      `${VENDOR_EMPLOYEE_SHIFT_HISTORY(employee_id)}?range=${range}`,
+      { skipToken: false },
     );
     return response?.data;
   } catch (error) {

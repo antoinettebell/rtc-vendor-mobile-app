@@ -116,6 +116,38 @@ const formatDateTime = (value) => {
   });
 };
 
+const formatShiftDateTime = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toLocaleString([], {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+};
+
+const getEmployeeShiftStatusText = (employee) => {
+  if (employee?.is_archived) {
+    return "Archived";
+  }
+
+  if (employee?.is_working || employee?.shift?.is_active) {
+    const startedAt = formatShiftDateTime(employee?.shift?.started_at);
+    return startedAt ? `Started ${startedAt}` : "Working";
+  }
+
+  const endedAt = formatShiftDateTime(employee?.shift?.ended_at);
+  return endedAt ? `Ended ${endedAt}` : "Off";
+};
+
 const getDateRange = (dateFilter) => {
   const period =
     dateFilter === "month" ? "month" : dateFilter === "week" ? "week" : "day";
@@ -147,7 +179,6 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
   const [vendorResponseNotes, setVendorResponseNotes] = useState("");
   const [reviewLoading, setReviewLoading] = useState(false);
   const [filterPicker, setFilterPicker] = useState(null);
-  const [activityExpanded, setActivityExpanded] = useState(false);
 
   const canTapToPay = false;
   const locations = user?.foodTruck?.locations || [];
@@ -167,9 +198,9 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
     }
     return employees;
   }, [employeeStatusFilter, employees]);
-  const visibleEmployees = activityExpanded
-    ? statusFilteredEmployees
-    : statusFilteredEmployees.filter((employee) => employee.is_working);
+  const visibleEmployees = statusFilteredEmployees.filter(
+    (employee) => employee.is_working
+  );
 
   const paymentFilters = useMemo(
     () =>
@@ -827,18 +858,6 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                             color={AppColor.white}
                           />
                         </Pressable>
-                        {employees.length ? (
-                          <Pressable
-                            style={styles.expandButton}
-                            onPress={() =>
-                              setActivityExpanded((current) => !current)
-                            }
-                          >
-                            <Text style={styles.expandButtonText}>
-                              {activityExpanded ? "Working Only" : "View All"}
-                            </Text>
-                          </Pressable>
-                        ) : null}
                       </View>
                     </View>
                     {visibleEmployees.length ? (
@@ -856,11 +875,8 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                               metrics.tap_orders || 0
                             }`
                           : `Cash ${metrics.cash_orders || 0}`;
-                        const statusText = employee.is_archived
-                          ? "Archived"
-                          : employee.is_working
-                            ? "Working"
-                            : "Off";
+                        const shiftStatusText =
+                          getEmployeeShiftStatusText(employee);
 
                         return (
                           <View
@@ -876,17 +892,21 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                                   {truckName} | {locationName}
                                 </Text>
                               </View>
-                              <Text
-                                style={[
-                                  styles.statusBadge,
-                                  employee.is_working && styles.statusBadgeWorking,
-                                  !employee.is_working &&
-                                    employee.is_active &&
-                                    styles.statusBadgeActive,
-                                ]}
+                              <Pressable
+                                style={styles.manageButton}
+                                onPress={() =>
+                                  navigation.navigate(
+                                    "profileEmployeeManagementScreen",
+                                    {
+                                      mode: "manage",
+                                      employeeInternalId:
+                                        employee.employee_internal_id,
+                                    }
+                                  )
+                                }
                               >
-                                {statusText}
-                              </Text>
+                                <Text style={styles.manageButtonText}>Manage</Text>
+                              </Pressable>
                             </View>
 
                             <View style={styles.activityDetails}>
@@ -918,24 +938,9 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                             <View style={styles.metaRow}>
                               <Text style={styles.metaLabel}>Status</Text>
                               <Text style={styles.metaValue}>
-                                {statusText}
+                                {shiftStatusText}
                               </Text>
                             </View>
-                            <Pressable
-                              style={styles.manageButton}
-                              onPress={() =>
-                                navigation.navigate(
-                                  "profileEmployeeManagementScreen",
-                                  {
-                                    mode: "manage",
-                                    employeeInternalId:
-                                      employee.employee_internal_id,
-                                  }
-                                )
-                              }
-                            >
-                              <Text style={styles.manageButtonText}>Manage</Text>
-                            </Pressable>
                           </View>
                         );
                       })
@@ -953,7 +958,7 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                         </Text>
                         <Text style={styles.emptyActivityText}>
                           {employees.length
-                            ? "Tap View All to view inactive employee activity."
+                            ? "No active employee sessions right now."
                             : "Try changing the filters or selecting a wider date range."}
                         </Text>
                       </View>
@@ -1471,7 +1476,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     justifyContent: "center",
-    marginTop: 12,
     minHeight: 32,
     paddingHorizontal: 14,
   },

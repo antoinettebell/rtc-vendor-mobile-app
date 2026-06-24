@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { IconButton } from "react-native-paper";
+import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 import { Dropdown } from "react-native-element-dropdown";
@@ -20,6 +21,7 @@ import {
   archiveVendorEmployee_API,
   createVendorEmployee_API,
   deleteVendorEmployee_API,
+  getVendorEmployeeShiftHistory_API,
   getVendorEmployees_API,
   resetVendorEmployeePin_API,
   updateVendorEmployee_API,
@@ -44,6 +46,28 @@ const getGeneratedLoginPreview = ({ first_name, last_name, zip_code }) => {
 
 const normalizePin = (value) => value.replace(/\D/g, "").slice(0, 4);
 const isFourDigitPin = (value) => /^\d{4}$/.test(value);
+const SHIFT_HISTORY_FILTERS = [
+  { label: "Week", value: "week" },
+  { label: "Month", value: "month" },
+];
+
+const formatShiftDateTime = (value) => {
+  if (!value) {
+    return "Not available";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Not available";
+  }
+
+  return date.toLocaleString([], {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+};
 
 const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -63,6 +87,10 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const [employeeLocationDrafts, setEmployeeLocationDrafts] = useState({});
   const [employeeTruckDrafts, setEmployeeTruckDrafts] = useState({});
   const [activeTab, setActiveTab] = useState("current");
+  const [shiftHistoryRange, setShiftHistoryRange] = useState("week");
+  const [shiftHistoryByEmployee, setShiftHistoryByEmployee] = useState({});
+  const [shiftHistoryLoadingId, setShiftHistoryLoadingId] = useState(null);
+  const isManageMode = managementMode === "manage";
 
   const locationOptions = useMemo(
     () =>
@@ -106,7 +134,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const fetchEmployees = async () => {
+  const fetchEmployees = useCallback(async () => {
     setLoading(true);
     try {
       const response = await getVendorEmployees_API({
@@ -140,7 +168,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, initialEmployeeInternalId]);
 
   const validateForm = () => {
     if (!form.first_name.trim() || !form.last_name.trim()) {
@@ -225,6 +253,34 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
       [employee._id]:
         current[employee._id] || employee.assigned_truck_unit_id || "",
     }));
+  };
+
+  const loadShiftHistory = async (employee, range = shiftHistoryRange) => {
+    if (!employee?._id) return;
+
+    setShiftHistoryLoadingId(employee._id);
+    try {
+      const response = await getVendorEmployeeShiftHistory_API({
+        employee_id: employee._id,
+        range,
+      });
+      setShiftHistoryByEmployee((current) => ({
+        ...current,
+        [employee._id]: response?.data?.sessions || [],
+      }));
+    } catch (error) {
+      Alert.alert(
+        "Shift history unavailable",
+        error?.message || "Please try again."
+      );
+    } finally {
+      setShiftHistoryLoadingId(null);
+    }
+  };
+
+  const selectShiftHistoryRange = async (employee, range) => {
+    setShiftHistoryRange(range);
+    await loadShiftHistory(employee, range);
   };
 
   const setEmployeeLocationDraft = (employeeId, locationId) => {
@@ -335,7 +391,24 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     fetchEmployees();
-  }, [activeTab]);
+  }, [fetchEmployees]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchEmployees();
+    }, [fetchEmployees])
+  );
+
+  useEffect(() => {
+    if (!expandedEmployeeId || activeTab !== "current") {
+      return;
+    }
+
+    const employee = employees.find((item) => item._id === expandedEmployeeId);
+    if (employee && !shiftHistoryByEmployee[expandedEmployeeId]) {
+      loadShiftHistory(employee, shiftHistoryRange);
+    }
+  }, [expandedEmployeeId, activeTab, employees]);
 
   return (
     <View style={styles.container}>
@@ -437,24 +510,36 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
               style={styles.input}
             />
 
-            <TouchableOpacity
-              onPress={createEmployee}
-              disabled={saving}
-              style={[styles.primaryButton, saving && styles.disabledButton]}
-            >
+	            <TouchableOpacity
+	              onPress={createEmployee}
+	              disabled={saving}
+	              style={[styles.primaryButton, saving && styles.disabledButton]}
+	            >
               {saving ? (
                 <ActivityIndicator color={AppColor.white} />
               ) : (
                 <Text style={styles.primaryButtonText}>Create Employee</Text>
               )}
 	            </TouchableOpacity>
-	          </View>
-	        ) : activeTab === "current" ? (
-          <TouchableOpacity
-            onPress={() => setManagementMode("create")}
+		          </View>
+		        ) : activeTab === "current" ? (
+	          <TouchableOpacity
+	            onPress={() => setManagementMode("create")}
             style={styles.addInlineButton}
           >
             <Text style={styles.addInlineButtonText}>+ Add Employee</Text>
+	          </TouchableOpacity>
+	        ) : null}
+
+        {activeTab === "current" && !isManageMode && employees.length ? (
+          <TouchableOpacity
+            onPress={() => {
+              setManagementMode("manage");
+              setExpandedEmployeeId(null);
+            }}
+            style={styles.manageAllButton}
+          >
+            <Text style={styles.manageAllButtonText}>Manage Employees</Text>
           </TouchableOpacity>
         ) : null}
 
@@ -529,39 +614,42 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                     )}
                   </Text>
                 </TouchableOpacity>
-                <View style={styles.employeeActions}>
-                  <IconButton
-                    icon={
-                      expandedEmployeeId === employee._id
-                        ? "chevron-up"
-                        : "chevron-down"
-                    }
-                    iconColor={AppColor.textHighlighter}
-                    size={22}
-                    style={styles.trashButton}
-                    onPress={() => toggleEmployeeDetails(employee)}
-                    accessibilityLabel={`Manage ${employee.first_name} ${employee.last_name}`}
-                  />
-                  {activeTab === "current" ? (
-                    <TouchableOpacity
-                      onPress={() => archiveEmployee(employee)}
-                      style={styles.archivePill}
-                    >
-                      <Text style={styles.archiveText}>Archive</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                  <IconButton
-                    icon="trash-can-outline"
-                    iconColor={AppColor.red}
-                    size={22}
-                    style={styles.trashButton}
-                    onPress={() => deleteEmployee(employee)}
-                    accessibilityLabel={`Delete ${employee.first_name} ${employee.last_name}`}
-                  />
-                </View>
+                {isManageMode ? (
+                  <View style={styles.employeeActions}>
+                    <IconButton
+                      icon={
+                        expandedEmployeeId === employee._id
+                          ? "chevron-up"
+                          : "chevron-down"
+                      }
+                      iconColor={AppColor.textHighlighter}
+                      size={22}
+                      style={styles.trashButton}
+                      onPress={() => toggleEmployeeDetails(employee)}
+                      accessibilityLabel={`Manage ${employee.first_name} ${employee.last_name}`}
+                    />
+                    {activeTab === "current" ? (
+	                    <TouchableOpacity
+	                      onPress={() => archiveEmployee(employee)}
+	                      style={styles.archivePill}
+	                    >
+	                      <Text style={styles.archiveText}>Archive</Text>
+	                    </TouchableOpacity>
+                    ) : null}
+                    <IconButton
+                      icon="trash-can-outline"
+                      iconColor={AppColor.red}
+                      size={22}
+                      style={styles.trashButton}
+                      onPress={() => deleteEmployee(employee)}
+                      accessibilityLabel={`Delete ${employee.first_name} ${employee.last_name}`}
+                    />
+                  </View>
+                ) : null}
               </View>
-
-              {activeTab === "current" && expandedEmployeeId === employee._id ? (
+              {isManageMode &&
+                activeTab === "current" &&
+                expandedEmployeeId === employee._id ? (
                 <View style={styles.submenu}>
                   <Text style={styles.submenuTitle}>Truck Assignment</Text>
                   <Text style={styles.helperText}>
@@ -605,24 +693,28 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                     placeholderStyle={styles.placeholderText}
                     itemTextStyle={styles.dropdownText}
                   />
-	                  <TouchableOpacity
-	                    onPress={() => assignEmployeeLocation(employee)}
-	                    style={styles.secondaryButton}
-	                  >
-	                    <Text style={styles.secondaryButtonText}>Save Assignment</Text>
-	                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => assignEmployeeLocation(employee)}
+                    style={styles.secondaryButton}
+                  >
+                    <Text style={styles.secondaryButtonText}>Save Assignment</Text>
+                  </TouchableOpacity>
                 </View>
               ) : null}
 
-              <Text style={styles.label}>Employee Login ID</Text>
-              <TextInput
-                value={employee.employee_login_id || ""}
-                editable={false}
-                style={styles.readOnlyInput}
-              />
+              {isManageMode ? (
+                <>
+                  <Text style={styles.label}>Employee Login ID</Text>
+                  <TextInput
+                    value={employee.employee_login_id || ""}
+                    editable={false}
+                    style={styles.readOnlyInput}
+                  />
+                </>
+              ) : null}
 
-              {activeTab === "current" ? (
-              <View style={styles.toggleRow}>
+              {isManageMode && activeTab === "current" ? (
+                <View style={styles.toggleRow}>
                 <View>
                   <Text style={styles.toggleLabel}>Login Access</Text>
                   <Text style={styles.employeeMeta}>
@@ -642,8 +734,8 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
               </View>
               ) : null}
 
-              {activeTab === "current" ? (
-              <View style={styles.toggleRow}>
+	              {isManageMode && activeTab === "current" ? (
+	              <View style={styles.toggleRow}>
                 <View>
                   <Text style={styles.toggleLabel}>On/Off Duty</Text>
                   <Text style={styles.employeeMeta}>
@@ -661,7 +753,9 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
               </View>
               ) : null}
 
-              {activeTab === "current" && resetEmployeeId === employee._id ? (
+	              {isManageMode &&
+                activeTab === "current" &&
+                resetEmployeeId === employee._id ? (
                 <View style={styles.resetBox}>
                   <Text style={styles.label}>New PIN</Text>
                   <TextInput
@@ -690,13 +784,76 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                     </TouchableOpacity>
                   </View>
                 </View>
-              ) : activeTab === "current" ? (
+	              ) : isManageMode && activeTab === "current" ? (
                 <TouchableOpacity
                   onPress={() => setResetEmployeeId(employee._id)}
                   style={styles.secondaryButton}
                 >
                   <Text style={styles.secondaryButtonText}>Reset PIN</Text>
                 </TouchableOpacity>
+              ) : null}
+
+	              {isManageMode &&
+                activeTab === "current" &&
+                expandedEmployeeId === employee._id ? (
+                <View style={styles.shiftHistorySection}>
+                  <View style={styles.shiftHistoryHeader}>
+                    <Text style={styles.submenuTitle}>Shift History</Text>
+                    <View style={styles.shiftFilterRow}>
+                      {SHIFT_HISTORY_FILTERS.map((filter) => (
+                        <TouchableOpacity
+                          key={filter.value}
+                          onPress={() => selectShiftHistoryRange(employee, filter.value)}
+                          style={[
+                            styles.shiftFilterButton,
+                            shiftHistoryRange === filter.value &&
+                              styles.shiftFilterButtonActive,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.shiftFilterText,
+                              shiftHistoryRange === filter.value &&
+                                styles.shiftFilterTextActive,
+                            ]}
+                          >
+                            {filter.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  {shiftHistoryLoadingId === employee._id ? (
+                    <ActivityIndicator color={AppColor.primary} style={{ marginTop: 12 }} />
+                  ) : (shiftHistoryByEmployee[employee._id] || []).length ? (
+                    (shiftHistoryByEmployee[employee._id] || []).map((session) => (
+                      <View
+                        key={session.employee_session_id || session._id}
+                        style={styles.shiftHistoryItem}
+                      >
+                        <View>
+                          <Text style={styles.shiftHistoryLabel}>Start</Text>
+                          <Text style={styles.shiftHistoryValue}>
+                            {formatShiftDateTime(session.started_at)}
+                          </Text>
+                        </View>
+                        <View style={styles.shiftHistoryEnd}>
+                          <Text style={styles.shiftHistoryLabel}>End</Text>
+                          <Text style={styles.shiftHistoryValue}>
+                            {session.ended_at
+                              ? formatShiftDateTime(session.ended_at)
+                              : "Active"}
+                          </Text>
+                        </View>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.emptyHistoryText}>
+                      No shift history for this {shiftHistoryRange}.
+                    </Text>
+                  )}
+                </View>
               ) : null}
             </View>
           ))
@@ -742,6 +899,18 @@ const styles = StyleSheet.create({
   },
   addInlineButtonText: {
     color: AppColor.primary,
+    fontFamily: Mulish700,
+    fontSize: 14,
+  },
+  manageAllButton: {
+    alignItems: "center",
+    backgroundColor: AppColor.primary,
+    borderRadius: 8,
+    justifyContent: "center",
+    minHeight: 44,
+  },
+  manageAllButtonText: {
+    color: AppColor.white,
     fontFamily: Mulish700,
     fontSize: 14,
   },
@@ -944,6 +1113,71 @@ const styles = StyleSheet.create({
     borderColor: AppColor.border,
     paddingTop: 8,
     marginTop: 8,
+  },
+  shiftHistorySection: {
+    borderTopWidth: 1,
+    borderColor: AppColor.border,
+    marginTop: 12,
+    paddingTop: 12,
+  },
+  shiftHistoryHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  shiftFilterRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  shiftFilterButton: {
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  shiftFilterButtonActive: {
+    backgroundColor: "#FFF5EE",
+    borderColor: AppColor.primary,
+  },
+  shiftFilterText: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish700,
+    fontSize: 12,
+  },
+  shiftFilterTextActive: {
+    color: AppColor.primary,
+  },
+  shiftHistoryItem: {
+    backgroundColor: "#F9FAFB",
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10,
+    padding: 12,
+  },
+  shiftHistoryEnd: {
+    alignItems: "flex-end",
+  },
+  shiftHistoryLabel: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 12,
+  },
+  shiftHistoryValue: {
+    color: AppColor.text,
+    fontFamily: Mulish700,
+    fontSize: 13,
+    marginTop: 2,
+  },
+  emptyHistoryText: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 13,
+    marginTop: 12,
   },
   buttonRow: {
     flexDirection: "row",
