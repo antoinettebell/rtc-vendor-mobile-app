@@ -815,7 +815,9 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                         <Pressable
                           style={styles.addEmployeeButton}
                           onPress={() =>
-                            navigation.navigate("profileEmployeeManagementScreen")
+                            navigation.navigate("profileEmployeeManagementScreen", {
+                              mode: "create",
+                            })
                           }
                           accessibilityLabel="Add employee"
                         >
@@ -923,7 +925,12 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                               style={styles.manageButton}
                               onPress={() =>
                                 navigation.navigate(
-                                  "profileEmployeeManagementScreen"
+                                  "profileEmployeeManagementScreen",
+                                  {
+                                    mode: "manage",
+                                    employeeInternalId:
+                                      employee.employee_internal_id,
+                                  }
                                 )
                               }
                             >

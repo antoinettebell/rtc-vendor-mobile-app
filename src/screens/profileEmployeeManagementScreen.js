@@ -45,10 +45,12 @@ const getGeneratedLoginPreview = ({ first_name, last_name, zip_code }) => {
 const normalizePin = (value) => value.replace(/\D/g, "").slice(0, 4);
 const isFourDigitPin = (value) => /^\d{4}$/.test(value);
 
-const ProfileEmployeeManagementScreen = ({ navigation }) => {
+const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const user = useSelector((state) => state.userReducer.user);
   const foodTruck = user?.foodTruck;
+  const initialMode = route?.params?.mode === "create" ? "create" : "manage";
+  const initialEmployeeInternalId = route?.params?.employeeInternalId || null;
 
   const [employees, setEmployees] = useState([]);
   const [form, setForm] = useState(initialForm);
@@ -57,6 +59,7 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
   const [resetEmployeeId, setResetEmployeeId] = useState(null);
   const [resetPin, setResetPin] = useState("");
   const [expandedEmployeeId, setExpandedEmployeeId] = useState(null);
+  const [managementMode, setManagementMode] = useState(initialMode);
   const [employeeLocationDrafts, setEmployeeLocationDrafts] = useState({});
   const [employeeTruckDrafts, setEmployeeTruckDrafts] = useState({});
   const [activeTab, setActiveTab] = useState("current");
@@ -110,7 +113,27 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
         archivedOnly: activeTab === "archived",
       });
       if (response?.success && response?.data) {
-        setEmployees(response.data.vendoremployeeList || []);
+        const nextEmployees = response.data.vendoremployeeList || [];
+        setEmployees(nextEmployees);
+        if (initialEmployeeInternalId && activeTab === "current") {
+          const matchedEmployee = nextEmployees.find(
+            (employee) =>
+              employee.employee_internal_id === initialEmployeeInternalId
+          );
+          if (matchedEmployee) {
+            setExpandedEmployeeId(matchedEmployee._id);
+            setEmployeeLocationDrafts((current) => ({
+              ...current,
+              [matchedEmployee._id]: matchedEmployee.assigned_location_id,
+            }));
+            setEmployeeTruckDrafts((current) => ({
+              ...current,
+              [matchedEmployee._id]:
+                matchedEmployee.assigned_truck_unit_id || "",
+            }));
+            setManagementMode("manage");
+          }
+        }
       }
     } catch (error) {
       Alert.alert("Employees unavailable", error?.message || "Please try again.");
@@ -159,6 +182,7 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
       });
       if (response?.success) {
         setForm(initialForm);
+        setManagementMode("manage");
         await fetchEmployees();
         Alert.alert("Employee saved", "The employee was added to Current Employees.");
       }
@@ -323,14 +347,22 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
           onPress={() => navigation.goBack()}
         />
         <Text style={styles.headerTitle}>Employees</Text>
-        <View style={{ width: 48 }} />
+        <IconButton
+          icon={managementMode === "create" ? "account-group" : "plus"}
+          iconColor={AppColor.primary}
+          onPress={() =>
+            setManagementMode((current) =>
+              current === "create" ? "manage" : "create"
+            )
+          }
+        />
       </View>
 
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
-        {activeTab === "current" ? (
+        {activeTab === "current" && managementMode === "create" ? (
           <View style={styles.formSection}>
             <Text style={styles.sectionTitle}>Create Employee</Text>
 
@@ -415,8 +447,15 @@ const ProfileEmployeeManagementScreen = ({ navigation }) => {
               ) : (
                 <Text style={styles.primaryButtonText}>Create Employee</Text>
               )}
-            </TouchableOpacity>
-          </View>
+	            </TouchableOpacity>
+	          </View>
+	        ) : activeTab === "current" ? (
+          <TouchableOpacity
+            onPress={() => setManagementMode("create")}
+            style={styles.addInlineButton}
+          >
+            <Text style={styles.addInlineButtonText}>+ Add Employee</Text>
+          </TouchableOpacity>
         ) : null}
 
         <View style={styles.tabRow}>
@@ -691,6 +730,20 @@ const styles = StyleSheet.create({
     borderColor: AppColor.border,
     borderRadius: 8,
     padding: 16,
+  },
+  addInlineButton: {
+    alignItems: "center",
+    backgroundColor: AppColor.white,
+    borderColor: AppColor.primary,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 44,
+  },
+  addInlineButtonText: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
+    fontSize: 14,
   },
   sectionTitle: {
     fontSize: 18,
