@@ -856,11 +856,11 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                               metrics.tap_orders || 0
                             }`
                           : `Cash ${metrics.cash_orders || 0}`;
-                        const statusText = employee.is_working
-                          ? "Working"
-                          : employee.is_active
-                            ? "Active"
-                            : "Inactive";
+                        const statusText = employee.is_archived
+                          ? "Archived"
+                          : employee.is_working
+                            ? "Working"
+                            : "Off";
 
                         return (
                           <View
@@ -916,9 +916,9 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                               </View>
                             </View>
                             <View style={styles.metaRow}>
-                              <Text style={styles.metaLabel}>Date/time</Text>
+                              <Text style={styles.metaLabel}>Status</Text>
                               <Text style={styles.metaValue}>
-                                {formatDateTime(employee.last_activity_at)}
+                                {statusText}
                               </Text>
                             </View>
                             <Pressable
