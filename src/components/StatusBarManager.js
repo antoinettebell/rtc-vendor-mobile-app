@@ -3,18 +3,21 @@ import { Platform, StatusBar } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 
 const StatusBarManager = ({
-  backgroundColor = "transparent",
+  backgroundColor = null,
   barStyle = "dark-content",
-  translucent = true,
+  translucent = false,
 }) => {
+  const resolvedBackgroundColor =
+    backgroundColor || (barStyle === "light-content" ? "#FC7B03" : "#FFFFFF");
+
   useFocusEffect(
     useCallback(() => {
       StatusBar.setBarStyle(barStyle);
       if (Platform.OS === "android") {
-        StatusBar.setBackgroundColor(backgroundColor);
+        StatusBar.setBackgroundColor(resolvedBackgroundColor);
         StatusBar.setTranslucent(translucent);
       }
-    }, [backgroundColor, barStyle, translucent])
+    }, [barStyle, resolvedBackgroundColor, translucent])
   );
 
   return null; // No JSX needed, this is imperative

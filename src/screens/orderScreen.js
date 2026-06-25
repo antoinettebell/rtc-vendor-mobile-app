@@ -35,6 +35,11 @@ import {
 import { printOrderTickets } from "../helpers/print.helper";
 import AppImage from "../components/AppImage";
 
+const getDisplayOrderStatus = (order) =>
+  order?.refundStatus === "PENDING"
+    ? "Refund Pending"
+    : orderCurrentStatusNames[order?.orderStatus];
+
 const ACTIVE_ORDER_STATUSES = [
   orderStatusStrings.placed,
   orderStatusStrings.accepted,
@@ -128,7 +133,7 @@ const OrderScreen = ({ navigation }) => {
                 }
               >
                 <Text style={styles.menuAnchorText}>
-                  {orderCurrentStatusNames[item?.orderStatus]}
+                  {getDisplayOrderStatus(item)}
                 </Text>
                 <Feather
                   name="chevron-down"

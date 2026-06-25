@@ -17,7 +17,6 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import {
   employeeShiftAction_API,
   getEmployeeDashboard_API,
-  toggleEmployeeDuty_API,
   updateLocationOrdering_API,
 } from "../api/appAPI";
 import { setAuthToken, setUser } from "../redux/slices/userSlice";
@@ -54,7 +53,6 @@ const EmployeeShiftScreen = ({ navigation }) => {
 
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [dutyLoading, setDutyLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
 
@@ -63,27 +61,35 @@ const EmployeeShiftScreen = ({ navigation }) => {
   const assignedTruckUnit =
     dashboard?.assignedTruckUnit || user?.assignedTruckUnit || null;
   const shift = dashboard?.shift || {};
-  const isOnDuty = !!user?.is_working;
-  const isShiftActive = !!user?.employee_session_id && shift?.is_active !== false;
+  const isOnDuty =
+    dashboard?.employee?.is_working !== undefined
+      ? !!dashboard.employee.is_working
+      : !!user?.is_working;
+  const canManageShift = isOnDuty;
+  const canManageStore = canManageShift && !!assignedTruckUnit?._id;
+  const isShiftActive = !!shift?.is_active;
+  const hasClockedOut = !!shift?.ended_at && !isShiftActive;
   const isOnBreak = shift?.shift_status === "ON_BREAK";
+  const breakCount = Number(shift?.break_count || 0);
+  const canStartShift = isOnDuty && !isShiftActive && !hasClockedOut;
+  const canPauseForBreak =
+    isOnDuty && isShiftActive && !isOnBreak && breakCount < 2;
   const locationIsOpen =
     dashboard?.location?.is_open !== undefined
       ? dashboard.location.is_open
-      : foodTruck?.currentLocation?.toString() ===
-          assignedLocation?._id?.toString() ||
-        !!assignedLocation?.isOrderingOpen;
-  const hasShiftAssignment = !!assignedLocation?._id && !!assignedTruckUnit?.name;
-  const dutyDisabled = dutyLoading || !hasShiftAssignment;
-  const locationToggleDisabled =
-    locationLoading || !hasShiftAssignment || !isOnDuty;
+      : (assignedTruckUnit?.open_locations || []).some(
+          (location) =>
+            location?.locationId?.toString() === assignedLocation?._id?.toString() &&
+            location?.isOrderingOpen,
+        );
+  const hasShiftAssignment = !!assignedLocation?._id && !!assignedTruckUnit?._id;
 
-  const handleBack = useCallback(() => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-      return;
-    }
-    navigation.navigate("employeeSessionScreen");
-  }, [navigation]);
+  const handleBack = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "employeeSessionScreen" }],
+    });
+  };
 
   const loadDashboard = useCallback(async () => {
     const response = await getEmployeeDashboard_API();
@@ -129,43 +135,16 @@ const EmployeeShiftScreen = ({ navigation }) => {
     }
   };
 
-  const handleToggleDuty = async () => {
-    if (!hasShiftAssignment) {
-      Alert.alert(
-        "Assignment required",
-        "This employee must be assigned to a truck and location before going on duty.",
-      );
-      return;
-    }
-
-    setDutyLoading(true);
-    try {
-      const response = await toggleEmployeeDuty_API({ is_working: !isOnDuty });
-      mergeEmployeeResponse(response);
-      await loadDashboard();
-    } catch (error) {
-      Alert.alert(
-        "Duty update failed",
-        error?.message || "Could not update duty status.",
-      );
-    } finally {
-      setDutyLoading(false);
-    }
-  };
-
   const handleToggleLocation = async () => {
-    if (!hasShiftAssignment) {
+    if (!foodTruck?._id || !assignedLocation?._id || !assignedTruckUnit?._id) return;
+    if (!canManageStore) {
       Alert.alert(
-        "Assignment required",
-        "This employee must be assigned to a truck and location before opening the store.",
+        "Not scheduled",
+        "You must be Working and assigned to a truck before you can open or close the store.",
       );
       return;
     }
-    if (!isOnDuty) {
-      Alert.alert("Off duty", "Go on duty before opening or closing the store.");
-      return;
-    }
-    if (!foodTruck?._id || !assignedLocation?._id) return;
+
     setLocationLoading(true);
     try {
       const response = await updateLocationOrdering_API({
@@ -214,10 +193,29 @@ const EmployeeShiftScreen = ({ navigation }) => {
     }
   };
 
+  const confirmEndShift = () => {
+    Alert.alert(
+      "End shift?",
+      "Once you clock out, only the vendor can clock you back in for this shift.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "End Shift",
+          style: "destructive",
+          onPress: () => runShiftAction("END"),
+        },
+      ],
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+        <TouchableOpacity
+          style={styles.backButton}
+          hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
+          onPress={handleBack}
+        >
           <MaterialCommunityIcons name="arrow-left" size={22} color={AppColor.black} />
         </TouchableOpacity>
         <View style={styles.headerTextBlock}>
@@ -238,23 +236,30 @@ const EmployeeShiftScreen = ({ navigation }) => {
         ) : null}
 
         <View style={styles.panel}>
-          <View style={styles.toggleRow}>
+          <View style={styles.statusRow}>
             <View>
-              <Text style={styles.panelTitle}>On/Off Duty</Text>
+              <Text style={styles.panelTitle}>Duty Status</Text>
               <Text style={styles.caption}>
-                {!hasShiftAssignment
-                  ? "Truck and location assignment required"
-                  : isOnDuty
-                    ? "Available to work"
-                    : "Not available for shifts"}
+                Vendor managed schedule status
               </Text>
             </View>
-            <Switch
-              value={isOnDuty}
-              disabled={dutyDisabled}
-              onValueChange={handleToggleDuty}
-              trackColor={{ false: AppColor.border, true: AppColor.primary }}
-            />
+            <View
+              style={[
+                styles.statusBadge,
+                isOnDuty ? styles.statusBadgeActive : styles.statusBadgeInactive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusBadgeText,
+                  isOnDuty
+                    ? styles.statusBadgeTextActive
+                    : styles.statusBadgeTextInactive,
+                ]}
+              >
+                {isOnDuty ? "Working" : "Off duty"}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -269,17 +274,23 @@ const EmployeeShiftScreen = ({ navigation }) => {
                     ? "Go on duty before changing store status"
                     : assignedTruckUnit?.name
                   ? `${assignedTruckUnit.name} is ${locationIsOpen ? "open" : "closed"}`
-                  : locationIsOpen
-                    ? "Store is open"
-                    : "Store is closed"}
+                  : "No truck assigned"}
               </Text>
             </View>
-            <Switch
-              value={locationIsOpen}
-              disabled={locationToggleDisabled}
-              onValueChange={handleToggleLocation}
-              trackColor={{ false: AppColor.border, true: AppColor.primary }}
-            />
+            {canManageStore ? (
+              <Switch
+                value={locationIsOpen}
+                disabled={locationLoading}
+                onValueChange={handleToggleLocation}
+                trackColor={{ false: AppColor.border, true: AppColor.primary }}
+              />
+            ) : (
+              <View style={styles.readOnlyStoreBadge}>
+                <Text style={styles.readOnlyStoreBadgeText}>
+                  {assignedTruckUnit?._id ? "View only" : "Unavailable"}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -302,32 +313,39 @@ const EmployeeShiftScreen = ({ navigation }) => {
             </Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Break minutes</Text>
-            <Text style={styles.detailValue}>{shift.total_break_minutes || 0}</Text>
+            <Text style={styles.detailLabel}>Clock out</Text>
+            <Text style={styles.detailValue}>{formatDateTime(shift.ended_at)}</Text>
           </View>
-
           <TouchableOpacity
             style={[
               styles.actionButton,
-              (!isOnDuty || isShiftActive) && styles.disabledButton,
+              !canStartShift && styles.disabledButton,
             ]}
-            disabled={!isOnDuty || isShiftActive || !!actionLoading}
+            disabled={!canStartShift || !!actionLoading}
             onPress={() => runShiftAction("START")}
           >
             <Text style={styles.actionButtonText}>
-              {actionLoading === "START" ? "Starting..." : "Start Shift"}
+              {actionLoading === "START"
+                ? "Starting..."
+                : hasClockedOut
+                  ? "Shift Ended"
+                  : "Start Shift"}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
               styles.secondaryButton,
-              (!isOnDuty || !isShiftActive || isOnBreak) && styles.disabledButton,
+              !canPauseForBreak && styles.disabledButton,
             ]}
-            disabled={!isOnDuty || !isShiftActive || isOnBreak || !!actionLoading}
+            disabled={!canPauseForBreak || !!actionLoading}
             onPress={() => runShiftAction("PAUSE")}
           >
             <Text style={styles.secondaryButtonText}>
-              {actionLoading === "PAUSE" ? "Pausing..." : "Pause for Break"}
+              {actionLoading === "PAUSE"
+                ? "Pausing..."
+                : breakCount >= 2
+                  ? "Break Limit Reached"
+                  : "Pause for Break"}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -348,7 +366,7 @@ const EmployeeShiftScreen = ({ navigation }) => {
               (!isOnDuty || !isShiftActive) && styles.disabledButton,
             ]}
             disabled={!isOnDuty || !isShiftActive || !!actionLoading}
-            onPress={() => runShiftAction("END")}
+            onPress={confirmEndShift}
           >
             <Text style={styles.dangerButtonText}>
               {actionLoading === "END" ? "Ending..." : "End Shift"}
@@ -416,6 +434,49 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  statusRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 12,
+    justifyContent: "space-between",
+  },
+  statusBadge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  statusBadgeActive: {
+    backgroundColor: "#E8F5E9",
+    borderColor: "#A5D6A7",
+  },
+  statusBadgeInactive: {
+    backgroundColor: "#F5F5F5",
+    borderColor: AppColor.border,
+  },
+  statusBadgeText: {
+    fontFamily: Mulish700,
+    fontSize: 13,
+  },
+  statusBadgeTextActive: {
+    color: "#2E7D32",
+  },
+  statusBadgeTextInactive: {
+    color: AppColor.textHighlighter,
+  },
+  readOnlyStoreBadge: {
+    backgroundColor: "#F5F5F5",
+    borderColor: AppColor.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  readOnlyStoreBadgeText: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish700,
+    fontSize: 13,
   },
   detailRow: {
     borderBottomColor: AppColor.border,

@@ -84,6 +84,48 @@ const REQUEST_REASONS = [
   "other",
 ];
 
+const PAID_PAYMENT_STATUSES = ["PAID", "COMPLETED", "CAPTURED"];
+const POST_PICKUP_STATUSES = [
+  orderStatusStrings.driver_picked_up,
+  orderStatusStrings.delivered,
+  orderStatusStrings.completed,
+];
+const TEN_MINUTES_MS = 10 * 60 * 1000;
+
+const isCashPayment = (order) =>
+  ["COD", "CASH"].includes(
+    String(order?.paymentMethod || order?.payment_method || "").toUpperCase(),
+  );
+
+const isPaidOrPickedUp = (order) =>
+  PAID_PAYMENT_STATUSES.includes(
+    String(order?.paymentStatus || "").toUpperCase(),
+  ) || POST_PICKUP_STATUSES.includes(order?.orderStatus);
+
+const getCompletedAt = (order) =>
+  order?.completed_at || order?.statusTime?.completedAt || null;
+
+const isCompletedRefundWindowExpired = (order) => {
+  if (order?.orderStatus !== orderStatusStrings.completed) return false;
+  const completedAt = getCompletedAt(order);
+  if (!completedAt) return false;
+  const completedDate = new Date(completedAt);
+  if (Number.isNaN(completedDate.getTime())) return false;
+  return Date.now() - completedDate.getTime() > TEN_MINUTES_MS;
+};
+
+const getAvailableRequestTypes = (order) =>
+  isPaidOrPickedUp(order) ? ["REFUND"] : ["REFUND", "CANCEL"];
+
+const getAvailableReasons = (order, requestType) =>
+  REQUEST_REASONS.filter(
+    (reason) =>
+      !(requestType === "REFUND" && isCashPayment(order) && reason === "payment issue"),
+  );
+
+const getDisplayOrderStatus = (order) =>
+  order?.refundStatus === "PENDING" ? "Refund Pending" : order?.orderStatus;
+
 const formatMoney = (value) => {
   const amount = Number(value);
   return `$${(Number.isFinite(amount) ? amount : 0).toFixed(2)}`;
@@ -242,8 +284,7 @@ const EmployeePosBoardScreen = ({ navigation }) => {
   const capabilities = user?.employeeCapabilities || {};
   const canTapToPay = false;
   const canUsePos = !!capabilities.employeeWalkUpPos;
-  const isWorking =
-    !!user?.employee_session_id && dashboard?.shift?.is_active !== false;
+  const isWorking = !!dashboard?.shift?.is_active;
 
   const displayedLocation = dashboard?.assignedLocation || assignedLocation;
   const employeeName =
@@ -258,13 +299,12 @@ const EmployeePosBoardScreen = ({ navigation }) => {
   }, [navigation]);
 
   const categories = useMemo(() => {
-    const names = Array.from(new Set(items.map(getItemCategory))).sort();
-    return ["All", ...names];
+    return Array.from(new Set(items.map(getItemCategory)));
   }, [items]);
 
   const visibleItems = useMemo(
     () =>
-      (selectedCategory === "All"
+      (!selectedCategory
         ? items
         : items.filter((item) => getItemCategory(item) === selectedCategory)
       ).filter((item) => item.available !== false),
@@ -285,50 +325,6 @@ const EmployeePosBoardScreen = ({ navigation }) => {
   const filteredOrders = orders.filter((item) =>
     selectedTabStatuses.includes(item.orderStatus),
   );
-  const dailyStatusGroups = useMemo(
-    () =>
-      [
-        {
-          label: "Open",
-          orders: orders.filter(
-            (item) =>
-              ![
-                orderStatusStrings.completed,
-                orderStatusStrings.driver_picked_up,
-              ].includes(item.orderStatus) && item.paymentStatus !== "REFUNDED",
-          ),
-        },
-        {
-          label: "Completed",
-          orders: orders.filter(
-            (item) => item.orderStatus === orderStatusStrings.completed,
-          ),
-        },
-        {
-          label: "Pending Pickup",
-          orders: orders.filter(
-            (item) => item.orderStatus === orderStatusStrings.ready_for_pickup,
-          ),
-        },
-        {
-          label: "Picked Up",
-          orders: orders.filter(
-            (item) => item.orderStatus === orderStatusStrings.driver_picked_up,
-          ),
-        },
-        {
-          label: "Refunds",
-          orders: orders.filter((item) => item.paymentStatus === "REFUNDED"),
-        },
-      ].map((group) => ({
-        ...group,
-        ticketNumbers: group.orders
-          .map((item) => item?.orderNumber || item?._id)
-          .filter(Boolean),
-      })),
-    [orders],
-  );
-
   const loadDashboard = useCallback(async () => {
     const response = await getEmployeeDashboard_API();
     if (response?.success && response?.data?.dashboard) {
@@ -339,7 +335,13 @@ const EmployeePosBoardScreen = ({ navigation }) => {
   const loadMenu = useCallback(async () => {
     const response = await getAllFoodItem_API();
     if (response?.success && response?.data?.menuList) {
-      setItems(response.data.menuList.filter((item) => item.available !== false));
+      const menuItems = response.data.menuList
+        .filter((item) => item.available !== false)
+        .sort(
+          (a, b) =>
+            (b.popularDish ? 1 : 0) - (a.popularDish ? 1 : 0),
+        );
+      setItems(menuItems);
     }
   }, []);
 
@@ -391,6 +393,13 @@ const EmployeePosBoardScreen = ({ navigation }) => {
       );
     }
   }, [canUsePos, handleBack]);
+
+  useEffect(() => {
+    if (!categories.length) return;
+    if (!selectedCategory || !categories.includes(selectedCategory)) {
+      setSelectedCategory(categories[0]);
+    }
+  }, [categories, selectedCategory]);
 
   const handleSignOut = async () => {
     try {
@@ -569,7 +578,7 @@ const EmployeePosBoardScreen = ({ navigation }) => {
       location: assignedLocation,
       truckUnit: assignedTruckUnit,
       guestPhone: guestPhone.trim(),
-      returnScreen: "employeePosBoardScreen",
+      returnScreen: "employeeSessionScreen",
     });
   };
 
@@ -662,14 +671,26 @@ const EmployeePosBoardScreen = ({ navigation }) => {
       );
       return;
     }
+    if (isCompletedRefundWindowExpired(orderItem)) {
+      Alert.alert(
+        "Refund window closed",
+        "Refund requests are only available for 10 minutes after completion.",
+      );
+      return;
+    }
+    const nextRequestType = getAvailableRequestTypes(orderItem)[0];
     setRequestModalOrder(orderItem);
-    setRequestType("REFUND");
-    setReasonCode(REQUEST_REASONS[0]);
+    setRequestType(nextRequestType);
+    setReasonCode(getAvailableReasons(orderItem, nextRequestType)[0]);
     setEmployeeNotes("");
   };
 
   const submitRequest = async () => {
     if (!requestModalOrder?._id) return;
+    if (reasonCode === "other" && !employeeNotes.trim()) {
+      Alert.alert("Notes required", "Please add notes when reason is other.");
+      return;
+    }
     setRequestSubmitting(true);
     try {
       const response = await submitRefundCancelRequest_API({
@@ -763,6 +784,8 @@ const EmployeePosBoardScreen = ({ navigation }) => {
     const nextStatus = getNextEmployeeStatus(item.orderStatus);
     const nextLabel = getNextStatusLabel(item.orderStatus);
     const existingRequest = getOrderRequest(item?._id);
+    const canRequestRefundCancel =
+      !existingRequest && !isCompletedRefundWindowExpired(item);
 
     return (
       <View style={styles.orderCard}>
@@ -775,7 +798,7 @@ const EmployeePosBoardScreen = ({ navigation }) => {
           <Text style={styles.orderTitle}>
             Order #{item?.orderNumber || item?._id}
           </Text>
-          <Text style={styles.orderStatus}>{item?.orderStatus}</Text>
+          <Text style={styles.orderStatus}>{getDisplayOrderStatus(item)}</Text>
         </View>
         <Text style={styles.orderMeta}>
           {(item?.items || []).length} items |{" "}
@@ -804,14 +827,18 @@ const EmployeePosBoardScreen = ({ navigation }) => {
               </Text>
             </TouchableOpacity>
           ) : null}
-          {item.orderStatus !== orderStatusStrings.completed ? (
-            <TouchableOpacity
-              style={styles.dangerSmall}
-              onPress={() => openRequestModal(item)}
-            >
-              <Text style={styles.dangerSmallText}>Refund/Cancel</Text>
-            </TouchableOpacity>
-          ) : null}
+          <TouchableOpacity
+            style={[
+              styles.dangerSmall,
+              !canRequestRefundCancel && styles.disabledButton,
+            ]}
+            disabled={!canRequestRefundCancel}
+            onPress={() => openRequestModal(item)}
+          >
+            <Text style={styles.dangerSmallText}>
+              {isPaidOrPickedUp(item) ? "Refund" : "Refund/Cancel"}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -1064,14 +1091,20 @@ const EmployeePosBoardScreen = ({ navigation }) => {
               Order #{requestModalOrder?.orderNumber || requestModalOrder?._id}
             </Text>
             <View style={styles.segmentRow}>
-              {["REFUND", "CANCEL"].map((type) => (
+              {getAvailableRequestTypes(requestModalOrder).map((type) => (
                 <TouchableOpacity
                   key={type}
                   style={[
                     styles.segmentButton,
                     requestType === type && styles.segmentButtonSelected,
                   ]}
-                  onPress={() => setRequestType(type)}
+                  onPress={() => {
+                    setRequestType(type);
+                    const reasons = getAvailableReasons(requestModalOrder, type);
+                    if (!reasons.includes(reasonCode)) {
+                      setReasonCode(reasons[0]);
+                    }
+                  }}
                 >
                   <Text
                     style={[
@@ -1086,7 +1119,7 @@ const EmployeePosBoardScreen = ({ navigation }) => {
             </View>
             <Text style={styles.optionTitle}>Reason</Text>
             <View style={styles.reasonWrap}>
-              {REQUEST_REASONS.map((reason) => (
+              {getAvailableReasons(requestModalOrder, requestType).map((reason) => (
                 <TouchableOpacity
                   key={reason}
                   style={[
@@ -1111,7 +1144,7 @@ const EmployeePosBoardScreen = ({ navigation }) => {
               multiline
               value={employeeNotes}
               onChangeText={setEmployeeNotes}
-              placeholder="Optional notes"
+              placeholder={reasonCode === "other" ? "Required notes" : "Optional notes"}
               placeholderTextColor={AppColor.gray}
               style={[styles.input, styles.notesInput]}
             />
@@ -1164,19 +1197,44 @@ const EmployeePosBoardScreen = ({ navigation }) => {
         }
         contentContainerStyle={styles.content}
       >
-        <View style={styles.shiftBar}>
-          <View style={styles.statusGrid}>
-            {dailyStatusGroups.map((group) => (
-              <View key={group.label} style={styles.statusCard}>
-                <Text style={styles.shiftLabel}>{group.label}</Text>
-                <Text style={styles.statusCount}>{group.orders.length}</Text>
-                <Text style={styles.ticketText} numberOfLines={2}>
-                  {group.ticketNumbers.length
-                    ? group.ticketNumbers.map((number) => `#${number}`).join(", ")
-                    : "No tickets"}
-                </Text>
-              </View>
-            ))}
+        <View style={styles.guestBox}>
+          <Text style={styles.sectionTitle}>Walk-up customer</Text>
+          <TextInput
+            style={styles.phoneInput}
+            value={guestPhone}
+            onChangeText={setGuestPhone}
+            keyboardType="phone-pad"
+            placeholder="Optional phone number"
+            placeholderTextColor={AppColor.gray}
+          />
+          <View style={styles.quickCartBar}>
+            <View>
+              <Text style={styles.quickCartLabel}>Cart total</Text>
+              <Text style={styles.quickCartValue}>
+                {formatMoney(order.subtotal)}
+              </Text>
+            </View>
+            <View style={styles.quickCartActions}>
+              <TouchableOpacity
+                style={[
+                  styles.payButton,
+                  (!isWorking || order.items.length === 0) &&
+                    styles.disabledButton,
+                ]}
+                disabled={!isWorking || order.items.length === 0}
+                onPress={goToCheckout}
+              >
+                <Text style={styles.payButtonText}>Cash</Text>
+              </TouchableOpacity>
+              {order.items.length > 0 ? (
+                <TouchableOpacity
+                  style={styles.secondaryButton}
+                  onPress={() => dispatch(clearPosOrder())}
+                >
+                  <Text style={styles.secondaryButtonText}>Clear</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
           </View>
         </View>
 
@@ -1221,14 +1279,6 @@ const EmployeePosBoardScreen = ({ navigation }) => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Cart / Payment</Text>
-          <TextInput
-            style={styles.input}
-            value={guestPhone}
-            onChangeText={setGuestPhone}
-            keyboardType="phone-pad"
-            placeholder="Optional customer phone"
-            placeholderTextColor={AppColor.gray}
-          />
           {order.items.length === 0 ? (
             <Text style={styles.emptyText}>Cart is empty.</Text>
           ) : (
@@ -1252,19 +1302,8 @@ const EmployeePosBoardScreen = ({ navigation }) => {
             <Text style={styles.totalLabel}>Subtotal</Text>
             <Text style={styles.totalValue}>{formatMoney(order.subtotal)}</Text>
           </View>
-          <View style={styles.paymentActions}>
-            <TouchableOpacity
-              style={[
-                styles.payButton,
-                (!isWorking || order.items.length === 0) &&
-                  styles.disabledButton,
-              ]}
-              disabled={!isWorking || order.items.length === 0}
-              onPress={goToCheckout}
-            >
-              <Text style={styles.payButtonText}>Cash</Text>
-            </TouchableOpacity>
-            {canTapToPay ? (
+          {canTapToPay ? (
+            <View style={styles.paymentActions}>
               <TouchableOpacity
                 style={[
                   styles.payButton,
@@ -1276,16 +1315,8 @@ const EmployeePosBoardScreen = ({ navigation }) => {
               >
                 <Text style={styles.payButtonText}>Tap to Pay</Text>
               </TouchableOpacity>
-            ) : null}
-            {order.items.length > 0 ? (
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={() => dispatch(clearPosOrder())}
-              >
-                <Text style={styles.secondaryButtonText}>Clear</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.section}>
@@ -1455,6 +1486,14 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     padding: 14,
   },
+  guestBox: {
+    backgroundColor: AppColor.white,
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 14,
+    padding: 14,
+  },
   sectionTitle: {
     color: AppColor.black,
     fontFamily: Mulish700,
@@ -1549,6 +1588,39 @@ const styles = StyleSheet.create({
     fontFamily: Mulish400,
     minHeight: 42,
     paddingHorizontal: 10,
+  },
+  phoneInput: {
+    borderColor: AppColor.border,
+    borderRadius: 6,
+    borderWidth: 1,
+    color: AppColor.black,
+    fontFamily: Mulish400,
+    minHeight: 42,
+    paddingHorizontal: 10,
+  },
+  quickCartBar: {
+    alignItems: "center",
+    borderTopColor: AppColor.border,
+    borderTopWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 12,
+    paddingTop: 12,
+  },
+  quickCartLabel: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish600,
+    fontSize: 12,
+  },
+  quickCartValue: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 18,
+    marginTop: 2,
+  },
+  quickCartActions: {
+    flexDirection: "row",
+    gap: 8,
   },
   cartItem: {
     borderBottomColor: AppColor.border,

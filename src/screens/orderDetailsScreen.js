@@ -44,6 +44,32 @@ import {
 } from "../helpers/order.helper";
 import AppImage from "../components/AppImage";
 
+const POS_REFUNDABLE_STATUSES = [
+  orderStatusStrings.preparing,
+  orderStatusStrings.ready_for_pickup,
+  orderStatusStrings.driver_picked_up,
+  orderStatusStrings.delivered,
+  orderStatusStrings.completed,
+];
+const TEN_MINUTES_MS = 10 * 60 * 1000;
+
+const getCompletedAt = (order) =>
+  order?.completed_at || order?.statusTime?.completedAt || null;
+
+const isCompletedRefundWindowExpired = (order) => {
+  if (order?.orderStatus !== orderStatusStrings.completed) return false;
+  const completedAt = getCompletedAt(order);
+  if (!completedAt) return false;
+  const completedDate = new Date(completedAt);
+  if (Number.isNaN(completedDate.getTime())) return false;
+  return Date.now() - completedDate.getTime() > TEN_MINUTES_MS;
+};
+
+const getDisplayOrderStatus = (order) =>
+  order?.refundStatus === "PENDING"
+    ? "Refund Pending"
+    : orderCurrentStatusNames[order?.orderStatus];
+
 const OrderDetailsScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -166,6 +192,14 @@ const OrderDetailsScreen = ({ navigation, route }) => {
   };
 
   const handleRefundPress = (order) => {
+    if (isCompletedRefundWindowExpired(order)) {
+      Alert.alert(
+        "Refund window closed",
+        "Refunds are only available for 10 minutes after completion."
+      );
+      return;
+    }
+
     const refundAmount = Math.max(
       0,
       Number(order?.total || 0) - Number(order?.tipsAmount || 0)
@@ -354,9 +388,8 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     isVendorPosOrder(orderData) &&
     ["CASH", "TAP_TO_PAY"].includes(orderData?.paymentMethod) &&
     orderData?.paymentStatus !== "REFUNDED" &&
-    [orderStatusStrings.preparing, orderStatusStrings.ready_for_pickup].includes(
-      orderData?.orderStatus
-    );
+    POS_REFUNDABLE_STATUSES.includes(orderData?.orderStatus) &&
+    !isCompletedRefundWindowExpired(orderData);
   const orderIsTerminal =
     orderData?.paymentStatus === "REFUNDED" ||
     [
@@ -383,7 +416,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
   const terminalStatusLabel =
     orderData?.paymentStatus === "REFUNDED"
       ? "Refunded"
-      : orderCurrentStatusNames[orderData?.orderStatus];
+      : getDisplayOrderStatus(orderData);
 
   return (
     <View style={styles.container}>
@@ -527,7 +560,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                 {"Order Status"}
               </Text>
               <Text style={[styles.orderIdText, { color: AppColor.primary }]}>
-                {orderCurrentStatusNames[orderData?.orderStatus]}
+                {getDisplayOrderStatus(orderData)}
               </Text>
             </View>
             {/* Order ID and Location */}

@@ -7,6 +7,17 @@ import { tnc_API } from "../api/authAPI";
 import { AppColor, Mulish700 } from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
 
+const normalizeTermsContent = (content = "") =>
+  String(content)
+    .replace(
+      /Refunds are issued by RTC as deemed necessary to resolve disputes, with the option to charge back the Vendor for excessive refunds or repeated quality issues\./gi,
+      "Refunds are issued by the vendor or RTC as deemed necessary to resolve disputes, with the option to charge the vendor for excessive refunds or quality issues."
+    )
+    .replace(
+      /Vendors must comply with food safety laws and standards\./gi,
+      "Vendor is required to comply with all food safety laws and standards of their governed state."
+    );
+
 const TermsOfServiceScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
 
@@ -19,7 +30,7 @@ const TermsOfServiceScreen = ({ navigation }) => {
       const response = await tnc_API();
       if (response?.success && response?.data) {
         console.log("Response => ", response);
-        setHtmlContent(response.data.termsConditions);
+        setHtmlContent(normalizeTermsContent(response.data.termsConditions));
       }
     } catch (error) {
       console.log("error => ", error);

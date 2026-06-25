@@ -14,6 +14,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import BootSplash from "react-native-bootsplash";
 import { AppColor, Secondary400 } from "./src/utils/theme";
 import GlobalSnackbar from "./src/components/GlobalSnackbar";
 import {
@@ -67,10 +68,13 @@ import AuthSetBusinessHrsScreen from "./src/screens/authSetBusinessHrsScreen";
 import ProfileSetBusinessHrsScreen from "./src/screens/profileSetBusinessHrsScreen";
 import EditMailingAddressScreen from "./src/screens/editMailingAddressScreen";
 import EarningListScreen from "./src/screens/earningListScreen";
+import EarningsSummaryDetailScreen from "./src/screens/earningsSummaryDetailScreen";
 import VendorPosMenuScreen from "./src/screens/vendorPosMenuScreen";
 import VendorPosCheckoutScreen from "./src/screens/vendorPosCheckoutScreen";
 import ProfileEmployeeManagementScreen from "./src/screens/profileEmployeeManagementScreen";
 import EmployeeSessionScreen from "./src/screens/employeeSessionScreen";
+import EmployeeOrderManagementScreen from "./src/screens/employeeOrderManagementScreen";
+import EmployeeRefundRequestsScreen from "./src/screens/employeeRefundRequestsScreen";
 import EmployeePosBoardScreen from "./src/screens/employeePosBoardScreen";
 import EmployeeShiftScreen from "./src/screens/employeeShiftScreen";
 
@@ -335,6 +339,10 @@ const MainAppNavigator = ({ insets }) => (
       component={OtpVerificationScreen}
     />
     <Stack.Screen name="earningListScreen" component={EarningListScreen} />
+    <Stack.Screen
+      name="earningsSummaryDetailScreen"
+      component={EarningsSummaryDetailScreen}
+    />
     <Stack.Screen name="vendorPosMenuScreen" component={VendorPosMenuScreen} />
     <Stack.Screen
       name="vendorPosCheckoutScreen"
@@ -422,6 +430,14 @@ const EmployeeAppNavigator = () => (
       component={EmployeePosBoardScreen}
     />
     <Stack.Screen
+      name="employeeOrderManagementScreen"
+      component={EmployeeOrderManagementScreen}
+    />
+    <Stack.Screen
+      name="employeeRefundRequestsScreen"
+      component={EmployeeRefundRequestsScreen}
+    />
+    <Stack.Screen
       name="employeeShiftScreen"
       component={EmployeeShiftScreen}
     />
@@ -457,6 +473,7 @@ const App = () => {
 
   useEffect(() => {
     configureNotification();
+    BootSplash.hide({ fade: true });
   }, []);
 
   return (

@@ -31,6 +31,8 @@ export const RESET_VENDOR_EMPLOYEE_PIN = (employee_id) =>
   `/vendor-employee/${employee_id}/reset-pin`;
 export const VENDOR_EMPLOYEE_SHIFT_HISTORY = (employee_id) =>
   `/vendor-employee/${employee_id}/shift-history`;
+export const VENDOR_EMPLOYEE_SESSION_ACTION = (employee_id) =>
+  `/vendor-employee/${employee_id}/session/action`;
 export const EMPLOYEE_DASHBOARD = "/vendor-employee/dashboard";
 export const END_EMPLOYEE_SESSION = "/vendor-employee/session/end";
 export const TOGGLE_EMPLOYEE_DUTY = "/vendor-employee/session/duty";

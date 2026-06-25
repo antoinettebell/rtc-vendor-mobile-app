@@ -76,6 +76,7 @@ import {
   RESET_VENDOR_EMPLOYEE_PIN,
   VENDOR_EMPLOYEE,
   VENDOR_EMPLOYEE_BY_ID,
+  VENDOR_EMPLOYEE_SESSION_ACTION,
   VENDOR_EMPLOYEE_SHIFT_HISTORY,
 } from "./apiEndPoint";
 
@@ -1225,6 +1226,19 @@ export const getVendorEmployeeShiftHistory_API = async ({
   try {
     const response = await apiClient.get(
       `${VENDOR_EMPLOYEE_SHIFT_HISTORY(employee_id)}?range=${range}`,
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const vendorEmployeeShiftAction_API = async ({ employee_id, action }) => {
+  try {
+    const response = await apiClient.post(
+      VENDOR_EMPLOYEE_SESSION_ACTION(employee_id),
+      { action },
       { skipToken: false },
     );
     return response?.data;

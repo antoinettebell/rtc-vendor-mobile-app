@@ -23,6 +23,7 @@ import {
   getEarningByFoodTruckID_API,
   getRefundCancelRequests_API,
   reviewRefundCancelRequest_API,
+  vendorEmployeeShiftAction_API,
 } from "../api/appAPI";
 import { formatMoney } from "../helpers/order.helper";
 import StatusBarManager from "../components/StatusBarManager";
@@ -139,13 +140,21 @@ const getEmployeeShiftStatusText = (employee) => {
     return "Archived";
   }
 
-  if (employee?.is_working || employee?.shift?.is_active) {
+  if (employee?.shift?.is_active) {
     const startedAt = formatShiftDateTime(employee?.shift?.started_at);
-    return startedAt ? `Started ${startedAt}` : "Working";
+    return startedAt ? `Started ${startedAt}` : "Shift started";
   }
 
-  const endedAt = formatShiftDateTime(employee?.shift?.ended_at);
-  return endedAt ? `Ended ${endedAt}` : "Off";
+  if (employee?.shift?.ended_at) {
+    const endedAt = formatShiftDateTime(employee?.shift?.ended_at);
+    return endedAt ? `Ended ${endedAt}` : "Shift ended";
+  }
+
+  if (employee?.is_working) {
+    return "Working - shift not started";
+  }
+
+  return "Off duty";
 };
 
 const getDateRange = (dateFilter) => {
@@ -166,6 +175,7 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [earnings, setEarnings] = useState(null);
   const [employeeAnalytics, setEmployeeAnalytics] = useState(null);
+  const [allFoodTruckAnalytics, setAllFoodTruckAnalytics] = useState(null);
   const [dateFilter, setDateFilter] = useState("today");
   const [locationFilter, setLocationFilter] = useState(null);
   const [truckUnitFilter, setTruckUnitFilter] = useState(null);
@@ -178,6 +188,8 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
   const [reviewStatus, setReviewStatus] = useState("APPROVED");
   const [vendorResponseNotes, setVendorResponseNotes] = useState("");
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [employeeShiftActionLoading, setEmployeeShiftActionLoading] =
+    useState(null);
   const [filterPicker, setFilterPicker] = useState(null);
 
   const canTapToPay = false;
@@ -209,8 +221,7 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
         : PAYMENT_FILTERS.filter((item) => item.value !== "TAP_TO_PAY"),
     [canTapToPay]
   );
-  const analyticsEmployees = isEmployeesScreen ? statusFilteredEmployees : employees;
-  const analyticsSummary = useMemo(() => {
+  const buildAnalyticsSummary = useCallback((analyticsEmployees = []) => {
     const totals = analyticsEmployees.reduce(
       (acc, employee) => {
         const metrics = employee.metrics || {};
@@ -231,7 +242,92 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
       ...totals,
       averageTicket: totals.orders ? totals.sales / totals.orders : 0,
     };
-  }, [analyticsEmployees]);
+  }, []);
+  const analyticsEmployees = isEmployeesScreen ? statusFilteredEmployees : employees;
+  const analyticsSummary = useMemo(() => {
+    const allEmployees = allFoodTruckAnalytics?.employees || [];
+    return buildAnalyticsSummary(
+      isEmployeesScreen ? analyticsEmployees : allEmployees
+    );
+  }, [
+    allFoodTruckAnalytics,
+    analyticsEmployees,
+    buildAnalyticsSummary,
+    isEmployeesScreen,
+  ]);
+  const allFoodTruckSummary = useMemo(
+    () => buildAnalyticsSummary(allFoodTruckAnalytics?.employees || []),
+    [allFoodTruckAnalytics, buildAnalyticsSummary]
+  );
+  const earningsSummaryRows = useMemo(
+    () => [
+      {
+        key: "grossSales",
+        label: "Gross Sales",
+        value: `$${formatMoney(allFoodTruckSummary.sales)}`,
+        detailLabel: "All food truck sales",
+        rawValue: allFoodTruckSummary.sales,
+      },
+      {
+        key: "orders",
+        label: "Orders",
+        value: String(allFoodTruckSummary.orders),
+        detailLabel: "Orders across all food trucks",
+        rawValue: allFoodTruckSummary.orders,
+      },
+      {
+        key: "refundsCancels",
+        label: "Refunds/Cancels",
+        value: String(allFoodTruckSummary.requests),
+        detailLabel: "Requests across all food trucks",
+        rawValue: allFoodTruckSummary.requests,
+      },
+      {
+        key: "avgTicket",
+        label: "Avg. Ticket",
+        value: `$${formatMoney(allFoodTruckSummary.averageTicket)}`,
+        detailLabel: "Gross sales divided by orders",
+        rawValue: allFoodTruckSummary.averageTicket,
+      },
+    ],
+    [allFoodTruckSummary]
+  );
+  const allFoodTruckBreakdown = useMemo(() => {
+    const grouped = (allFoodTruckAnalytics?.employees || []).reduce(
+      (acc, employee) => {
+        const truckName =
+          employee.assigned_truck_unit_name ||
+          employee.assigned_truck_unit?.name ||
+          "Unassigned";
+        const metrics = employee.metrics || {};
+        const existing = acc[truckName] || {
+          label: truckName,
+          sales: 0,
+          orders: 0,
+          requests: 0,
+        };
+        const orders = Number(metrics.orders_processed || 0);
+        const sales = Number(metrics.gross_sales || 0);
+        const requests = Number(metrics.refund_cancel_requests_submitted || 0);
+
+        return {
+          ...acc,
+          [truckName]: {
+            ...existing,
+            sales: existing.sales + sales,
+            orders: existing.orders + orders,
+            requests: existing.requests + requests,
+          },
+        };
+      },
+      {}
+    );
+
+    return Object.values(grouped).map((item) => ({
+      ...item,
+      averageTicket: item.orders ? item.sales / item.orders : 0,
+    }));
+  }, [allFoodTruckAnalytics]);
   const refundStatusCounts = useMemo(
     () =>
       refundRequests.reduce(
@@ -313,24 +409,33 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
     }
     try {
       const { startDate, endDate } = getDateRange(dateFilter);
-      const analyticsResponse = await getEarningByFoodTruckID_API({
-        foodTruck_id: user.foodTruck._id,
-        startDate,
-        endDate,
-	        locationId: locationFilter,
-	        truckUnitId: truckUnitFilter,
-	        employeeInternalId: employeeFilter,
-	        paymentMethod: paymentFilter,
-	        refundCancelStatus: null,
-	      });
-	      const requestsResponse = await getRefundCancelRequests_API({
-	        foodTruckId: user.foodTruck._id,
-	        status: requestStatusFilter?.toUpperCase() || null,
-	        employeeInternalId: isEmployeesScreen ? employeeFilter : null,
-	        locationId: isEmployeesScreen ? locationFilter : null,
-	        truckUnitId: truckUnitFilter,
-	        limit: 25,
-	      });
+      const [analyticsResponse, allFoodTruckResponse, requestsResponse] =
+        await Promise.all([
+          getEarningByFoodTruckID_API({
+            foodTruck_id: user.foodTruck._id,
+            startDate,
+            endDate,
+            locationId: locationFilter,
+            truckUnitId: truckUnitFilter,
+            employeeInternalId: employeeFilter,
+            paymentMethod: paymentFilter,
+            refundCancelStatus: null,
+          }),
+          getEarningByFoodTruckID_API({
+            foodTruck_id: user.foodTruck._id,
+            startDate,
+            endDate,
+            refundCancelStatus: null,
+          }),
+          getRefundCancelRequests_API({
+            foodTruckId: user.foodTruck._id,
+            status: requestStatusFilter?.toUpperCase() || null,
+            employeeInternalId: isEmployeesScreen ? employeeFilter : null,
+            locationId: isEmployeesScreen ? locationFilter : null,
+            truckUnitId: truckUnitFilter,
+            limit: 25,
+          }),
+        ]);
       const backendEarnings = analyticsResponse?.data?.earningsFulldata || {};
 
       setEarnings({
@@ -340,7 +445,10 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
         monthlyEarning: Number(backendEarnings.monthlyEarning || 0),
       });
       setEmployeeAnalytics(analyticsResponse?.data?.employeeAnalytics || null);
-	      setRefundRequests(requestsResponse?.data?.requests || []);
+      setAllFoodTruckAnalytics(
+        allFoodTruckResponse?.data?.employeeAnalytics || null
+      );
+      setRefundRequests(requestsResponse?.data?.requests || []);
     } catch (error) {
       console.error("Error refreshing data:", error);
     } finally {
@@ -357,6 +465,10 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
 
   const submitReview = async () => {
     if (!reviewRequest?.request_id) {
+      return;
+    }
+    if (reviewStatus === "REJECTED" && !vendorResponseNotes.trim()) {
+      Alert.alert("Notes required", "Please add notes before rejecting this request.");
       return;
     }
 
@@ -387,6 +499,55 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
     }
   };
 
+  const runVendorEmployeeShiftAction = async (employee, action) => {
+    const employeeId = employee?.employee_id || employee?._id;
+    if (!employeeId) {
+      Alert.alert("Employee unavailable", "Could not identify this employee.");
+      return;
+    }
+
+    const isReopen = action === "REOPEN";
+    setEmployeeShiftActionLoading(`${employeeId}:${action}`);
+    try {
+      await vendorEmployeeShiftAction_API({
+        employee_id: employeeId,
+        action,
+      });
+      await onRefresh({ isInitialLoad: false });
+      Alert.alert(
+        "Shift updated",
+        isReopen
+          ? "The employee has been clocked back in."
+          : "The employee shift has been ended.",
+      );
+    } catch (error) {
+      Alert.alert(
+        "Shift update failed",
+        error?.message || "Could not update this employee shift.",
+      );
+    } finally {
+      setEmployeeShiftActionLoading(null);
+    }
+  };
+
+  const confirmVendorEmployeeShiftAction = (employee, action) => {
+    const isReopen = action === "REOPEN";
+    Alert.alert(
+      isReopen ? "Clock employee back in?" : "End employee shift?",
+      isReopen
+        ? "This will delete the current clock-out time and mark the shift active again."
+        : "This will record the employee clock-out time now.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: isReopen ? "Clock In" : "End Shift",
+          style: isReopen ? "default" : "destructive",
+          onPress: () => runVendorEmployeeShiftAction(employee, action),
+        },
+      ],
+    );
+  };
+
   const onPressNavigationHandler = ({
     listType = "earning",
     durationType = "monthly",
@@ -395,6 +556,43 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
       truckId: user.foodTruck._id,
       listType: listType,
       durationType: durationType,
+    });
+  };
+  const openEarningsSummary = (summaryItem) => {
+    const { startDate, endDate } = getDateRange(dateFilter);
+    const breakdownRows = allFoodTruckBreakdown.map((item) => {
+      let value;
+
+      if (summaryItem.key === "grossSales") {
+        value = `$${formatMoney(item.sales)}`;
+      } else if (summaryItem.key === "orders") {
+        value = String(item.orders);
+      } else if (summaryItem.key === "refundsCancels") {
+        value = String(item.requests);
+      } else {
+        value = `$${formatMoney(item.averageTicket)}`;
+      }
+
+      return {
+        label: item.label,
+        value,
+      };
+    });
+
+    navigation.navigate("earningsSummaryDetailScreen", {
+      title: summaryItem.label,
+      value: summaryItem.value,
+      detailLabel: summaryItem.detailLabel,
+      dateLabel: `${moment(startDate).format("MMM D")} - ${moment(endDate).format(
+        "MMM D"
+      )}`,
+      breakdownRows,
+      totals: {
+        grossSales: `$${formatMoney(allFoodTruckSummary.sales)}`,
+        orders: String(allFoodTruckSummary.orders),
+        refundsCancels: String(allFoodTruckSummary.requests),
+        avgTicket: `$${formatMoney(allFoodTruckSummary.averageTicket)}`,
+      },
     });
   };
 
@@ -651,34 +849,45 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                 )}
 
                 <View style={styles.summaryGrid}>
-                  <View style={styles.summaryCard}>
-                    <Text style={styles.summaryLabel}>
-                      {isEmployeesScreen ? "Employee Sales" : "Gross Sales"}
-                    </Text>
-                    <Text style={styles.summaryValue}>
-                      ${formatMoney(analyticsSummary.sales)}
-                    </Text>
-                  </View>
-                  <View style={styles.summaryCard}>
-                    <Text style={styles.summaryLabel}>
-                      {isEmployeesScreen ? "Orders Handled" : "Orders"}
-                    </Text>
-                    <Text style={styles.summaryValue}>
-                      {analyticsSummary.orders}
-                    </Text>
-                  </View>
-                  <View style={styles.summaryCard}>
-                    <Text style={styles.summaryLabel}>Refunds/Cancels</Text>
-                    <Text style={styles.summaryValue}>
-                      {analyticsSummary.requests}
-                    </Text>
-                  </View>
-                  <View style={styles.summaryCard}>
-                    <Text style={styles.summaryLabel}>Avg. Ticket</Text>
-                    <Text style={styles.summaryValue}>
-                      ${formatMoney(analyticsSummary.averageTicket)}
-                    </Text>
-                  </View>
+                  {earningsSummaryRows.map((item) => (
+                    <Pressable
+                      key={item.key}
+                      style={styles.summaryCard}
+                      onPress={
+                        isEmployeesScreen
+                          ? undefined
+                          : () => openEarningsSummary(item)
+                      }
+                    >
+                      <View style={styles.summaryCardHeader}>
+                        <Text style={styles.summaryLabel}>
+                          {isEmployeesScreen && item.key === "grossSales"
+                            ? "Employee Sales"
+                            : isEmployeesScreen && item.key === "orders"
+                            ? "Orders Handled"
+                            : item.label}
+                        </Text>
+                        {!isEmployeesScreen ? (
+                          <FontAwesome6
+                            name="circle-arrow-right"
+                            size={12}
+                            color={AppColor.primary}
+                          />
+                        ) : null}
+                      </View>
+                      <Text style={styles.summaryValue}>
+                        {isEmployeesScreen && item.key === "grossSales"
+                          ? `$${formatMoney(analyticsSummary.sales)}`
+                          : isEmployeesScreen && item.key === "orders"
+                          ? analyticsSummary.orders
+                          : isEmployeesScreen && item.key === "refundsCancels"
+                          ? analyticsSummary.requests
+                          : isEmployeesScreen && item.key === "avgTicket"
+                          ? `$${formatMoney(analyticsSummary.averageTicket)}`
+                          : item.value}
+                      </Text>
+                    </Pressable>
+                  ))}
                 </View>
 
                 {isEmployeesScreen ? (
@@ -789,7 +998,19 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                           String(request.request_status || "").toUpperCase() ===
                           "PENDING";
                         return (
-                          <View key={request.request_id} style={styles.requestCard}>
+                          <Pressable
+                            key={request.request_id}
+                            style={styles.requestCard}
+                            onPress={() => {
+                              const orderId =
+                                request.order_id?._id || request.order_id;
+                              if (orderId) {
+                                navigation.navigate("orderDetailsScreen", {
+                                  orderId,
+                                });
+                              }
+                            }}
+                          >
                             <Text style={styles.requestTitle}>
                               Order #{request.order_id?.orderNumber || request.order_id}
                             </Text>
@@ -827,7 +1048,7 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                                 Status: {request.request_status || "Not available"}
                               </Text>
                             )}
-                          </View>
+                          </Pressable>
                         );
                       })
                     ) : (
@@ -892,6 +1113,15 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                           : `Cash ${metrics.cash_orders || 0}`;
                         const shiftStatusText =
                           getEmployeeShiftStatusText(employee);
+                        const employeeId = employee.employee_id || employee._id;
+                        const canEndEmployeeShift = !!employee.shift?.is_active;
+                        const canReopenEmployeeShift =
+                          !employee.shift?.is_active && !!employee.shift?.ended_at;
+                        const shiftActionKey = canReopenEmployeeShift
+                          ? `${employeeId}:REOPEN`
+                          : `${employeeId}:END`;
+                        const isShiftActionLoading =
+                          employeeShiftActionLoading === shiftActionKey;
 
                         return (
                           <View
@@ -956,7 +1186,42 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                                 {shiftStatusText}
                               </Text>
                             </View>
-                          </View>
+                            {canEndEmployeeShift || canReopenEmployeeShift ? (
+                              <View style={styles.shiftControlRow}>
+                                <Pressable
+                                  style={[
+                                    styles.shiftControlButton,
+                                    canEndEmployeeShift
+                                      ? styles.shiftEndButton
+                                      : styles.shiftReopenButton,
+                                    isShiftActionLoading &&
+                                      styles.shiftControlDisabled,
+                                  ]}
+                                  disabled={isShiftActionLoading}
+                                  onPress={() =>
+                                    confirmVendorEmployeeShiftAction(
+                                      employee,
+                                      canReopenEmployeeShift ? "REOPEN" : "END",
+                                    )
+                                  }
+                                >
+                                  <Text
+                                    style={[
+                                      styles.shiftControlButtonText,
+                                      canEndEmployeeShift &&
+                                        styles.shiftEndButtonText,
+                                    ]}
+                                  >
+                                    {isShiftActionLoading
+                                      ? "Updating..."
+	                                      : canReopenEmployeeShift
+	                                        ? "Clock Back In"
+	                                        : "End Shift"}
+	                                  </Text>
+	                                </Pressable>
+	                              </View>
+	                            ) : null}
+	                          </View>
                         );
                       })
                     ) : (
@@ -1017,8 +1282,23 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                         </Text>
                       </View>
                       {refundRequests.length ? (
-                        refundRequests.map((request) => (
-                          <View key={request.request_id} style={styles.requestCard}>
+                        refundRequests.map((request) => {
+                          const isPending =
+                            String(request.request_status || "").toUpperCase() ===
+                            "PENDING";
+                          const orderId = request.order_id?._id || request.order_id;
+                          return (
+                          <Pressable
+                            key={request.request_id}
+                            style={styles.requestCard}
+                            onPress={() => {
+                              if (orderId) {
+                                navigation.navigate("orderDetailsScreen", {
+                                  orderId,
+                                });
+                              }
+                            }}
+                          >
                             <Text style={styles.requestTitle}>
                               Order #{request.order_id?.orderNumber || request.order_id}
                             </Text>
@@ -1032,8 +1312,29 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                             <Text style={styles.requestMeta}>
                               {formatDateTime(request.requested_at)}
                             </Text>
-                          </View>
-                        ))
+                            {isPending ? (
+                              <View style={styles.reviewActions}>
+                                <Pressable
+                                  style={styles.rejectButton}
+                                  onPress={() =>
+                                    openReviewModal(request, "REJECTED")
+                                  }
+                                >
+                                  <Text style={styles.rejectButtonText}>Reject</Text>
+                                </Pressable>
+                                <Pressable
+                                  style={styles.approveButton}
+                                  onPress={() =>
+                                    openReviewModal(request, "APPROVED")
+                                  }
+                                >
+                                  <Text style={styles.approveButtonText}>Approve</Text>
+                                </Pressable>
+                              </View>
+                            ) : null}
+                          </Pressable>
+                        );
+                        })
                       ) : (
                         <Text style={styles.emptyInlineText}>
                           No employee refund or cancel activity found.
@@ -1185,6 +1486,12 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     minHeight: 76,
     padding: 12,
+  },
+  summaryCardHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8,
   },
   summaryLabel: {
     color: AppColor.textHighlighter,
@@ -1493,6 +1800,38 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 10,
     paddingTop: 10,
+  },
+  shiftControlRow: {
+    alignItems: "flex-end",
+    borderTopColor: "#EEF0F4",
+    borderTopWidth: 1,
+    marginTop: 10,
+    paddingTop: 10,
+  },
+  shiftControlButton: {
+    alignItems: "center",
+    borderRadius: 6,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 36,
+    paddingHorizontal: 14,
+  },
+  shiftReopenButton: {
+    borderColor: AppColor.primary,
+  },
+  shiftEndButton: {
+    borderColor: "#FF7A7A",
+  },
+  shiftControlDisabled: {
+    opacity: 0.5,
+  },
+  shiftControlButtonText: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
+    fontSize: 12,
+  },
+  shiftEndButtonText: {
+    color: "#FF7A7A",
   },
   manageButton: {
     alignItems: "center",

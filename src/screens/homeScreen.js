@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator as NativeIndicator,
+  Modal,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -55,6 +56,7 @@ import {
   isVendorPosOrder,
 } from "../helpers/order.helper";
 import AppImage from "../components/AppImage";
+import { clearCurrentNotificationOrder } from "../redux/slices/pushNotificationSlice";
 
 const QuickStatsComponent = ({ title, subTitle, icon, onPress }) => (
   <Pressable style={styles.quickStatsContainer} onPress={onPress}>
@@ -91,6 +93,14 @@ const HomeScreen = ({ navigation }) => {
   const [orderRejectBtnLoading, setOrderRejectBtnLoading] = useState(false);
   const [orderAcceptBtnLoading, setOrderAcceptBtnLoading] = useState(false);
   const [locationTimeAdvanceData, setLocationTimeAdvanceData] = useState(null);
+  const [notificationsVisible, setNotificationsVisible] = useState(false);
+  const { currentOrderId, orderQueue } = useSelector(
+    (state) => state.pushNotificationReducer,
+  );
+  const pendingNotificationOrders = [
+    currentOrderId,
+    ...(Array.isArray(orderQueue) ? orderQueue : []),
+  ].filter(Boolean);
 
   const isOn = useSharedValue(false);
   const isEmployeeSession =
@@ -526,6 +536,24 @@ const HomeScreen = ({ navigation }) => {
             {user?.foodTruck?.name || ""}
           </Text>
         </View>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={styles.headerRightContainer}
+          onPress={() => setNotificationsVisible(true)}
+        >
+          <MaterialCommunityIcons
+            name="bell-circle"
+            size={38}
+            color={AppColor.primary}
+          />
+          {pendingNotificationOrders.length ? (
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>
+                {pendingNotificationOrders.length}
+              </Text>
+            </View>
+          ) : null}
+        </TouchableOpacity>
         {false && (
           <TouchableOpacity
             activeOpacity={0.7}
@@ -539,6 +567,58 @@ const HomeScreen = ({ navigation }) => {
           </TouchableOpacity>
         )}
       </View>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={notificationsVisible}
+        onRequestClose={() => setNotificationsVisible(false)}
+      >
+        <View style={styles.notificationOverlay}>
+          <View style={styles.notificationCard}>
+            <View style={styles.notificationHeader}>
+              <Text style={styles.notificationTitle}>Notifications</Text>
+              <TouchableOpacity onPress={() => setNotificationsVisible(false)}>
+                <MaterialCommunityIcons
+                  name="close"
+                  size={22}
+                  color={AppColor.black}
+                />
+              </TouchableOpacity>
+            </View>
+            {pendingNotificationOrders.length ? (
+              pendingNotificationOrders.map((orderId) => (
+                <TouchableOpacity
+                  key={orderId}
+                  style={styles.notificationRow}
+                  onPress={() => {
+                    setNotificationsVisible(false);
+                    navigation.navigate("orderDetailsScreen", { orderId });
+                  }}
+                >
+                  <Text style={styles.notificationRowTitle}>New order</Text>
+                  <Text style={styles.notificationRowMeta}>Order #{orderId}</Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <Text style={styles.notificationEmpty}>No notifications right now.</Text>
+            )}
+            {pendingNotificationOrders.length ? (
+              <TouchableOpacity
+                style={styles.acknowledgeButton}
+                onPress={() => {
+                  pendingNotificationOrders.forEach(() =>
+                    dispatch(clearCurrentNotificationOrder()),
+                  );
+                  setNotificationsVisible(false);
+                }}
+              >
+                <Text style={styles.acknowledgeButtonText}>Acknowledge all</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
 
       {/* Banner for pending status */}
       <CustomBanner
@@ -1066,6 +1146,84 @@ const styles = StyleSheet.create({
   headerRightContainer: {
     width: "10%",
     alignItems: "flex-end",
+  },
+  notificationBadge: {
+    alignItems: "center",
+    backgroundColor: "#DC2626",
+    borderRadius: 10,
+    height: 18,
+    justifyContent: "center",
+    minWidth: 18,
+    paddingHorizontal: 4,
+    position: "absolute",
+    right: -3,
+    top: -2,
+  },
+  notificationBadgeText: {
+    color: AppColor.white,
+    fontFamily: Mulish700,
+    fontSize: 10,
+  },
+  notificationOverlay: {
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.35)",
+    flex: 1,
+    justifyContent: "center",
+    padding: 16,
+  },
+  notificationCard: {
+    backgroundColor: AppColor.white,
+    borderRadius: 8,
+    maxHeight: "80%",
+    padding: 16,
+    width: "100%",
+  },
+  notificationHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  notificationTitle: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 18,
+  },
+  notificationRow: {
+    borderTopColor: AppColor.border,
+    borderTopWidth: 1,
+    paddingVertical: 12,
+  },
+  notificationRowTitle: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 14,
+  },
+  notificationRowMeta: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 12,
+    marginTop: 3,
+  },
+  notificationEmpty: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 14,
+    paddingVertical: 18,
+    textAlign: "center",
+  },
+  acknowledgeButton: {
+    alignItems: "center",
+    backgroundColor: AppColor.primary,
+    borderRadius: 6,
+    marginTop: 12,
+    minHeight: 42,
+    justifyContent: "center",
+  },
+  acknowledgeButtonText: {
+    color: AppColor.white,
+    fontFamily: Mulish700,
+    fontSize: 14,
   },
   scrollViewContent: {
     flexGrow: 1,

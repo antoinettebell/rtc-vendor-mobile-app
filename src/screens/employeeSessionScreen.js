@@ -38,6 +38,38 @@ const ACTIVE_ORDER_STATUSES = [
   orderStatusStrings.preparing,
   orderStatusStrings.ready_for_pickup,
   orderStatusStrings.driver_picked_up,
+  orderStatusStrings.completed,
+];
+
+const ORDER_BUCKETS = [
+  {
+    label: "Preparing",
+    value: "preparing",
+    statuses: [
+      orderStatusStrings.placed,
+      orderStatusStrings.accepted,
+      orderStatusStrings.preparing,
+    ],
+  },
+  {
+    label: "Ready for Pickup",
+    value: "ready",
+    statuses: [
+      orderStatusStrings.ready_for_pickup,
+      orderStatusStrings.driver_picked_up,
+    ],
+  },
+  {
+    label: "Completed",
+    value: "completed",
+    statuses: [orderStatusStrings.completed],
+  },
+];
+
+const REFUND_BUCKETS = [
+  { label: "Pending", value: "PENDING" },
+  { label: "Approved", value: "APPROVED" },
+  { label: "Rejected", value: "REJECTED" },
 ];
 
 const REQUEST_REASONS = [
@@ -49,6 +81,47 @@ const REQUEST_REASONS = [
   "customer complaint",
   "other",
 ];
+const PAID_PAYMENT_STATUSES = ["PAID", "COMPLETED", "CAPTURED"];
+const POST_PICKUP_STATUSES = [
+  orderStatusStrings.driver_picked_up,
+  orderStatusStrings.delivered,
+  orderStatusStrings.completed,
+];
+const TEN_MINUTES_MS = 10 * 60 * 1000;
+
+const isCashPayment = (order) =>
+  ["CASH", "COD"].includes(
+    String(order?.paymentMethod || order?.payment_method || "").toUpperCase(),
+  );
+
+const isPaidOrPickedUp = (order) =>
+  PAID_PAYMENT_STATUSES.includes(String(order?.paymentStatus || "").toUpperCase()) ||
+  POST_PICKUP_STATUSES.includes(order?.orderStatus);
+
+const getCompletedAt = (order) =>
+  order?.completed_at || order?.statusTime?.completedAt || null;
+
+const isCompletedRefundWindowExpired = (order) => {
+  if (order?.orderStatus !== orderStatusStrings.completed) return false;
+  const completedAt = getCompletedAt(order);
+  if (!completedAt) return false;
+  const completedDate = new Date(completedAt);
+  if (Number.isNaN(completedDate.getTime())) return false;
+  return Date.now() - completedDate.getTime() > TEN_MINUTES_MS;
+};
+
+const getAvailableRequestTypes = (order) =>
+  isPaidOrPickedUp(order) ? ["REFUND"] : ["REFUND", "CANCEL"];
+
+const getAvailableReasons = (order, requestType) =>
+  REQUEST_REASONS.filter(
+    (reason) =>
+      !(
+        requestType === "REFUND" &&
+        isCashPayment(order) &&
+        reason === "payment issue"
+      ),
+  );
 
 const formatMoney = (value) => {
   const amount = Number(value);
@@ -75,14 +148,20 @@ const EmployeeSessionScreen = ({ navigation }) => {
   const [reasonCode, setReasonCode] = useState(REQUEST_REASONS[0]);
   const [employeeNotes, setEmployeeNotes] = useState("");
   const [requestSubmitting, setRequestSubmitting] = useState(false);
+  const [selectedOrderBucket, setSelectedOrderBucket] = useState("preparing");
+  const [selectedRefundBucket, setSelectedRefundBucket] = useState("PENDING");
 
   const foodTruck = user?.foodTruck;
   const assignedLocation = user?.assignedLocation;
+  const assignedTruckUnit = dashboard?.assignedTruckUnit || user?.assignedTruckUnit;
   const capabilities = user?.employeeCapabilities || {};
   const canTapToPay = false;
   const locationIsOpen =
-    foodTruck?.currentLocation?.toString() ===
-      assignedLocation?._id?.toString() || !!assignedLocation?.isOrderingOpen;
+    (assignedTruckUnit?.open_locations || []).some(
+      (location) =>
+        location?.locationId?.toString() === assignedLocation?._id?.toString() &&
+        location?.isOrderingOpen,
+    );
 
   const employeeName = useMemo(
     () =>
@@ -153,24 +232,50 @@ const EmployeeSessionScreen = ({ navigation }) => {
     dispatch(onSignOut());
   };
 
-  const handleCompleteOrder = async (order) => {
+  const getNextOrderStatus = (status) => {
+    if (
+      [orderStatusStrings.placed, orderStatusStrings.accepted].includes(status)
+    ) {
+      return orderStatusStrings.preparing;
+    }
+    if (status === orderStatusStrings.preparing) {
+      return orderStatusStrings.ready_for_pickup;
+    }
+    if (
+      [
+        orderStatusStrings.ready_for_pickup,
+        orderStatusStrings.driver_picked_up,
+      ].includes(status)
+    ) {
+      return orderStatusStrings.completed;
+    }
+    return null;
+  };
+
+  const getNextOrderStatusLabel = (status) => {
+    const next = getNextOrderStatus(status);
+    if (next === orderStatusStrings.preparing) return "Start Preparing";
+    if (next === orderStatusStrings.ready_for_pickup) return "Mark Ready";
+    if (next === orderStatusStrings.completed) return "Complete";
+    return null;
+  };
+
+  const updateOrderStatus = async (order, nextStatus) => {
+    if (!nextStatus) return;
     setActionLoadingId(order?._id);
     try {
       const response = await updateOrderStatusByID_API({
         order_id: order?._id,
-        payload: {
-          orderStatus: orderStatusStrings.completed,
-        },
+        payload: { orderStatus: nextStatus },
       });
 
       if (response?.success) {
-        setOrders((prev) => prev.filter((item) => item._id !== order?._id));
-        await loadDashboard();
+        await Promise.all([loadOrders(), loadDashboard()]);
       }
     } catch (error) {
       Alert.alert(
         "Order update failed",
-        error?.message || "Could not complete order.",
+        error?.message || "Could not update order.",
       );
     } finally {
       setActionLoadingId(null);
@@ -224,14 +329,27 @@ const EmployeeSessionScreen = ({ navigation }) => {
       return;
     }
 
+    if (isCompletedRefundWindowExpired(order)) {
+      Alert.alert(
+        "Refund unavailable",
+        "Employees can only request a refund within 10 minutes after completion.",
+      );
+      return;
+    }
+
     setRequestModalOrder(order);
-    setRequestType("REFUND");
-    setReasonCode(REQUEST_REASONS[0]);
+    const nextRequestType = getAvailableRequestTypes(order)[0];
+    setRequestType(nextRequestType);
+    setReasonCode(getAvailableReasons(order, nextRequestType)[0]);
     setEmployeeNotes("");
   };
 
   const submitRequest = async () => {
     if (!requestModalOrder?._id) {
+      return;
+    }
+    if (reasonCode === "other" && !employeeNotes.trim()) {
+      Alert.alert("Notes required", "Please add notes when reason is other.");
       return;
     }
 
@@ -262,8 +380,32 @@ const EmployeeSessionScreen = ({ navigation }) => {
     }
   };
 
-  const renderOrder = ({ item }) => (
-    <View style={styles.orderCard}>
+  const renderOrder = ({ item }) => {
+    const nextStatus = getNextOrderStatus(item?.orderStatus);
+    const nextStatusLabel = getNextOrderStatusLabel(item?.orderStatus);
+    const canRequestRefundCancel =
+      !getOrderRequest(item?._id) && !isCompletedRefundWindowExpired(item);
+
+    return (
+    <TouchableOpacity
+      activeOpacity={0.85}
+      style={styles.orderCard}
+      onPress={() => {
+        if (nextStatus) {
+          Alert.alert(
+            "Update order status?",
+            `Move order #${item?.orderNumber || item?._id} to ${nextStatusLabel}?`,
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: nextStatusLabel,
+                onPress: () => updateOrderStatus(item, nextStatus),
+              },
+            ],
+          );
+        }
+      }}
+    >
       {(() => {
         const existingRequest = getOrderRequest(item?._id);
         return existingRequest ? (
@@ -282,6 +424,22 @@ const EmployeeSessionScreen = ({ navigation }) => {
         {(item?.items || []).length} items | $
         {getVendorOrderTotal(item).toFixed(2)}
       </Text>
+      {(item?.items || []).length ? (
+        <View style={styles.orderItemsBox}>
+          {(item.items || []).map((orderItem, index) => (
+            <Text
+              key={`${item?._id || "order"}-${orderItem?._id || index}`}
+              style={styles.orderItemLine}
+            >
+              {orderItem?.qty || orderItem?.quantity || 1}x{" "}
+              {orderItem?.menuItem?.name ||
+                orderItem?.name ||
+                orderItem?.menuItemId?.name ||
+                "Menu item"}
+            </Text>
+          ))}
+        </View>
+      ) : null}
       <View style={styles.orderActions}>
         <TouchableOpacity
           activeOpacity={0.8}
@@ -297,31 +455,62 @@ const EmployeeSessionScreen = ({ navigation }) => {
         </TouchableOpacity>
         <TouchableOpacity
           activeOpacity={0.8}
-          style={styles.primarySmallButton}
-          disabled={actionLoadingId === item?._id}
-          onPress={() => handleCompleteOrder(item)}
+          style={[
+            styles.primarySmallButton,
+            !nextStatus && styles.disabledButton,
+          ]}
+          disabled={!nextStatus || actionLoadingId === item?._id}
+          onPress={() => updateOrderStatus(item, nextStatus)}
         >
           <Text style={styles.primarySmallButtonText}>
-            {actionLoadingId === item?._id ? "Updating..." : "Complete"}
+            {actionLoadingId === item?._id
+              ? "Updating..."
+              : nextStatusLabel || "Completed"}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           activeOpacity={0.8}
-          style={styles.dangerButton}
+          style={[
+            styles.dangerButton,
+            !canRequestRefundCancel && styles.disabledButton,
+          ]}
+          disabled={!canRequestRefundCancel}
           onPress={() => openRequestModal(item)}
         >
-          <Text style={styles.dangerButtonText}>Request Refund/Cancel</Text>
+          <Text style={styles.dangerButtonText}>
+            {isPaidOrPickedUp(item) ? "Request Refund" : "Request Refund/Cancel"}
+          </Text>
         </TouchableOpacity>
       </View>
-    </View>
-  );
+    </TouchableOpacity>
+    );
+  };
 
   const metrics = dashboard?.metrics || {};
   const displayedLocation = dashboard?.assignedLocation || assignedLocation;
+  const displayedTruckName =
+    assignedTruckUnit?.name || foodTruck?.name || "Food truck";
   const displayedLocationOpen =
     dashboard?.location?.is_open !== undefined
       ? dashboard.location.is_open
       : locationIsOpen;
+  const selectedOrderBucketConfig =
+    ORDER_BUCKETS.find((bucket) => bucket.value === selectedOrderBucket) ||
+    ORDER_BUCKETS[0];
+  const filteredOrders = orders.filter((order) =>
+    selectedOrderBucketConfig.statuses.includes(order?.orderStatus),
+  );
+  const refundBucketCounts = REFUND_BUCKETS.reduce((counts, bucket) => {
+    counts[bucket.value] = requests.filter(
+      (request) =>
+        String(request.request_status || "").toUpperCase() === bucket.value,
+    ).length;
+    return counts;
+  }, {});
+  const selectedRefundRequests = requests.filter(
+    (request) =>
+      String(request.request_status || "").toUpperCase() === selectedRefundBucket,
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -339,14 +528,20 @@ const EmployeeSessionScreen = ({ navigation }) => {
             </Text>
 
             <View style={styles.segmentRow}>
-              {["REFUND", "CANCEL"].map((type) => (
+              {getAvailableRequestTypes(requestModalOrder).map((type) => (
                 <TouchableOpacity
                   key={type}
                   style={[
                     styles.segmentButton,
                     requestType === type && styles.segmentButtonSelected,
                   ]}
-                  onPress={() => setRequestType(type)}
+                  onPress={() => {
+                    setRequestType(type);
+                    const reasons = getAvailableReasons(requestModalOrder, type);
+                    if (!reasons.includes(reasonCode)) {
+                      setReasonCode(reasons[0]);
+                    }
+                  }}
                 >
                   <Text
                     style={[
@@ -362,7 +557,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
 
             <Text style={styles.modalLabel}>Reason</Text>
             <View style={styles.reasonWrap}>
-              {REQUEST_REASONS.map((reason) => (
+              {getAvailableReasons(requestModalOrder, requestType).map((reason) => (
                 <TouchableOpacity
                   key={reason}
                   style={[
@@ -383,17 +578,17 @@ const EmployeeSessionScreen = ({ navigation }) => {
               ))}
             </View>
 
-            <Text style={styles.modalLabel}>Notes</Text>
+	            <Text style={styles.modalLabel}>Notes</Text>
             <TextInput
               multiline
               value={employeeNotes}
               onChangeText={setEmployeeNotes}
-              placeholder="Optional notes"
+              placeholder={reasonCode === "other" ? "Required notes" : "Optional notes"}
               placeholderTextColor={AppColor.textHighlighter}
               style={styles.notesInput}
             />
 
-            <View style={styles.modalActions}>
+	            <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalSecondary}
                 onPress={() => setRequestModalOrder(null)}
@@ -424,7 +619,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
       </View>
 
       <FlatList
-        data={orders}
+        data={[]}
         keyExtractor={(item) => item?._id}
         renderItem={renderOrder}
         refreshControl={
@@ -433,126 +628,118 @@ const EmployeeSessionScreen = ({ navigation }) => {
         ListHeaderComponent={
           <View>
             <View style={styles.panel}>
-              <Text style={styles.panelTitle}>
-                {foodTruck?.name || "Food truck"}
-              </Text>
-              <Text style={styles.locationText}>
-                {displayedLocation?.title ||
-                  displayedLocation?.address ||
-                  user?.assigned_location_id ||
-                  "Assigned location"}
-              </Text>
-              <Text style={styles.locationAddress}>
-                {displayedLocation?.address || ""}
-              </Text>
+              <View style={styles.locationHeaderRow}>
+                <View style={styles.locationInfoBlock}>
+                  <Text style={styles.panelTitle}>
+                    {displayedTruckName}
+                  </Text>
+                  <Text style={styles.locationText}>
+                    {displayedLocation?.title ||
+                      displayedLocation?.address ||
+                      user?.assigned_location_id ||
+                      "Assigned location"}
+                  </Text>
+                  <Text style={styles.locationAddress}>
+                    {displayedLocation?.address || ""}
+                  </Text>
 
-              <Text
-                style={[
-                  styles.locationStatus,
-                  displayedLocationOpen && styles.locationStatusOpen,
-                ]}
-              >
-                {displayedLocationOpen ? "Location Open" : "Location Closed"}
-              </Text>
+                  <Text
+                    style={[
+                      styles.locationStatus,
+                      displayedLocationOpen && styles.locationStatusOpen,
+                    ]}
+                  >
+                    {displayedLocationOpen ? "Location Open" : "Location Closed"}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={styles.takeoutButton}
+                  onPress={() => navigation.navigate("employeePosBoardScreen")}
+                >
+                  <Text style={styles.takeoutButtonText}>Take-Out Order</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.panel}>
               <Text style={styles.panelTitle}>Today</Text>
               <View style={styles.statsGrid}>
                 <StatCard
-                  label="Orders created"
-                  value={metrics.orders_created_today || 0}
-                />
-                <StatCard
-                  label="Completed"
-                  value={metrics.completed_orders_today || 0}
-                />
-                <StatCard
-                  label="Gross sales"
-                  value={formatMoney(metrics.gross_sales_today)}
-                />
-                <StatCard
-                  label="Cash orders"
-                  value={metrics.cash_orders_today || 0}
-                />
-                <StatCard
                   label="Cash drawer"
                   value={formatMoney(metrics.cash_drawer_total)}
                 />
-                {canTapToPay ? (
-                  <StatCard
-                    label="Tap orders"
-                    value={metrics.tap_orders_today || 0}
-                  />
-                ) : null}
                 <StatCard
                   label="Refund/cancel requests"
                   value={metrics.refund_cancel_requests_submitted || 0}
                 />
               </View>
-              <View style={styles.requestRow}>
-                <View style={styles.requestBadge}>
-                  <Text style={styles.requestCount}>
-                    {metrics.refund_cancel_request_status_counts?.pending || 0}
-                  </Text>
-                  <Text style={styles.requestLabel}>Pending</Text>
-                </View>
-                <View style={styles.requestBadge}>
-                  <Text style={styles.requestCount}>
-                    {metrics.refund_cancel_request_status_counts?.approved || 0}
-                  </Text>
-                  <Text style={styles.requestLabel}>Approved</Text>
-                </View>
-                <View style={styles.requestBadge}>
-                  <Text style={styles.requestCount}>
-                    {metrics.refund_cancel_request_status_counts?.rejected || 0}
-                  </Text>
-                  <Text style={styles.requestLabel}>Rejected</Text>
-                </View>
+            </View>
+
+            <View style={styles.panel}>
+              <Text style={styles.panelTitle}>Order Management</Text>
+              <View style={styles.bucketRow}>
+                {ORDER_BUCKETS.map((bucket) => {
+                  const count = orders.filter((order) =>
+                    bucket.statuses.includes(order?.orderStatus),
+                  ).length;
+                  return (
+                    <TouchableOpacity
+                      key={bucket.value}
+                      style={styles.bucketCard}
+                      onPress={() =>
+                        navigation.navigate("employeeOrderManagementScreen", {
+                          bucket: bucket.value,
+                        })
+                      }
+                    >
+                      <Text style={styles.bucketCount}>
+                        {count}
+                      </Text>
+                      <Text style={styles.bucketLabel}>
+                        {bucket.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
 
             <View style={styles.panel}>
-              <Text style={styles.panelTitle}>Walk-up POS</Text>
-              <View style={styles.paymentRow}>
-                <View style={styles.paymentBadge}>
-                  <Text style={styles.paymentBadgeText}>Cash enabled</Text>
-                </View>
-                <View
-                  style={[
-                    styles.paymentBadge,
-                    !canTapToPay && styles.paymentBadgeDisabled,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.paymentBadgeText,
-                      !canTapToPay && styles.paymentBadgeTextDisabled,
-                    ]}
-                  >
-                    {canTapToPay
-                      ? "Tap to Pay enabled"
-                      : "Tap to Pay unavailable"}
-                  </Text>
-                </View>
+              <Text style={styles.panelTitle}>Refunds</Text>
+              <View style={styles.bucketRow}>
+                {REFUND_BUCKETS.map((bucket) => {
+                  return (
+                    <TouchableOpacity
+                      key={bucket.value}
+                      style={styles.bucketCard}
+                      onPress={() =>
+                        navigation.navigate("employeeRefundRequestsScreen", {
+                          bucket: bucket.value,
+                        })
+                      }
+                    >
+                      <Text style={styles.bucketCount}>
+                        {refundBucketCounts[bucket.value] || 0}
+                      </Text>
+                      <Text style={styles.bucketLabel}>
+                        {bucket.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
+            </View>
+
+            <View style={styles.bottomActionPanel}>
               <TouchableOpacity
                 activeOpacity={0.8}
-                style={[styles.primaryButton, styles.stackedAction]}
+                style={styles.primaryButton}
                 onPress={() => navigation.navigate("employeeShiftScreen")}
               >
                 <Text style={styles.primaryButtonText}>My Shift</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={styles.primaryButton}
-                onPress={() => navigation.navigate("employeePosBoardScreen")}
-              >
-                <Text style={styles.primaryButtonText}>Walk-up Orders</Text>
-              </TouchableOpacity>
             </View>
-
-            <Text style={styles.queueTitle}>Active Order Queue</Text>
           </View>
         }
         ListEmptyComponent={
@@ -561,11 +748,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
               color={AppColor.primary}
               style={styles.emptyLoader}
             />
-          ) : (
-            <Text style={styles.emptyText}>
-              No active orders for this location.
-            </Text>
-          )
+          ) : null
         }
         contentContainerStyle={styles.content}
       />
@@ -716,6 +899,99 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 3,
   },
+  bucketRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  bucketCard: {
+    alignItems: "center",
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flex: 1,
+    minHeight: 68,
+    justifyContent: "center",
+    paddingHorizontal: 6,
+    paddingVertical: 10,
+  },
+  bucketCardActive: {
+    backgroundColor: AppColor.primary,
+    borderColor: AppColor.primary,
+  },
+  bucketCount: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 18,
+  },
+  bucketLabel: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish600,
+    fontSize: 11,
+    marginTop: 4,
+    textAlign: "center",
+  },
+  bucketTextActive: {
+    color: AppColor.white,
+  },
+  bucketDetails: {
+    marginTop: 12,
+  },
+  refundCard: {
+    borderTopColor: AppColor.border,
+    borderTopWidth: 1,
+    paddingVertical: 10,
+  },
+  refundTitle: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 13,
+  },
+  refundMeta: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 12,
+    marginTop: 3,
+  },
+  refundDetail: {
+    color: AppColor.black,
+    fontFamily: Mulish400,
+    fontSize: 12,
+    marginTop: 6,
+  },
+  refundStatusText: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
+    fontSize: 12,
+    marginTop: 6,
+  },
+  emptyInlineText: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 13,
+    marginTop: 10,
+  },
+  locationHeaderRow: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: 12,
+    justifyContent: "space-between",
+  },
+  locationInfoBlock: {
+    flex: 1,
+  },
+  takeoutButton: {
+    alignItems: "center",
+    backgroundColor: AppColor.primary,
+    borderRadius: 6,
+    justifyContent: "center",
+    minHeight: 40,
+    paddingHorizontal: 12,
+  },
+  takeoutButtonText: {
+    color: AppColor.white,
+    fontFamily: Mulish700,
+    fontSize: 12,
+  },
   locationText: {
     color: AppColor.black,
     fontFamily: Mulish600,
@@ -783,6 +1059,9 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
     fontSize: 16,
   },
+  bottomActionPanel: {
+    marginBottom: 14,
+  },
   queueTitle: {
     color: AppColor.black,
     fontFamily: Mulish700,
@@ -820,6 +1099,20 @@ const styles = StyleSheet.create({
     fontFamily: Mulish400,
     fontSize: 13,
     marginTop: 8,
+  },
+  orderItemsBox: {
+    backgroundColor: "#F9FAFB",
+    borderColor: AppColor.border,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginTop: 10,
+    padding: 10,
+  },
+  orderItemLine: {
+    color: AppColor.black,
+    fontFamily: Mulish400,
+    fontSize: 12,
+    marginBottom: 3,
   },
   orderActions: {
     flexDirection: "row",
@@ -869,6 +1162,9 @@ const styles = StyleSheet.create({
     color: "#DC2626",
     fontFamily: Mulish700,
     fontSize: 13,
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
   requestStatusNotice: {
     color: AppColor.primary,

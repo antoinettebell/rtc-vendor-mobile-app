@@ -381,7 +381,11 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
               await deleteVendorEmployee_API(employee._id);
               fetchEmployees();
             } catch (error) {
-              Alert.alert("Delete failed", error?.message || "Please try again.");
+              Alert.alert(
+                "Delete failed",
+                error?.message ||
+                  "Employee cannot be deleted due to prior sales activity. Please Disable Login Access then Archive the Employee."
+              );
             }
           },
         },
