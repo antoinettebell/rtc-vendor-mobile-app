@@ -145,7 +145,7 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
         );
         dispatch(
           showSnackbar({
-            message: "Add-ons updated successfully!",
+            message: "Ad Space updated successfully!",
             type: "success",
           }),
         );
@@ -546,11 +546,11 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
             {visibleAddOns?.length ? (
               <View>
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Add-Ons</Text>
+                  <Text style={styles.sectionTitle}>Ad Space</Text>
                   <Text style={styles.sectionSubtitle}>
                     {isEliteSelected
-                      ? "Optional add-ons for your current plan."
-                      : "Optional add-ons for your current plan."}
+                      ? "Optional ad placement for your current plan."
+                      : "Optional ad placement for your current plan."}
                   </Text>
                 </View>
 
@@ -576,7 +576,7 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
                   <ActivityIndicator color={AppColor.white} />
                 ) : (
                   <Text style={styles.continueButtonText}>
-                    {"Update Add-ons"}
+                    {"Update Ad Space"}
                   </Text>
                 )}
               </TouchableOpacity>

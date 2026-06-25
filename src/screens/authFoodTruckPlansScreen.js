@@ -488,11 +488,11 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
               {visibleAddOns?.length ? (
                 <View>
                   <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Select Add-Ons</Text>
+                    <Text style={styles.sectionTitle}>Select Ad Space</Text>
                     <Text style={styles.sectionSubtitle}>
                       {isEliteSelected
-                        ? "Optional add-ons for your current plan."
-                        : "Optional add-ons for your current plan."}
+                        ? "Optional ad placement for your current plan."
+                        : "Optional ad placement for your current plan."}
                     </Text>
                   </View>
 
