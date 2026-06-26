@@ -5,7 +5,7 @@
     "version": "1.6",
     "ios": {
       "bundleIdentifier": "com.rounddacorner.dev.vendor",
-      "buildNumber": "35",
+      "buildNumber": "36",
       "entitlements": {
         "com.apple.developer.proximity-reader.payment.acceptance": true
       },
@@ -17,7 +17,7 @@
     },
     "android": {
       "package": "com.rounddacorner.dev.vendor",
-      "versionCode": 34
+      "versionCode": 36
     },
     "extra": {
       "eas": {
