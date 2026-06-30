@@ -394,7 +394,7 @@
 				CODE_SIGN_ENTITLEMENTS = FoodtruckVendor/FoodtruckVendor.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 48;
 				DEVELOPMENT_TEAM = 5G26GFF98P;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = FoodtruckVendor/Info.plist;
@@ -432,7 +432,7 @@
 				CODE_SIGN_ENTITLEMENTS = FoodtruckVendor/FoodtruckVendor.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 48;
 				DEVELOPMENT_TEAM = 5G26GFF98P;
 				INFOPLIST_FILE = FoodtruckVendor/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
