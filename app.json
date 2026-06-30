@@ -5,10 +5,7 @@
     "version": "1.6",
     "ios": {
       "bundleIdentifier": "com.rounddacorner.dev.vendor",
-      "buildNumber": "48",
-      "entitlements": {
-        "com.apple.developer.proximity-reader.payment.acceptance": true
-      },
+      "buildNumber": "49",
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
@@ -17,7 +14,7 @@
     },
     "android": {
       "package": "com.rounddacorner.dev.vendor",
-      "versionCode": 48
+      "versionCode": 49
     },
     "extra": {
       "eas": {
