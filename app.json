@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "RTC_DEV_VENDOR",
+    "name": "Round Da' Corner - Vendor",
     "slug": "foodtruckvendor",
     "version": "1.6",
     "ios": {
       "bundleIdentifier": "com.rounddacorner.dev.vendor",
-      "buildNumber": "49",
+      "buildNumber": "50",
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
@@ -14,7 +14,7 @@
     },
     "android": {
       "package": "com.rounddacorner.dev.vendor",
-      "versionCode": 49
+      "versionCode": 50
     },
     "extra": {
       "eas": {

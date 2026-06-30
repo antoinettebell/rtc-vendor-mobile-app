@@ -26,7 +26,15 @@
       }
     },
     "production": {
+      "env": {
+        "API_URL": "http://157.245.6.61:8000",
+        "API_PREFIX": "/api/v1",
+        "APP_ENV": "production",
+        "TAP_TO_PAY_ENABLED": "false",
+        "TAP_TO_PAY_ENVIRONMENT": "production"
+      },
       "ios": {
+        "image": "latest",
         "simulator": false,
         "buildConfiguration": "Release"
       },
