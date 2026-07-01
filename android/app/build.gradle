@@ -80,10 +80,10 @@ android {
 
     namespace "com.ea.rtcvendor"
     defaultConfig {
-        applicationId "com.rounddacorner.dev.vendor"
+        applicationId "com.ea.rtcvendor"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 50
+        versionCode 51
         versionName "1.6"
         vectorDrawables.useSupportLibrary = true
     }

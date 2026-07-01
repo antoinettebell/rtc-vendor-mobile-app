@@ -4,8 +4,8 @@
     "slug": "foodtruckvendor",
     "version": "1.6",
     "ios": {
-      "bundleIdentifier": "com.rounddacorner.dev.vendor",
-      "buildNumber": "50",
+      "bundleIdentifier": "com.ea.rtcvendor",
+      "buildNumber": "51",
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
@@ -13,8 +13,8 @@
       }
     },
     "android": {
-      "package": "com.rounddacorner.dev.vendor",
-      "versionCode": 50
+      "package": "com.ea.rtcvendor",
+      "versionCode": 51
     },
     "extra": {
       "eas": {
