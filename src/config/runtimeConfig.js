@@ -1,6 +1,6 @@
 import Config from "react-native-config";
 
-const DEFAULT_API_URL = "http://157.245.6.61:3000";
+const DEFAULT_API_URL = "http://157.245.6.61:8000";
 const DEFAULT_API_PREFIX = "/api/v1";
 
 const configuredApiUrl = Config.API_URL || "";
