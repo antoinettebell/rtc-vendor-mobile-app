@@ -70,6 +70,7 @@ import {
   EMPLOYEE_ORDERS,
   EMPLOYEE_SHIFT_ACTION,
   END_EMPLOYEE_SESSION,
+  FOOD_TRUCK_DOCUMENTS,
   TOGGLE_EMPLOYEE_DUTY,
   REFUND_CANCEL_REQUESTS,
   REVIEW_REFUND_CANCEL_REQUEST,
@@ -121,6 +122,19 @@ export const uploadImage_API = async (payload) => {
   try {
     const URL = `${MEDIA_UPLOAD}`;
     const response = await apiClient.post(URL, payload, { formData: true });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const uploadFoodTruckDocument_API = async ({ foodtruck_id, payload }) => {
+  try {
+    const response = await apiClient.post(
+      FOOD_TRUCK_DOCUMENTS(foodtruck_id),
+      payload,
+      { formData: true, skipToken: false },
+    );
     return response?.data;
   } catch (error) {
     throw error?.response?.data || error;

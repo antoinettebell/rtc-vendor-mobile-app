@@ -12,6 +12,7 @@ import {
   View,
   TextInput as NativeTextInput,
   ActivityIndicator as NativeIndicator,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -24,6 +25,7 @@ import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import AntDesign from "react-native-vector-icons/AntDesign";
 import { useDispatch, useSelector } from "react-redux";
 import ImagePicker from "react-native-image-crop-picker";
+import DocumentPicker, { types } from "react-native-document-picker";
 import { RESULTS } from "react-native-permissions";
 import FastImage from "@d11/react-native-fast-image";
 import usePermission from "../hooks/usePermission";
@@ -42,6 +44,7 @@ import {
   getUserDetail_API,
   updateFoodTruckProfile_API,
   updateUserDetail_API,
+  uploadFoodTruckDocument_API,
   uploadImage_API,
 } from "../api/appAPI";
 import { setUser, updateFoodTruck } from "../redux/slices/userSlice";
@@ -279,6 +282,7 @@ const EditProfileScreen = ({ navigation }) => {
   const [selectedLogo, setSelectedLogo] = useState(null);
   const [selectedMediaType, setSelectedMediaType] = useState(null);
   const [selectedPhotos, setSelectedPhotos] = useState([]);
+  const [selectedDocuments, setSelectedDocuments] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -496,6 +500,90 @@ const EditProfileScreen = ({ navigation }) => {
   const onPhotosRemovePress = (index) => {
     const tempPhotos = selectedPhotos.filter((_, i) => i !== index);
     setSelectedPhotos(tempPhotos);
+  };
+
+  const normalizeDocumentName = (value) =>
+    String(value || "")
+      .trim()
+      .toLowerCase();
+
+  const askReplaceDocument = (fileName) =>
+    new Promise((resolve) => {
+      Alert.alert(
+        "Replace existing file?",
+        `A document named "${fileName}" already exists. Do you want to replace the existing file?`,
+        [
+          { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+          {
+            text: "Replace",
+            style: "destructive",
+            onPress: () => resolve(true),
+          },
+        ]
+      );
+    });
+
+  const onPressUploadDocuments = async () => {
+    try {
+      const pickedFiles = await DocumentPicker.pick({
+        allowMultiSelection: true,
+        type: [types.pdf, types.images],
+      });
+      const existingNames = new Set(
+        (user?.foodTruck?.documents || [])
+          .map((document) => document.title || document.original_name)
+          .map(normalizeDocumentName)
+          .filter(Boolean)
+      );
+      let nextSelectedDocuments = [...selectedDocuments];
+      const selectedNames = new Set(
+        nextSelectedDocuments
+          .map((document) => document.name)
+          .map(normalizeDocumentName)
+          .filter(Boolean)
+      );
+
+      for (const file of pickedFiles) {
+        const fileName = normalizeDocumentName(file.name);
+        if (!fileName) continue;
+
+        if (existingNames.has(fileName)) {
+          const shouldReplace = await askReplaceDocument(
+            file.name || "Vendor document"
+          );
+          if (!shouldReplace) continue;
+          nextSelectedDocuments = nextSelectedDocuments.filter(
+            (document) => normalizeDocumentName(document.name) !== fileName
+          );
+          nextSelectedDocuments.push({ ...file, replaceExisting: true });
+          continue;
+        }
+
+        if (selectedNames.has(fileName)) {
+          const shouldReplace = await askReplaceDocument(
+            file.name || "Vendor document"
+          );
+          if (!shouldReplace) continue;
+          nextSelectedDocuments = nextSelectedDocuments.filter(
+            (document) => normalizeDocumentName(document.name) !== fileName
+          );
+        } else {
+          selectedNames.add(fileName);
+        }
+
+        nextSelectedDocuments.push(file);
+      }
+
+      setSelectedDocuments(nextSelectedDocuments);
+    } catch (error) {
+      if (!DocumentPicker.isCancel(error)) {
+        console.log("document picker error => ", error);
+      }
+    }
+  };
+
+  const onDocumentsRemovePress = (index) => {
+    setSelectedDocuments((prev) => prev.filter((_, i) => i !== index));
   };
 
   const processSocialMediaResponse = (response, plan) => {
@@ -852,15 +940,41 @@ const EditProfileScreen = ({ navigation }) => {
         foodTruckId,
       });
       if (foodTruckResponse.success && foodTruckResponse.data) {
+        let updatedFoodTruck = foodTruckResponse.data.foodtruck;
+        for (const document of selectedDocuments) {
+          const formData = new FormData();
+          formData.append("file", {
+            uri: document.uri,
+            name: document.name || "vendor-document",
+            type: document.type || "application/octet-stream",
+          });
+          formData.append("title", document.name || "Vendor document");
+          formData.append("document_type", "LICENSE");
+          if (document.replaceExisting) {
+            formData.append("replace_existing", "true");
+          }
+
+          try {
+            const documentResponse = await uploadFoodTruckDocument_API({
+              foodtruck_id: foodTruckId,
+              payload: formData,
+            });
+            if (documentResponse?.success && documentResponse?.data?.foodtruck) {
+              updatedFoodTruck = documentResponse.data.foodtruck;
+            }
+          } catch (error) {
+            console.log("document upload error => ", error);
+          }
+        }
         console.log("foodTruckResponse => ", foodTruckResponse.data);
-        dispatch(updateFoodTruck(foodTruckResponse.data.foodtruck));
+        dispatch(updateFoodTruck(updatedFoodTruck));
         dispatch(
           addOrUpdateUser({
             emailid: user.email,
             userData: {
               emailid: user.email,
-              username: foodTruckResponse?.data?.foodtruck?.name || "",
-              imageUrl: foodTruckResponse?.data?.foodtruck.logo || null,
+              username: updatedFoodTruck?.name || "",
+              imageUrl: updatedFoodTruck?.logo || null,
             },
           })
         );
@@ -1118,6 +1232,85 @@ const EditProfileScreen = ({ navigation }) => {
                   >
                     {errors.photos}
                   </HelperText>
+                )}
+              </View>
+
+              {/* Optional Documents Upload */}
+              <View style={styles.section}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 8,
+                  }}
+                >
+                  <View style={{ flex: 1, paddingRight: 12 }}>
+                    <Text style={[styles.label, { marginBottom: 0 }]}>
+                      Permits & Licenses
+                    </Text>
+                    <Text style={styles.optionalText}>
+                      Optional. Upload permits, licenses, insurance, or other
+                      documents.
+                    </Text>
+                  </View>
+                  {selectedDocuments?.length > 0 && (
+                    <TouchableOpacity
+                      hitSlop={5}
+                      activeOpacity={0.7}
+                      onPress={onPressUploadDocuments}
+                    >
+                      <AntDesign
+                        name="plussquareo"
+                        size={20}
+                        color={AppColor.primary}
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {selectedDocuments.length === 0 ? (
+                  <TouchableOpacity
+                    style={styles.photoUploadContainer}
+                    onPress={onPressUploadDocuments}
+                  >
+                    <FontAwesome6
+                      name="file-arrow-up"
+                      color={AppColor.black}
+                      size={20}
+                    />
+                    <Text style={styles.uploadButtonText}>Upload Documents</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={{ gap: 10, marginTop: 10 }}>
+                    {selectedDocuments.map((document, index) => (
+                      <View
+                        key={`${document.uri}-${index}`}
+                        style={styles.documentRow}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.documentName} numberOfLines={1}>
+                            {document.name || "Vendor document"}
+                          </Text>
+                          <Text style={styles.documentMeta} numberOfLines={1}>
+                            {document.type || "Document"}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          hitSlop={5}
+                          onPress={() => onDocumentsRemovePress(index)}
+                          activeOpacity={0.7}
+                        >
+                          <FontAwesome6
+                            name="minus"
+                            size={14}
+                            color={AppColor.white}
+                            style={styles.documentRemove}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
                 )}
               </View>
 
@@ -1618,6 +1811,12 @@ const styles = StyleSheet.create({
     color: AppColor.black,
     marginBottom: 8,
   },
+  optionalText: {
+    fontSize: 13,
+    fontFamily: Mulish400,
+    color: AppColor.textHighlighter,
+    marginTop: 4,
+  },
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -1662,6 +1861,34 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 5,
+  },
+  documentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  documentName: {
+    fontSize: 15,
+    fontFamily: Mulish700,
+    color: AppColor.text,
+  },
+  documentMeta: {
+    fontSize: 12,
+    fontFamily: Mulish400,
+    color: AppColor.textHighlighter,
+    marginTop: 2,
+  },
+  documentRemove: {
+    backgroundColor: AppColor.primary,
+    borderRadius: 10,
+    height: 20,
+    width: 20,
+    textAlign: "center",
+    lineHeight: 20,
   },
 
   //   Radio Buttons

@@ -18,6 +18,8 @@ export const UPDATE_FOOD_TRUCK_UNITS = (foodtruck_id) =>
   `/food-truck/${foodtruck_id}/truck-units`;
 export const UPDATE_FOOD_TRUCK_UNIT = (foodtruck_id, truck_unit_id) =>
   `/food-truck/${foodtruck_id}/truck-units/${truck_unit_id}`;
+export const FOOD_TRUCK_DOCUMENTS = (foodtruck_id) =>
+  `/food-truck/${foodtruck_id}/documents`;
 
 // Subscription
 export const UPDATE_SUBSCRIPTION_PLAN = "/food-truck/change-plan";
