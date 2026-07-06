@@ -47,6 +47,19 @@ const MEDIA_IMAGE_TYPE = {
   WEB: require("../assets/images/global.png"),
 };
 
+const canUseMultipleTruckUnits = (plan) => {
+  const planText = `${plan?.slug || ""} ${plan?.name || ""} ${
+    plan?.title || ""
+  }`;
+
+  return (
+    !!plan?.capabilities?.multipleTruckUnits ||
+    plan?.slug === "SUB_ELITE" ||
+    /elite/i.test(planText) ||
+    Number(plan?.rate) === 5.5
+  );
+};
+
 const UserProfileScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
@@ -60,6 +73,9 @@ const UserProfileScreen = ({ navigation }) => {
   const [truckPhoneInput, setTruckPhoneInput] = useState("");
   const canUseEmployeeLogin =
     !!user?.foodTruck?.plan?.capabilities?.employeeLogin;
+  const canUseMultipleTrucks = canUseMultipleTruckUnits(
+    user?.foodTruck?.plan
+  );
   const vendorAccessCode = user?.foodTruck?._id
     ? user.foodTruck._id.toString().slice(-6).toUpperCase()
     : "";
@@ -147,6 +163,13 @@ const UserProfileScreen = ({ navigation }) => {
   };
 
   const openTruckNameModal = (mode, truckUnit = null) => {
+    if (mode === "create" && !canUseMultipleTrucks) {
+      Alert.alert(
+        "Upgrade required",
+        "Multiple food trucks are available on the Elite plan."
+      );
+      return;
+    }
     setTruckNameModal({ mode, truckUnit });
     setTruckNameInput(mode === "edit" ? truckUnit?.name || "" : "");
     setTruckPhoneInput(mode === "edit" ? formatPhoneNumber(truckUnit?.phone || "") : "");
@@ -159,6 +182,13 @@ const UserProfileScreen = ({ navigation }) => {
   };
 
   const createTruckUnit = async () => {
+    if (!canUseMultipleTrucks) {
+      Alert.alert(
+        "Upgrade required",
+        "Multiple food trucks are available on the Elite plan."
+      );
+      return;
+    }
     if (!truckNameInput.trim()) {
       Alert.alert("Truck name required", "Enter a truck name.");
       return;
@@ -392,14 +422,16 @@ const UserProfileScreen = ({ navigation }) => {
                     {visibleTruckUnits.length} active
                   </Text>
                 </View>
-                <TouchableOpacity
-                  onPress={() => openTruckNameModal("create")}
-                  disabled={truckSaving}
-                  style={styles.truckAddButton}
-                >
-                  <Ionicons name="add" size={18} color={AppColor.primary} />
-                  <Text style={styles.truckAddText}>Add</Text>
-                </TouchableOpacity>
+                {canUseMultipleTrucks ? (
+                  <TouchableOpacity
+                    onPress={() => openTruckNameModal("create")}
+                    disabled={truckSaving}
+                    style={styles.truckAddButton}
+                  >
+                    <Ionicons name="add" size={18} color={AppColor.primary} />
+                    <Text style={styles.truckAddText}>Add</Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
 
               {visibleTruckUnits.map((truck, index) => (
@@ -435,27 +467,29 @@ const UserProfileScreen = ({ navigation }) => {
                 </View>
               ))}
 
-              {archivedTruckUnits.map((truck) => (
-                <View key={truck._id} style={styles.truckRow}>
-                  <View style={styles.truckTextBlock}>
-                    <Text style={styles.itemText} numberOfLines={1}>
-                      {truck.name}
-                    </Text>
-                    {truck.phone ? (
-                      <Text style={styles.truckPhoneText} numberOfLines={1}>
-                        {formatPhoneNumber(truck.phone)}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => reactivateTruckUnit(truck)}
-                    disabled={truckSaving}
-                    style={styles.reactivateButton}
-                  >
-                    <Text style={styles.reactivateText}>Reactivate</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
+              {canUseMultipleTrucks
+                ? archivedTruckUnits.map((truck) => (
+                    <View key={truck._id} style={styles.truckRow}>
+                      <View style={styles.truckTextBlock}>
+                        <Text style={styles.itemText} numberOfLines={1}>
+                          {truck.name}
+                        </Text>
+                        {truck.phone ? (
+                          <Text style={styles.truckPhoneText} numberOfLines={1}>
+                            {formatPhoneNumber(truck.phone)}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => reactivateTruckUnit(truck)}
+                        disabled={truckSaving}
+                        style={styles.reactivateButton}
+                      >
+                        <Text style={styles.reactivateText}>Reactivate</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))
+                : null}
             </View>
 
             {/* Email - Removed as it's now in the profile header */}

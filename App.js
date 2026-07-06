@@ -93,6 +93,8 @@ const earningsInactive = require("./src/assets/images/earningsMenuInactive.png")
 const profileActive = require("./src/assets/images/profileMenuActive.png");
 const profileInactive = require("./src/assets/images/profileMenuInactive.png");
 
+const canUseEmployeeLogin = (plan) => !!plan?.capabilities?.employeeLogin;
+
 const FeatureComingSoonScreen = () => (
   <SafeAreaView style={styles.comingSoonContainer}>
     <View style={styles.comingSoonContent}>
@@ -168,25 +170,29 @@ const FinalSignupStepsNavigator = () => (
 );
 
 // bottom tab navigator
-const BottomTabNavigator = ({ insets }) => (
-  <BottomTab.Navigator
-    screenOptions={{
-      tabBarHideOnKeyboard: true,
-      headerShown: false,
-      tabBarStyle: {
-        height: insets.bottom + 60,
-        // height: Platform.OS === "ios" ? insets.bottom + 60 : 60,
-      },
-      tabBarLabelStyle: {
-        // fontFamily: Secondary400,
-        fontSize: 12,
-        fontWeight: "500",
-        bottom: Dimensions.get("window").width > 768 ? 0 : 5,
-      },
-      tabBarActiveTintColor: AppColor.primary,
-      tabBarInactiveTintColor: AppColor.gray,
-    }}
-  >
+const BottomTabNavigator = ({ insets }) => {
+  const { user } = useSelector((state) => state.userReducer);
+  const showEmployeesTab = canUseEmployeeLogin(user?.foodTruck?.plan);
+
+  return (
+    <BottomTab.Navigator
+      screenOptions={{
+        tabBarHideOnKeyboard: true,
+        headerShown: false,
+        tabBarStyle: {
+          height: insets.bottom + 60,
+          // height: Platform.OS === "ios" ? insets.bottom + 60 : 60,
+        },
+        tabBarLabelStyle: {
+          // fontFamily: Secondary400,
+          fontSize: 12,
+          fontWeight: "500",
+          bottom: Dimensions.get("window").width > 768 ? 0 : 5,
+        },
+        tabBarActiveTintColor: AppColor.primary,
+        tabBarInactiveTintColor: AppColor.gray,
+      }}
+    >
     <BottomTab.Screen
       name="homeScreen"
       component={HomeScreen}
@@ -251,16 +257,18 @@ const BottomTabNavigator = ({ insets }) => (
         ),
       }}
     />
-    <BottomTab.Screen
-      name="employeesScreen"
-      component={EmployeesScreen}
-      options={{
-        tabBarLabel: "Employees",
-        tabBarIcon: ({ color, size }) => (
-          <MaterialIcons name="people-alt" size={size || 24} color={color} />
-        ),
-      }}
-    />
+    {showEmployeesTab ? (
+      <BottomTab.Screen
+        name="employeesScreen"
+        component={EmployeesScreen}
+        options={{
+          tabBarLabel: "Employees",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="people-alt" size={size || 24} color={color} />
+          ),
+        }}
+      />
+    ) : null}
     <BottomTab.Screen
       name="profileMenuScreen"
       component={ProfileMenuScreen}
@@ -274,8 +282,9 @@ const BottomTabNavigator = ({ insets }) => (
         ),
       }}
     />
-  </BottomTab.Navigator>
-);
+    </BottomTab.Navigator>
+  );
+};
 
 // main app navigator
 const MainAppNavigator = ({ insets }) => (
