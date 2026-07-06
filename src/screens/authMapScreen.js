@@ -42,6 +42,15 @@ const initialRegion = {
   longitudeDelta: 0.0421,
 };
 
+const getGoogleMapsErrorMessage = (response) => {
+  const googleMessage = response?.error_message;
+  if (googleMessage) {
+    return `Google Maps error: ${googleMessage}`;
+  }
+
+  return `Google Maps error: ${response?.status || "UNKNOWN_ERROR"}`;
+};
+
 const AuthMapScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -126,7 +135,7 @@ const AuthMapScreen = ({ navigation, route }) => {
           case "REQUEST_DENIED":
             setSnackbar({
               visible: true,
-              message: "Something went wrong.",
+              message: getGoogleMapsErrorMessage(response),
               type: "error",
             });
             break;
@@ -147,7 +156,7 @@ const AuthMapScreen = ({ navigation, route }) => {
             });
             break;
         }
-        console.log("Geocoding Error:", response.status);
+        console.log("Geocoding Error:", response.status, response.error_message);
         return null;
       }
     } catch (error) {
