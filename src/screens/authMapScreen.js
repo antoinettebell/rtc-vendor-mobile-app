@@ -71,9 +71,7 @@ const AuthMapScreen = ({ navigation, route }) => {
   );
 
   const onSearchPress = () => {
-    if (searchTxtRef?.current) {
-      searchTxtRef?.current?.focus();
-    }
+    searchTxtRef?.current?.focus?.();
   };
 
   const getCurrentLocation = () => {
@@ -226,7 +224,7 @@ const AuthMapScreen = ({ navigation, route }) => {
           });
         }
       } else if (error?.code === 3) {
-        showToast({
+        setSnackbar({
           visible: true,
           type: "info",
           message: "Please select location manually.",
@@ -326,7 +324,11 @@ const AuthMapScreen = ({ navigation, route }) => {
           <GooglePlacesAutocomplete
             ref={searchTxtRef}
             placeholder="Search Location"
-            query={{ key: GOOGLE_MAP_API_KEY, language: "en" }}
+            query={{
+              key: GOOGLE_MAP_API_KEY,
+              language: "en",
+              types: "geocode|establishment",
+            }}
             enablePoweredByContainer={false}
             numberOfLines={2}
             fetchDetails={true}
@@ -336,7 +338,19 @@ const AuthMapScreen = ({ navigation, route }) => {
               multiline: false,
               numberOfLines: 1,
             }}
+            predefinedPlaces={[]}
+            keyboardShouldPersistTaps="always"
+            minLength={2}
+            timeout={20000}
             onPress={(data, details = null) => {
+              if (!details) {
+                setSnackbar({
+                  visible: true,
+                  message: "We couldn't find details for that location.",
+                  type: "error",
+                });
+                return;
+              }
               const adrs = data?.description || "";
               const region = {
                 latitude: details?.geometry?.location?.lat,
@@ -373,7 +387,14 @@ const AuthMapScreen = ({ navigation, route }) => {
                 searchTxtRef?.current.setAddressText(""); // Clears internal state
               }
             }}
-            onFail={(error) => console.log(error)}
+            onFail={(error) => {
+              console.log("Google Places Autocomplete Error:", error);
+              setSnackbar({
+                visible: true,
+                message: "Failed to search location. Please try again.",
+                type: "error",
+              });
+            }}
             renderRightButton={() => (
               <Pressable
                 onPress={onSearchPress}

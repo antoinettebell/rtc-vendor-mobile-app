@@ -66,9 +66,7 @@ const ProfileMapScreen = ({ navigation, route }) => {
   );
 
   const onSearchPress = () => {
-    if (searchTxtRef?.current) {
-      searchTxtRef?.current?.focus();
-    }
+    searchTxtRef?.current?.focus?.();
   };
 
   const getCurrentLocation = () => {
@@ -332,7 +330,11 @@ const ProfileMapScreen = ({ navigation, route }) => {
           <GooglePlacesAutocomplete
             ref={searchTxtRef}
             placeholder="Search Location"
-            query={{ key: GOOGLE_MAP_API_KEY, language: "en" }}
+            query={{
+              key: GOOGLE_MAP_API_KEY,
+              language: "en",
+              types: "geocode|establishment",
+            }}
             enablePoweredByContainer={false}
             numberOfLines={2}
             fetchDetails={true}
@@ -342,7 +344,20 @@ const ProfileMapScreen = ({ navigation, route }) => {
               multiline: false,
               numberOfLines: 1,
             }}
+            predefinedPlaces={[]}
+            keyboardShouldPersistTaps="always"
+            minLength={2}
+            timeout={20000}
             onPress={(data, details = null) => {
+              if (!details) {
+                dispatch(
+                  showSnackbar({
+                    message: "We couldn't find details for that location.",
+                    type: "error",
+                  })
+                );
+                return;
+              }
               const adrs = data?.description || "";
               const region = {
                 latitude: details?.geometry?.location?.lat,
@@ -379,7 +394,15 @@ const ProfileMapScreen = ({ navigation, route }) => {
                 searchTxtRef?.current.setAddressText(""); // Clears internal state
               }
             }}
-            onFail={(error) => console.log(error)}
+            onFail={(error) => {
+              console.log("Google Places Autocomplete Error:", error);
+              dispatch(
+                showSnackbar({
+                  message: "Failed to search location. Please try again.",
+                  type: "error",
+                })
+              );
+            }}
             renderRightButton={() => (
               <Pressable
                 onPress={onSearchPress}
