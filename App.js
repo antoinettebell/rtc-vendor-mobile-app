@@ -2,10 +2,6 @@ import React, { useEffect, useState } from "react";
 import {
   Dimensions,
   Platform,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  View,
   Image,
 } from "react-native";
 import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
@@ -15,7 +11,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import BootSplash from "react-native-bootsplash";
-import { AppColor, Secondary400 } from "./src/utils/theme";
+import { AppColor } from "./src/utils/theme";
 import GlobalSnackbar from "./src/components/GlobalSnackbar";
 import {
   createAndroidChannel,
@@ -77,10 +73,22 @@ import EmployeeOrderManagementScreen from "./src/screens/employeeOrderManagement
 import EmployeeRefundRequestsScreen from "./src/screens/employeeRefundRequestsScreen";
 import EmployeePosBoardScreen from "./src/screens/employeePosBoardScreen";
 import EmployeeShiftScreen from "./src/screens/employeeShiftScreen";
+import VendorMarketplaceScreen from "./src/screens/vendorMarketplaceScreen";
+import VendorMarketplaceNearMeScreen from "./src/screens/vendorMarketplaceNearMeScreen";
+import VendorMarketplaceEventDetailsScreen from "./src/screens/vendorMarketplaceEventDetailsScreen";
+import VendorMarketplaceBidResponseScreen from "./src/screens/vendorMarketplaceBidResponseScreen";
+import VendorMarketplaceBidDetailScreen from "./src/screens/vendorMarketplaceBidDetailScreen";
+import VendorMarketplaceMyBidsScreen from "./src/screens/vendorMarketplaceMyBidsScreen";
+import VendorMarketplaceAwardedBidsScreen from "./src/screens/vendorMarketplaceAwardedBidsScreen";
+import VendorMarketplaceAwardedEventDetailsScreen from "./src/screens/vendorMarketplaceAwardedEventDetailsScreen";
+import VendorMarketplacePaymentScreen from "./src/screens/vendorMarketplacePaymentScreen";
+import VendorMarketplaceMyApplicationsScreen from "./src/screens/vendorMarketplaceMyApplicationsScreen";
+import VendorMarketplaceApplicationScreen from "./src/screens/vendorMarketplaceApplicationScreen";
+import VendorMarketplaceApplicationDetailScreen from "./src/screens/vendorMarketplaceApplicationDetailScreen";
+import VendorFeeCheckoutScreen from "./src/screens/vendorFeeCheckoutScreen";
 
 const Stack = createNativeStackNavigator();
 const BottomTab = createBottomTabNavigator();
-const EVENT_MARKETPLACE_ENABLED = false;
 
 const homeActive = require("./src/assets/images/homeMenuActive.png");
 const homeInactive = require("./src/assets/images/homeMenuInactive.png");
@@ -94,18 +102,6 @@ const profileActive = require("./src/assets/images/profileMenuActive.png");
 const profileInactive = require("./src/assets/images/profileMenuInactive.png");
 
 const canUseEmployeeLogin = (plan) => !!plan?.capabilities?.employeeLogin;
-
-const FeatureComingSoonScreen = () => (
-  <SafeAreaView style={styles.comingSoonContainer}>
-    <View style={styles.comingSoonContent}>
-      <MaterialIcons name="storefront" size={44} color={AppColor.primary} />
-      <Text style={styles.comingSoonTitle}>Feature Coming Soon</Text>
-      <Text style={styles.comingSoonMessage}>
-        Marketplace is being finalized and will be available in a future update.
-      </Text>
-    </View>
-  </SafeAreaView>
-);
 
 const AuthNavigator = () => (
   <Stack.Navigator
@@ -232,18 +228,16 @@ const BottomTabNavigator = ({ insets }) => {
         ),
       }}
     />
-    {EVENT_MARKETPLACE_ENABLED ? (
-      <BottomTab.Screen
-        name="vendorMarketplaceScreen"
-        component={FeatureComingSoonScreen}
-        options={{
-          tabBarLabel: "Marketplace",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="storefront" size={size || 24} color={color} />
-          ),
-        }}
-      />
-    ) : null}
+    <BottomTab.Screen
+      name="vendorMarketplaceScreen"
+      component={VendorMarketplaceScreen}
+      options={{
+        tabBarLabel: "Marketplace",
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="storefront" size={size || 24} color={color} />
+        ),
+      }}
+    />
     <BottomTab.Screen
       name="earningsScreen"
       component={EarningsScreen}
@@ -359,71 +353,71 @@ const MainAppNavigator = ({ insets }) => (
     />
     <Stack.Screen
       name="vendorMarketplaceScreen"
-      component={FeatureComingSoonScreen}
+      component={VendorMarketplaceScreen}
     />
     <Stack.Screen
       name="VendorMarketplaceNearMeScreen"
-      component={FeatureComingSoonScreen}
+      component={VendorMarketplaceNearMeScreen}
     />
     <Stack.Screen
       name="vendorMarketplaceNearMeScreen"
-      component={FeatureComingSoonScreen}
+      component={VendorMarketplaceNearMeScreen}
     />
     <Stack.Screen
       name="vendorMarketplaceEventDetailsScreen"
-      component={FeatureComingSoonScreen}
+      component={VendorMarketplaceEventDetailsScreen}
     />
     <Stack.Screen
       name="vendorMarketplaceBidResponseScreen"
-      component={FeatureComingSoonScreen}
+      component={VendorMarketplaceBidResponseScreen}
     />
     <Stack.Screen
       name="VendorBidResponseScreen"
-      component={FeatureComingSoonScreen}
+      component={VendorMarketplaceBidResponseScreen}
     />
     <Stack.Screen
       name="VendorBidDetailScreen"
-      component={FeatureComingSoonScreen}
+      component={VendorMarketplaceBidDetailScreen}
     />
     <Stack.Screen
       name="vendorMarketplaceMyBidsScreen"
-      component={FeatureComingSoonScreen}
+      component={VendorMarketplaceMyBidsScreen}
     />
     <Stack.Screen
       name="VendorMyBidsScreen"
-      component={FeatureComingSoonScreen}
+      component={VendorMarketplaceMyBidsScreen}
     />
     <Stack.Screen
       name="VendorMyApplicationsScreen"
-      component={FeatureComingSoonScreen}
+      component={VendorMarketplaceMyApplicationsScreen}
     />
     <Stack.Screen
       name="VendorApplicationScreen"
-      component={FeatureComingSoonScreen}
+      component={VendorMarketplaceApplicationScreen}
     />
     <Stack.Screen
       name="VendorApplicationDetailScreen"
-      component={FeatureComingSoonScreen}
+      component={VendorMarketplaceApplicationDetailScreen}
     />
     <Stack.Screen
       name="VendorFeeCheckoutScreen"
-      component={FeatureComingSoonScreen}
+      component={VendorFeeCheckoutScreen}
     />
     <Stack.Screen
       name="vendorMarketplaceAwardedBidsScreen"
-      component={FeatureComingSoonScreen}
+      component={VendorMarketplaceAwardedBidsScreen}
     />
     <Stack.Screen
       name="VendorAwardedEventsScreen"
-      component={FeatureComingSoonScreen}
+      component={VendorMarketplaceAwardedBidsScreen}
     />
     <Stack.Screen
       name="VendorAwardedEventDetailsScreen"
-      component={FeatureComingSoonScreen}
+      component={VendorMarketplaceAwardedEventDetailsScreen}
     />
     <Stack.Screen
       name="vendorMarketplacePaymentScreen"
-      component={FeatureComingSoonScreen}
+      component={VendorMarketplacePaymentScreen}
     />
   </Stack.Navigator>
 );
@@ -510,30 +504,3 @@ const App = () => {
 };
 
 export default App;
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  comingSoonContainer: {
-    flex: 1,
-    backgroundColor: AppColor.white,
-    justifyContent: "center",
-    paddingHorizontal: 28,
-  },
-  comingSoonContent: {
-    alignItems: "center",
-    gap: 12,
-  },
-  comingSoonTitle: {
-    fontSize: 22,
-    fontFamily: Secondary400,
-    color: AppColor.text,
-    textAlign: "center",
-  },
-  comingSoonMessage: {
-    fontSize: 15,
-    fontFamily: Secondary400,
-    color: AppColor.textHighlighter,
-    lineHeight: 22,
-    textAlign: "center",
-  },
-});

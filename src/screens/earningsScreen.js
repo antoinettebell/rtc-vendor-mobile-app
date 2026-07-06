@@ -192,7 +192,7 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
     useState(null);
   const [filterPicker, setFilterPicker] = useState(null);
 
-  const canTapToPay = false;
+  const canTapToPay = !!user?.foodTruck?.plan?.capabilities?.tapToPay;
   const locations = user?.foodTruck?.locations || [];
   const truckUnits = (user?.foodTruck?.truck_units || []).filter(
     (unit) => !unit.is_archived

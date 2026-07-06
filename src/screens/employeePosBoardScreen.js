@@ -282,7 +282,7 @@ const EmployeePosBoardScreen = ({ navigation }) => {
   const assignedLocation = user?.assignedLocation;
   const assignedTruckUnit = dashboard?.assignedTruckUnit || user?.assignedTruckUnit;
   const capabilities = user?.employeeCapabilities || {};
-  const canTapToPay = false;
+  const canTapToPay = !!capabilities.tapToPay;
   const canUsePos = !!capabilities.employeeWalkUpPos;
   const isWorking = !!dashboard?.shift?.is_active;
 

@@ -39,7 +39,6 @@ import {
 import { showSnackbar } from "../redux/slices/snackbarSlice";
 
 const EVENT_MARKETPLACE_PATTERN = /event|booking|marketplace/i;
-const EVENT_MARKETPLACE_ENABLED = false;
 
 const isEventMarketplaceAddOn = (addOn) =>
   EVENT_MARKETPLACE_PATTERN.test(
@@ -81,19 +80,14 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
   const isEliteSelected = isElitePlan(selectedPlanObject);
   const visibleAddOns = useMemo(
     () =>
-      EVENT_MARKETPLACE_ENABLED
-        ? addOnsData
-        : addOnsData.filter((addOn) => !isEventMarketplaceAddOn(addOn)),
-    [addOnsData],
+      isEliteSelected
+        ? addOnsData.filter((addOn) => !isEventMarketplaceAddOn(addOn))
+        : addOnsData,
+    [addOnsData, isEliteSelected],
   );
   const getSubmittedAddOns = () => {
-    if (EVENT_MARKETPLACE_ENABLED) {
-      return isEliteSelected
-        ? selectedAddOns.filter((id) => {
-            const addOn = addOnsData.find((item) => item._id === id);
-            return !isEventMarketplaceAddOn(addOn);
-          })
-        : selectedAddOns;
+    if (!isEliteSelected) {
+      return selectedAddOns;
     }
 
     return selectedAddOns.filter((id) => {
@@ -233,7 +227,7 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
 
   const handleAddOnSelection = (id) => {
     const addOn = addOnsData.find((item) => item._id === id);
-    if (!EVENT_MARKETPLACE_ENABLED && isEventMarketplaceAddOn(addOn)) {
+    if (isEliteSelected && isEventMarketplaceAddOn(addOn)) {
       return;
     }
 
@@ -390,11 +384,6 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
         {isExpanded && (
           <View style={{ marginTop: 8 }}>
             {item.details
-              .filter(
-                (benefit) =>
-                  EVENT_MARKETPLACE_ENABLED ||
-                  !EVENT_MARKETPLACE_PATTERN.test(String(benefit || "")),
-              )
               .map((benefit, idx) => {
               const unavailable = isUnavailableBenefit(benefit);
               return (
@@ -524,7 +513,7 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
               )}
             </TouchableOpacity>
 
-            {EVENT_MARKETPLACE_ENABLED && isEliteSelected ? (
+            {isEliteSelected ? (
               <View style={styles.includedAccessCard}>
                 <Ionicons
                   name="checkmark-circle"

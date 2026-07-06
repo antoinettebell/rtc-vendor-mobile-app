@@ -155,7 +155,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
   const assignedLocation = user?.assignedLocation;
   const assignedTruckUnit = dashboard?.assignedTruckUnit || user?.assignedTruckUnit;
   const capabilities = user?.employeeCapabilities || {};
-  const canTapToPay = false;
+  const canTapToPay = !!capabilities.tapToPay;
   const locationIsOpen =
     (assignedTruckUnit?.open_locations || []).some(
       (location) =>
