@@ -83,7 +83,7 @@ android {
         applicationId "com.ea.rtcvendor"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 56
+        versionCode 57
         versionName "1.7"
         vectorDrawables.useSupportLibrary = true
     }

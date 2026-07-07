@@ -14,7 +14,7 @@
     },
     "android": {
       "package": "com.ea.rtcvendor",
-      "versionCode": 56
+      "versionCode": 57
     },
     "extra": {
       "eas": {
