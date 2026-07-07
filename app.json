@@ -2,7 +2,7 @@
   "expo": {
     "name": "Round Da' Corner - Vendor",
     "slug": "foodtruckvendor",
-    "version": "1.6",
+    "version": "1.7",
     "ios": {
       "bundleIdentifier": "com.ea.rtcvendor",
       "buildNumber": "56",
