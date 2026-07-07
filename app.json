@@ -5,7 +5,7 @@
     "version": "1.7",
     "ios": {
       "bundleIdentifier": "com.ea.rtcvendor",
-      "buildNumber": "56",
+      "buildNumber": "57",
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
@@ -14,7 +14,7 @@
     },
     "android": {
       "package": "com.ea.rtcvendor",
-      "versionCode": 57
+      "versionCode": 58
     },
     "extra": {
       "eas": {
