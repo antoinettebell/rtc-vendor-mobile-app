@@ -30,8 +30,10 @@ import {
   GET_REVIEW_STATS_BY_FOODTRUCK_ID,
   GET_USER_DETAILS,
   MARKETPLACE_APPLICATION_ATTACHMENTS,
+  MARKETPLACE_APPLICATION_ATTACHMENT,
   MARKETPLACE_APPLICATION_VENDOR_FEE_PAYMENT,
   MARKETPLACE_AWARDED_BIDS,
+  MARKETPLACE_BID_ATTACHMENT,
   MARKETPLACE_BID_ATTACHMENTS,
   MARKETPLACE_EVENT_APPLICATIONS,
   MARKETPLACE_EVENT_BIDS,
@@ -43,6 +45,8 @@ import {
   MARKETPLACE_PAYMENT_BY_ID,
   MARKETPLACE_PAYMENT_CALL,
   MARKETPLACE_PAYMENT_CHECKOUT,
+  MARKETPLACE_VENDOR_AGREEMENT_RETURN,
+  MARKETPLACE_VENDOR_AGREEMENT_SIGNING,
   MEDIA_UPLOAD,
   REGISTER_COMPLETE,
   REMOVE_ACCOUNT,
@@ -218,6 +222,21 @@ export const uploadMarketplaceBidAttachment_API = async ({ bid_id, payload }) =>
   }
 };
 
+export const deleteMarketplaceBidAttachment_API = async ({
+  bid_id,
+  attachment_id,
+}) => {
+  try {
+    const response = await apiClient.delete(
+      MARKETPLACE_BID_ATTACHMENT(bid_id, attachment_id),
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
 export const submitMarketplaceApplication_API = async ({ event_id, payload }) => {
   try {
     const response = await apiClient.post(
@@ -240,6 +259,50 @@ export const uploadMarketplaceApplicationAttachment_API = async ({
       MARKETPLACE_APPLICATION_ATTACHMENTS(application_id),
       payload,
       { formData: true, skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const deleteMarketplaceApplicationAttachment_API = async ({
+  application_id,
+  attachment_id,
+}) => {
+  try {
+    const response = await apiClient.delete(
+      MARKETPLACE_APPLICATION_ATTACHMENT(application_id, attachment_id),
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const startMarketplaceVendorAgreementSigning_API = async (payload) => {
+  try {
+    const response = await apiClient.post(
+      MARKETPLACE_VENDOR_AGREEMENT_SIGNING,
+      payload,
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const returnMarketplaceVendorAgreement_API = async ({
+  agreement_id,
+  status,
+}) => {
+  try {
+    const response = await apiClient.post(
+      MARKETPLACE_VENDOR_AGREEMENT_RETURN(agreement_id),
+      { status },
+      { skipToken: false },
     );
     return response?.data;
   } catch (error) {

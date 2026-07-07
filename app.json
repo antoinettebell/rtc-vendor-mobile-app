@@ -2,6 +2,7 @@
   "expo": {
     "name": "RTC_DEV_VENDOR",
     "slug": "foodtruckvendor",
+    "scheme": "rounddacornervendor",
     "version": "1.6",
     "ios": {
       "bundleIdentifier": "com.rounddacorner.dev.vendor",

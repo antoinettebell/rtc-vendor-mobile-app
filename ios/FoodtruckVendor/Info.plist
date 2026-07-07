@@ -22,6 +22,17 @@
     <string>????</string>
     <key>CFBundleVersion</key>
     <string>54</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+      <dict>
+        <key>CFBundleURLName</key>
+        <string>com.rounddacorner.vendor.docusign</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>rounddacornervendor</string>
+        </array>
+      </dict>
+    </array>
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>NSAppTransportSecurity</key>
