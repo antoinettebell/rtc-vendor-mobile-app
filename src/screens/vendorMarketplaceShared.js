@@ -100,6 +100,87 @@ export const isEventAccessError = (error) =>
   Number(error?.code || error?.statusCode || error?.status) === 403 ||
   /accept event bookings/i.test(error?.message || "");
 
+export const getMarketplaceNotesError = (value) => {
+  const text = String(value || "");
+  if (!text.trim()) return "";
+
+  const hasEmail = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(text);
+  const hasUrl =
+    /\b(?:https?:\/\/|www\.)\S+/i.test(text) ||
+    /\b[A-Z0-9-]+\.(?:com|net|org|io|co|us|biz|info|me|app|food|catering)\b/i.test(
+      text,
+    );
+  const hasPhone = /(?:\+?1[\s-.]*)?(?:\(?\d{3}\)?[\s-.]*)\d{3}[\s-.]*\d{4}\b/.test(
+    text,
+  );
+
+  return hasEmail || hasUrl || hasPhone
+    ? "Notes cannot include phone numbers, emails, or web links."
+    : "";
+};
+
+export const normalizeMarketplaceRequirementLabel = (label) => {
+  const value = String(label || "").trim();
+  const normalized = value.toLowerCase();
+
+  if (!value || normalized === "none") return "";
+  if (
+    normalized === "insurance" ||
+    normalized === "certificate of insurance"
+  ) {
+    return "Insurance";
+  }
+  if (
+    normalized === "health permit" ||
+    normalized === "health department" ||
+    normalized === "food handler permit"
+  ) {
+    return "Health Permit";
+  }
+  if (normalized === "alcohol" || normalized === "liquor license") {
+    return "Liquor License";
+  }
+  if (normalized === "fire permit") return "Fire Permit";
+  if (normalized === "business license") return "Business License";
+  if (normalized === "city permit") return "City Permit";
+  if (normalized === "food vendor") return "Food Vendor Permit";
+  if (normalized === "other") return "Other";
+
+  return value;
+};
+
+export const getMarketplaceRequirementLabels = (event = {}) => {
+  const labels = [];
+  const addLabel = (label) => {
+    const normalizedLabel = normalizeMarketplaceRequirementLabel(label);
+    if (normalizedLabel && !labels.includes(normalizedLabel)) {
+      labels.push(normalizedLabel);
+    }
+  };
+
+  if (event?.insurance_required) addLabel("Insurance");
+
+  if (Array.isArray(event?.permits_required)) {
+    event.permits_required.forEach((permit) => {
+      if (String(permit || "").trim().toLowerCase() !== "alcohol") {
+        addLabel(permit);
+      }
+    });
+  }
+
+  if (
+    event?.alcohol_required ||
+    (Array.isArray(event?.permits_required) &&
+      event.permits_required.some(
+        (permit) => String(permit || "").trim().toLowerCase() === "alcohol",
+      ))
+  ) {
+    addLabel("Liquor License");
+  }
+
+  return labels;
+};
+
 export const getEventImageUrl = (event) =>
   event?.image_url ||
   event?.event_image_url ||
@@ -248,6 +329,13 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 5,
     lineHeight: 19,
+  },
+  errorText: {
+    fontFamily: Mulish400,
+    color: AppColor.red,
+    fontSize: 12,
+    marginTop: 6,
+    lineHeight: 17,
   },
   input: {
     minHeight: 44,

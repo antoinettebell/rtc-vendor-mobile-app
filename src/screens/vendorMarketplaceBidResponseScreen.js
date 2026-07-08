@@ -34,20 +34,12 @@ import {
   formatDuration,
   formatMoney,
   getEventLocation,
+  getMarketplaceNotesError,
+  getMarketplaceRequirementLabels,
   isVendorPaysToAttendEvent,
+  normalizeMarketplaceRequirementLabel,
   styles,
 } from "./vendorMarketplaceShared";
-
-const REQUIREMENT_LABELS = [
-  "Insurance",
-  "Health Permit",
-  "Fire Permit",
-  "Liquor License",
-  "Certificate of Insurance",
-  "Business License",
-  "Food Handler Permit",
-  "Other",
-];
 
 const ReadOnlyRow = ({ label, value }) => (
   <View style={{ marginTop: 12 }}>
@@ -82,7 +74,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     ) || [],
   );
   const [selectedRequirementLabel, setSelectedRequirementLabel] = useState(
-    REQUIREMENT_LABELS[0],
+    "",
   );
   const [menuPdf, setMenuPdf] = useState(null);
   const [bidImages, setBidImages] = useState([]);
@@ -117,22 +109,24 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   const averagePricePerMealNumber = averagePricePerMeal
     ? Number(averagePricePerMeal)
     : null;
-  const requiresInsurance = !!event?.insurance_required;
-  const requiresPermits =
-    Array.isArray(event?.permits_required) && event.permits_required.length > 0;
-  const requiresLiquor = !!event?.alcohol_required;
   const requiredRequirementLabels = useMemo(() => {
-    const labels = [];
-    if (requiresInsurance) labels.push("Insurance");
-    if (requiresPermits) labels.push("Health Permit");
-    if (requiresLiquor) labels.push("Liquor License");
-    return labels;
-  }, [requiresInsurance, requiresLiquor, requiresPermits]);
+    return getMarketplaceRequirementLabels(event);
+  }, [event]);
+  const requiredPermitLabels = useMemo(
+    () =>
+      requiredRequirementLabels.filter(
+        (label) => label !== "Insurance" && label !== "Liquor License",
+      ),
+    [requiredRequirementLabels],
+  );
+  const notesError = useMemo(() => getMarketplaceNotesError(notes), [notes]);
   const uploadedRequirementLabels = useMemo(
     () =>
       new Set(
         requirementFiles
-          .map((file) => file.requirement_label)
+          .map((file) =>
+            normalizeMarketplaceRequirementLabel(file.requirement_label),
+          )
           .filter(Boolean),
       ),
     [requirementFiles],
@@ -147,6 +141,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       !!eventId &&
       isCoordinatorPaysEvent &&
       fullBidAmount.trim() &&
+      !notesError &&
       !Number.isNaN(fullBidNumber) &&
       fullBidNumber >= 0 &&
       (!pricePerGuest || (!Number.isNaN(pricePerGuestNumber) && pricePerGuestNumber >= 0)) &&
@@ -160,6 +155,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       fullBidAmount,
       fullBidNumber,
       isCoordinatorPaysEvent,
+      notesError,
       pricePerGuest,
       pricePerGuestNumber,
     ],
@@ -173,14 +169,31 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     menu_description: menuDescription.trim(),
     notes: notes.trim(),
     insurance_confirmed: uploadedRequirementLabels.has("Insurance"),
-    permits_confirmed: uploadedRequirementLabels.has("Health Permit"),
+    permits_confirmed:
+      requiredPermitLabels.length > 0
+        ? requiredPermitLabels.every((label) => uploadedRequirementLabels.has(label))
+        : false,
     liquor_license_confirmed: uploadedRequirementLabels.has("Liquor License"),
     nda_required: true,
     nda_acknowledged: bidStatus === "SUBMITTED",
     bid_status: bidStatus,
   });
 
+  useEffect(() => {
+    if (!requiredRequirementLabels.length) {
+      setSelectedRequirementLabel("");
+      return;
+    }
+    if (!requiredRequirementLabels.includes(selectedRequirementLabel)) {
+      setSelectedRequirementLabel(requiredRequirementLabels[0]);
+    }
+  }, [requiredRequirementLabels, selectedRequirementLabel]);
+
   const saveBidDraft = async (bidStatus = "DRAFT") => {
+    if (notesError) {
+      Alert.alert("Notes Not Allowed", notesError);
+      return null;
+    }
     if (!canSaveDraft) {
       Alert.alert("Draft Not Saved", "Complete the required bid amount first.");
       return null;
@@ -344,6 +357,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   };
 
   const pickRequirementFile = async () => {
+    if (!selectedRequirementLabel) return;
     try {
       const draft = savedBid?.bid_id ? savedBid : await saveBidDraft("DRAFT");
       if (!draft?.bid_id) return;
@@ -528,12 +542,13 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                 placeholderTextColor={AppColor.placeholderTextColor}
                 style={[styles.input, styles.textarea]}
               />
+              {!!notesError && <Text style={styles.errorText}>{notesError}</Text>}
             </View>
 
             <View style={styles.card}>
               <Text style={styles.sectionHeader}>Requirements</Text>
               <View style={[styles.row, { flexWrap: "wrap", gap: 8 }]}>
-                {REQUIREMENT_LABELS.map((label) => (
+                {requiredRequirementLabels.map((label) => (
                   <TouchableOpacity
                     key={label}
                     activeOpacity={0.7}
@@ -556,6 +571,9 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                   </TouchableOpacity>
                 ))}
               </View>
+              {!requiredRequirementLabels.length ? (
+                <Text style={styles.meta}>No document uploads required.</Text>
+              ) : null}
               {requirementFiles.map((file) => (
                 <View
                   key={file.attachment_id || file.file_url}
@@ -574,16 +592,18 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                   </TouchableOpacity>
                 </View>
               ))}
-              <TouchableOpacity
-                activeOpacity={0.7}
-                style={[styles.secondaryButton, { marginTop: 12 }]}
-                onPress={pickRequirementFile}
-                disabled={submitting || !canSaveDraft}
-              >
-                <Text style={styles.secondaryButtonText}>
-                  Upload {selectedRequirementLabel}
-                </Text>
-              </TouchableOpacity>
+              {requiredRequirementLabels.length ? (
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  style={[styles.secondaryButton, { marginTop: 12 }]}
+                  onPress={pickRequirementFile}
+                  disabled={submitting || !canSaveDraft}
+                >
+                  <Text style={styles.secondaryButtonText}>
+                    Upload {selectedRequirementLabel}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
               <Text style={styles.meta}>
                 Governance and NDA agreements are signed through DocuSign when
                 you submit.
