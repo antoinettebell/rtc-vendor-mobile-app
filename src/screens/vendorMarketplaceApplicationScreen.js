@@ -100,6 +100,16 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
       (item) => item.attachment_type === "REQUIREMENT_DOCUMENT",
     ) || [],
   );
+  const [uploadedMenuFiles, setUploadedMenuFiles] = useState(
+    route?.params?.application?.attachments?.filter(
+      (item) => item.attachment_type === "APPLICATION_MENU_PDF",
+    ) || [],
+  );
+  const [uploadedFoodPhotoFiles, setUploadedFoodPhotoFiles] = useState(
+    route?.params?.application?.attachments?.filter(
+      (item) => item.attachment_type === "APPLICATION_IMAGE",
+    ) || [],
+  );
   const [selectedRequirementLabel, setSelectedRequirementLabel] = useState(
     "",
   );
@@ -282,7 +292,7 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
         actions.push({
           text: "Save Draft",
           onPress: async () => {
-            const draft = await saveApplicationDraft("DRAFT");
+            const draft = await saveApplicationDraftWithFiles({ notify: false });
             if (draft?.application_id) leaveScreen();
           },
         });
@@ -300,7 +310,7 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
     canSaveDraft,
     hasUnsavedDraftContent,
     navigation,
-    saveApplicationDraft,
+    saveApplicationDraftWithFiles,
     submitting,
   ]);
 
@@ -327,13 +337,57 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
   };
 
   const uploadApplicationFiles = async (applicationId) => {
+    const uploadedMenus = [];
+    const uploadedImages = [];
+
     if (menuPdf) {
-      await uploadApplicationFile(applicationId, menuPdf, "APPLICATION_MENU_PDF");
+      const response = await uploadApplicationFile(
+        applicationId,
+        menuPdf,
+        "APPLICATION_MENU_PDF",
+      );
+      const attachment = response?.data?.marketplaceAttachment;
+      if (attachment) uploadedMenus.push(attachment);
     }
     for (const image of foodPhotos) {
-      await uploadApplicationFile(applicationId, image, "APPLICATION_IMAGE");
+      const response = await uploadApplicationFile(
+        applicationId,
+        image,
+        "APPLICATION_IMAGE",
+      );
+      const attachment = response?.data?.marketplaceAttachment;
+      if (attachment) uploadedImages.push(attachment);
+    }
+
+    if (uploadedMenus.length) {
+      setUploadedMenuFiles(uploadedMenus);
+      setMenuPdf(null);
+    }
+    if (uploadedImages.length) {
+      setUploadedFoodPhotoFiles((prev) => [...prev, ...uploadedImages]);
+      setFoodPhotos([]);
     }
   };
+
+  async function saveApplicationDraftWithFiles({ notify = true } = {}) {
+    if (submitting) return null;
+    setSubmitting(true);
+    try {
+      const draft = await saveApplicationDraft("DRAFT");
+      if (draft?.application_id) {
+        await uploadApplicationFiles(draft.application_id);
+        if (notify) {
+          Alert.alert("Draft Saved", "Your application draft has been saved.");
+        }
+      }
+      return draft;
+    } catch (error) {
+      Alert.alert("Draft Not Saved", error?.message || "Please try again.");
+      return null;
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   const finalizeApplicationSubmission = async () => {
     const response = await submitMarketplaceApplication_API({
@@ -747,11 +801,29 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
             <View style={styles.card}>
               <Text style={styles.sectionHeader}>Menu / Photos</Text>
               <Text style={styles.label}>Sample Menu Upload</Text>
+              {uploadedMenuFiles.map((file) => (
+                <Text
+                  key={file.attachment_id || file.file_url}
+                  style={styles.meta}
+                  numberOfLines={1}
+                >
+                  {file.original_name || "Saved menu"}
+                </Text>
+              ))}
               {menuPdf ? <Text style={styles.meta}>{menuPdf.name}</Text> : null}
               <TouchableOpacity activeOpacity={0.7} style={[styles.secondaryButton, { marginTop: 10 }]} onPress={pickMenuPdf} disabled={submitting}>
                 <Text style={styles.secondaryButtonText}>Choose Sample Menu</Text>
               </TouchableOpacity>
               <Text style={styles.label}>Food Photos Upload</Text>
+              {uploadedFoodPhotoFiles.map((file) => (
+                <Text
+                  key={file.attachment_id || file.file_url}
+                  style={styles.meta}
+                  numberOfLines={1}
+                >
+                  {file.original_name || "Saved food photo"}
+                </Text>
+              ))}
               {foodPhotos.map((image, index) => (
                 <Text key={`${image.uri}-${index}`} style={styles.meta} numberOfLines={1}>{image.name}</Text>
               ))}
@@ -768,7 +840,7 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
               activeOpacity={0.7}
               style={[styles.secondaryButton, { marginBottom: 12 }]}
               disabled={!canSaveDraft || submitting}
-              onPress={() => saveApplicationDraft("DRAFT")}
+              onPress={() => saveApplicationDraftWithFiles()}
             >
               <Text style={styles.secondaryButtonText}>Save Draft</Text>
             </TouchableOpacity>

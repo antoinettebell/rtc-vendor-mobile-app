@@ -95,6 +95,16 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       (item) => item.attachment_type === "REQUIREMENT_DOCUMENT",
     ) || [],
   );
+  const [uploadedMenuFiles, setUploadedMenuFiles] = useState(
+    route?.params?.bid?.attachments?.filter(
+      (item) => item.attachment_type === "BID_MENU_PDF",
+    ) || [],
+  );
+  const [uploadedBidImageFiles, setUploadedBidImageFiles] = useState(
+    route?.params?.bid?.attachments?.filter(
+      (item) => item.attachment_type === "BID_IMAGE",
+    ) || [],
+  );
   const [selectedRequirementLabel, setSelectedRequirementLabel] = useState(
     "",
   );
@@ -285,14 +295,50 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   };
 
   const uploadBidFiles = async (bidId) => {
+    const uploadedMenus = [];
+    const uploadedImages = [];
+
     if (menuPdf) {
-      await uploadBidFile(bidId, menuPdf, "BID_MENU_PDF");
+      const response = await uploadBidFile(bidId, menuPdf, "BID_MENU_PDF");
+      const attachment = response?.data?.marketplaceAttachment;
+      if (attachment) uploadedMenus.push(attachment);
     }
 
     for (const image of bidImages) {
-      await uploadBidFile(bidId, image, "BID_IMAGE");
+      const response = await uploadBidFile(bidId, image, "BID_IMAGE");
+      const attachment = response?.data?.marketplaceAttachment;
+      if (attachment) uploadedImages.push(attachment);
+    }
+
+    if (uploadedMenus.length) {
+      setUploadedMenuFiles(uploadedMenus);
+      setMenuPdf(null);
+    }
+    if (uploadedImages.length) {
+      setUploadedBidImageFiles((prev) => [...prev, ...uploadedImages]);
+      setBidImages([]);
     }
   };
+
+  async function saveBidDraftWithFiles({ notify = true } = {}) {
+    if (submitting) return null;
+    setSubmitting(true);
+    try {
+      const draft = await saveBidDraft("DRAFT");
+      if (draft?.bid_id) {
+        await uploadBidFiles(draft.bid_id);
+        if (notify) {
+          Alert.alert("Draft Saved", "Your bid draft has been saved.");
+        }
+      }
+      return draft;
+    } catch (error) {
+      Alert.alert("Draft Not Saved", error?.message || "Please try again.");
+      return null;
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   const finalizeBidSubmission = async () => {
     const response = await submitMarketplaceBid_API({
@@ -457,7 +503,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
         actions.push({
           text: "Save Draft",
           onPress: async () => {
-            const draft = await saveBidDraft("DRAFT");
+            const draft = await saveBidDraftWithFiles({ notify: false });
             if (draft?.bid_id) leaveScreen();
           },
         });
@@ -471,7 +517,13 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     });
 
     return unsubscribe;
-  }, [canSaveDraft, hasUnsavedDraftContent, navigation, saveBidDraft, submitting]);
+  }, [
+    canSaveDraft,
+    hasUnsavedDraftContent,
+    navigation,
+    saveBidDraftWithFiles,
+    submitting,
+  ]);
 
   const chooseRequirementFile = async () => {
     try {
@@ -776,6 +828,15 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
               </Text>
 
               <Text style={styles.label}>Sample Menu Upload</Text>
+              {uploadedMenuFiles.map((file) => (
+                <Text
+                  key={file.attachment_id || file.file_url}
+                  style={styles.meta}
+                  numberOfLines={1}
+                >
+                  {file.original_name || "Saved menu"}
+                </Text>
+              ))}
               {menuPdf ? (
                 <View style={[styles.row, { alignItems: "center" }]}>
                   <Text style={[styles.meta, styles.flex]} numberOfLines={1}>
@@ -799,6 +860,15 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
               </TouchableOpacity>
 
               <Text style={styles.label}>Food Photos Upload</Text>
+              {uploadedBidImageFiles.map((file) => (
+                <Text
+                  key={file.attachment_id || file.file_url}
+                  style={styles.meta}
+                  numberOfLines={1}
+                >
+                  {file.original_name || "Saved food image"}
+                </Text>
+              ))}
               {bidImages.map((image, index) => (
                 <View
                   key={`${image.uri}-${index}`}
@@ -832,7 +902,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
               activeOpacity={0.7}
               style={[styles.secondaryButton, { marginBottom: 12 }]}
               disabled={!canSaveDraft || submitting}
-              onPress={() => saveBidDraft("DRAFT")}
+              onPress={() => saveBidDraftWithFiles()}
             >
               <Text style={styles.secondaryButtonText}>Save Draft</Text>
             </TouchableOpacity>
