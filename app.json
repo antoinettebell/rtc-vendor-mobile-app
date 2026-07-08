@@ -3,10 +3,10 @@
     "name": "RTC_DEV_VENDOR",
     "slug": "foodtruckvendor",
     "scheme": "rounddacornervendor",
-    "version": "1.6",
+    "version": "1.7",
     "ios": {
       "bundleIdentifier": "com.rounddacorner.dev.vendor",
-      "buildNumber": "55",
+      "buildNumber": "57",
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
@@ -15,7 +15,7 @@
     },
     "android": {
       "package": "com.rounddacorner.dev.vendor",
-      "versionCode": 55
+      "versionCode": 58
     },
     "extra": {
       "eas": {
