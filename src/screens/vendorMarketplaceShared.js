@@ -113,9 +113,27 @@ export const getMarketplaceNotesError = (value) => {
   const hasPhone = /(?:\+?1[\s-.]*)?(?:\(?\d{3}\)?[\s-.]*)\d{3}[\s-.]*\d{4}\b/.test(
     text,
   );
+  const hasSocialOrPayment =
+    /\b(?:insta|instagram|ig|fb|facebook|meta|twitter|x|whatsapp|whats\s*app|cash\s*app|cashapp|paypal|pay\s*pal|venmo|zelle)\b/i.test(
+      text,
+    );
+  const hasContactRequest =
+    /\b(?:call|text|dm|message|email|reach|contact)\s+(?:me|us|my|our)\b/i.test(
+      text,
+    ) ||
+    /\b(?:find|follow|add|look\s+up)\s+(?:me|us)\s+on\b/i.test(text) ||
+    /\b(?:my|our)\s+(?:number|phone|email|cell|mobile|handle|username|user\s*name|cash\s*app|paypal|zelle)\b/i.test(
+      text,
+    );
+  const hasSocialHandle = /(^|\s)@[A-Z0-9_.-]{2,}/i.test(text);
 
-  return hasEmail || hasUrl || hasPhone
-    ? "Notes cannot include phone numbers, emails, or web links."
+  return hasEmail ||
+    hasUrl ||
+    hasPhone ||
+    hasSocialOrPayment ||
+    hasContactRequest ||
+    hasSocialHandle
+    ? "Notes cannot include contact info, social handles, payment handles, or requests to connect outside RTC."
     : "";
 };
 

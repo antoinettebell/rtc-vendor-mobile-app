@@ -25,6 +25,7 @@ import {
   formatMoney,
   getEventImageUrl,
   getEventLocation,
+  getMarketplaceNotesError,
   getPaymentAmount,
   getPaymentAmountLabel,
   getPaymentTypeLabel,
@@ -128,11 +129,16 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
   const primaryActionRoute = vendorPays
     ? "VendorApplicationScreen"
     : "VendorBidResponseScreen";
+  const questionError = getMarketplaceNotesError(questionText);
 
   const handleAskQuestion = async () => {
     const trimmedQuestion = questionText.trim();
     if (!trimmedQuestion) {
       Alert.alert("Messages", "Enter a question before posting.");
+      return;
+    }
+    if (questionError) {
+      Alert.alert("Messages", questionError);
       return;
     }
 
@@ -209,10 +215,17 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
             multiline
             style={[styles.input, styles.textarea, { marginTop: 14 }]}
           />
+          {!!questionError && (
+            <Text style={styles.errorText}>{questionError}</Text>
+          )}
           <TouchableOpacity
             activeOpacity={0.7}
-            style={[styles.button, { marginTop: 10 }]}
-            disabled={questionSubmitting}
+            style={[
+              styles.button,
+              { marginTop: 10 },
+              (questionSubmitting || !!questionError) && styles.buttonDisabled,
+            ]}
+            disabled={questionSubmitting || !!questionError}
             onPress={handleAskQuestion}
           >
             <Text style={styles.buttonText}>
