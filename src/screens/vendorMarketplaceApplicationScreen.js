@@ -152,23 +152,17 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
   const canSaveDraft = useMemo(
     () =>
       !!eventId &&
-      businessName.trim() &&
-      contactName.trim() &&
-      phone.trim() &&
-      email.trim() &&
-      foodTypeCuisine.trim() &&
       !notesError,
-    [
-      businessName,
-      contactName,
-      email,
-      eventId,
-      foodTypeCuisine,
-      notesError,
-      phone,
-    ],
+    [eventId, notesError],
   );
-  const canSubmit = canSaveDraft && requirementsSatisfied;
+  const applicationFieldsComplete =
+    businessName.trim() &&
+    contactName.trim() &&
+    phone.trim() &&
+    email.trim() &&
+    foodTypeCuisine.trim();
+  const canSubmit =
+    canSaveDraft && applicationFieldsComplete && requirementsSatisfied;
   const hasUnsavedDraftContent = useMemo(() => {
     const initial = initialDraftRef.current;
     return (
@@ -229,7 +223,7 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
       return null;
     }
     if (!canSaveDraft) {
-      Alert.alert("Draft Not Saved", "Complete the required fields first.");
+      Alert.alert("Draft Not Saved", "Fix the highlighted fields before saving.");
       return null;
     }
 

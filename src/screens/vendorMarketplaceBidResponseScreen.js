@@ -151,10 +151,9 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     () =>
       !!eventId &&
       isCoordinatorPaysEvent &&
-      fullBidAmount.trim() &&
       !notesError &&
-      !Number.isNaN(fullBidNumber) &&
-      fullBidNumber >= 0 &&
+      (!fullBidAmount.trim() ||
+        (!Number.isNaN(fullBidNumber) && fullBidNumber >= 0)) &&
       (!pricePerGuest || (!Number.isNaN(pricePerGuestNumber) && pricePerGuestNumber >= 0)) &&
       (!averagePricePerMeal ||
         (!Number.isNaN(averagePricePerMealNumber) &&
@@ -171,7 +170,11 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       pricePerGuestNumber,
     ],
   );
-  const canSubmit = canSaveDraft && requirementsSatisfied;
+  const bidFieldsComplete =
+    fullBidAmount.trim() &&
+    !Number.isNaN(fullBidNumber) &&
+    fullBidNumber >= 0;
+  const canSubmit = canSaveDraft && bidFieldsComplete && requirementsSatisfied;
   const hasUnsavedDraftContent = useMemo(() => {
     const initial = initialDraftRef.current;
     return (
@@ -196,7 +199,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   const buildBidPayload = (bidStatus) => ({
     price_per_guest: pricePerGuestNumber,
     average_price_per_meal: averagePricePerMealNumber,
-    full_bid_amount: fullBidNumber,
+    full_bid_amount: fullBidAmount.trim() ? fullBidNumber : null,
     menu_description: menuDescription.trim(),
     notes: notes.trim(),
     insurance_confirmed: uploadedRequirementLabels.has("Insurance"),
@@ -226,7 +229,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       return null;
     }
     if (!canSaveDraft) {
-      Alert.alert("Draft Not Saved", "Complete the required bid amount first.");
+      Alert.alert("Draft Not Saved", "Fix the highlighted fields before saving.");
       return null;
     }
 
