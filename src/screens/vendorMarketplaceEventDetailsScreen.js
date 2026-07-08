@@ -49,7 +49,18 @@ const boolText = (value) => (value ? "Yes" : "No");
 const idText = (value) => String(value || "");
 
 const isEditableDraftStatus = (value) =>
-  ["DRAFT", "PENDING_SIGNATURE"].includes(String(value || "DRAFT"));
+  ["DRAFT", "PENDING_SIGNATURE"].includes(
+    String(value || "DRAFT").toUpperCase(),
+  );
+
+const submissionEventIds = (submission) => [
+  submission?.event_id,
+  submission?.marketplaceEvent?.event_id,
+  submission?.event?.event_id,
+];
+
+const isSubmissionForEvent = (submission, eventId) =>
+  submissionEventIds(submission).some((candidate) => idText(candidate) === idText(eventId));
 
 const getServiceSpecificRows = (event) => {
   if (!event) return [];
@@ -154,7 +165,7 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
         const response = await getMarketplaceMyApplications_API();
         const draft = (response?.data?.marketplaceApplicationList || []).find(
           (application) =>
-            idText(application.event_id) === idText(currentEventId) &&
+            isSubmissionForEvent(application, currentEventId) &&
             isEditableDraftStatus(application.application_status),
         );
         navigation.navigate(primaryActionRoute, {
@@ -168,7 +179,7 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
       const response = await getMarketplaceMyBids_API();
       const draft = (response?.data?.marketplaceBidList || []).find(
         (bid) =>
-          idText(bid.event_id) === idText(currentEventId) &&
+          isSubmissionForEvent(bid, currentEventId) &&
           isEditableDraftStatus(bid.bid_status),
       );
       navigation.navigate(primaryActionRoute, {
