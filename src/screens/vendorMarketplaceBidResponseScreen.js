@@ -82,6 +82,9 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   const { checkAndRequestPermission: photosPermissionStatus } = usePermission(
     permission.photos
   );
+  const { checkAndRequestPermission: cameraPermissionStatus } = usePermission(
+    permission.camera
+  );
 
   const loadEvent = async () => {
     if (!eventId || event) return;
@@ -356,40 +359,101 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     }
   };
 
-  const pickRequirementFile = async () => {
-    if (!selectedRequirementLabel) return;
+  const uploadSelectedRequirementFile = async (file) => {
+    const draft = savedBid?.bid_id ? savedBid : await saveBidDraft("DRAFT");
+    if (!draft?.bid_id || !file) return;
+    const uploadResponse = await uploadBidFile(
+      draft.bid_id,
+      file,
+      "REQUIREMENT_DOCUMENT",
+      selectedRequirementLabel,
+    );
+    if (uploadResponse?.data?.marketplaceAttachment) {
+      setRequirementFiles((prev) => [
+        ...prev.filter(
+          (item) => item.requirement_label !== selectedRequirementLabel,
+        ),
+        uploadResponse.data.marketplaceAttachment,
+      ]);
+    }
+  };
+
+  const chooseRequirementFile = async () => {
     try {
-      const draft = savedBid?.bid_id ? savedBid : await saveBidDraft("DRAFT");
-      if (!draft?.bid_id) return;
       const [file] = await DocumentPicker.pick({
         type: [types.pdf, types.images],
       });
       if (file) {
-        const uploadResponse = await uploadBidFile(
-          draft.bid_id,
-          {
-            uri: file.uri,
-            name: file.name || `${selectedRequirementLabel}.pdf`,
-            type: file.type || "application/pdf",
-            size: file.size,
-          },
-          "REQUIREMENT_DOCUMENT",
-          selectedRequirementLabel,
-        );
-        if (uploadResponse?.data?.marketplaceAttachment) {
-          setRequirementFiles((prev) => [
-            ...prev.filter(
-              (item) => item.requirement_label !== selectedRequirementLabel,
-            ),
-            uploadResponse.data.marketplaceAttachment,
-          ]);
-        }
+        await uploadSelectedRequirementFile({
+          uri: file.uri,
+          name: file.name || `${selectedRequirementLabel}.pdf`,
+          type: file.type || "application/pdf",
+          size: file.size,
+        });
       }
     } catch (error) {
       if (!DocumentPicker.isCancel(error)) {
         Alert.alert("File Not Selected", error?.message || "Please try again.");
       }
     }
+  };
+
+  const chooseRequirementPhoto = async () => {
+    try {
+      const photosStatus = await photosPermissionStatus();
+      if (
+        photosStatus !== RESULTS.GRANTED &&
+        photosStatus !== RESULTS.LIMITED
+      ) {
+        return;
+      }
+      const image = await ImagePicker.openPicker({ mediaType: "photo" });
+      await uploadSelectedRequirementFile({
+        uri: image?.path,
+        name:
+          image?.filename ||
+          image?.path?.split("/").pop() ||
+          `${selectedRequirementLabel}.jpg`,
+        type: image?.mime || "image/jpeg",
+      });
+    } catch (error) {
+      if (error?.code !== "E_PICKER_CANCELLED") {
+        Alert.alert("Photo Not Selected", error?.message || "Please try again.");
+      }
+    }
+  };
+
+  const takeRequirementPhoto = async () => {
+    try {
+      const cameraStatus = await cameraPermissionStatus();
+      if (cameraStatus !== RESULTS.GRANTED) return;
+      const image = await ImagePicker.openCamera({
+        cropping: false,
+        mediaType: "photo",
+      });
+      await uploadSelectedRequirementFile({
+        uri: image?.path,
+        name:
+          image?.filename ||
+          image?.path?.split("/").pop() ||
+          `${selectedRequirementLabel}.jpg`,
+        type: image?.mime || "image/jpeg",
+      });
+    } catch (error) {
+      if (error?.code !== "E_PICKER_CANCELLED") {
+        Alert.alert("Photo Not Taken", error?.message || "Please try again.");
+      }
+    }
+  };
+
+  const pickRequirementFile = () => {
+    if (!selectedRequirementLabel) return;
+    Alert.alert(`Upload ${selectedRequirementLabel}`, "Choose how to add the document.", [
+      { text: "Take Photo", onPress: takeRequirementPhoto },
+      { text: "Choose Photo", onPress: chooseRequirementPhoto },
+      { text: "Choose File or PDF", onPress: chooseRequirementFile },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const removeRequirementFile = async (file) => {
