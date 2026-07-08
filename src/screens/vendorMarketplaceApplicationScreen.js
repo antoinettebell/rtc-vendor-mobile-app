@@ -83,6 +83,18 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
   const [menuPdf, setMenuPdf] = useState(null);
   const [foodPhotos, setFoodPhotos] = useState([]);
   const pendingAgreementRef = useRef(null);
+  const isLeavingRef = useRef(false);
+  const initialDraftRef = useRef({
+    businessName: foodTruck?.name || "",
+    contactName: [user?.firstName, user?.lastName].filter(Boolean).join(" "),
+    phone: user?.phone || foodTruck?.phone || "",
+    email: user?.email || "",
+    foodTypeCuisine: Array.isArray(foodTruck?.cuisine)
+      ? foodTruck.cuisine.map((item) => item?.name || item).filter(Boolean).join(", ")
+      : "",
+    menuDescription: "",
+    notes: "",
+  });
   const { checkAndRequestPermission: photosPermissionStatus } = usePermission(
     permission.photos
   );
@@ -157,6 +169,30 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
     ],
   );
   const canSubmit = canSaveDraft && requirementsSatisfied;
+  const hasUnsavedDraftContent = useMemo(() => {
+    const initial = initialDraftRef.current;
+    return (
+      businessName !== initial.businessName ||
+      contactName !== initial.contactName ||
+      phone !== initial.phone ||
+      email !== initial.email ||
+      foodTypeCuisine !== initial.foodTypeCuisine ||
+      menuDescription !== initial.menuDescription ||
+      notes !== initial.notes ||
+      !!menuPdf ||
+      foodPhotos.length > 0
+    );
+  }, [
+    businessName,
+    contactName,
+    email,
+    foodPhotos.length,
+    foodTypeCuisine,
+    menuDescription,
+    menuPdf,
+    notes,
+    phone,
+  ]);
 
   const buildApplicationPayload = (applicationStatus) => ({
     business_name: businessName.trim(),
@@ -203,10 +239,63 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
     });
     if (response?.success) {
       setSavedApplication(response.data?.marketplaceApplication || null);
+      initialDraftRef.current = {
+        businessName,
+        contactName,
+        phone,
+        email,
+        foodTypeCuisine,
+        menuDescription,
+        notes,
+      };
       return response.data?.marketplaceApplication || null;
     }
     return null;
   };
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", (event) => {
+      if (isLeavingRef.current || submitting || !hasUnsavedDraftContent) return;
+
+      event.preventDefault();
+      const leaveScreen = () => {
+        isLeavingRef.current = true;
+        navigation.dispatch(event.data.action);
+      };
+      const actions = [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Leave Without Saving",
+          style: "destructive",
+          onPress: leaveScreen,
+        },
+      ];
+
+      if (canSaveDraft) {
+        actions.push({
+          text: "Save Draft",
+          onPress: async () => {
+            const draft = await saveApplicationDraft("DRAFT");
+            if (draft?.application_id) leaveScreen();
+          },
+        });
+      }
+
+      Alert.alert(
+        "Save Draft?",
+        "Save this application before leaving the screen?",
+        actions,
+      );
+    });
+
+    return unsubscribe;
+  }, [
+    canSaveDraft,
+    hasUnsavedDraftContent,
+    navigation,
+    saveApplicationDraft,
+    submitting,
+  ]);
 
   const uploadApplicationFile = async (
     applicationId,
@@ -254,7 +343,10 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
       Alert.alert("Application Submitted", "Your application has been submitted.", [
         {
           text: "OK",
-          onPress: () => navigation.navigate("VendorMyApplicationsScreen"),
+          onPress: () => {
+            isLeavingRef.current = true;
+            navigation.navigate("VendorMyApplicationsScreen");
+          },
         },
       ]);
     }

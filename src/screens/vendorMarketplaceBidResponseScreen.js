@@ -79,6 +79,14 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   const [menuPdf, setMenuPdf] = useState(null);
   const [bidImages, setBidImages] = useState([]);
   const pendingAgreementRef = useRef(null);
+  const isLeavingRef = useRef(false);
+  const initialDraftRef = useRef({
+    pricePerGuest: "",
+    averagePricePerMeal: "",
+    fullBidAmount: "",
+    menuDescription: "",
+    notes: "",
+  });
   const { checkAndRequestPermission: photosPermissionStatus } = usePermission(
     permission.photos
   );
@@ -164,6 +172,26 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     ],
   );
   const canSubmit = canSaveDraft && requirementsSatisfied;
+  const hasUnsavedDraftContent = useMemo(() => {
+    const initial = initialDraftRef.current;
+    return (
+      pricePerGuest !== initial.pricePerGuest ||
+      averagePricePerMeal !== initial.averagePricePerMeal ||
+      fullBidAmount !== initial.fullBidAmount ||
+      menuDescription !== initial.menuDescription ||
+      notes !== initial.notes ||
+      !!menuPdf ||
+      bidImages.length > 0
+    );
+  }, [
+    averagePricePerMeal,
+    bidImages.length,
+    fullBidAmount,
+    menuDescription,
+    menuPdf,
+    notes,
+    pricePerGuest,
+  ]);
 
   const buildBidPayload = (bidStatus) => ({
     price_per_guest: pricePerGuestNumber,
@@ -208,6 +236,13 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     });
     if (response?.success) {
       setSavedBid(response.data?.marketplaceBid || null);
+      initialDraftRef.current = {
+        pricePerGuest,
+        averagePricePerMeal,
+        fullBidAmount,
+        menuDescription,
+        notes,
+      };
       return response.data?.marketplaceBid || null;
     }
     return null;
@@ -254,7 +289,10 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       Alert.alert("Bid Submitted", "Your bid has been submitted.", [
         {
           text: "OK",
-          onPress: () => navigation.navigate("VendorMyBidsScreen"),
+          onPress: () => {
+            isLeavingRef.current = true;
+            navigation.navigate("VendorMyBidsScreen");
+          },
         },
       ]);
     }
@@ -377,6 +415,44 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       ]);
     }
   };
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", (event) => {
+      if (isLeavingRef.current || submitting || !hasUnsavedDraftContent) return;
+
+      event.preventDefault();
+      const leaveScreen = () => {
+        isLeavingRef.current = true;
+        navigation.dispatch(event.data.action);
+      };
+      const actions = [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Leave Without Saving",
+          style: "destructive",
+          onPress: leaveScreen,
+        },
+      ];
+
+      if (canSaveDraft) {
+        actions.push({
+          text: "Save Draft",
+          onPress: async () => {
+            const draft = await saveBidDraft("DRAFT");
+            if (draft?.bid_id) leaveScreen();
+          },
+        });
+      }
+
+      Alert.alert(
+        "Save Draft?",
+        "Save this bid response before leaving the screen?",
+        actions,
+      );
+    });
+
+    return unsubscribe;
+  }, [canSaveDraft, hasUnsavedDraftContent, navigation, saveBidDraft, submitting]);
 
   const chooseRequirementFile = async () => {
     try {
