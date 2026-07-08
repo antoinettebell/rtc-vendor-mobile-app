@@ -48,29 +48,52 @@ const ReadOnlyRow = ({ label, value }) => (
   </View>
 );
 
+const foodTruckCuisineText = (foodTruck = {}) =>
+  Array.isArray(foodTruck?.cuisine)
+    ? foodTruck.cuisine.map((item) => item?.name || item).filter(Boolean).join(", ")
+    : "";
+
 const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const user = useSelector((state) => state.userReducer.user);
   const foodTruck = user?.foodTruck || {};
-  const eventId = route?.params?.eventId;
-  const [event, setEvent] = useState(route?.params?.event || null);
+  const initialApplication = route?.params?.application || null;
+  const initialEvent =
+    route?.params?.event ||
+    initialApplication?.marketplaceEvent ||
+    initialApplication?.event ||
+    null;
+  const eventId = route?.params?.eventId || initialApplication?.event_id;
+  const defaultContactName = [user?.firstName, user?.lastName]
+    .filter(Boolean)
+    .join(" ");
+  const defaultCuisineText = foodTruckCuisineText(foodTruck);
+  const initialDraft = {
+    businessName: initialApplication?.business_name || foodTruck?.name || "",
+    contactName: initialApplication?.contact_name || defaultContactName,
+    phone: initialApplication?.phone || user?.phone || foodTruck?.phone || "",
+    email: initialApplication?.email || user?.email || "",
+    foodTypeCuisine:
+      initialApplication?.food_type_cuisine || defaultCuisineText,
+    menuDescription: initialApplication?.menu_description || "",
+    notes: initialApplication?.notes || "",
+  };
+  const [event, setEvent] = useState(initialEvent);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [businessName, setBusinessName] = useState(foodTruck?.name || "");
-  const [contactName, setContactName] = useState(
-    [user?.firstName, user?.lastName].filter(Boolean).join(" "),
-  );
-  const [phone, setPhone] = useState(user?.phone || foodTruck?.phone || "");
-  const [email, setEmail] = useState(user?.email || "");
+  const [businessName, setBusinessName] = useState(initialDraft.businessName);
+  const [contactName, setContactName] = useState(initialDraft.contactName);
+  const [phone, setPhone] = useState(initialDraft.phone);
+  const [email, setEmail] = useState(initialDraft.email);
   const [foodTypeCuisine, setFoodTypeCuisine] = useState(
-    Array.isArray(foodTruck?.cuisine)
-      ? foodTruck.cuisine.map((item) => item?.name || item).filter(Boolean).join(", ")
-      : "",
+    initialDraft.foodTypeCuisine,
   );
-  const [menuDescription, setMenuDescription] = useState("");
-  const [notes, setNotes] = useState("");
+  const [menuDescription, setMenuDescription] = useState(
+    initialDraft.menuDescription,
+  );
+  const [notes, setNotes] = useState(initialDraft.notes);
   const [savedApplication, setSavedApplication] = useState(
-    route?.params?.application || null,
+    initialApplication,
   );
   const [requirementFiles, setRequirementFiles] = useState(
     route?.params?.application?.attachments?.filter(
@@ -84,17 +107,7 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
   const [foodPhotos, setFoodPhotos] = useState([]);
   const pendingAgreementRef = useRef(null);
   const isLeavingRef = useRef(false);
-  const initialDraftRef = useRef({
-    businessName: foodTruck?.name || "",
-    contactName: [user?.firstName, user?.lastName].filter(Boolean).join(" "),
-    phone: user?.phone || foodTruck?.phone || "",
-    email: user?.email || "",
-    foodTypeCuisine: Array.isArray(foodTruck?.cuisine)
-      ? foodTruck.cuisine.map((item) => item?.name || item).filter(Boolean).join(", ")
-      : "",
-    menuDescription: "",
-    notes: "",
-  });
+  const initialDraftRef = useRef(initialDraft);
   const { checkAndRequestPermission: photosPermissionStatus } = usePermission(
     permission.photos
   );

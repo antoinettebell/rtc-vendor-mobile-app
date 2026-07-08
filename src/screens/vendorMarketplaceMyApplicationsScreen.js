@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import StatusBarManager from "../components/StatusBarManager";
 import { AppColor } from "../utils/theme";
 import { getMarketplaceMyApplications_API } from "../api/appAPI";
@@ -53,6 +54,11 @@ const getActionLabel = (status) => {
       return "View Details";
   }
 };
+
+const isEditableApplication = (application) =>
+  ["DRAFT", "PENDING_SIGNATURE"].includes(
+    String(application?.application_status || "DRAFT"),
+  );
 
 const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -105,14 +111,47 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
   const renderApplication = ({ item }) => {
     const event = getApplicationEvent(item);
     const status = item.application_status || "DRAFT";
+    const editable = isEditableApplication(item);
+    const openApplication = () => {
+      if (editable) {
+        navigation.navigate("VendorApplicationScreen", {
+          eventId: item.event_id || event?.event_id,
+          application: item,
+          event,
+        });
+        return;
+      }
+
+      const routeName =
+        status === "ACCEPTED" || status === "PAYMENT_DUE"
+          ? "VendorFeeCheckoutScreen"
+          : "VendorApplicationDetailScreen";
+      navigation.navigate(routeName, {
+        application: item,
+        event,
+      });
+    };
+
     return (
       <View style={styles.card}>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <Text style={[styles.title, { flex: 1, paddingRight: 8 }]}>
             {event?.event_name || item.event_id}
           </Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{formatStatusLabel(status)}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            {editable ? (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                accessibilityLabel="Edit draft application"
+                style={{ padding: 4, marginRight: 6 }}
+                onPress={openApplication}
+              >
+                <MaterialIcons name="edit" size={22} color={AppColor.primary} />
+              </TouchableOpacity>
+            ) : null}
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{formatStatusLabel(status)}</Text>
+            </View>
           </View>
         </View>
         <Text style={styles.meta}>
@@ -128,16 +167,7 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
         <TouchableOpacity
           activeOpacity={0.7}
           style={[styles.secondaryButton, { marginTop: 14 }]}
-          onPress={() => {
-            const routeName =
-              status === "ACCEPTED" || status === "PAYMENT_DUE"
-                ? "VendorFeeCheckoutScreen"
-                : "VendorApplicationDetailScreen";
-            navigation.navigate(routeName, {
-              application: item,
-              event,
-            });
-          }}
+          onPress={openApplication}
         >
           <Text style={styles.secondaryButtonText}>{getActionLabel(status)}</Text>
         </TouchableOpacity>

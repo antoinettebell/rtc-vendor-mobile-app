@@ -56,18 +56,40 @@ const formatCurrencyInput = (value, setter) => {
   setter(Number.isNaN(amount) ? "" : amount.toFixed(2));
 };
 
+const currencyDraftValue = (value) =>
+  value === null || value === undefined || value === "" ? "" : String(value);
+
 const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
-  const eventId = route?.params?.eventId;
-  const [event, setEvent] = useState(route?.params?.event || null);
+  const initialBid = route?.params?.bid || null;
+  const initialEvent =
+    route?.params?.event ||
+    initialBid?.marketplaceEvent ||
+    initialBid?.event ||
+    null;
+  const eventId = route?.params?.eventId || initialBid?.event_id;
+  const initialDraft = {
+    pricePerGuest: currencyDraftValue(initialBid?.price_per_guest),
+    averagePricePerMeal: currencyDraftValue(initialBid?.average_price_per_meal),
+    fullBidAmount: currencyDraftValue(initialBid?.full_bid_amount),
+    menuDescription: initialBid?.menu_description || "",
+    notes: initialBid?.notes || "",
+  };
+  const [event, setEvent] = useState(initialEvent);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [pricePerGuest, setPricePerGuest] = useState("");
-  const [averagePricePerMeal, setAveragePricePerMeal] = useState("");
-  const [fullBidAmount, setFullBidAmount] = useState("");
-  const [menuDescription, setMenuDescription] = useState("");
-  const [notes, setNotes] = useState("");
-  const [savedBid, setSavedBid] = useState(route?.params?.bid || null);
+  const [pricePerGuest, setPricePerGuest] = useState(
+    initialDraft.pricePerGuest,
+  );
+  const [averagePricePerMeal, setAveragePricePerMeal] = useState(
+    initialDraft.averagePricePerMeal,
+  );
+  const [fullBidAmount, setFullBidAmount] = useState(initialDraft.fullBidAmount);
+  const [menuDescription, setMenuDescription] = useState(
+    initialDraft.menuDescription,
+  );
+  const [notes, setNotes] = useState(initialDraft.notes);
+  const [savedBid, setSavedBid] = useState(initialBid);
   const [requirementFiles, setRequirementFiles] = useState(
     route?.params?.bid?.attachments?.filter(
       (item) => item.attachment_type === "REQUIREMENT_DOCUMENT",
@@ -80,13 +102,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   const [bidImages, setBidImages] = useState([]);
   const pendingAgreementRef = useRef(null);
   const isLeavingRef = useRef(false);
-  const initialDraftRef = useRef({
-    pricePerGuest: "",
-    averagePricePerMeal: "",
-    fullBidAmount: "",
-    menuDescription: "",
-    notes: "",
-  });
+  const initialDraftRef = useRef(initialDraft);
   const { checkAndRequestPermission: photosPermissionStatus } = usePermission(
     permission.photos
   );

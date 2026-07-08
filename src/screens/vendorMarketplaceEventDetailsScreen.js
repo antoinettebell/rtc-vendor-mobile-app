@@ -17,6 +17,8 @@ import {
   askMarketplaceEventQuestion_API,
   getMarketplaceEventById_API,
   getMarketplaceEventQuestions_API,
+  getMarketplaceMyApplications_API,
+  getMarketplaceMyBids_API,
 } from "../api/appAPI";
 import {
   MarketplaceHeader,
@@ -43,6 +45,11 @@ const DetailRow = ({ label, value }) => (
 );
 
 const boolText = (value) => (value ? "Yes" : "No");
+
+const idText = (value) => String(value || "");
+
+const isEditableDraftStatus = (value) =>
+  ["DRAFT", "PENDING_SIGNATURE"].includes(String(value || "DRAFT"));
 
 const getServiceSpecificRows = (event) => {
   if (!event) return [];
@@ -81,6 +88,7 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
   const [qaLoading, setQaLoading] = useState(false);
   const [questionText, setQuestionText] = useState("");
   const [questionSubmitting, setQuestionSubmitting] = useState(false);
+  const [primaryActionLoading, setPrimaryActionLoading] = useState(false);
 
   const loadQuestions = async () => {
     if (!eventId) return;
@@ -130,6 +138,51 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
     ? "VendorApplicationScreen"
     : "VendorBidResponseScreen";
   const questionError = getMarketplaceNotesError(questionText);
+
+  const handlePrimaryAction = async () => {
+    if (isClosed || primaryActionLoading) return;
+
+    const currentEventId = event?.event_id || eventId;
+    const params = {
+      eventId: currentEventId,
+      event,
+    };
+
+    setPrimaryActionLoading(true);
+    try {
+      if (vendorPays) {
+        const response = await getMarketplaceMyApplications_API();
+        const draft = (response?.data?.marketplaceApplicationList || []).find(
+          (application) =>
+            idText(application.event_id) === idText(currentEventId) &&
+            isEditableDraftStatus(application.application_status),
+        );
+        navigation.navigate(primaryActionRoute, {
+          ...params,
+          application: draft || undefined,
+          event: draft?.marketplaceEvent || draft?.event || event,
+        });
+        return;
+      }
+
+      const response = await getMarketplaceMyBids_API();
+      const draft = (response?.data?.marketplaceBidList || []).find(
+        (bid) =>
+          idText(bid.event_id) === idText(currentEventId) &&
+          isEditableDraftStatus(bid.bid_status),
+      );
+      navigation.navigate(primaryActionRoute, {
+        ...params,
+        bid: draft || undefined,
+        event: draft?.marketplaceEvent || draft?.event || event,
+      });
+    } catch (error) {
+      console.log("Marketplace draft lookup error", error);
+      navigation.navigate(primaryActionRoute, params);
+    } finally {
+      setPrimaryActionLoading(false);
+    }
+  };
 
   const handleAskQuestion = async () => {
     const trimmedQuestion = questionText.trim();
@@ -408,17 +461,19 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
 
           <TouchableOpacity
             activeOpacity={0.7}
-            style={[styles.button, isClosed && { opacity: 0.55 }]}
-            disabled={isClosed}
-            onPress={() =>
-              navigation.navigate(primaryActionRoute, {
-                eventId: event?.event_id || eventId,
-                event,
-              })
-            }
+            style={[
+              styles.button,
+              (isClosed || primaryActionLoading) && { opacity: 0.55 },
+            ]}
+            disabled={isClosed || primaryActionLoading}
+            onPress={handlePrimaryAction}
           >
             <Text style={styles.buttonText}>
-              {isClosed ? "Closed to Submissions" : getPrimaryActionLabel(event)}
+              {isClosed
+                ? "Closed to Submissions"
+                : primaryActionLoading
+                  ? "Checking Draft..."
+                  : getPrimaryActionLabel(event)}
             </Text>
           </TouchableOpacity>
 

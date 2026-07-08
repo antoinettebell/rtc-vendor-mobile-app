@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import StatusBarManager from "../components/StatusBarManager";
 import { AppColor } from "../utils/theme";
 import { getMarketplaceMyBids_API } from "../api/appAPI";
@@ -32,6 +33,9 @@ const BID_STATUS_FILTERS = [
   { label: "Not Selected", value: "NOT_AWARDED" },
   { label: "Withdrawn", value: "WITHDRAWN" },
 ];
+
+const isEditableBid = (bid) =>
+  ["DRAFT", "PENDING_SIGNATURE"].includes(String(bid?.bid_status || "DRAFT"));
 
 const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -80,16 +84,46 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
 
   const renderBid = ({ item }) => {
     const event = getBidEvent(item);
+    const editable = isEditableBid(item);
+    const openBid = () => {
+      if (editable) {
+        navigation.navigate("VendorBidResponseScreen", {
+          eventId: item.event_id || event?.event_id,
+          bid: item,
+          event,
+        });
+        return;
+      }
+      if (event?.event_id || item.event_id) {
+        navigation.navigate("VendorBidDetailScreen", {
+          bid: item,
+          event,
+        });
+      }
+    };
+
     return (
       <View style={styles.card}>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <Text style={[styles.title, { flex: 1, paddingRight: 8 }]}>
             {event?.event_name || item.event_id}
           </Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {formatStatusLabel(item.bid_status)}
-            </Text>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            {editable ? (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                accessibilityLabel="Edit draft bid"
+                style={{ padding: 4, marginRight: 6 }}
+                onPress={openBid}
+              >
+                <MaterialIcons name="edit" size={22} color={AppColor.primary} />
+              </TouchableOpacity>
+            ) : null}
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {formatStatusLabel(item.bid_status)}
+              </Text>
+            </View>
           </View>
         </View>
         <Text style={styles.meta}>
@@ -108,16 +142,11 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
         <TouchableOpacity
           activeOpacity={0.7}
           style={[styles.secondaryButton, { marginTop: 14 }]}
-          onPress={() =>
-            event?.event_id
-              ? navigation.navigate("VendorBidDetailScreen", {
-                  bid: item,
-                  event,
-                })
-              : null
-          }
+          onPress={openBid}
         >
-          <Text style={styles.secondaryButtonText}>View Details</Text>
+          <Text style={styles.secondaryButtonText}>
+            {editable ? "Edit Draft" : "View Details"}
+          </Text>
         </TouchableOpacity>
       </View>
     );
