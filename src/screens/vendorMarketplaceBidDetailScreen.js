@@ -1,9 +1,10 @@
 import React from "react";
-import { Linking, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StatusBarManager from "../components/StatusBarManager";
 import {
   MarketplaceHeader,
+  MarketplaceAttachmentPicker,
   formatDate,
   formatDuration,
   formatMoney,
@@ -30,12 +31,19 @@ const attachmentLabel = (type) => {
       return "Food Photo";
     case "PERMIT_LICENSE":
       return "Permit / License";
+    case "REQUIREMENT_DOCUMENT":
+      return "Requirement";
     case "AGREEMENT_DOCUMENT":
-      return "Agreement Document";
+      return "Signed Agreement";
     default:
       return "Attachment";
   }
 };
+
+const attachmentPickerLabel = (attachment) =>
+  `${attachment.requirement_label || attachmentLabel(attachment.attachment_type)}: ${
+    attachment.original_name || "Open file"
+  }`;
 
 const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -124,25 +132,11 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
 
         <View style={styles.card}>
           <Text style={styles.title}>Uploaded Files</Text>
-          {attachments.length ? (
-            attachments.map((attachment) => (
-              <TouchableOpacity
-                key={attachment.attachment_id || attachment.file_url}
-                activeOpacity={0.7}
-                style={[styles.secondaryButton, { marginTop: 10 }]}
-                onPress={() =>
-                  attachment.file_url ? Linking.openURL(attachment.file_url) : null
-                }
-              >
-                <Text style={styles.secondaryButtonText} numberOfLines={1}>
-                  {attachmentLabel(attachment.attachment_type)}:{" "}
-                  {attachment.original_name || "Open file"}
-                </Text>
-              </TouchableOpacity>
-            ))
-          ) : (
-            <Text style={styles.emptyText}>No files uploaded for this bid.</Text>
-          )}
+          <MarketplaceAttachmentPicker
+            attachments={attachments}
+            getLabel={attachmentPickerLabel}
+            emptyText="No files uploaded for this bid."
+          />
         </View>
       </ScrollView>
     </View>

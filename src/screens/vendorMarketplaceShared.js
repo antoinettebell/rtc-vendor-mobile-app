@@ -1,5 +1,6 @@
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Linking, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Dropdown } from "react-native-element-dropdown";
 import Entypo from "react-native-vector-icons/Entypo";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 
@@ -269,6 +270,111 @@ export const MarketplaceHeader = ({ title, navigation, right }) => (
   </View>
 );
 
+export const MarketplaceAttachmentPicker = ({
+  attachments = [],
+  getLabel,
+  emptyText = "No files uploaded.",
+}) => {
+  const visibleAttachments = React.useMemo(() => {
+    const imageTypes = new Set(["BID_IMAGE", "APPLICATION_IMAGE"]);
+    const seenExactFiles = new Set();
+    const latestBySlot = new Map();
+    const images = [];
+
+    attachments.forEach((attachment) => {
+      const exactKey =
+        attachment.file_key || attachment.file_url || attachment.attachment_id;
+      if (exactKey && seenExactFiles.has(exactKey)) {
+        return;
+      }
+      if (exactKey) {
+        seenExactFiles.add(exactKey);
+      }
+
+      if (imageTypes.has(attachment.attachment_type)) {
+        images.push(attachment);
+        return;
+      }
+
+      const slotKey = [
+        attachment.attachment_type,
+        attachment.requirement_key,
+        attachment.requirement_label,
+      ]
+        .filter(Boolean)
+        .join(":");
+      latestBySlot.set(slotKey || exactKey || attachment.attachment_id, attachment);
+    });
+
+    return [...latestBySlot.values(), ...images];
+  }, [attachments]);
+
+  const options = React.useMemo(
+    () =>
+      visibleAttachments.map((attachment, index) => ({
+        label:
+          getLabel?.(attachment) ||
+          attachment.original_name ||
+          attachment.name ||
+          "Uploaded file",
+        value: attachment.attachment_id || attachment.file_url || `${index}`,
+        attachment,
+      })),
+    [visibleAttachments, getLabel],
+  );
+  const [selectedValue, setSelectedValue] = React.useState(
+    options[0]?.value || null,
+  );
+
+  React.useEffect(() => {
+    if (!options.length) {
+      setSelectedValue(null);
+      return;
+    }
+    if (!options.some((option) => option.value === selectedValue)) {
+      setSelectedValue(options[0].value);
+    }
+  }, [options, selectedValue]);
+
+  const selectedOption =
+    options.find((option) => option.value === selectedValue) || options[0];
+  const selectedAttachment = selectedOption?.attachment;
+
+  if (!options.length) {
+    return <Text style={styles.emptyText}>{emptyText}</Text>;
+  }
+
+  return (
+    <View style={styles.filePickerRow}>
+      <Dropdown
+        data={options}
+        labelField="label"
+        valueField="value"
+        value={selectedValue}
+        placeholder="Select document"
+        style={styles.fileDropdown}
+        placeholderStyle={styles.fileDropdownText}
+        selectedTextStyle={styles.fileDropdownText}
+        itemTextStyle={styles.fileDropdownText}
+        containerStyle={styles.fileDropdownMenu}
+        onChange={(item) => setSelectedValue(item.value)}
+      />
+      <TouchableOpacity
+        activeOpacity={0.7}
+        style={[
+          styles.secondaryButton,
+          styles.fileOpenButton,
+          !selectedAttachment?.file_url && styles.buttonDisabled,
+        ]}
+        disabled={!selectedAttachment?.file_url}
+        onPress={() => Linking.openURL(selectedAttachment.file_url)}
+      >
+        <Text style={styles.secondaryButtonText}>Open</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -433,6 +539,33 @@ export const styles = StyleSheet.create({
     fontFamily: Mulish700,
     color: AppColor.primary,
     fontSize: 14,
+  },
+  filePickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 12,
+  },
+  fileDropdown: {
+    flex: 1,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: "#DDE2EA",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    backgroundColor: AppColor.white,
+  },
+  fileDropdownMenu: {
+    borderRadius: 8,
+  },
+  fileDropdownText: {
+    fontFamily: Mulish400,
+    fontSize: 13,
+    color: AppColor.text,
+  },
+  fileOpenButton: {
+    width: 92,
+    paddingHorizontal: 12,
   },
   badge: {
     alignSelf: "flex-start",
