@@ -488,6 +488,7 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
       });
       const existingNames = new Set(
         (user?.foodTruck?.documents || [])
+          .filter((document) => document?.document_status !== "ARCHIVED")
           .map((document) => document.title || document.original_name)
           .map(normalizeDocumentName)
           .filter(Boolean)
