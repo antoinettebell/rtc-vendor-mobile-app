@@ -25,6 +25,23 @@
         "buildType": "apk"
       }
     },
+    "testflight": {
+      "env": {
+        "API_URL": "http://157.245.6.61:8000",
+        "API_PREFIX": "/api/v1",
+        "APP_ENV": "development",
+        "TAP_TO_PAY_ENABLED": "false",
+        "TAP_TO_PAY_ENVIRONMENT": "sandbox"
+      },
+      "ios": {
+        "image": "latest",
+        "simulator": false,
+        "buildConfiguration": "Release"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      }
+    },
     "production": {
       "env": {
         "API_URL": "http://157.245.6.61:3000",
@@ -44,6 +61,7 @@
     }
   },
   "submit": {
+    "testflight": {},
     "production": {}
   }
 }
