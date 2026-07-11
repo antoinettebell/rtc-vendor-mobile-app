@@ -7,6 +7,7 @@
     "ios": "react-native run-ios",
     "lint": "eslint App.js src/api/apiEndPoint.js src/api/appAPI.js src/screens/profileMenuScreen.js src/screens/profileSubscriptionScreen.js src/screens/authFoodTruckPlansScreen.js src/screens/vendorMarketplace*.js",
     "start": "react-native start --reset-cache",
+    "eas-build-pre-install": "node scripts/write-eas-env.js",
     "postinstall": "patch-package",
     "ios:entitlements:production": "node scripts/set-ios-entitlements.js production",
     "ios:entitlements:tap-to-pay": "node scripts/set-ios-entitlements.js tapToPay"
