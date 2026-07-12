@@ -112,10 +112,11 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
     const event = getApplicationEvent(item);
     const status = item.application_status || "DRAFT";
     const editable = isEditableApplication(item);
+    const eventId = item.event_id || event?.event_id;
     const openApplication = () => {
       if (editable) {
         navigation.navigate("VendorApplicationScreen", {
-          eventId: item.event_id || event?.event_id,
+          eventId,
           application: item,
           event,
         });
@@ -171,6 +172,24 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
         >
           <Text style={styles.secondaryButtonText}>{getActionLabel(status)}</Text>
         </TouchableOpacity>
+        {eventId ? (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={[styles.secondaryButton, { marginTop: 10 }]}
+            onPress={() =>
+              navigation.navigate("vendorMarketplaceMessagesScreen", { eventId })
+            }
+          >
+            <MaterialIcons
+              name="chat-bubble-outline"
+              size={18}
+              color={AppColor.primary}
+            />
+            <Text style={[styles.secondaryButtonText, { marginLeft: 8 }]}>
+              Messages
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     );
   };

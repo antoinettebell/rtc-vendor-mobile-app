@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import StatusBarManager from "../components/StatusBarManager";
 import { AppColor } from "../utils/theme";
 import {
@@ -260,6 +261,8 @@ const VendorMarketplaceAwardedBidsScreen = ({ navigation }) => {
 
   const renderAwardedEvent = ({ item }) => {
     const event = item.event || {};
+    const eventId =
+      event.event_id || item.bid?.event_id || item.application?.event_id || null;
     const isVendorPays =
       item.paymentType === MARKETPLACE_PAYMENT_TYPES.VENDOR_PAYS_TO_ATTEND;
     return (
@@ -292,6 +295,24 @@ const VendorMarketplaceAwardedBidsScreen = ({ navigation }) => {
         >
           <Text style={styles.buttonText}>{getActionLabel(item)}</Text>
         </TouchableOpacity>
+        {eventId ? (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={[styles.secondaryButton, { marginTop: 10 }]}
+            onPress={() =>
+              navigation.navigate("vendorMarketplaceMessagesScreen", { eventId })
+            }
+          >
+            <MaterialIcons
+              name="chat-bubble-outline"
+              size={18}
+              color={AppColor.primary}
+            />
+            <Text style={[styles.secondaryButtonText, { marginLeft: 8 }]}>
+              Messages
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </TouchableOpacity>
     );
   };

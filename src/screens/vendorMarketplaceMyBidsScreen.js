@@ -85,16 +85,17 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
   const renderBid = ({ item }) => {
     const event = getBidEvent(item);
     const editable = isEditableBid(item);
+    const eventId = item.event_id || event?.event_id;
     const openBid = () => {
       if (editable) {
         navigation.navigate("VendorBidResponseScreen", {
-          eventId: item.event_id || event?.event_id,
+          eventId,
           bid: item,
           event,
         });
         return;
       }
-      if (event?.event_id || item.event_id) {
+      if (eventId) {
         navigation.navigate("VendorBidDetailScreen", {
           bid: item,
           event,
@@ -148,6 +149,24 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
             {editable ? "Edit Draft" : "View Details"}
           </Text>
         </TouchableOpacity>
+        {eventId ? (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={[styles.secondaryButton, { marginTop: 10 }]}
+            onPress={() =>
+              navigation.navigate("vendorMarketplaceMessagesScreen", { eventId })
+            }
+          >
+            <MaterialIcons
+              name="chat-bubble-outline"
+              size={18}
+              color={AppColor.primary}
+            />
+            <Text style={[styles.secondaryButtonText, { marginLeft: 8 }]}>
+              Messages
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     );
   };
