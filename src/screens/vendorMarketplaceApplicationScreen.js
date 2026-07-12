@@ -37,6 +37,7 @@ import {
   getEventLocation,
   getMarketplaceNotesError,
   getMarketplaceRequirementLabels,
+  isApplicationRevisionRequested,
   normalizeMarketplaceRequirementLabel,
   styles,
 } from "./vendorMarketplaceShared";
@@ -108,6 +109,7 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
   const [savedApplication, setSavedApplication] = useState(
     initialApplication,
   );
+  const isRevisionMode = isApplicationRevisionRequested(initialApplication);
   const [requirementFiles, setRequirementFiles] = useState(
     route?.params?.application?.attachments?.filter(
       (item) => item.attachment_type === "REQUIREMENT_DOCUMENT",
@@ -866,14 +868,16 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
               Payment is not required now. If accepted, you will receive a notification to pay the vendor fee.
             </Text>
 
-            <TouchableOpacity
-              activeOpacity={0.7}
-              style={[styles.secondaryButton, { marginBottom: 12 }]}
-              disabled={!canSaveDraft || submitting}
-              onPress={() => saveApplicationDraftWithFiles()}
-            >
-              <Text style={styles.secondaryButtonText}>Save Draft</Text>
-            </TouchableOpacity>
+            {!isRevisionMode ? (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[styles.secondaryButton, { marginBottom: 12 }]}
+                disabled={!canSaveDraft || submitting}
+                onPress={() => saveApplicationDraftWithFiles()}
+              >
+                <Text style={styles.secondaryButtonText}>Save Draft</Text>
+              </TouchableOpacity>
+            ) : null}
 
             <TouchableOpacity
               activeOpacity={0.7}
@@ -884,7 +888,11 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
               {submitting ? (
                 <ActivityIndicator color={AppColor.white} />
               ) : (
-                <Text style={styles.buttonText}>Submit Application</Text>
+                <Text style={styles.buttonText}>
+                  {isRevisionMode
+                    ? "Submit Revised Application"
+                    : "Submit Application"}
+                </Text>
               )}
             </TouchableOpacity>
           </ScrollView>

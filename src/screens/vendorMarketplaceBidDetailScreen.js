@@ -1,5 +1,5 @@
 import React from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StatusBarManager from "../components/StatusBarManager";
 import {
@@ -11,6 +11,7 @@ import {
   formatStatusLabel,
   getBidEvent,
   getEventLocation,
+  isBidRevisionRequested,
   styles,
 } from "./vendorMarketplaceShared";
 
@@ -50,6 +51,7 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
   const bid = route?.params?.bid || {};
   const event = route?.params?.event || getBidEvent(bid);
   const attachments = Array.isArray(bid.attachments) ? bid.attachments : [];
+  const canRevise = isBidRevisionRequested(bid);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -58,6 +60,21 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.card}>
           <Text style={styles.title}>{event?.event_name || "Marketplace Bid"}</Text>
+          {canRevise ? (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={[styles.button, { marginTop: 14 }]}
+              onPress={() =>
+                navigation.navigate("VendorBidResponseScreen", {
+                  eventId: bid.event_id || event?.event_id,
+                  bid,
+                  event,
+                })
+              }
+            >
+              <Text style={styles.buttonText}>Revise Bid</Text>
+            </TouchableOpacity>
+          ) : null}
           <DetailRow label="Event Type" value={event?.event_type} />
           <DetailRow label="Event Date" value={formatDate(event?.event_date)} />
           <DetailRow label="Event Time" value={event?.event_time || "Not set"} />

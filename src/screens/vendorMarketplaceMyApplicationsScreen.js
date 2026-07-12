@@ -20,6 +20,7 @@ import {
   formatStatusLabel,
   getApplicationEvent,
   getEventLocation,
+  isApplicationRevisionRequested,
   isVendorPaysToAttendEvent,
   styles,
 } from "./vendorMarketplaceShared";
@@ -58,7 +59,7 @@ const getActionLabel = (status) => {
 const isEditableApplication = (application) =>
   ["DRAFT", "PENDING_SIGNATURE"].includes(
     String(application?.application_status || "DRAFT"),
-  );
+  ) || isApplicationRevisionRequested(application);
 
 const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -143,7 +144,11 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
             {editable ? (
               <TouchableOpacity
                 activeOpacity={0.7}
-                accessibilityLabel="Edit draft application"
+                accessibilityLabel={
+                  isApplicationRevisionRequested(item)
+                    ? "Revise application"
+                    : "Edit draft application"
+                }
                 style={{ padding: 4, marginRight: 6 }}
                 onPress={openApplication}
               >
@@ -170,7 +175,11 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
           style={[styles.secondaryButton, { marginTop: 14 }]}
           onPress={openApplication}
         >
-          <Text style={styles.secondaryButtonText}>{getActionLabel(status)}</Text>
+          <Text style={styles.secondaryButtonText}>
+            {isApplicationRevisionRequested(item)
+              ? "Revise Application"
+              : getActionLabel(status)}
+          </Text>
         </TouchableOpacity>
         {eventId ? (
           <TouchableOpacity

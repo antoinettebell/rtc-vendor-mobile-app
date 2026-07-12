@@ -20,6 +20,7 @@ import {
   formatStatusLabel,
   getBidEvent,
   getEventLocation,
+  isBidRevisionRequested,
   isVendorPaysToAttendEvent,
   styles,
 } from "./vendorMarketplaceShared";
@@ -35,7 +36,8 @@ const BID_STATUS_FILTERS = [
 ];
 
 const isEditableBid = (bid) =>
-  ["DRAFT", "PENDING_SIGNATURE"].includes(String(bid?.bid_status || "DRAFT"));
+  ["DRAFT", "PENDING_SIGNATURE"].includes(String(bid?.bid_status || "DRAFT")) ||
+  isBidRevisionRequested(bid);
 
 const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -113,7 +115,9 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
             {editable ? (
               <TouchableOpacity
                 activeOpacity={0.7}
-                accessibilityLabel="Edit draft bid"
+                accessibilityLabel={
+                  isBidRevisionRequested(item) ? "Revise bid" : "Edit draft bid"
+                }
                 style={{ padding: 4, marginRight: 6 }}
                 onPress={openBid}
               >
@@ -146,7 +150,11 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
           onPress={openBid}
         >
           <Text style={styles.secondaryButtonText}>
-            {editable ? "Edit Draft" : "View Details"}
+            {isBidRevisionRequested(item)
+              ? "Revise Bid"
+              : editable
+                ? "Edit Draft"
+                : "View Details"}
           </Text>
         </TouchableOpacity>
         {eventId ? (

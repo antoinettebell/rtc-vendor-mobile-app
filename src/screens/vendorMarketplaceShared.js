@@ -97,6 +97,18 @@ export const getBidEvent = (bid) => bid?.marketplaceEvent || bid?.event || {};
 export const getApplicationEvent = (application) =>
   application?.marketplaceEvent || application?.event || {};
 
+export const isBidRevisionRequested = (bid) => {
+  if (!bid?.revision_requested_at) return false;
+  if (!bid.revision_submitted_at) return true;
+  return new Date(bid.revision_requested_at) > new Date(bid.revision_submitted_at);
+};
+
+export const isApplicationRevisionRequested = (application) => {
+  if (!application?.revision_requested_at) return false;
+  if (!application.revision_submitted_at) return true;
+  return new Date(application.revision_requested_at) > new Date(application.revision_submitted_at);
+};
+
 export const isEventAccessError = (error) =>
   Number(error?.code || error?.statusCode || error?.status) === 403 ||
   /accept event bookings/i.test(error?.message || "");

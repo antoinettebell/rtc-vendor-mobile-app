@@ -11,6 +11,7 @@ import {
   formatStatusLabel,
   getApplicationEvent,
   getEventLocation,
+  isApplicationRevisionRequested,
   styles,
 } from "./vendorMarketplaceShared";
 
@@ -54,6 +55,7 @@ const VendorMarketplaceApplicationDetailScreen = ({ navigation, route }) => {
     : [];
   const status = application.application_status || "DRAFT";
   const canPay = status === "ACCEPTED" || status === "PAYMENT_DUE";
+  const canRevise = isApplicationRevisionRequested(application);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -62,6 +64,21 @@ const VendorMarketplaceApplicationDetailScreen = ({ navigation, route }) => {
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.card}>
           <Text style={styles.title}>{event?.event_name || "Application"}</Text>
+          {canRevise ? (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={[styles.button, { marginTop: 14 }]}
+              onPress={() =>
+                navigation.navigate("VendorApplicationScreen", {
+                  eventId: application.event_id || event?.event_id,
+                  application,
+                  event,
+                })
+              }
+            >
+              <Text style={styles.buttonText}>Revise Application</Text>
+            </TouchableOpacity>
+          ) : null}
           <DetailRow label="Event Type" value={event?.event_type} />
           <DetailRow label="Event Date" value={formatDate(event?.event_date)} />
           <DetailRow label="Event Time" value={event?.event_time || "Not set"} />

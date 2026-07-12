@@ -36,6 +36,7 @@ import {
   getEventLocation,
   getMarketplaceNotesError,
   getMarketplaceRequirementLabels,
+  isBidRevisionRequested,
   isVendorPaysToAttendEvent,
   normalizeMarketplaceRequirementLabel,
   styles,
@@ -103,6 +104,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   );
   const [notes, setNotes] = useState(initialDraft.notes);
   const [savedBid, setSavedBid] = useState(initialBid);
+  const isRevisionMode = isBidRevisionRequested(initialBid);
   const [requirementFiles, setRequirementFiles] = useState(
     route?.params?.bid?.attachments?.filter(
       (item) => item.attachment_type === "REQUIREMENT_DOCUMENT",
@@ -928,14 +930,16 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
 
             </View>
 
-            <TouchableOpacity
-              activeOpacity={0.7}
-              style={[styles.secondaryButton, { marginBottom: 12 }]}
-              disabled={!canSaveDraft || submitting}
-              onPress={() => saveBidDraftWithFiles()}
-            >
-              <Text style={styles.secondaryButtonText}>Save Draft</Text>
-            </TouchableOpacity>
+            {!isRevisionMode ? (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[styles.secondaryButton, { marginBottom: 12 }]}
+                disabled={!canSaveDraft || submitting}
+                onPress={() => saveBidDraftWithFiles()}
+              >
+                <Text style={styles.secondaryButtonText}>Save Draft</Text>
+              </TouchableOpacity>
+            ) : null}
 
             <TouchableOpacity
               activeOpacity={0.7}
@@ -946,7 +950,9 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
               {submitting ? (
                 <ActivityIndicator color={AppColor.white} />
               ) : (
-                <Text style={styles.buttonText}>Submit Bid</Text>
+                <Text style={styles.buttonText}>
+                  {isRevisionMode ? "Submit Revised Bid" : "Submit Bid"}
+                </Text>
               )}
             </TouchableOpacity>
           </ScrollView>

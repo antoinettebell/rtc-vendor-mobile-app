@@ -133,7 +133,11 @@ const VendorMarketplaceMessagesScreen = ({ navigation, route }) => {
                 }}
               >
                 <View style={styles.rowBetween}>
-                  <Text style={styles.label}>{question.vendor_display_id}</Text>
+                  <Text style={styles.label}>
+                    {question.initiated_by_role === "CUSTOMER"
+                      ? "Coordinator Message"
+                      : question.vendor_display_id}
+                  </Text>
                   <Text style={styles.meta}>{question.unread ? "Unread" : "Read"}</Text>
                 </View>
                 <Text style={styles.meta}>{question.question_text}</Text>
