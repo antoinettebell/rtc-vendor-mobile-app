@@ -468,7 +468,7 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
                     </Text>
                     <Text style={styles.includedAccessText}>
                       Elite vendors can participate in event marketplace
-                      opportunities without selecting the Event Bookings add-on.
+                      opportunities through their tier.
                     </Text>
                   </View>
                 </View>
@@ -477,11 +477,11 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
               {visibleAddOns?.length ? (
                 <View>
                   <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Select Ad Space</Text>
+                    <Text style={styles.sectionTitle}>Select Add-Ons</Text>
                     <Text style={styles.sectionSubtitle}>
                       {isEliteSelected
-                        ? "Optional ad placement for your current plan."
-                        : "Optional ad placement for your current plan."}
+                        ? "Optional paid add-ons for your current plan."
+                        : "Optional paid add-ons for your current plan."}
                     </Text>
                   </View>
 
