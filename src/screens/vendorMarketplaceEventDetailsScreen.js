@@ -1,20 +1,18 @@
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import StatusBarManager from "../components/StatusBarManager";
 import AppImage from "../components/AppImage";
 import { AppColor } from "../utils/theme";
 import {
-  askMarketplaceEventQuestion_API,
   getMarketplaceEventById_API,
   getMarketplaceEventQuestions_API,
   getMarketplaceMyApplications_API,
@@ -27,7 +25,6 @@ import {
   formatMoney,
   getEventImageUrl,
   getEventLocation,
-  getMarketplaceNotesError,
   getPaymentAmount,
   getPaymentAmountLabel,
   getPaymentTypeLabel,
@@ -95,25 +92,23 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
   const [event, setEvent] = useState(route?.params?.event || null);
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState([]);
-  const [qaArchived, setQaArchived] = useState(false);
-  const [qaLoading, setQaLoading] = useState(false);
-  const [questionText, setQuestionText] = useState("");
-  const [questionSubmitting, setQuestionSubmitting] = useState(false);
   const [primaryActionLoading, setPrimaryActionLoading] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({
+    summary: true,
+    payment: true,
+    requirements: true,
+    needs: true,
+  });
 
   const loadQuestions = async () => {
     if (!eventId) return;
-    setQaLoading(true);
     try {
       const response = await getMarketplaceEventQuestions_API(eventId);
       if (response?.success) {
         setQuestions(response.data?.marketplaceQuestionList || []);
-        setQaArchived(!!response.data?.qa_archived);
       }
     } catch (error) {
       console.log("Marketplace messages error", error);
-    } finally {
-      setQaLoading(false);
     }
   };
 
@@ -148,8 +143,6 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
   const primaryActionRoute = vendorPays
     ? "VendorApplicationScreen"
     : "VendorBidResponseScreen";
-  const questionError = getMarketplaceNotesError(questionText);
-
   const handlePrimaryAction = async () => {
     if (isClosed || primaryActionLoading) return;
 
@@ -195,109 +188,79 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleAskQuestion = async () => {
-    const trimmedQuestion = questionText.trim();
-    if (!trimmedQuestion) {
-      Alert.alert("Messages", "Enter a question before posting.");
-      return;
-    }
-    if (questionError) {
-      Alert.alert("Messages", questionError);
-      return;
-    }
-
-    setQuestionSubmitting(true);
-    try {
-      const response = await askMarketplaceEventQuestion_API({
-        event_id: event?.event_id || eventId,
-        question_text: trimmedQuestion,
-      });
-      if (response?.success) {
-        setQuestionText("");
-        await loadQuestions();
-        if (response.data?.blocked) {
-          Alert.alert("Messages", "This question was blocked by RTC moderation.");
+  const renderMessagesEntry = () => {
+    const unreadCount = questions.filter((question) => question.unread).length;
+    return (
+      <TouchableOpacity
+        activeOpacity={0.75}
+        style={styles.card}
+        onPress={() =>
+          navigation.navigate("vendorMarketplaceMessagesScreen", { eventId })
         }
-      } else if (response?.message) {
-        Alert.alert("Messages", response.message);
-      }
-    } catch (error) {
-      Alert.alert("Messages", error?.message || "Unable to post question.");
-    } finally {
-      setQuestionSubmitting(false);
-    }
+      >
+        <View style={styles.rowBetween}>
+          <Text style={styles.title}>Messages</Text>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>
+              {unreadCount ? `${unreadCount} UNREAD` : "READ"}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.meta}>
+          {questions.length
+            ? "Open event messages and coordinator responses."
+            : "No messages yet."}
+        </Text>
+      </TouchableOpacity>
+    );
   };
 
-  const renderMessages = () => (
-    <View style={styles.card}>
-      <View style={styles.rowBetween}>
-        <Text style={styles.title}>Messages</Text>
-        {qaArchived ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>ARCHIVED</Text>
-          </View>
-        ) : null}
-      </View>
-      {qaLoading ? (
-        <ActivityIndicator
-          color={AppColor.primary}
-          size="small"
-          style={{ marginTop: 16 }}
-        />
-      ) : questions.length ? (
-        questions.map((question) => (
-          <View
-            key={question.question_id}
-            style={{
-              borderTopWidth: 1,
-              borderTopColor: "#E7EAEF",
-              marginTop: 14,
-              paddingTop: 14,
-            }}
-          >
-            <Text style={styles.label}>{question.vendor_display_id}</Text>
-            <Text style={styles.meta}>{question.question_text}</Text>
-            {question.answer_text ? (
-              <>
-                <Text style={styles.label}>Coordinator Response</Text>
-                <Text style={styles.meta}>{question.answer_text}</Text>
-              </>
-            ) : null}
-          </View>
-        ))
-      ) : (
-        <Text style={styles.emptyText}>No messages yet.</Text>
-      )}
+  const sectionKeys = ["summary", "payment", "requirements", "needs"];
 
-      {!qaArchived && !isClosed ? (
-        <>
-          <TextInput
-            value={questionText}
-            onChangeText={setQuestionText}
-            placeholder="Question"
-            placeholderTextColor={AppColor.textHighlighter}
-            multiline
-            style={[styles.input, styles.textarea, { marginTop: 14 }]}
-          />
-          {!!questionError && (
-            <Text style={styles.errorText}>{questionError}</Text>
-          )}
-          <TouchableOpacity
-            activeOpacity={0.7}
-            style={[
-              styles.button,
-              { marginTop: 10 },
-              (questionSubmitting || !!questionError) && styles.buttonDisabled,
-            ]}
-            disabled={questionSubmitting || !!questionError}
-            onPress={handleAskQuestion}
-          >
-            <Text style={styles.buttonText}>
-              {questionSubmitting ? "Posting..." : "Ask Question"}
-            </Text>
-          </TouchableOpacity>
-        </>
-      ) : null}
+  const toggleSection = (key) => {
+    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const setAllSectionsExpanded = (expanded) => {
+    setExpandedSections(
+      sectionKeys.reduce((next, key) => ({ ...next, [key]: expanded }), {})
+    );
+  };
+
+  const renderSectionControls = () => (
+    <View style={{ flexDirection: "row", gap: 10, marginBottom: 12 }}>
+      <TouchableOpacity
+        activeOpacity={0.7}
+        style={[styles.secondaryButton, { flex: 1, paddingVertical: 10 }]}
+        onPress={() => setAllSectionsExpanded(true)}
+      >
+        <Text style={styles.secondaryButtonText}>Expand All</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        activeOpacity={0.7}
+        style={[styles.secondaryButton, { flex: 1, paddingVertical: 10 }]}
+        onPress={() => setAllSectionsExpanded(false)}
+      >
+        <Text style={styles.secondaryButtonText}>Collapse All</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderCollapsibleSection = (key, title, children, cardStyle) => (
+    <View style={[styles.card, cardStyle]}>
+      <TouchableOpacity
+        activeOpacity={0.7}
+        style={styles.rowBetween}
+        onPress={() => toggleSection(key)}
+      >
+        <Text style={styles.sectionHeader}>{title}</Text>
+        <MaterialIcons
+          name={expandedSections[key] ? "expand-less" : "expand-more"}
+          size={24}
+          color={AppColor.primary}
+        />
+      </TouchableOpacity>
+      {expandedSections[key] ? children : null}
     </View>
   );
 
@@ -311,6 +274,8 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.body}>
+          {renderMessagesEntry()}
+
           <AppImage
             uri={primaryImageUrl}
             containerStyle={styles.heroImage}
@@ -350,8 +315,10 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
             </ScrollView>
           ) : null}
 
-          <View style={styles.card}>
-            <Text style={styles.sectionHeader}>Event Summary</Text>
+          {renderSectionControls()}
+
+          {renderCollapsibleSection("summary", "Event Summary", (
+            <>
             <DetailRow label="Event Type" value={event?.event_type} />
             <DetailRow
               label="Date"
@@ -376,15 +343,14 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
                 This event is closed to new submissions.
               </Text>
             ) : null}
-          </View>
+            </>
+          ))}
 
-          <View
-            style={[
-              styles.card,
-              vendorPays ? styles.feeSummaryCard : styles.summaryCard,
-            ]}
-          >
-            <Text style={styles.title}>Payment Type</Text>
+          {renderCollapsibleSection(
+            "payment",
+            "Payment Type",
+            (
+              <>
             <View
               style={[
                 styles.badge,
@@ -412,10 +378,13 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
                 ? "Set by Event Coordinator. Payment required only if accepted."
                 : "Budget set by Event Coordinator"}
             </Text>
-          </View>
+              </>
+            ),
+            vendorPays ? styles.feeSummaryCard : styles.summaryCard
+          )}
 
-          <View style={styles.card}>
-            <Text style={styles.sectionHeader}>Requirements</Text>
+          {renderCollapsibleSection("requirements", "Requirements", (
+            <>
             <DetailRow
               label="Insurance Required"
               value={boolText(event?.insurance_required)}
@@ -435,10 +404,11 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
             />
             {/* TODO: Replace fallback once backend provides an event-level NDA flag. */}
             <DetailRow label="NDA Required" value={boolText(event?.nda_required)} />
-          </View>
+            </>
+          ))}
 
-          <View style={styles.card}>
-            <Text style={styles.sectionHeader}>Event Needs</Text>
+          {renderCollapsibleSection("needs", "Event Needs", (
+            <>
             <DetailRow label="Event Style" value={event?.event_style} />
             <DetailRow label="Service Type" value={event?.service_type} />
             <DetailRow
@@ -468,7 +438,8 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
               label="Equipment Needed"
               value={listText(event?.equipment_needed)}
             />
-          </View>
+            </>
+          ))}
 
           <TouchableOpacity
             activeOpacity={0.7}
@@ -488,7 +459,6 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
             </Text>
           </TouchableOpacity>
 
-          {renderMessages()}
         </ScrollView>
       )}
     </View>

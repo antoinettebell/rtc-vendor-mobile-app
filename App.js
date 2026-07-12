@@ -76,6 +76,7 @@ import EmployeeShiftScreen from "./src/screens/employeeShiftScreen";
 import VendorMarketplaceScreen from "./src/screens/vendorMarketplaceScreen";
 import VendorMarketplaceNearMeScreen from "./src/screens/vendorMarketplaceNearMeScreen";
 import VendorMarketplaceEventDetailsScreen from "./src/screens/vendorMarketplaceEventDetailsScreen";
+import VendorMarketplaceMessagesScreen from "./src/screens/vendorMarketplaceMessagesScreen";
 import VendorMarketplaceBidResponseScreen from "./src/screens/vendorMarketplaceBidResponseScreen";
 import VendorMarketplaceBidDetailScreen from "./src/screens/vendorMarketplaceBidDetailScreen";
 import VendorMarketplaceMyBidsScreen from "./src/screens/vendorMarketplaceMyBidsScreen";
@@ -366,6 +367,10 @@ const MainAppNavigator = ({ insets }) => (
     <Stack.Screen
       name="vendorMarketplaceEventDetailsScreen"
       component={VendorMarketplaceEventDetailsScreen}
+    />
+    <Stack.Screen
+      name="vendorMarketplaceMessagesScreen"
+      component={VendorMarketplaceMessagesScreen}
     />
     <Stack.Screen
       name="vendorMarketplaceBidResponseScreen"

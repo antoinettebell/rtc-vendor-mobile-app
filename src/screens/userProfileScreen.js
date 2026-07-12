@@ -435,7 +435,10 @@ const UserProfileScreen = ({ navigation }) => {
               </View>
 
               {visibleTruckUnits.map((truck, index) => (
-                <View key={truck._id || "primary-truck"} style={styles.truckRow}>
+                <View
+                  key={`active-truck-${truck._id || truck.name || index}`}
+                  style={styles.truckRow}
+                >
                   <View style={styles.truckTextBlock}>
                     <Text style={styles.itemText} numberOfLines={1}>
                       {truck.name || `Truck ${index + 1}`}
@@ -468,8 +471,11 @@ const UserProfileScreen = ({ navigation }) => {
               ))}
 
               {canUseMultipleTrucks
-                ? archivedTruckUnits.map((truck) => (
-                    <View key={truck._id} style={styles.truckRow}>
+                ? archivedTruckUnits.map((truck, index) => (
+                    <View
+                      key={`archived-truck-${truck._id || truck.name || index}`}
+                      style={styles.truckRow}
+                    >
                       <View style={styles.truckTextBlock}>
                         <Text style={styles.itemText} numberOfLines={1}>
                           {truck.name}
