@@ -414,6 +414,27 @@ const UserProfileScreen = ({ navigation }) => {
               </View>
             ) : null}
 
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate("vendorComplianceScreen")}
+              style={styles.complianceButton}
+            >
+              <View style={styles.complianceIconContainer}>
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={22}
+                  color={AppColor.primary}
+                />
+              </View>
+              <View style={styles.complianceTextContainer}>
+                <Text style={styles.complianceTitle}>Compliance</Text>
+                <Text style={styles.accessCodeHelper}>
+                  Score, permits, licenses, and insurance
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={AppColor.gray} />
+            </TouchableOpacity>
+
             <View style={styles.truckSection}>
               <View style={styles.truckSectionHeader}>
                 <View>
@@ -764,6 +785,33 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
     fontSize: 18,
     letterSpacing: 0,
+  },
+  complianceButton: {
+    alignItems: "center",
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    marginTop: 14,
+    minHeight: 64,
+    padding: 12,
+  },
+  complianceIconContainer: {
+    alignItems: "center",
+    backgroundColor: "#FFF3E8",
+    borderRadius: 20,
+    height: 40,
+    justifyContent: "center",
+    marginRight: 12,
+    width: 40,
+  },
+  complianceTextContainer: {
+    flex: 1,
+  },
+  complianceTitle: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 16,
   },
 
   socialMediaContainer: {

@@ -524,10 +524,10 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
                   <Text style={styles.includedAccessTitle}>
                     Event Marketplace Access included
                   </Text>
-                  <Text style={styles.includedAccessText}>
-                    Elite vendors can participate in event marketplace
-                    opportunities without selecting the Event Bookings add-on.
-                  </Text>
+	                  <Text style={styles.includedAccessText}>
+	                    Elite vendors can participate in event marketplace
+	                    opportunities through their tier.
+	                  </Text>
                 </View>
               </View>
             ) : null}
@@ -535,12 +535,12 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
             {visibleAddOns?.length ? (
               <View>
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Ad Space</Text>
-                  <Text style={styles.sectionSubtitle}>
-                    {isEliteSelected
-                      ? "Optional ad placement for your current plan."
-                      : "Optional ad placement for your current plan."}
-                  </Text>
+	                  <Text style={styles.sectionTitle}>Add-Ons</Text>
+	                  <Text style={styles.sectionSubtitle}>
+	                    {isEliteSelected
+	                      ? "Optional paid add-ons for your current plan."
+	                      : "Optional paid add-ons for your current plan."}
+	                  </Text>
                 </View>
 
                 <FlatList

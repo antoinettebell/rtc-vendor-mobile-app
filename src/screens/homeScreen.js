@@ -38,6 +38,7 @@ import LabeledSwitch from "../components/LabeledSwitch";
 import { useSharedValue } from "react-native-reanimated";
 import { Dropdown } from "react-native-element-dropdown";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
+import { maybeShowComplianceError } from "../helpers/compliance.helper";
 import { ActivityIndicator, Divider } from "react-native-paper";
 import moment from "moment";
 import { useFocusEffect } from "@react-navigation/native";
@@ -236,6 +237,9 @@ const HomeScreen = ({ navigation }) => {
       console.log("error => ", error);
       isOn.value = temp_isOn;
       setIsOpen(temp_isOpen);
+      if (maybeShowComplianceError(error, navigation)) {
+        return;
+      }
       dispatch(
         showSnackbar({
           message: error.message || "Something went wrong!",

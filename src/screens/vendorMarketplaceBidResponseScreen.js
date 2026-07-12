@@ -28,6 +28,7 @@ import {
 } from "../api/appAPI";
 import usePermission from "../hooks/usePermission";
 import { permission } from "../helpers/permission.helper";
+import { maybeShowComplianceError } from "../helpers/compliance.helper";
 import {
   MarketplaceHeader,
   formatDate,
@@ -468,7 +469,9 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       }
       await Linking.openURL(signingResponse.data.signing_url);
     } catch (error) {
-      Alert.alert("Bid Not Submitted", error?.message || "Please try again.");
+      if (!maybeShowComplianceError(error, navigation)) {
+        Alert.alert("Bid Not Submitted", error?.message || "Please try again.");
+      }
     } finally {
       setSubmitting(false);
     }
