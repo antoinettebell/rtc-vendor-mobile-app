@@ -87,6 +87,7 @@ import VendorMarketplaceMyApplicationsScreen from "./src/screens/vendorMarketpla
 import VendorMarketplaceApplicationScreen from "./src/screens/vendorMarketplaceApplicationScreen";
 import VendorMarketplaceApplicationDetailScreen from "./src/screens/vendorMarketplaceApplicationDetailScreen";
 import VendorFeeCheckoutScreen from "./src/screens/vendorFeeCheckoutScreen";
+import VendorComplianceScreen from "./src/screens/vendorComplianceScreen";
 
 const Stack = createNativeStackNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -333,6 +334,10 @@ const MainAppNavigator = ({ insets }) => (
     <Stack.Screen
       name="profileSubscriptionScreen"
       component={ProfileSubscriptionScreen}
+    />
+    <Stack.Screen
+      name="vendorComplianceScreen"
+      component={VendorComplianceScreen}
     />
     <Stack.Screen
       name="profileEmployeeManagementScreen"

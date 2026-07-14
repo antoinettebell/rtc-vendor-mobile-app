@@ -762,6 +762,13 @@ const ProfileMenuScreen = ({ navigation }) => {
           <HR />
           <ItemComponent
             rightIcon
+            label="Compliance"
+            imageUri={PROFILE_MENU_IMAGES.subscription}
+            onPress={() => navigation.navigate("vendorComplianceScreen")}
+          />
+          <HR />
+          <ItemComponent
+            rightIcon
             label="Change Password"
             imageUri={PROFILE_MENU_IMAGES.changePassword}
             onPress={() => setChangePWDModalVisible(true)}

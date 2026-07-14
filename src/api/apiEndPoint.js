@@ -20,6 +20,14 @@ export const UPDATE_FOOD_TRUCK_UNIT = (foodtruck_id, truck_unit_id) =>
   `/food-truck/${foodtruck_id}/truck-units/${truck_unit_id}`;
 export const FOOD_TRUCK_DOCUMENTS = (foodtruck_id) =>
   `/food-truck/${foodtruck_id}/documents`;
+export const VENDOR_COMPLIANCE_ME = "/vendor-compliance/me";
+export const VENDOR_COMPLIANCE_REQUIREMENTS = "/vendor-compliance/requirements";
+export const VENDOR_COMPLIANCE_FOOD_TRUCK = (foodtruck_id) =>
+  `/vendor-compliance/food-truck/${foodtruck_id}`;
+export const VENDOR_COMPLIANCE_DOCUMENTS = (foodtruck_id) =>
+  `/vendor-compliance/food-truck/${foodtruck_id}/documents`;
+export const VENDOR_COMPLIANCE_HISTORY = (foodtruck_id) =>
+  `/vendor-compliance/food-truck/${foodtruck_id}/history`;
 
 // Subscription
 export const UPDATE_SUBSCRIPTION_PLAN = "/food-truck/change-plan";

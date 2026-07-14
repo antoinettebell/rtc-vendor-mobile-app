@@ -83,6 +83,11 @@ import {
   VENDOR_EMPLOYEE_BY_ID,
   VENDOR_EMPLOYEE_SESSION_ACTION,
   VENDOR_EMPLOYEE_SHIFT_HISTORY,
+  VENDOR_COMPLIANCE_DOCUMENTS,
+  VENDOR_COMPLIANCE_FOOD_TRUCK,
+  VENDOR_COMPLIANCE_HISTORY,
+  VENDOR_COMPLIANCE_ME,
+  VENDOR_COMPLIANCE_REQUIREMENTS,
 } from "./apiEndPoint";
 
 /**
@@ -138,6 +143,57 @@ export const uploadFoodTruckDocument_API = async ({ foodtruck_id, payload }) => 
       FOOD_TRUCK_DOCUMENTS(foodtruck_id),
       payload,
       { formData: true, skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const getVendorComplianceSummary_API = async ({ foodtruck_id } = {}) => {
+  try {
+    const URL = foodtruck_id
+      ? VENDOR_COMPLIANCE_FOOD_TRUCK(foodtruck_id)
+      : VENDOR_COMPLIANCE_ME;
+    const response = await apiClient.get(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const getVendorComplianceRequirements_API = async () => {
+  try {
+    const response = await apiClient.get(VENDOR_COMPLIANCE_REQUIREMENTS, {
+      skipToken: false,
+    });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const uploadVendorComplianceDocument_API = async ({
+  foodtruck_id,
+  payload,
+}) => {
+  try {
+    const response = await apiClient.post(
+      VENDOR_COMPLIANCE_DOCUMENTS(foodtruck_id),
+      payload,
+      { formData: true, skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const getVendorComplianceHistory_API = async ({ foodtruck_id }) => {
+  try {
+    const response = await apiClient.get(
+      VENDOR_COMPLIANCE_HISTORY(foodtruck_id),
+      { skipToken: false },
     );
     return response?.data;
   } catch (error) {
