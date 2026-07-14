@@ -109,4 +109,12 @@ export const handleNotificationAction = async (notification) => {
     store.dispatch(showAvailabilityPrompt(notificationData));
     navigate("homeScreen");
   }
+
+  if (
+    notificationData?.activityType ===
+      notificationTypes.vendor_compliance_expiration ||
+    notificationData?.activityType === notificationTypes.vendor_compliance_required
+  ) {
+    navigate("vendorComplianceScreen");
+  }
 };

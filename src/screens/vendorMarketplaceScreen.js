@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,11 +11,9 @@ import { useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import StatusBarManager from "../components/StatusBarManager";
-import { getAddOnsPlans_API } from "../api/appAPI";
+import { getVendorComplianceSummary_API } from "../api/appAPI";
 import { AppColor } from "../utils/theme";
 import { MarketplaceHeader, styles } from "./vendorMarketplaceShared";
-
-const EVENT_ADD_ON_PATTERN = /event|booking|marketplace/i;
 
 const getPlanLabel = (plan) =>
   String(plan?.slug || plan?.name || plan?.title || "").toLowerCase();
@@ -32,29 +31,9 @@ const isElitePlan = (plan) => {
   );
 };
 
-const hasEventBookingsAddOn = (foodTruck, eventAddOnIds = []) => {
-  const addOns = foodTruck?.addOns || [];
-  return Array.isArray(addOns)
-    ? addOns.some((addOn) => {
-        if (typeof addOn === "string") {
-          return (
-            EVENT_ADD_ON_PATTERN.test(addOn) || eventAddOnIds.includes(addOn)
-          );
-        }
-        if (eventAddOnIds.includes(addOn?._id)) {
-          return true;
-        }
-        return EVENT_ADD_ON_PATTERN.test(
-          `${addOn?.slug || ""} ${addOn?.name || ""} ${addOn?.description || ""}`,
-        );
-      })
-    : false;
-};
-
-const canAccessMarketplace = (foodTruck, eventAddOnIds, selectedPlan) =>
+const canAccessMarketplace = (foodTruck, selectedPlan) =>
   isElitePlan(foodTruck?.plan || foodTruck?.planId) ||
-  isElitePlan(selectedPlan) ||
-  hasEventBookingsAddOn(foodTruck, eventAddOnIds);
+  isElitePlan(selectedPlan);
 
 const MARKETPLACE_CARDS = [
   {
@@ -134,10 +113,6 @@ const MarketplaceAccessPrompt = ({ navigation }) => {
         title="Upgrade to Elite"
         details={["Includes Marketplace Access", "5.5% per sale fee"]}
       />
-      <AccessOption
-        title="Add-On Event Bookings - $25/month"
-        details={["Add marketplace access to your current plan."]}
-      />
 
       <TouchableOpacity
         activeOpacity={0.8}
@@ -145,15 +120,6 @@ const MarketplaceAccessPrompt = ({ navigation }) => {
         onPress={() => navigation.navigate("profileSubscriptionScreen")}
       >
         <Text style={styles.buttonText}>Upgrade to Elite</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        activeOpacity={0.8}
-        style={[styles.secondaryButton, { marginTop: 12 }]}
-        onPress={() => navigation.navigate("profileSubscriptionScreen")}
-      >
-        <Text style={styles.secondaryButtonText}>
-          Add-On Event Bookings - $25/month
-        </Text>
       </TouchableOpacity>
       <TouchableOpacity
         activeOpacity={0.8}
@@ -170,42 +136,71 @@ const VendorMarketplaceScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { selectedPlan, user } = useSelector((state) => state.userReducer);
   const foodTruck = user?.foodTruck;
-  const [eventAddOnIds, setEventAddOnIds] = useState([]);
+  const [compliance, setCompliance] = useState(null);
+  const [checkingCompliance, setCheckingCompliance] = useState(false);
   const hasAccess = useMemo(
-    () => canAccessMarketplace(foodTruck, eventAddOnIds, selectedPlan),
-    [eventAddOnIds, foodTruck, selectedPlan],
+    () => canAccessMarketplace(foodTruck, selectedPlan),
+    [foodTruck, selectedPlan],
   );
+  const complianceBlocked =
+    hasAccess &&
+    !checkingCompliance &&
+    compliance &&
+    (Number(compliance.score || 0) < 100 || compliance.eligible === false);
 
   useEffect(() => {
-    const loadEventAddOns = async () => {
+    const loadCompliance = async () => {
+      if (!hasAccess || !foodTruck?._id) {
+        setCompliance(null);
+        return;
+      }
+
+      setCheckingCompliance(true);
       try {
-        const response = await getAddOnsPlans_API();
-        const addOns = response?.data?.addonsList || [];
-        setEventAddOnIds(
-          addOns
-            .filter((addOn) =>
-              EVENT_ADD_ON_PATTERN.test(
-                `${addOn?.slug || ""} ${addOn?.name || ""} ${
-                  addOn?.description || ""
-                }`,
-              ),
-            )
-            .map((addOn) => addOn._id)
-            .filter(Boolean),
-        );
+        const response = await getVendorComplianceSummary_API({
+          foodtruck_id: foodTruck._id,
+        });
+        setCompliance(response?.data?.compliance || null);
       } catch (error) {
-        console.log("Marketplace add-ons error", error);
+        console.log("Marketplace compliance check error", error);
+      } finally {
+        setCheckingCompliance(false);
       }
     };
 
-    loadEventAddOns();
-  }, []);
+    loadCompliance();
+  }, [foodTruck?._id, hasAccess]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBarManager />
       <MarketplaceHeader title="Marketplace" navigation={navigation} />
-      {hasAccess ? (
+      {checkingCompliance ? (
+        <View style={localStyles.loadingWrap}>
+          <ActivityIndicator size="large" color={AppColor.primary} />
+        </View>
+      ) : complianceBlocked ? (
+        <ScrollView contentContainerStyle={styles.body}>
+          <View style={styles.card}>
+            <Text style={[styles.title, { textAlign: "center" }]}>
+              Compliance Paperwork Required
+            </Text>
+            <Text style={styles.emptyText}>
+              Please update your compliance paperwork.
+            </Text>
+            <Text style={styles.meta}>
+              Compliance score: {compliance?.score || 0}/100
+            </Text>
+          </View>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.button}
+            onPress={() => navigation.navigate("vendorComplianceScreen")}
+          >
+            <Text style={styles.buttonText}>OK</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      ) : hasAccess ? (
         <ScrollView contentContainerStyle={styles.body}>
           <Text style={localStyles.kicker}>ROUND THE CORNER</Text>
           <Text style={localStyles.heading}>Vendor Event Marketplace</Text>
@@ -266,6 +261,11 @@ const localStyles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 12,
     borderColor: AppColor.border,
+  },
+  loadingWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
 
