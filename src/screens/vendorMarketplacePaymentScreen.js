@@ -24,6 +24,8 @@ import {
   checkoutMarketplacePayment_API,
   getMarketplacePaymentById_API,
 } from "../api/appAPI";
+import { startTapToPaySale } from "../services/tapToPay-service";
+import tapToPayConfig from "../services/tapToPay-config";
 import {
   MarketplaceHeader,
   formatMoney,
@@ -201,6 +203,49 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
   };
 
   const paid = payment?.payment_status === "PAID";
+  const isFinalEventPayment = payment?.payment_type === "FINAL_EVENT_PAYMENT";
+  const canUseTapToPay =
+    isFinalEventPayment && tapToPayConfig.enabled;
+
+  const payWithTapToPay = async () => {
+    if (!payment || paymentLoading) return;
+    setPaymentLoading("tapToPay");
+    try {
+      const tapToPayResult = await startTapToPaySale({
+        amount: Number(payment.total_amount || 0),
+        reference: payment.payment_id,
+        metadata: {
+          paymentId: payment.payment_id,
+          paymentType: payment.payment_type,
+        },
+      });
+      const response = await checkoutMarketplacePayment_API({
+        payment_id: payment.payment_id,
+        payload: {
+          payment_method: "TAP_TO_PAY",
+          payment_data: tapToPayResult?.opaqueToken || tapToPayResult,
+        },
+      });
+      if (response?.success) {
+        setPayment(response.data?.marketplacePayment);
+        Alert.alert(
+          "Payment Successful",
+          successMessage || "Final event payment is confirmed.",
+          [
+            {
+              text: "OK",
+              onPress: () =>
+                returnScreen ? navigation.replace(returnScreen) : navigation.goBack(),
+            },
+          ],
+        );
+      }
+    } catch (error) {
+      Alert.alert("Tap to Pay Failed", error?.message || "Please try again.");
+    } finally {
+      setPaymentLoading(null);
+    }
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -228,10 +273,25 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
 
         {!paid ? (
           <>
-            {Platform.OS === "ios" ? (
+            {canUseTapToPay ? (
               <TouchableOpacity
                 activeOpacity={0.7}
                 style={styles.button}
+                disabled={!!paymentLoading}
+                onPress={payWithTapToPay}
+              >
+                <Text style={styles.buttonText}>
+                  {paymentLoading === "tapToPay"
+                    ? "Processing..."
+                    : `Tap to Pay ${formatMoney(payment?.total_amount || 0)}`}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {!isFinalEventPayment && Platform.OS === "ios" ? (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[styles.button, canUseTapToPay && { marginTop: 12 }]}
                 disabled={!!paymentLoading}
                 onPress={() => payWithWallet("applePay")}
               >
@@ -239,7 +299,7 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
                   {paymentLoading === "applePay" ? "Processing..." : "Apple Pay"}
                 </Text>
               </TouchableOpacity>
-            ) : (
+            ) : !isFinalEventPayment ? (
               <TouchableOpacity
                 activeOpacity={0.7}
                 style={styles.button}
@@ -250,7 +310,7 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
                   {paymentLoading === "googlePay" ? "Processing..." : "Google Pay"}
                 </Text>
               </TouchableOpacity>
-            )}
+            ) : null}
 
             <TouchableOpacity
               activeOpacity={0.7}

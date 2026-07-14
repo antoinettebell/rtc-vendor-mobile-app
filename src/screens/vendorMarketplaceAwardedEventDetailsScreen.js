@@ -332,6 +332,10 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
     vendorFee + rtcEventProcessingFee;
 
   const showConfirmation = vendorPays && isPaidApplication(application);
+	  const canAcceptFinalEventPayment =
+	    record?.final_payment_id &&
+	    record?.final_payment_status &&
+	    record.final_payment_status !== "PAID";
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -575,6 +579,21 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
             <Text style={styles.secondaryButtonText}>
               View Payment Confirmation
             </Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {canAcceptFinalEventPayment ? (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={[styles.button, { marginBottom: 12 }]}
+	            onPress={() =>
+	              navigation.navigate("vendorMarketplacePaymentScreen", {
+	                paymentId: record.final_payment_id,
+	                successMessage: "Final event payment is confirmed.",
+	              })
+	            }
+          >
+            <Text style={styles.buttonText}>Accept Event Payment</Text>
           </TouchableOpacity>
         ) : null}
       </ScrollView>

@@ -526,7 +526,7 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
                   </Text>
                   <Text style={styles.includedAccessText}>
                     Elite vendors can participate in event marketplace
-                    opportunities without selecting the Event Bookings add-on.
+                    opportunities through their tier.
                   </Text>
                 </View>
               </View>

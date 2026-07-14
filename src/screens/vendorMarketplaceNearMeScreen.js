@@ -40,15 +40,14 @@ const LockedMarketplace = ({ navigation }) => (
         Event Marketplace Locked
       </Text>
       <Text style={styles.emptyText}>
-        Accept Event Bookings is required before you can browse events or submit
-        bids.
+        Upgrade to Elite before you can browse events or submit bids.
       </Text>
       <TouchableOpacity
         activeOpacity={0.7}
         style={[styles.button, { marginTop: 18 }]}
         onPress={() => navigation.navigate("profileSubscriptionScreen")}
       >
-        <Text style={styles.buttonText}>Manage Add-ons</Text>
+        <Text style={styles.buttonText}>Manage Plan</Text>
       </TouchableOpacity>
     </View>
   </View>
