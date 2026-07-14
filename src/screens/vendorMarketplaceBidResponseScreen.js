@@ -48,6 +48,15 @@ const ReadOnlyRow = ({ label, value }) => (
     <Text style={styles.meta}>{value || "None"}</Text>
   </View>
 );
+const boolText = (value) =>
+  value === true ? "Yes" : value === false ? "No" : "Not answered";
+
+const FormField = ({ label, children, full = false }) => (
+  <View style={[styles.formGridField, full && styles.formGridFieldFull]}>
+    <Text style={styles.fieldLabel}>{label}</Text>
+    {children}
+  </View>
+);
 
 const askWhetherToSignNewAgreement = () =>
   new Promise((resolve) => {
@@ -722,69 +731,96 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                 label="Event Budget"
                 value={formatMoney(event?.budgeted_amount)}
               />
+              <ReadOnlyRow
+                label="Free Food Offered"
+                value={boolText(event?.free_food_offered)}
+              />
+              {event?.free_food_offered === true ? (
+                <>
+                  <ReadOnlyRow
+                    label="Free Food Provider"
+                    value={event?.free_food_provider || "Not set"}
+                  />
+                  <ReadOnlyRow
+                    label="Vendors Must Give Away Food"
+                    value={boolText(event?.vendors_required_to_giveaway_food)}
+                  />
+                </>
+              ) : null}
             </View>
 
             <View style={styles.card}>
               <Text style={styles.sectionHeader}>Pricing Details</Text>
-              <Text style={styles.label}>Bid Amount *</Text>
-              <TextInput
-                value={fullBidAmount}
-                onChangeText={(value) =>
-                  setFullBidAmount(normalizeCurrencyInput(value))
-                }
-                onBlur={() => formatCurrencyInput(fullBidAmount, setFullBidAmount)}
-                keyboardType="decimal-pad"
-                placeholder="0.00"
-                placeholderTextColor={AppColor.placeholderTextColor}
-                style={styles.input}
-              />
-              <Text style={styles.label}>Price Per Guest</Text>
-              <TextInput
-                value={pricePerGuest}
-                onChangeText={(value) =>
-                  setPricePerGuest(normalizeCurrencyInput(value))
-                }
-                onBlur={() => formatCurrencyInput(pricePerGuest, setPricePerGuest)}
-                keyboardType="decimal-pad"
-                placeholder="Optional"
-                placeholderTextColor={AppColor.placeholderTextColor}
-                style={styles.input}
-              />
-              <Text style={styles.label}>Average Price Per Meal</Text>
-              <TextInput
-                value={averagePricePerMeal}
-                onChangeText={(value) =>
-                  setAveragePricePerMeal(normalizeCurrencyInput(value))
-                }
-                onBlur={() =>
-                  formatCurrencyInput(
-                    averagePricePerMeal,
-                    setAveragePricePerMeal,
-                  )
-                }
-                keyboardType="decimal-pad"
-                placeholder="Optional"
-                placeholderTextColor={AppColor.placeholderTextColor}
-                style={styles.input}
-              />
-              <Text style={styles.label}>Menu Description</Text>
-              <TextInput
-                value={menuDescription}
-                onChangeText={setMenuDescription}
-                multiline
-                placeholder="Describe the menu you are bidding with."
-                placeholderTextColor={AppColor.placeholderTextColor}
-                style={[styles.input, styles.textarea]}
-              />
-              <Text style={styles.label}>Special Notes to Event Coordinator</Text>
-              <TextInput
-                value={notes}
-                onChangeText={setNotes}
-                multiline
-                placeholder="Optional notes for the event coordinator."
-                placeholderTextColor={AppColor.placeholderTextColor}
-                style={[styles.input, styles.textarea]}
-              />
+              <View style={styles.formGrid}>
+                <FormField label="Bid Amount *">
+                  <TextInput
+                    value={fullBidAmount}
+                    onChangeText={(value) =>
+                      setFullBidAmount(normalizeCurrencyInput(value))
+                    }
+                    onBlur={() =>
+                      formatCurrencyInput(fullBidAmount, setFullBidAmount)
+                    }
+                    keyboardType="decimal-pad"
+                    placeholder="0.00"
+                    placeholderTextColor={AppColor.placeholderTextColor}
+                    style={styles.input}
+                  />
+                </FormField>
+                <FormField label="Price Per Guest">
+                  <TextInput
+                    value={pricePerGuest}
+                    onChangeText={(value) =>
+                      setPricePerGuest(normalizeCurrencyInput(value))
+                    }
+                    onBlur={() =>
+                      formatCurrencyInput(pricePerGuest, setPricePerGuest)
+                    }
+                    keyboardType="decimal-pad"
+                    placeholder="Optional"
+                    placeholderTextColor={AppColor.placeholderTextColor}
+                    style={styles.input}
+                  />
+                </FormField>
+                <FormField label="Average Price Per Meal">
+                  <TextInput
+                    value={averagePricePerMeal}
+                    onChangeText={(value) =>
+                      setAveragePricePerMeal(normalizeCurrencyInput(value))
+                    }
+                    onBlur={() =>
+                      formatCurrencyInput(
+                        averagePricePerMeal,
+                        setAveragePricePerMeal,
+                      )
+                    }
+                    keyboardType="decimal-pad"
+                    placeholder="Optional"
+                    placeholderTextColor={AppColor.placeholderTextColor}
+                    style={styles.input}
+                  />
+                </FormField>
+                <FormField label="Menu Description" full>
+                  <TextInput
+                    value={menuDescription}
+                    onChangeText={setMenuDescription}
+                    multiline
+                    placeholder="Describe the menu you are bidding with."
+                    placeholderTextColor={AppColor.placeholderTextColor}
+                    style={[styles.input, styles.textarea]}
+                  />
+                </FormField>
+                <FormField label="Special Notes to Event Coordinator" full>
+                  <TextInput
+                    value={notes}
+                    onChangeText={setNotes}
+                    multiline
+                    placeholder="Optional notes for the event coordinator."
+                    placeholderTextColor={AppColor.placeholderTextColor}
+                    style={[styles.input, styles.textarea]}
+                  />
+                </FormField>
+              </View>
               {!!notesError && <Text style={styles.errorText}>{notesError}</Text>}
             </View>
 

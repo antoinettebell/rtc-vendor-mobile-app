@@ -459,6 +459,13 @@ export const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 14,
   },
+  fieldLabel: {
+    fontFamily: Mulish600,
+    fontSize: 13,
+    color: AppColor.text,
+    marginBottom: 8,
+    marginTop: 0,
+  },
   meta: {
     fontFamily: Mulish400,
     color: AppColor.textHighlighter,
@@ -484,6 +491,24 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     color: AppColor.text,
     backgroundColor: AppColor.white,
+  },
+  formGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "flex-start",
+    columnGap: 10,
+    rowGap: 12,
+    marginTop: 14,
+  },
+  formGridField: {
+    flexBasis: "48%",
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 145,
+  },
+  formGridFieldFull: {
+    flexBasis: "100%",
+    minWidth: "100%",
   },
   textarea: {
     minHeight: 96,

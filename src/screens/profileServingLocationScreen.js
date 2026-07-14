@@ -34,6 +34,7 @@ import { showSnackbar } from "../redux/slices/snackbarSlice";
 import {
   getFoodtruckDetail_API,
   removeFoodtruckLocation_API,
+  updateLocationOrdering_API,
   updateFoodTruckProfile_API,
 } from "../api/appAPI";
 import { updateFoodTruck } from "../redux/slices/userSlice";
@@ -303,7 +304,7 @@ const RenameLocationModal = ({
   );
 };
 
-const ProfileServingLocationScreen = ({ navigation }) => {
+const ProfileServingLocationScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
 
@@ -315,6 +316,7 @@ const ProfileServingLocationScreen = ({ navigation }) => {
   const [availability, setAvailability] = useState([]);
   const [locationsData, setlocationsData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const openNewestLocationOnSave = !!route?.params?.openNewestLocationOnSave;
   const [dataLoading, setDataLoading] = useState(false);
   const [menuVisible, setMenuVisible] = useState(null);
   const [renameLocationData, setRenameLocationData] = useState(null);
@@ -490,13 +492,47 @@ const ProfileServingLocationScreen = ({ navigation }) => {
         foodTruckId,
       });
       if (response?.success && response?.data) {
-        dispatch(updateFoodTruck(response.data.foodtruck));
-        dispatch(setSelectedCuisine(response.data.foodtruck.cuisine));
-        dispatch(setSelectedLocations(response.data.foodtruck.locations));
+        let updatedFoodTruck = response.data.foodtruck;
+        if (openNewestLocationOnSave) {
+          const savedLocations = updatedFoodTruck.locations || [];
+          const newestDraftLocation = locationsData[locationsData.length - 1];
+          const targetLocation =
+            savedLocations.find(
+              (location) =>
+                location.title === newestDraftLocation?.title &&
+                location.address === newestDraftLocation?.address
+            ) ||
+            savedLocations[savedLocations.length - 1] ||
+            savedLocations[0];
+
+          if (targetLocation?._id) {
+            const orderingResponse = await updateLocationOrdering_API({
+              foodtruck_id: foodTruckId,
+              location_id: targetLocation._id,
+              isOrderingOpen: true,
+            });
+            if (orderingResponse?.success && orderingResponse?.data?.foodtruck) {
+              updatedFoodTruck = orderingResponse.data.foodtruck;
+            }
+          }
+        }
+
+        dispatch(updateFoodTruck(updatedFoodTruck));
+        dispatch(setSelectedCuisine(updatedFoodTruck.cuisine));
+        dispatch(setSelectedLocations(updatedFoodTruck.locations));
         dispatch(
-          showSnackbar({ message: "Location Updated!", type: "success" })
+          showSnackbar({
+            message: openNewestLocationOnSave
+              ? "Location added and ordering turned on."
+              : "Location Updated!",
+            type: "success",
+          })
         );
-        navigation.goBack();
+        if (openNewestLocationOnSave) {
+          navigation.navigate("homeScreen");
+        } else {
+          navigation.goBack();
+        }
       }
     } catch (error) {
       console.log("error => ", error);

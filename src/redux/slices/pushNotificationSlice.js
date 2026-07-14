@@ -4,6 +4,7 @@ const initialState = {
   currentOrderId: null, // The orderId currently being processed/shown
   orderQueue: [], // Queue of pending orderIds
   showPopup: false, // Controls whether the popup is visible
+  availabilityPrompt: null,
 };
 
 const pushNotificationSlice = createSlice({
@@ -68,6 +69,14 @@ const pushNotificationSlice = createSlice({
       );
     },
 
+    showAvailabilityPrompt: (state, { payload }) => {
+      state.availabilityPrompt = payload || {};
+    },
+
+    clearAvailabilityPrompt: (state) => {
+      state.availabilityPrompt = null;
+    },
+
     // Slice cleanup
     clearPushNotificationRedux: () => initialState,
   },
@@ -76,7 +85,9 @@ const pushNotificationSlice = createSlice({
 export const {
   addPushNotificationOrder,
   clearCurrentNotificationOrder,
+  clearAvailabilityPrompt,
   hideNotificationPopup,
+  showAvailabilityPrompt,
   clearPushNotificationRedux,
 } = pushNotificationSlice.actions;
 

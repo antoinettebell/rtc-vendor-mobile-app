@@ -69,6 +69,7 @@ export const orderCurrentStatusNames = {
 
 export const notificationTypes = {
   new_order: "NEW_ORDER",
+  vendor_daily_location_check: "VENDOR_DAILY_LOCATION_CHECK",
   order_cancelled: "ORDER_CANCELLED",
   order_accepted: "ORDER_ACCEPTED",
   order_rejected: "ORDER_REJECTED",

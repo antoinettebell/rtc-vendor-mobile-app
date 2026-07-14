@@ -48,6 +48,15 @@ const ReadOnlyRow = ({ label, value }) => (
     <Text style={styles.meta}>{value || "None"}</Text>
   </View>
 );
+const boolText = (value) =>
+  value === true ? "Yes" : value === false ? "No" : "Not answered";
+
+const FormField = ({ label, children, full = false }) => (
+  <View style={[styles.formGridField, full && styles.formGridFieldFull]}>
+    <Text style={styles.fieldLabel}>{label}</Text>
+    {children}
+  </View>
+);
 
 const askWhetherToSignNewAgreement = () =>
   new Promise((resolve) => {
@@ -723,6 +732,22 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
               <ReadOnlyRow label="Event Time" value={event?.event_time || "Not set"} />
               <ReadOnlyRow label="Duration" value={formatDuration(event)} />
               <ReadOnlyRow label="Location" value={getEventLocation(event)} />
+              <ReadOnlyRow
+                label="Free Food Offered"
+                value={boolText(event?.free_food_offered)}
+              />
+              {event?.free_food_offered === true ? (
+                <>
+                  <ReadOnlyRow
+                    label="Free Food Provider"
+                    value={event?.free_food_provider || "Not set"}
+                  />
+                  <ReadOnlyRow
+                    label="Vendors Must Give Away Food"
+                    value={boolText(event?.vendors_required_to_giveaway_food)}
+                  />
+                </>
+              ) : null}
             </View>
 
             <View style={[styles.card, styles.feeSummaryCard]}>
@@ -734,34 +759,66 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
 
             <View style={styles.card}>
               <Text style={styles.sectionHeader}>Business Details</Text>
-              <Text style={styles.label}>Business Name *</Text>
-              <TextInput value={businessName} onChangeText={setBusinessName} style={styles.input} />
-              <Text style={styles.label}>Contact Name *</Text>
-              <TextInput value={contactName} onChangeText={setContactName} style={styles.input} />
-              <Text style={styles.label}>Phone *</Text>
-              <TextInput value={phone} onChangeText={setPhone} keyboardType="phone-pad" style={styles.input} />
-              <Text style={styles.label}>Email *</Text>
-              <TextInput value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" style={styles.input} />
-              <Text style={styles.label}>Food Type / Cuisine *</Text>
-              <TextInput value={foodTypeCuisine} onChangeText={setFoodTypeCuisine} style={styles.input} />
-              <Text style={styles.label}>Menu Description</Text>
-              <TextInput
-                value={menuDescription}
-                onChangeText={setMenuDescription}
-                multiline
-                placeholder="Describe what you would serve at this event."
-                placeholderTextColor={AppColor.placeholderTextColor}
-                style={[styles.input, styles.textarea]}
-              />
-              <Text style={styles.label}>Special Notes to Event Coordinator</Text>
-              <TextInput
-                value={notes}
-                onChangeText={setNotes}
-                multiline
-                placeholder="Optional notes for the event coordinator."
-                placeholderTextColor={AppColor.placeholderTextColor}
-                style={[styles.input, styles.textarea]}
-              />
+              <View style={styles.formGrid}>
+                <FormField label="Business Name *">
+                  <TextInput
+                    value={businessName}
+                    onChangeText={setBusinessName}
+                    style={styles.input}
+                  />
+                </FormField>
+                <FormField label="Contact Name *">
+                  <TextInput
+                    value={contactName}
+                    onChangeText={setContactName}
+                    style={styles.input}
+                  />
+                </FormField>
+                <FormField label="Phone *">
+                  <TextInput
+                    value={phone}
+                    onChangeText={setPhone}
+                    keyboardType="phone-pad"
+                    style={styles.input}
+                  />
+                </FormField>
+                <FormField label="Email *">
+                  <TextInput
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    style={styles.input}
+                  />
+                </FormField>
+                <FormField label="Food Type / Cuisine *" full>
+                  <TextInput
+                    value={foodTypeCuisine}
+                    onChangeText={setFoodTypeCuisine}
+                    style={styles.input}
+                  />
+                </FormField>
+                <FormField label="Menu Description" full>
+                  <TextInput
+                    value={menuDescription}
+                    onChangeText={setMenuDescription}
+                    multiline
+                    placeholder="Describe what you would serve at this event."
+                    placeholderTextColor={AppColor.placeholderTextColor}
+                    style={[styles.input, styles.textarea]}
+                  />
+                </FormField>
+                <FormField label="Special Notes to Event Coordinator" full>
+                  <TextInput
+                    value={notes}
+                    onChangeText={setNotes}
+                    multiline
+                    placeholder="Optional notes for the event coordinator."
+                    placeholderTextColor={AppColor.placeholderTextColor}
+                    style={[styles.input, styles.textarea]}
+                  />
+                </FormField>
+              </View>
               {!!notesError && <Text style={styles.errorText}>{notesError}</Text>}
             </View>
 

@@ -56,7 +56,10 @@ import {
   isVendorPosOrder,
 } from "../helpers/order.helper";
 import AppImage from "../components/AppImage";
-import { clearCurrentNotificationOrder } from "../redux/slices/pushNotificationSlice";
+import {
+  clearAvailabilityPrompt,
+  clearCurrentNotificationOrder,
+} from "../redux/slices/pushNotificationSlice";
 
 const QuickStatsComponent = ({ title, subTitle, icon, onPress }) => (
   <Pressable style={styles.quickStatsContainer} onPress={onPress}>
@@ -94,7 +97,7 @@ const HomeScreen = ({ navigation }) => {
   const [orderAcceptBtnLoading, setOrderAcceptBtnLoading] = useState(false);
   const [locationTimeAdvanceData, setLocationTimeAdvanceData] = useState(null);
   const [notificationsVisible, setNotificationsVisible] = useState(false);
-  const { currentOrderId, orderQueue } = useSelector(
+  const { currentOrderId, orderQueue, availabilityPrompt } = useSelector(
     (state) => state.pushNotificationReducer,
   );
   const pendingNotificationOrders = [
@@ -182,6 +185,125 @@ const HomeScreen = ({ navigation }) => {
       null,
     [getTruckOpenLocationId, selectedLocation, user?.foodTruck]
   );
+
+  const openLocationForOrders = useCallback(
+    async ({ locationId, truck = selectedTruck }) => {
+      if (!locationId || !user?.foodTruck?._id) {
+        throw new Error("Please select a location");
+      }
+
+      const response = await updateLocationOrdering_API({
+        foodtruck_id: user.foodTruck._id,
+        location_id: locationId,
+        truck_unit_id: truck?._id || null,
+        isOrderingOpen: true,
+      });
+
+      if (response?.success && response.data) {
+        dispatch(updateFoodTruck(response.data.foodtruck));
+        setSelectedLocation(locationId);
+        setSelectedTruckUnit(truck?.value || truck?._id || null);
+        isOn.value = true;
+        setIsOpen(true);
+      }
+
+      return response;
+    },
+    [dispatch, isOn, selectedTruck, user?.foodTruck?._id]
+  );
+
+  const showSupportMessage = useCallback(() => {
+    Alert.alert(
+      "We hope all is well",
+      "Please let us know how we can help!\n\n800-410-7053\nsupport@roundthecornerapp.com",
+      [{ text: "OK", onPress: () => dispatch(clearAvailabilityPrompt()) }]
+    );
+  }, [dispatch]);
+
+  const askAcceptingOrdersToday = useCallback(
+    (locationId) => {
+      Alert.alert(
+        "Are you accepting orders today?",
+        "",
+        [
+          {
+            text: "No",
+            style: "cancel",
+            onPress: showSupportMessage,
+          },
+          {
+            text: "Yes",
+            onPress: async () => {
+              try {
+                await openLocationForOrders({ locationId });
+                dispatch(clearAvailabilityPrompt());
+                navigation.navigate("homeScreen");
+              } catch (error) {
+                dispatch(
+                  showSnackbar({
+                    message: error.message || "Could not open ordering.",
+                    type: "error",
+                  })
+                );
+              }
+            },
+          },
+        ],
+        { cancelable: false }
+      );
+    },
+    [dispatch, navigation, openLocationForOrders, showSupportMessage]
+  );
+
+  useEffect(() => {
+    if (!availabilityPrompt) return;
+
+    const promptLocationId =
+      availabilityPrompt.locationId ||
+      selectedLocation ||
+      user?.foodTruck?.currentLocation ||
+      (user?.foodTruck?.locations || [])[0]?._id ||
+      null;
+    const promptLocation =
+      (user?.foodTruck?.locations || []).find(
+        (location) => location._id?.toString() === promptLocationId?.toString()
+      ) || null;
+    const locationLabel =
+      availabilityPrompt.locationTitle ||
+      promptLocation?.title ||
+      availabilityPrompt.locationAddress ||
+      promptLocation?.address ||
+      "your saved location";
+
+    Alert.alert(
+      "Confirm your location",
+      `Are you located at ${locationLabel} today?`,
+      [
+        {
+          text: "No",
+          style: "cancel",
+          onPress: () => {
+            dispatch(clearAvailabilityPrompt());
+            navigation.navigate("profileServingLocationScreen", {
+              openNewestLocationOnSave: true,
+            });
+          },
+        },
+        {
+          text: "Yes",
+          onPress: () => askAcceptingOrdersToday(promptLocationId),
+        },
+      ],
+      { cancelable: false }
+    );
+  }, [
+    askAcceptingOrdersToday,
+    availabilityPrompt,
+    dispatch,
+    navigation,
+    selectedLocation,
+    user?.foodTruck,
+  ]);
 
   // Location Switch
   const handlePress = async () => {

@@ -402,6 +402,22 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
               label="Liquor License Required"
               value={boolText(event?.alcohol_required)}
             />
+            <DetailRow
+              label="Free Food Offered"
+              value={boolText(event?.free_food_offered)}
+            />
+            {event?.free_food_offered === true ? (
+              <>
+                <DetailRow
+                  label="Free Food Provider"
+                  value={event?.free_food_provider || "Not set"}
+                />
+                <DetailRow
+                  label="Vendors Must Give Away Food"
+                  value={boolText(event?.vendors_required_to_giveaway_food)}
+                />
+              </>
+            ) : null}
             {/* TODO: Replace fallback once backend provides an event-level NDA flag. */}
             <DetailRow label="NDA Required" value={boolText(event?.nda_required)} />
             </>

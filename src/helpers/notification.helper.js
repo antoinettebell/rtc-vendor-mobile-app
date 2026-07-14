@@ -9,7 +9,11 @@ import {
 import notifee from "@notifee/react-native";
 import { notificationTypes } from "../utils/constants";
 import { store } from "../redux/store";
-import { addPushNotificationOrder } from "../redux/slices/pushNotificationSlice";
+import {
+  addPushNotificationOrder,
+  showAvailabilityPrompt,
+} from "../redux/slices/pushNotificationSlice";
+import { navigate } from "./navigation.helper";
 
 const installationsInstance = getInstallations();
 const messagingInstance = getMessaging();
@@ -96,5 +100,13 @@ export const handleNotificationAction = async (notification) => {
         addPushNotificationOrder({ orderId: notificationData.orderId })
       );
     }
+  }
+
+  if (
+    notificationData?.activityType ===
+    notificationTypes.vendor_daily_location_check
+  ) {
+    store.dispatch(showAvailabilityPrompt(notificationData));
+    navigate("homeScreen");
   }
 };
