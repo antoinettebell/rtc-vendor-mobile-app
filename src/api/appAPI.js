@@ -41,6 +41,7 @@ import {
   MARKETPLACE_EVENT_QUESTIONS,
   MARKETPLACE_MY_APPLICATIONS,
   MARKETPLACE_MY_BIDS,
+  MARKETPLACE_NOTIFICATION_SUMMARY,
   MARKETPLACE_OPEN_EVENTS,
   MARKETPLACE_PAYMENT_BY_ID,
   MARKETPLACE_PAYMENT_CALL,
@@ -211,6 +212,17 @@ export const getMarketplaceOpenEvents_API = async ({
   try {
     const URL = `${MARKETPLACE_OPEN_EVENTS}?page=${page}&limit=${limit}`;
     const response = await apiClient.get(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const getMarketplaceNotificationSummary_API = async () => {
+  try {
+    const response = await apiClient.get(MARKETPLACE_NOTIFICATION_SUMMARY, {
+      skipToken: false,
+    });
     return response?.data;
   } catch (error) {
     throw error?.response?.data || error;

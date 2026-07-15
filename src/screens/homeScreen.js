@@ -22,6 +22,7 @@ import CustomBanner from "../components/CustomBanner";
 import {
   getBankDetail_API,
   getEarningForHomeByFoodTruckID_API,
+  getMarketplaceNotificationSummary_API,
   getOrderList_API,
   getUserDetail_API,
   updateLocationOrdering_API,
@@ -92,6 +93,7 @@ const HomeScreen = ({ navigation }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [newOrderLoading, setNewOrderLoading] = useState(false);
   const [newOrderData, setNewOrderData] = useState(null);
+  const [marketplaceNotifications, setMarketplaceNotifications] = useState([]);
   const [earningData, setEarningData] = useState(null);
   const [orderRejectBtnLoading, setOrderRejectBtnLoading] = useState(false);
   const [orderAcceptBtnLoading, setOrderAcceptBtnLoading] = useState(false);
@@ -100,10 +102,33 @@ const HomeScreen = ({ navigation }) => {
   const { currentOrderId, orderQueue, availabilityPrompt } = useSelector(
     (state) => state.pushNotificationReducer,
   );
-  const pendingNotificationOrders = [
-    currentOrderId,
-    ...(Array.isArray(orderQueue) ? orderQueue : []),
-  ].filter(Boolean);
+  const pendingNotificationOrders = useMemo(
+    () => [
+      ...new Set(
+        [currentOrderId, ...(Array.isArray(orderQueue) ? orderQueue : [])].filter(
+          Boolean,
+        ),
+      ),
+    ],
+    [currentOrderId, orderQueue],
+  );
+  const notificationRows = useMemo(
+    () => [
+      ...pendingNotificationOrders.map((orderId) => ({
+        id: `order-${orderId}`,
+        type: "ORDER",
+        title: "New order",
+        subtitle: `Order #${orderId}`,
+        orderId,
+      })),
+      ...marketplaceNotifications.map((item) => ({
+        ...item,
+        id: item.id || `${item.type}-${item.event_id || item.question_id}`,
+      })),
+    ],
+    [marketplaceNotifications, pendingNotificationOrders],
+  );
+  const notificationCount = notificationRows.length;
 
   const isOn = useSharedValue(false);
   const isEmployeeSession =
@@ -557,10 +582,53 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+  const getMarketplaceNotificationsFromAPI = async () => {
+    try {
+      const response = await getMarketplaceNotificationSummary_API();
+      if (response?.success) {
+        setMarketplaceNotifications(
+          response.data?.marketplaceNotificationList || [],
+        );
+      }
+    } catch (error) {
+      console.log("Marketplace notification summary error => ", error);
+      setMarketplaceNotifications([]);
+    }
+  };
+
+  const openNotificationRow = (item) => {
+    setNotificationsVisible(false);
+
+    if (item.type === "ORDER") {
+      navigation.navigate("orderDetailsScreen", { orderId: item.orderId });
+      return;
+    }
+
+    if (item.type === "MARKETPLACE_MESSAGE") {
+      navigation.navigate("vendorMarketplaceMessagesScreen", {
+        eventId: item.event_id,
+      });
+      return;
+    }
+
+    if (
+      item.type === "MARKETPLACE_BID" ||
+      item.type === "MARKETPLACE_APPLICATION"
+    ) {
+      navigation.navigate("vendorMarketplaceEventDetailsScreen", {
+        eventId: item.event_id,
+      });
+      return;
+    }
+
+    navigation.navigate("vendorMarketplaceScreen");
+  };
+
   // Fetch new order data on focus
   useFocusEffect(
     useCallback(() => {
       getOrderDataFromAPI();
+      getMarketplaceNotificationsFromAPI();
       getUserDataFromAPI(); // to refresh the active location data
     }, [])
   );
@@ -668,10 +736,10 @@ const HomeScreen = ({ navigation }) => {
             size={38}
             color={AppColor.primary}
           />
-          {pendingNotificationOrders.length ? (
+          {notificationCount ? (
             <View style={styles.notificationBadge}>
               <Text style={styles.notificationBadgeText}>
-                {pendingNotificationOrders.length}
+                {notificationCount > 99 ? "99+" : notificationCount}
               </Text>
             </View>
           ) : null}
@@ -708,20 +776,26 @@ const HomeScreen = ({ navigation }) => {
                 />
               </TouchableOpacity>
             </View>
-            {pendingNotificationOrders.length ? (
-              pendingNotificationOrders.map((orderId) => (
-                <TouchableOpacity
-                  key={orderId}
-                  style={styles.notificationRow}
-                  onPress={() => {
-                    setNotificationsVisible(false);
-                    navigation.navigate("orderDetailsScreen", { orderId });
-                  }}
-                >
-                  <Text style={styles.notificationRowTitle}>New order</Text>
-                  <Text style={styles.notificationRowMeta}>Order #{orderId}</Text>
-                </TouchableOpacity>
-              ))
+            {notificationRows.length ? (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {notificationRows.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.notificationRow}
+                    onPress={() => openNotificationRow(item)}
+                  >
+                    <Text style={styles.notificationRowTitle}>{item.title}</Text>
+                    <Text style={styles.notificationRowMeta}>
+                      {item.event_name || item.subtitle}
+                    </Text>
+                    {item.event_name && item.subtitle ? (
+                      <Text style={styles.notificationRowMeta}>
+                        {item.subtitle}
+                      </Text>
+                    ) : null}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             ) : (
               <Text style={styles.notificationEmpty}>No notifications right now.</Text>
             )}
