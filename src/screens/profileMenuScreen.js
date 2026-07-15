@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
   Linking,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +11,7 @@ import {
   View,
   ActivityIndicator as NativeIndicator,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
 import FastImage from "@d11/react-native-fast-image";
 import Entypo from "react-native-vector-icons/Entypo";
@@ -39,7 +41,11 @@ import {
 import { updatePassword_API } from "../api/authAPI";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
 import { checkInstallationId } from "../helpers/notification.helper";
-import { deleteAccount_API, removeFcmToken_API } from "../api/appAPI";
+import {
+  deleteAccount_API,
+  getVendorComplianceSummary_API,
+  removeFcmToken_API,
+} from "../api/appAPI";
 import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlice";
 import AppImage from "../components/AppImage";
 import { updateUserKey } from "../redux/slices/userInfoSlice";
@@ -70,6 +76,19 @@ const ItemComponent = ({ imageUri, label, rightIcon, isRed, onPress }) => (
 );
 
 const HR = () => <View style={styles.HR} />;
+
+const SCORE_FALLBACK = {
+  red: "#D93025",
+  yellow: "#F9AB00",
+  blue: "#1A73E8",
+  green: "#188038",
+};
+
+const formatComplianceLabel = (value = "") =>
+  String(value || "")
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 const SignoutModal = ({
   isModalVisible,
@@ -415,6 +434,58 @@ const ProfileMenuScreen = ({ navigation }) => {
     message: "",
     type: "info",
   });
+  const [compliance, setCompliance] = useState(null);
+  const [complianceLoading, setComplianceLoading] = useState(false);
+
+  const loadComplianceSummary = useCallback(async () => {
+    const foodTruckId = user?.foodTruck?._id;
+    if (!foodTruckId) {
+      setCompliance(null);
+      return;
+    }
+
+    setComplianceLoading(true);
+    try {
+      const response = await getVendorComplianceSummary_API({
+        foodtruck_id: foodTruckId,
+      });
+      setCompliance(response?.data?.compliance || null);
+    } catch (error) {
+      console.log("Profile compliance summary error => ", error);
+      setCompliance(null);
+    } finally {
+      setComplianceLoading(false);
+    }
+  }, [user?.foodTruck?._id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadComplianceSummary();
+    }, [loadComplianceSummary])
+  );
+
+  const complianceScore = Math.max(
+    0,
+    Math.min(100, Number(compliance?.score) || 0)
+  );
+  const complianceColor =
+    compliance?.score_color_hex ||
+    SCORE_FALLBACK[compliance?.score_color] ||
+    AppColor.primary;
+  const complianceOpenItems = [
+    ...(compliance?.missing_requirements || []).map(
+      (item) => `Missing ${formatComplianceLabel(item)}`
+    ),
+    ...(compliance?.pending_requirements || []).map(
+      (item) => `Pending ${formatComplianceLabel(item)}`
+    ),
+    ...(compliance?.rejected_requirements || []).map(
+      (item) => `Rejected ${formatComplianceLabel(item)}`
+    ),
+    ...(compliance?.expiring_requirements || []).map(
+      (item) => `${formatComplianceLabel(item)} expiring soon`
+    ),
+  ];
 
   const handleSignOut = async () => {
     setSignoutModalLoading(true);
@@ -693,10 +764,70 @@ const ProfileMenuScreen = ({ navigation }) => {
               ? "Food Caterer"
               : "Food Truck"}
           </Text>
-        </View>
+	        </View>
 
-        {/* Menu List */}
-        <View
+	        <TouchableOpacity
+	          activeOpacity={0.8}
+	          style={styles.complianceCard}
+	          onPress={() => navigation.navigate("vendorComplianceScreen")}
+	        >
+	          <View style={styles.complianceHeader}>
+	            <View>
+	              <Text style={styles.complianceEyebrow}>Compliance Status</Text>
+	              <Text style={styles.complianceTitle}>
+	                {compliance?.score_label || "Checking paperwork"}
+	              </Text>
+	            </View>
+	            {complianceLoading ? (
+	              <NativeIndicator size="small" color={AppColor.primary} />
+	            ) : (
+	              <View
+	                style={[
+	                  styles.complianceScoreBadge,
+	                  { backgroundColor: complianceColor },
+	                ]}
+	              >
+	                <Text style={styles.complianceScoreText}>
+	                  {complianceScore}%
+	                </Text>
+	              </View>
+	            )}
+	          </View>
+	          <View style={styles.complianceMeterTrack}>
+	            <View
+	              style={[
+	                styles.complianceMeterFill,
+	                {
+	                  width: `${complianceScore}%`,
+	                  backgroundColor: complianceColor,
+	                },
+	              ]}
+	            />
+	          </View>
+	          <Text style={styles.complianceBody}>
+	            {compliance?.eligible
+	              ? "Your paperwork is complete for bidding and accepting orders."
+	              : compliance?.message ||
+	                "Please update your compliance paperwork."}
+	          </Text>
+	          {complianceOpenItems.length ? (
+	            <Text style={styles.complianceOpenItems} numberOfLines={2}>
+	              {complianceOpenItems.slice(0, 3).join(" • ")}
+	              {complianceOpenItems.length > 3
+	                ? ` • +${complianceOpenItems.length - 3} more`
+	                : ""}
+	            </Text>
+	          ) : null}
+	          <View style={styles.complianceFooter}>
+	            <Text style={styles.complianceSupport}>
+	              Support {compliance?.support_phone_number || "(800) 410-7053"}
+	            </Text>
+	            <Entypo name="chevron-small-right" size={24} color={AppColor.black} />
+	          </View>
+	        </TouchableOpacity>
+
+	        {/* Menu List */}
+	        <View
           style={{
             backgroundColor: AppColor.white,
             borderWidth: 1,
@@ -1000,5 +1131,80 @@ const styles = StyleSheet.create({
     fontFamily: Mulish400,
     fontSize: 12,
     color: AppColor.black,
+  },
+  complianceCard: {
+    backgroundColor: AppColor.white,
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
+    borderRadius: 10,
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
+  },
+  complianceHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  complianceEyebrow: {
+    fontFamily: Mulish400,
+    fontSize: 12,
+    color: AppColor.subText,
+  },
+  complianceTitle: {
+    fontFamily: Mulish700,
+    fontSize: 17,
+    color: AppColor.black,
+    marginTop: 2,
+  },
+  complianceScoreBadge: {
+    minWidth: 58,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  complianceScoreText: {
+    fontFamily: Mulish700,
+    fontSize: 14,
+    color: AppColor.white,
+  },
+  complianceMeterTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#E5E5EA",
+    overflow: "hidden",
+    marginTop: 14,
+  },
+  complianceMeterFill: {
+    height: "100%",
+    borderRadius: 4,
+  },
+  complianceBody: {
+    fontFamily: Mulish400,
+    fontSize: 13,
+    color: AppColor.black,
+    marginTop: 12,
+    lineHeight: 19,
+  },
+  complianceOpenItems: {
+    fontFamily: Mulish400,
+    fontSize: 12,
+    color: AppColor.subText,
+    marginTop: 8,
+    lineHeight: 18,
+  },
+  complianceFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 12,
+  },
+  complianceSupport: {
+    fontFamily: Mulish400,
+    fontSize: 12,
+    color: AppColor.subText,
   },
 });
