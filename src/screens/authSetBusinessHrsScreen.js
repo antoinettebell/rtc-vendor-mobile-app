@@ -11,7 +11,6 @@ import {
 import {
   Text,
   Button,
-  Switch,
   IconButton,
   ActivityIndicator,
 } from "react-native-paper";
@@ -85,12 +84,6 @@ const AuthSetBusinessHrsScreen = ({ navigation }) => {
       setLocations(updated);
     }
     setPickerVisible(false);
-  };
-
-  const toggleSwitch = (locIndex) => {
-    const updated = [...locations];
-    updated[locIndex].enabled = !updated[locIndex].enabled;
-    setLocations(updated);
   };
 
   const updateLocation = (locIndex, selectedItem) => {
@@ -370,16 +363,6 @@ const AuthSetBusinessHrsScreen = ({ navigation }) => {
                   </View>
                 </View>
 
-                <View style={styles.timeRow}>
-                  <Text style={styles.sectionLabel}>
-                    {"Enable Business Hours"}
-                  </Text>
-                  <Switch
-                    color={AppColor.primary}
-                    value={loc.enabled}
-                    onValueChange={() => toggleSwitch(locIndex)}
-                  />
-                </View>
               </View>
             ))}
             <Button

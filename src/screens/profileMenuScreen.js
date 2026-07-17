@@ -868,7 +868,7 @@ const ProfileMenuScreen = ({ navigation }) => {
           <HR />
           <ItemComponent
             rightIcon
-            label="Pre-Order Availability"
+            label="Weekly Schedule"
             imageUri={PROFILE_MENU_IMAGES.manageAvailability}
             onPress={() => navigation.navigate("profileAvailabilityScreen")}
           />

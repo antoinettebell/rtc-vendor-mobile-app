@@ -12,7 +12,6 @@ import {
 import {
   Text,
   Button,
-  Switch,
   IconButton,
   ActivityIndicator,
 } from "react-native-paper";
@@ -99,12 +98,6 @@ const ProfileSetBusinessHrsScreen = ({ navigation }) => {
       setSelectedBusinessHrs(updated);
     }
     setPickerVisible(false);
-  };
-
-  const toggleSwitch = (locIndex) => {
-    const updated = [...selectedBusinessHrs];
-    updated[locIndex].enabled = !updated[locIndex].enabled;
-    setSelectedBusinessHrs(updated);
   };
 
   const updateLocation = (locIndex, selectedItem) => {
@@ -201,7 +194,7 @@ const ProfileSetBusinessHrsScreen = ({ navigation }) => {
         value: item.locationId,
         openTime: openTime,
         closeTime: closeTime,
-        enabled: item.available,
+        enabled: true,
         locationTitle: location ? location.title : null,
         locationAddress: location ? location.address : null,
         _id: item._id, // Include the _id from the API response
@@ -420,17 +413,6 @@ const ProfileSetBusinessHrsScreen = ({ navigation }) => {
                           />
                         </TouchableOpacity>
                       </View>
-                    </View>
-
-                    <View style={styles.timeRow}>
-                      <Text style={styles.sectionLabel}>
-                        {"Enable Business Hours"}
-                      </Text>
-                      <Switch
-                        color={AppColor.primary}
-                        value={loc.enabled}
-                        onValueChange={() => toggleSwitch(locIndex)}
-                      />
                     </View>
                   </View>
                 ))}

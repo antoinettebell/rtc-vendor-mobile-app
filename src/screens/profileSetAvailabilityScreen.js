@@ -64,6 +64,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
         {
           uniqueId: uuidv4(),
           value: null,
+          truckUnitId: null,
           openTime: moment().startOf("day").toDate(), // 00:00
           closeTime: moment().startOf("day").toDate(), // 00:00
           enabled: false,
@@ -78,6 +79,12 @@ export default function ProfileAvailabilityScreen({ navigation }) {
   const [pickerField, setPickerField] = useState(null);
   const [isPickerVisible, setPickerVisible] = useState(false);
   const [toolTipVisible, setToolTipVisible] = useState(false);
+  const truckUnitOptions = (user?.foodTruck?.truck_units || [])
+    .filter((unit) => !unit.is_archived)
+    .map((unit, index) => ({
+      label: unit.name || `Truck ${index + 1}`,
+      value: unit._id,
+    }));
 
   const getDataFromAPI = async () => {
     setDataLoading(true);
@@ -154,12 +161,23 @@ export default function ProfileAvailabilityScreen({ navigation }) {
     setAvailability(updated);
   };
 
+  const updateTruckUnit = (dayIndex, locIndex, selectedItem) => {
+    const updated = [...availability];
+    updated[dayIndex].locations[locIndex] = {
+      ...updated[dayIndex].locations[locIndex],
+      truckUnitId: selectedItem.value,
+      truckUnitName: selectedItem.label,
+    };
+    setAvailability(updated);
+  };
+
   const addLocation = (dayIndex) => {
     const updated = [...availability];
     const dayEnabledStatus = updated[dayIndex].dayEnabled; // Get the day's enabled status
     updated[dayIndex].locations.push({
       uniqueId: uuidv4(),
       value: null,
+      truckUnitId: null,
       openTime: moment().startOf("day").toDate(), // 00:00
       closeTime: moment().startOf("day").toDate(), // 00:00
       enabled: dayEnabledStatus, // Set enabled based on day's status
@@ -191,6 +209,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
               dayToUpdate.locations.push({
                 uniqueId: uuidv4(),
                 value: null,
+                truckUnitId: null,
                 openTime: moment().startOf("day").toDate(), // 00:00
                 closeTime: moment().startOf("day").toDate(), // 00:00
                 enabled: dayToUpdate.dayEnabled, // Inherit day's enabled status
@@ -335,7 +354,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
             onPress={() => navigation.goBack()}
           />
         </View>
-        <Text style={styles.headerTitle}>{"Pre-Order Availability"}</Text>
+        <Text style={styles.headerTitle}>{"Weekly Schedule"}</Text>
         <View style={{ width: "20%" }} />
       </View>
 
@@ -366,7 +385,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
                   }}
                 >
                   <Text style={styles.contentHeaderTitle}>
-                    {"Set Pre-Order Availability"}
+                    {"Weekly Schedule"}
                   </Text>
                   <Tooltip
                     animated={true}
@@ -389,7 +408,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
                         }}
                       >
                         {
-                          "This feature is for vendors who want to allot time for customers to schedule pick up and delivery during peek hours."
+                          "Set the weekly hours and truck assignment for each serving location."
                         }
                       </Text>
                     }
@@ -410,7 +429,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
                 </View>
                 <Text style={styles.contentHeaderDescription}>
                   {
-                    "Set a time for customers to place orders to pickup at a scheduled time."
+                    "Set the weekly open and close schedule customers can view for each location."
                   }
                 </Text>
               </View>
@@ -536,6 +555,36 @@ export default function ProfileAvailabilityScreen({ navigation }) {
                                 </TouchableOpacity>
                               </View>
                             </View>
+
+                            {truckUnitOptions.length > 0 && (
+                              <View style={styles.locationInputContainer}>
+                                <Text style={styles.locationInputLabel}>
+                                  {"Food Truck"}
+                                </Text>
+                                <Dropdown
+                                  data={truckUnitOptions}
+                                  labelField="label"
+                                  valueField="value"
+                                  value={loc.truckUnitId}
+                                  onChange={(selectedItem) =>
+                                    updateTruckUnit(
+                                      index,
+                                      locIndex,
+                                      selectedItem
+                                    )
+                                  }
+                                  placeholder="Select Food Truck"
+                                  style={styles.dropdown}
+                                  placeholderStyle={{
+                                    fontFamily: Mulish400,
+                                  }}
+                                  itemTextStyle={{ fontFamily: Mulish400 }}
+                                  selectedTextStyle={{
+                                    fontFamily: Mulish400,
+                                  }}
+                                />
+                              </View>
+                            )}
 
                             {locIndex !== item?.locations?.length - 1 && (
                               <View style={styles.divider} />

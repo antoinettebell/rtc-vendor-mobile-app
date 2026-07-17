@@ -9,6 +9,7 @@ export const transformLocationsForAPI = (data) => {
         return {
           ...(location?._id && { _id: location._id }), // Keep existing ID if available
           locationId: location.value,
+          truckUnitId: location.truckUnitId || null,
           day: dayItem.day.toLowerCase(),
           startTime: moment(location.openTime).format("HH:mm"),
           endTime: moment(location.closeTime).format("HH:mm"),
@@ -27,7 +28,7 @@ export const transformBusinessHoursForAPI = (data) => {
         locationId: location.value,
         startTime: moment(location.openTime).format("HH:mm"),
         endTime: moment(location.closeTime).format("HH:mm"),
-        available: location.enabled,
+        available: true,
       };
     });
 };
@@ -92,6 +93,7 @@ export const formatApiDataToComponentState = (
       {
         uniqueId: uuidv4(),
         value: null,
+        truckUnitId: null,
         openTime: moment().startOf("day").toDate(),
         closeTime: moment().startOf("day").toDate(),
         enabled: false,
@@ -135,6 +137,7 @@ export const formatApiDataToComponentState = (
         return {
           uniqueId: uuidv4(),
           value: entry.locationId,
+          truckUnitId: entry.truckUnitId || null,
           openTime: moment(entry.startTime, "HH:mm").toDate(),
           closeTime: moment(entry.endTime, "HH:mm").toDate(),
           enabled: entry.available,
