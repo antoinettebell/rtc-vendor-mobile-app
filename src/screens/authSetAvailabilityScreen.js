@@ -4,11 +4,10 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Platform,
-  Alert,
-  Animated,
-  Pressable,
-} from "react-native";
+	  Platform,
+	  Alert,
+	  Pressable,
+	} from "react-native";
 import {
   Text,
   Button,
@@ -44,6 +43,12 @@ import { fullDayNames } from "../utils/constants";
 import { onUnderReview } from "../redux/slices/authSlice";
 
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+const getExpandedDaysFromAvailability = (items = []) =>
+  items.reduce((acc, item, index) => {
+    acc[item.day || String(index)] = !!item.dayEnabled;
+    return acc;
+  }, {});
 
 const AuthSetAvailabilityScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -87,17 +92,19 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
             closeTime: new Date(locItem.closeTime), // Create new Date object
           })),
         })
-      );
-      setAvailability(deepCopiedAvailability);
-    }
-  }, [selectedPreOrderAvailability]);
+	      );
+	      setAvailability(deepCopiedAvailability);
+	      setExpandedDays(getExpandedDaysFromAvailability(deepCopiedAvailability));
+	    }
+	  }, [selectedPreOrderAvailability]);
 
   const [loading, setLoading] = useState(false);
   const [activeDayIndex, setActiveDayIndex] = useState(null);
   const [activeLocIndex, setActiveLocIndex] = useState(null);
   const [pickerField, setPickerField] = useState(null);
-  const [isPickerVisible, setPickerVisible] = useState(false);
-  const [toolTipVisible, setToolTipVisible] = useState(false);
+	  const [isPickerVisible, setPickerVisible] = useState(false);
+	  const [toolTipVisible, setToolTipVisible] = useState(false);
+	  const [expandedDays, setExpandedDays] = useState({});
   const truckUnitOptions = (user?.foodTruck?.truck_units || [])
     .filter((unit) => !unit.is_archived)
     .map((unit, index) => ({
@@ -129,17 +136,28 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
     setAvailability(updated);
   };
 
-  const toggleDaySwitch = (dayIndex) => {
-    const updated = [...availability];
-    const newDayEnabledStatus = !updated[dayIndex].dayEnabled;
+	  const toggleDaySwitch = (dayIndex) => {
+	    const updated = [...availability];
+	    const newDayEnabledStatus = !updated[dayIndex].dayEnabled;
     updated[dayIndex].dayEnabled = newDayEnabledStatus;
     // Set all locations for the day to the new dayEnabled state
     updated[dayIndex].locations = updated[dayIndex].locations.map((loc) => ({
       ...loc,
       enabled: newDayEnabledStatus,
-    }));
-    setAvailability(updated);
-  };
+	    }));
+	    setAvailability(updated);
+	    setExpandedDays((prev) => ({
+	      ...prev,
+	      [updated[dayIndex].day]: newDayEnabledStatus || prev[updated[dayIndex].day],
+	    }));
+	  };
+
+	  const toggleDayExpanded = (dayKey) => {
+	    setExpandedDays((prev) => ({
+	      ...prev,
+	      [dayKey]: !prev[dayKey],
+	    }));
+	  };
 
   const updateLocation = (dayIndex, locIndex, selectedItem) => {
     const updated = [...availability];
@@ -347,7 +365,7 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
       <StatusBarManager barStyle="light-content" />
 
       {/* Header Container */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
+	      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={{ width: "20%" }}>
           <IconButton
             icon="arrow-left"
@@ -465,44 +483,45 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
 
           {/* TimeSlots Container */}
           <View style={styles.timeSlotsContainer}>
-            {availability.map((item, index) => {
-              const animatedOpacity = useRef(
-                new Animated.Value(item.dayEnabled ? 1 : 0)
-              ).current;
-
-              useEffect(() => {
-                Animated.timing(animatedOpacity, {
-                  toValue: item.dayEnabled ? 1 : 0,
-                  duration: 500,
-                  useNativeDriver: true,
-                }).start();
-              }, [item.dayEnabled]);
-
-              return (
-                <View key={index} style={styles.dayContainer}>
-                  {/* Day Header with Switch */}
-                  <View
-                    style={[
-                      styles.timeRow,
-                      item.dayEnabled && { marginBottom: 16 },
-                    ]}
-                  >
-                    <View style={styles.dayCircle}>
-                      <Text style={styles.dayCircleText}>{item.day}</Text>
-                    </View>
-                    <Text style={styles.dayNameText}>
-                      {fullDayNames[item.day]}
-                    </Text>
-                    <Switch
-                      color={AppColor.primary}
-                      value={item.dayEnabled}
+	            {availability.map((item, index) => {
+	              const dayKey = item.day || String(index);
+	              const expanded = !!expandedDays[dayKey];
+	              return (
+	                <View key={dayKey} style={styles.dayContainer}>
+	                  {/* Day Header with Switch */}
+	                  <View
+	                    style={[
+	                      styles.timeRow,
+	                      item.dayEnabled && expanded && { marginBottom: 16 },
+	                    ]}
+	                  >
+	                    <Pressable
+	                      onPress={() => toggleDayExpanded(dayKey)}
+	                      style={styles.dayHeaderPressable}
+	                      hitSlop={8}
+	                    >
+	                      <View style={styles.dayCircle}>
+	                        <Text style={styles.dayCircleText}>{item.day}</Text>
+	                      </View>
+	                      <Text style={styles.dayNameText}>
+	                        {fullDayNames[item.day]}
+	                      </Text>
+	                      <MaterialIcons
+	                        name={expanded ? "keyboard-arrow-up" : "keyboard-arrow-down"}
+	                        size={26}
+	                        color={AppColor.textHighlighter}
+	                      />
+	                    </Pressable>
+	                    <Switch
+	                      color={AppColor.primary}
+	                      value={item.dayEnabled}
                       onValueChange={() => toggleDaySwitch(index)}
                     />
                   </View>
 
                   {/* Conditionally render location details if day is enabled */}
-                  <Animated.View style={{ opacity: animatedOpacity }}>
-                    {item.dayEnabled && (
+	                  <View>
+	                    {item.dayEnabled && expanded && (
                       <View>
                         {item.locations.map((loc, locIndex) => (
                           <View key={loc.uniqueId}>
@@ -648,7 +667,7 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
                         )}
                       </View>
                     )}
-                  </Animated.View>
+	                  </View>
                 </View>
               );
             })}
@@ -702,15 +721,17 @@ const styles = StyleSheet.create({
   },
 
   // Header
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: AppColor.primary,
-    paddingHorizontal: 8,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
-  },
+	  header: {
+	    flexDirection: "row",
+	    alignItems: "center",
+	    justifyContent: "space-between",
+	    backgroundColor: AppColor.primary,
+	    paddingHorizontal: 8,
+	    paddingBottom: 12,
+	    minHeight: 76,
+	    borderBottomLeftRadius: 25,
+	    borderBottomRightRadius: 25,
+	  },
   headerTitle: {
     color: AppColor.white,
     fontSize: 20,
@@ -766,12 +787,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  timeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-  },
+	  timeRow: {
+	    flexDirection: "row",
+	    alignItems: "center",
+	    justifyContent: "space-between",
+	    gap: 8,
+	  },
+	  dayHeaderPressable: {
+	    flex: 1,
+	    flexDirection: "row",
+	    alignItems: "center",
+	    gap: 8,
+	  },
   timeLabel: {
     fontSize: 14,
     fontFamily: Mulish400,

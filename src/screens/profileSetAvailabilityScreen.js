@@ -47,6 +47,12 @@ import { fullDayNames } from "../utils/constants";
 
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+const getExpandedDaysFromAvailability = (items = []) =>
+  items.reduce((acc, item, index) => {
+    acc[item.day || String(index)] = !!item.dayEnabled;
+    return acc;
+  }, {});
+
 export default function ProfileAvailabilityScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -79,6 +85,8 @@ export default function ProfileAvailabilityScreen({ navigation }) {
   const [pickerField, setPickerField] = useState(null);
   const [isPickerVisible, setPickerVisible] = useState(false);
   const [toolTipVisible, setToolTipVisible] = useState(false);
+  const [expandedDays, setExpandedDays] = useState({});
+  const [editingDays, setEditingDays] = useState({});
   const truckUnitOptions = (user?.foodTruck?.truck_units || [])
     .filter((unit) => !unit.is_archived)
     .map((unit, index) => ({
@@ -94,11 +102,13 @@ export default function ProfileAvailabilityScreen({ navigation }) {
       console.log("response => ", response);
       if (response?.success && response?.data) {
         dispatch(setSelectedLocations(response.data.foodtruck.locations));
-        const formattedAvailabilityData = formatApiDataToComponentState(
-          response.data.foodtruck.availability,
-          response.data.foodtruck.locations
-        );
-        setAvailability(formattedAvailabilityData);
+	        const formattedAvailabilityData = formatApiDataToComponentState(
+	          response.data.foodtruck.availability,
+	          response.data.foodtruck.locations
+	        );
+	        setAvailability(formattedAvailabilityData);
+	        setExpandedDays(getExpandedDaysFromAvailability(formattedAvailabilityData));
+	        setEditingDays({});
       }
     } catch (error) {
       console.log("error => ", error);
@@ -148,6 +158,30 @@ export default function ProfileAvailabilityScreen({ navigation }) {
       enabled: newDayEnabledStatus,
     }));
     setAvailability(updated);
+    setExpandedDays((prev) => ({
+      ...prev,
+      [updated[dayIndex].day]: newDayEnabledStatus || prev[updated[dayIndex].day],
+    }));
+  };
+
+  const toggleDayExpanded = (dayKey) => {
+    setExpandedDays((prev) => ({
+      ...prev,
+      [dayKey]: !prev[dayKey],
+    }));
+  };
+
+  const setDayEditing = (dayKey, editing) => {
+    setEditingDays((prev) => ({
+      ...prev,
+      [dayKey]: editing,
+    }));
+    if (editing) {
+      setExpandedDays((prev) => ({
+        ...prev,
+        [dayKey]: true,
+      }));
+    }
   };
 
   const updateLocation = (dayIndex, locIndex, selectedItem) => {
@@ -224,7 +258,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
   };
 
   // Handle API call for saving data
-  const handleContinuePress = async () => {
+  const saveScheduleChanges = async (changedDay = null) => {
     console.log("availability => ", availability);
 
     // --- Validation: Check for missing location ---
@@ -320,6 +354,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
     try {
       const payload = {
         availability: finalResult?.length ? finalResult : [],
+        availabilityChangeDay: changedDay,
       };
       const response = await updateFoodTruckProfile_API({
         payload,
@@ -330,7 +365,16 @@ export default function ProfileAvailabilityScreen({ navigation }) {
         dispatch(updateFoodTruck(response.data.foodtruck));
         dispatch(setSelectedCuisine(response.data.foodtruck.cuisine));
         dispatch(setSelectedLocations(response.data.foodtruck.locations));
-        navigation.goBack();
+        setEditingDays((prev) => ({
+          ...prev,
+          [changedDay]: false,
+        }));
+        dispatch(
+          showSnackbar({
+            message: "Weekly schedule updated.",
+            type: "success",
+          })
+        );
       }
     } catch (error) {
       console.error("error =>", error);
@@ -340,12 +384,26 @@ export default function ProfileAvailabilityScreen({ navigation }) {
     }
   };
 
+  const handleSaveDay = (dayKey) => {
+    Alert.alert(
+      "Update Weekly Schedule",
+      "Are you sure you want to change this date/time/location?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Save",
+          onPress: () => saveScheduleChanges(dayKey),
+        },
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
       <StatusBarManager />
 
       {/* Header Container */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
+	      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={{ width: "20%" }}>
           <IconButton
             icon="arrow-left"
@@ -435,181 +493,200 @@ export default function ProfileAvailabilityScreen({ navigation }) {
               </View>
 
               {/* TimeSlots Container */}
-              <View style={styles.timeSlotsContainer}>
-                {availability.map((item, index) => (
-                  <View key={index} style={styles.dayContainer}>
-                    <View
-                      style={[
-                        styles.timeRow,
-                        item.dayEnabled && { marginBottom: 16 },
-                      ]}
-                    >
-                      <View style={styles.dayCircle}>
-                        <Text style={styles.dayCircleText}>{item.day}</Text>
-                      </View>
-                      <Text style={styles.dayNameText}>
-                        {fullDayNames[item.day]}
-                      </Text>
-                      <Switch
-                        color={AppColor.primary}
-                        value={item.dayEnabled}
-                        onValueChange={() => toggleDaySwitch(index)}
-                      />
-                    </View>
+	              <View style={styles.timeSlotsContainer}>
+	                {availability.map((item, index) => {
+	                  const dayKey = item.day || String(index);
+	                  const expanded = !!expandedDays[dayKey];
+	                  const isDayEditing = !!editingDays[dayKey];
+	                  return (
+	                    <View key={dayKey} style={styles.dayContainer}>
+	                      <View
+	                        style={[
+	                          styles.timeRow,
+	                          item.dayEnabled && expanded && { marginBottom: 16 },
+	                        ]}
+	                      >
+	                        <Pressable
+	                          onPress={() => toggleDayExpanded(dayKey)}
+	                          style={styles.dayHeaderPressable}
+	                          hitSlop={8}
+	                        >
+	                          <View style={styles.dayCircle}>
+	                            <Text style={styles.dayCircleText}>{item.day}</Text>
+	                          </View>
+	                          <Text style={styles.dayNameText}>
+	                            {fullDayNames[item.day]}
+	                          </Text>
+	                          <MaterialIcons
+	                            name={expanded ? "keyboard-arrow-up" : "keyboard-arrow-down"}
+	                            size={26}
+	                            color={AppColor.textHighlighter}
+	                          />
+	                        </Pressable>
+	                        <TouchableOpacity
+	                          activeOpacity={0.7}
+	                          style={[
+	                            styles.dayActionButton,
+	                            isDayEditing && styles.dayActionButtonActive,
+	                          ]}
+	                          onPress={() =>
+	                            isDayEditing
+	                              ? handleSaveDay(dayKey)
+	                              : setDayEditing(dayKey, true)
+	                          }
+	                          disabled={loading}
+	                        >
+	                          <Text
+	                            style={[
+	                              styles.dayActionText,
+	                              isDayEditing && styles.dayActionTextActive,
+	                            ]}
+	                          >
+	                            {isDayEditing ? "Save" : "Edit"}
+	                          </Text>
+	                        </TouchableOpacity>
+	                        <Switch
+	                          color={AppColor.primary}
+	                          value={item.dayEnabled}
+	                          onValueChange={() => toggleDaySwitch(index)}
+	                          disabled={!isDayEditing || loading}
+	                        />
+	                      </View>
 
-                    {item.dayEnabled && (
-                      <View>
-                        {item.locations.map((loc, locIndex) => (
-                          <View key={loc.uniqueId}>
-                            <View style={styles.timeSlotRow}>
-                              <View style={styles.timeInputContainer}>
-                                <Text style={styles.timeInputLabel}>
-                                  {"Open"}
-                                </Text>
-                                <TouchableOpacity
-                                  activeOpacity={0.7}
-                                  style={styles.timeInputButton}
-                                  onPress={() =>
-                                    showTimePicker(index, locIndex, "openTime")
-                                  }
-                                >
-                                  <Text style={styles.timeLabel}>
-                                    {loc.openTime.toLocaleTimeString([], {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })}
-                                  </Text>
-                                  <Octicons
-                                    name="clock"
-                                    size={20}
-                                    color={AppColor.textHighlighter}
-                                  />
-                                </TouchableOpacity>
-                              </View>
+	                      {item.dayEnabled && expanded && (
+	                        <View>
+	                          {item.locations.map((loc, locIndex) => (
+	                            <View key={loc.uniqueId}>
+	                              <View style={styles.timeSlotRow}>
+	                                <View style={styles.timeInputContainer}>
+	                                  <Text style={styles.timeInputLabel}>{"Open"}</Text>
+	                                  <TouchableOpacity
+	                                    activeOpacity={0.7}
+	                                    style={styles.timeInputButton}
+	                                    onPress={() =>
+	                                      showTimePicker(index, locIndex, "openTime")
+	                                    }
+	                                    disabled={!isDayEditing || loading}
+	                                  >
+	                                    <Text style={styles.timeLabel}>
+	                                      {loc.openTime.toLocaleTimeString([], {
+	                                        hour: "2-digit",
+	                                        minute: "2-digit",
+	                                      })}
+	                                    </Text>
+	                                    <Octicons
+	                                      name="clock"
+	                                      size={20}
+	                                      color={AppColor.textHighlighter}
+	                                    />
+	                                  </TouchableOpacity>
+	                                </View>
 
-                              <View style={styles.timeInputContainer}>
-                                <Text style={styles.timeInputLabel}>
-                                  {"Close"}
-                                </Text>
-                                <TouchableOpacity
-                                  activeOpacity={0.7}
-                                  style={styles.timeInputButton}
-                                  onPress={() =>
-                                    showTimePicker(index, locIndex, "closeTime")
-                                  }
-                                >
-                                  <Text style={styles.timeLabel}>
-                                    {loc.closeTime.toLocaleTimeString([], {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })}
-                                  </Text>
-                                  <Octicons
-                                    name="clock"
-                                    size={20}
-                                    color={AppColor.textHighlighter}
-                                  />
-                                </TouchableOpacity>
-                              </View>
-                            </View>
+	                                <View style={styles.timeInputContainer}>
+	                                  <Text style={styles.timeInputLabel}>{"Close"}</Text>
+	                                  <TouchableOpacity
+	                                    activeOpacity={0.7}
+	                                    style={styles.timeInputButton}
+	                                    onPress={() =>
+	                                      showTimePicker(index, locIndex, "closeTime")
+	                                    }
+	                                    disabled={!isDayEditing || loading}
+	                                  >
+	                                    <Text style={styles.timeLabel}>
+	                                      {loc.closeTime.toLocaleTimeString([], {
+	                                        hour: "2-digit",
+	                                        minute: "2-digit",
+	                                      })}
+	                                    </Text>
+	                                    <Octicons
+	                                      name="clock"
+	                                      size={20}
+	                                      color={AppColor.textHighlighter}
+	                                    />
+	                                  </TouchableOpacity>
+	                                </View>
+	                              </View>
 
-                            <View style={styles.locationInputContainer}>
-                              <Text style={styles.locationInputLabel}>
-                                {"Location"}
-                              </Text>
-                              <View style={styles.locationDropdownWrapper}>
-                                <Dropdown
-                                  data={selectedLocations}
-                                  labelField="title"
-                                  valueField="_id"
-                                  value={loc.value}
-                                  onChange={(selectedItem) =>
-                                    updateLocation(
-                                      index,
-                                      locIndex,
-                                      selectedItem
-                                    )
-                                  }
-                                  placeholder="Select Location"
-                                  style={styles.dropdown}
-                                  placeholderStyle={{
-                                    fontFamily: Mulish400,
-                                  }}
-                                  itemTextStyle={{ fontFamily: Mulish400 }}
-                                  selectedTextStyle={{
-                                    fontFamily: Mulish400,
-                                  }}
-                                />
-                                <TouchableOpacity
-                                  activeOpacity={0.7}
-                                  style={styles.removeLocationButton}
-                                  onPress={() =>
-                                    removeLocation(index, locIndex)
-                                  }
-                                >
-                                  <MaterialCommunityIcons
-                                    name="trash-can"
-                                    color={AppColor.red}
-                                    size={32}
-                                  />
-                                </TouchableOpacity>
-                              </View>
-                            </View>
+	                              <View style={styles.locationInputContainer}>
+	                                <Text style={styles.locationInputLabel}>{"Location"}</Text>
+	                                <View style={styles.locationDropdownWrapper}>
+	                                  <Dropdown
+	                                    data={selectedLocations}
+	                                    labelField="title"
+	                                    valueField="_id"
+	                                    value={loc.value}
+	                                    onChange={(selectedItem) =>
+	                                      updateLocation(index, locIndex, selectedItem)
+	                                    }
+	                                    placeholder="Select Location"
+	                                    style={styles.dropdown}
+	                                    placeholderStyle={{ fontFamily: Mulish400 }}
+	                                    itemTextStyle={{ fontFamily: Mulish400 }}
+	                                    selectedTextStyle={{ fontFamily: Mulish400 }}
+	                                    disable={!isDayEditing || loading}
+	                                  />
+	                                  <TouchableOpacity
+	                                    activeOpacity={0.7}
+	                                    style={styles.removeLocationButton}
+	                                    onPress={() => removeLocation(index, locIndex)}
+	                                    disabled={!isDayEditing || loading}
+	                                  >
+	                                    <MaterialCommunityIcons
+	                                      name="trash-can"
+	                                      color={AppColor.red}
+	                                      size={32}
+	                                    />
+	                                  </TouchableOpacity>
+	                                </View>
+	                              </View>
 
-                            {truckUnitOptions.length > 0 && (
-                              <View style={styles.locationInputContainer}>
-                                <Text style={styles.locationInputLabel}>
-                                  {"Food Truck"}
-                                </Text>
-                                <Dropdown
-                                  data={truckUnitOptions}
-                                  labelField="label"
-                                  valueField="value"
-                                  value={loc.truckUnitId}
-                                  onChange={(selectedItem) =>
-                                    updateTruckUnit(
-                                      index,
-                                      locIndex,
-                                      selectedItem
-                                    )
-                                  }
-                                  placeholder="Select Food Truck"
-                                  style={styles.dropdown}
-                                  placeholderStyle={{
-                                    fontFamily: Mulish400,
-                                  }}
-                                  itemTextStyle={{ fontFamily: Mulish400 }}
-                                  selectedTextStyle={{
-                                    fontFamily: Mulish400,
-                                  }}
-                                />
-                              </View>
-                            )}
+	                              {truckUnitOptions.length > 0 && (
+	                                <View style={styles.locationInputContainer}>
+	                                  <Text style={styles.locationInputLabel}>
+	                                    {"Food Truck"}
+	                                  </Text>
+	                                  <Dropdown
+	                                    data={truckUnitOptions}
+	                                    labelField="label"
+	                                    valueField="value"
+	                                    value={loc.truckUnitId}
+	                                    onChange={(selectedItem) =>
+	                                      updateTruckUnit(index, locIndex, selectedItem)
+	                                    }
+	                                    placeholder="Select Food Truck"
+	                                    style={styles.dropdown}
+	                                    placeholderStyle={{ fontFamily: Mulish400 }}
+	                                    itemTextStyle={{ fontFamily: Mulish400 }}
+	                                    selectedTextStyle={{ fontFamily: Mulish400 }}
+	                                    disable={!isDayEditing || loading}
+	                                  />
+	                                </View>
+	                              )}
 
-                            {locIndex !== item?.locations?.length - 1 && (
-                              <View style={styles.divider} />
-                            )}
-                          </View>
-                        ))}
+	                              {locIndex !== item?.locations?.length - 1 && (
+	                                <View style={styles.divider} />
+	                              )}
+	                            </View>
+	                          ))}
 
-                        {item.dayEnabled && (
-                          <Button
-                            icon="plus-circle-outline"
-                            mode="outlined"
-                            onPress={() => addLocation(index)}
-                            style={styles.addButton}
-                            textColor={AppColor.primary}
-                            theme={styles.addButtonTheme}
-                            labelStyle={{ fontFamily: Mulish400 }}
-                          >
-                            Add Location
-                          </Button>
-                        )}
-                      </View>
-                    )}
-                  </View>
-                ))}
-              </View>
+	                          <Button
+	                            icon="plus-circle-outline"
+	                            mode="outlined"
+	                            onPress={() => addLocation(index)}
+	                            style={styles.addButton}
+	                            textColor={AppColor.primary}
+	                            theme={styles.addButtonTheme}
+	                            labelStyle={{ fontFamily: Mulish400 }}
+	                            disabled={!isDayEditing || loading}
+	                          >
+	                            Add Location
+	                          </Button>
+	                        </View>
+	                      )}
+	                    </View>
+	                  );
+	                })}
+	              </View>
             </View>
           </ScrollView>
 
@@ -622,17 +699,17 @@ export default function ProfileAvailabilityScreen({ navigation }) {
               backgroundColor: AppColor.white,
             }}
           >
-            <TouchableOpacity
-              style={styles.continueButton}
-              activeOpacity={0.7}
-              onPress={handleContinuePress}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color={AppColor.white} />
-              ) : (
-                <Text style={styles.continueButtonText}>{"Continue"}</Text>
-              )}
+	            <TouchableOpacity
+	              style={styles.continueButton}
+	              activeOpacity={0.7}
+	              onPress={() => navigation.goBack()}
+	              disabled={loading}
+	            >
+	              {loading ? (
+	                <ActivityIndicator color={AppColor.white} />
+	              ) : (
+	                <Text style={styles.continueButtonText}>{"Done"}</Text>
+	              )}
             </TouchableOpacity>
           </View>
         </>
@@ -668,7 +745,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: AppColor.white,
     paddingHorizontal: 8,
-    paddingBottom: 5,
+    paddingBottom: 12,
+    minHeight: 76,
     borderBottomWidth: 1,
     borderColor: "#E5E5EA",
   },
@@ -700,6 +778,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
+  },
+  dayHeaderPressable: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  dayActionButton: {
+    minWidth: 54,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: AppColor.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+    backgroundColor: AppColor.white,
+  },
+  dayActionButtonActive: {
+    backgroundColor: AppColor.primary,
+  },
+  dayActionText: {
+    color: AppColor.primary,
+    fontSize: 13,
+    fontFamily: Mulish700,
+  },
+  dayActionTextActive: {
+    color: AppColor.white,
   },
   timeLabel: {
     fontSize: 14,

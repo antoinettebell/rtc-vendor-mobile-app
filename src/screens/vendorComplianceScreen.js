@@ -1,22 +1,28 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
+	  ActivityIndicator,
+	  Alert,
+	  Linking,
+	  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import DocumentPicker, { types } from "react-native-document-picker";
+import ImagePicker from "react-native-image-crop-picker";
+import { RESULTS } from "react-native-permissions";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSelector } from "react-redux";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   getVendorComplianceHistory_API,
   getVendorComplianceSummary_API,
   uploadVendorComplianceDocument_API,
 } from "../api/appAPI";
 import StatusBarManager from "../components/StatusBarManager";
+import usePermission from "../hooks/usePermission";
+import { permission } from "../helpers/permission.helper";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 
 const SCORE_FALLBACK = {
@@ -25,6 +31,17 @@ const SCORE_FALLBACK = {
   blue: "#1A73E8",
   green: "#188038",
 };
+
+const EXPIRATION_WARNING_DAYS = 90;
+const EXPIRING_DOCUMENT_TYPES = new Set([
+  "HEALTH_PERMIT",
+  "BUSINESS_LICENSE",
+  "COI",
+  "PERMIT",
+  "LICENSE",
+  "CERTIFICATION",
+  "CERTIFICATE_OF_INSURANCE",
+]);
 
 const formatLabel = (value = "") =>
   String(value)
@@ -39,13 +56,54 @@ const formatDate = (value) => {
   return date.toLocaleDateString();
 };
 
+const getExpiringDocumentStatus = (requirement = {}) => {
+  const rawType = String(requirement.type || "").toUpperCase();
+  const daysUntilExpiration = requirement.days_until_expiration;
+  const hasExpirationStatus =
+    EXPIRING_DOCUMENT_TYPES.has(rawType) && daysUntilExpiration !== null;
+
+  if (!hasExpirationStatus) {
+    return {
+      label: formatLabel(requirement.status),
+      countdown: "",
+      tone: "neutral",
+    };
+  }
+
+  if (Number(daysUntilExpiration) < 0) {
+    return {
+      label: "Expired",
+      countdown: "Expired",
+      tone: "expired",
+    };
+  }
+
+  if (Number(daysUntilExpiration) <= EXPIRATION_WARNING_DAYS) {
+    return {
+      label: "Expiring",
+      countdown: `${daysUntilExpiration} days left`,
+      tone: "expiring",
+    };
+  }
+
+  return {
+    label: "Active",
+    countdown: "",
+    tone: "active",
+  };
+};
+
 const VendorComplianceScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const { user } = useSelector((state) => state.userReducer);
   const foodTruckId = user?.foodTruck?._id;
   const [loading, setLoading] = useState(true);
   const [uploadingType, setUploadingType] = useState(null);
   const [summary, setSummary] = useState(null);
   const [history, setHistory] = useState([]);
+  const { checkAndRequestPermission: cameraPermissionStatus } = usePermission(
+    permission.camera
+  );
 
   const loadCompliance = useCallback(async () => {
     if (!foodTruckId) return;
@@ -68,28 +126,32 @@ const VendorComplianceScreen = ({ navigation }) => {
     loadCompliance();
   }, [loadCompliance]);
 
-  const pickAndUpload = async (requirement) => {
+  const uploadComplianceFile = async (requirement, file) => {
+    const payload = new FormData();
+    payload.append("document_type", requirement.type);
+    payload.append("title", requirement.label);
+    payload.append("file", {
+      uri: file.uri,
+      name: file.name || `${requirement.type}.pdf`,
+      type: file.type || "application/octet-stream",
+    });
+
+    setUploadingType(requirement.type);
+    await uploadVendorComplianceDocument_API({
+      foodtruck_id: foodTruckId,
+      payload,
+    });
+    await loadCompliance();
+  };
+
+  const pickFileAndUpload = async (requirement) => {
     try {
       const [file] = await DocumentPicker.pick({
         type: [types.pdf, types.images],
         allowMultiSelection: false,
       });
 
-      const payload = new FormData();
-      payload.append("document_type", requirement.type);
-      payload.append("title", requirement.label);
-      payload.append("file", {
-        uri: file.uri,
-        name: file.name || `${requirement.type}.pdf`,
-        type: file.type || "application/octet-stream",
-      });
-
-      setUploadingType(requirement.type);
-      await uploadVendorComplianceDocument_API({
-        foodtruck_id: foodTruckId,
-        payload,
-      });
-      await loadCompliance();
+      await uploadComplianceFile(requirement, file);
     } catch (error) {
       if (!DocumentPicker.isCancel(error)) {
         Alert.alert("Upload Failed", error?.message || "Please try again.");
@@ -99,16 +161,63 @@ const VendorComplianceScreen = ({ navigation }) => {
     }
   };
 
-  const scoreColor =
-    summary?.score_color_hex ||
-    SCORE_FALLBACK[summary?.score_color] ||
-    AppColor.primary;
-  const requirements = summary?.requirements || [];
+  const captureAndUpload = async (requirement) => {
+    try {
+      const cameraStatus = await cameraPermissionStatus();
+      if (cameraStatus !== RESULTS.GRANTED) return;
+
+      const image = await ImagePicker.openCamera({
+        cropping: false,
+        mediaType: "photo",
+      });
+      const file = {
+        uri: image?.path,
+        name:
+          image?.filename ||
+          image?.path?.split("/").pop() ||
+          `${requirement.type}-${Date.now()}.jpg`,
+        type: image?.mime || "image/jpeg",
+      };
+
+      await uploadComplianceFile(requirement, file);
+    } catch (error) {
+      Alert.alert("Upload Failed", error?.message || "Please try again.");
+    } finally {
+      setUploadingType(null);
+    }
+  };
+
+  const pickAndUpload = (requirement) => {
+    Alert.alert(`Upload ${requirement.label}`, "Choose how to add the document.", [
+      { text: "Camera", onPress: () => captureAndUpload(requirement) },
+      { text: "Files", onPress: () => pickFileAndUpload(requirement) },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+	  const scoreColor =
+	    summary?.score_color_hex ||
+	    SCORE_FALLBACK[summary?.score_color] ||
+	    AppColor.primary;
+	  const requirements = summary?.requirements || [];
+	  const supportPhone = summary?.support_phone_number || "(800) 410-7053";
+	  const supportPhoneDigits = String(supportPhone).replace(/\D/g, "");
+	  const callSupport = () => {
+	    if (!supportPhoneDigits) return;
+	    Linking.openURL(`tel:${supportPhoneDigits}`).catch(() => {
+	      Alert.alert("Support", `Please call ${supportPhone}.`);
+	    });
+	  };
 
   return (
     <View style={styles.container}>
       <StatusBarManager barStyle="dark-content" backgroundColor={AppColor.white} />
-      <View style={styles.header}>
+      <View
+        style={[
+          styles.header,
+          { paddingTop: insets.top + 12, minHeight: insets.top + 72 },
+        ]}
+      >
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={26} color={AppColor.black} />
         </TouchableOpacity>
@@ -133,17 +242,17 @@ const VendorComplianceScreen = ({ navigation }) => {
                   ? "Your compliance status is eligible."
                   : "Complete required documents before bidding or accepting orders."}
               </Text>
-              <Text style={styles.supportText}>
-                Support {summary?.support_phone_number || "(800) 410-7053"}
-              </Text>
+	              <TouchableOpacity onPress={callSupport} activeOpacity={0.7}>
+	                <Text style={styles.supportText}>Support {supportPhone}</Text>
+	              </TouchableOpacity>
             </View>
           </View>
 
           <Text style={styles.sectionTitle}>Required Documents</Text>
           {requirements.map((requirement) => {
             const document = requirement.document;
-            const status = formatLabel(requirement.status);
-            const isUploading = uploadingType === requirement.type;
+	            const status = getExpiringDocumentStatus(requirement);
+	            const isUploading = uploadingType === requirement.type;
 
             return (
               <View key={requirement.type} style={styles.documentCard}>
@@ -153,13 +262,19 @@ const VendorComplianceScreen = ({ navigation }) => {
                   </View>
                   <View style={styles.documentTitleContainer}>
                     <Text style={styles.documentTitle}>{requirement.label}</Text>
-                    <Text style={styles.documentSubtitle}>{status}</Text>
-                  </View>
-                  <Text style={[styles.statusPill, { color: scoreColor }]}>
-                    {requirement.days_until_expiration === null
-                      ? ""
-                      : `${requirement.days_until_expiration}d`}
-                  </Text>
+	                    <Text style={styles.documentSubtitle}>{status.label}</Text>
+	                  </View>
+	                  <Text
+	                    style={[
+	                      styles.statusPill,
+	                      status.tone === "expired" && styles.statusExpired,
+	                      status.tone === "expiring" && styles.statusExpiring,
+	                      status.tone === "active" && styles.statusActive,
+	                      status.tone === "neutral" && { color: scoreColor },
+	                    ]}
+	                  >
+	                    {status.countdown}
+	                  </Text>
                 </View>
                 <Text style={styles.documentMeta}>
                   Expires {formatDate(document?.expiration_date)}
@@ -210,7 +325,6 @@ const styles = StyleSheet.create({
     backgroundColor: AppColor.white,
   },
   header: {
-    height: 60,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
@@ -275,12 +389,12 @@ const styles = StyleSheet.create({
     color: AppColor.subText,
     marginTop: 4,
   },
-  supportText: {
-    fontFamily: Mulish600,
-    fontSize: 13,
-    color: AppColor.black,
-    marginTop: 8,
-  },
+	  supportText: {
+	    fontFamily: Mulish600,
+	    fontSize: 13,
+	    color: AppColor.primary,
+	    marginTop: 8,
+	  },
   sectionTitle: {
     fontFamily: Mulish700,
     fontSize: 16,
@@ -323,10 +437,19 @@ const styles = StyleSheet.create({
     color: AppColor.subText,
     marginTop: 2,
   },
-  statusPill: {
-    fontFamily: Mulish700,
-    fontSize: 12,
-  },
+	  statusPill: {
+	    fontFamily: Mulish700,
+	    fontSize: 12,
+	  },
+	  statusActive: {
+	    color: SCORE_FALLBACK.green,
+	  },
+	  statusExpiring: {
+	    color: SCORE_FALLBACK.yellow,
+	  },
+	  statusExpired: {
+	    color: SCORE_FALLBACK.red,
+	  },
   documentMeta: {
     fontFamily: Mulish400,
     fontSize: 12,

@@ -480,64 +480,99 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
       );
     });
 
-  const onPressUploadDocuments = async () => {
+  const addSelectedDocumentsFromFiles = async (files = []) => {
+    const existingNames = new Set(
+      (user?.foodTruck?.documents || [])
+        .filter((document) => document?.document_status !== "ARCHIVED")
+        .map((document) => document.title || document.original_name)
+        .map(normalizeDocumentName)
+        .filter(Boolean)
+    );
+    let nextSelectedDocuments = [...selectedDocuments];
+    const selectedNames = new Set(
+      nextSelectedDocuments
+        .map((document) => document.name)
+        .map(normalizeDocumentName)
+        .filter(Boolean)
+    );
+
+    for (const file of files) {
+      const fileName = normalizeDocumentName(file.name);
+      if (!fileName) continue;
+
+      if (existingNames.has(fileName)) {
+        const shouldReplace = await askReplaceDocument(
+          file.name || "Vendor document"
+        );
+        if (!shouldReplace) continue;
+        nextSelectedDocuments = nextSelectedDocuments.filter(
+          (document) => normalizeDocumentName(document.name) !== fileName
+        );
+        nextSelectedDocuments.push({ ...file, replaceExisting: true });
+        continue;
+      }
+
+      if (selectedNames.has(fileName)) {
+        const shouldReplace = await askReplaceDocument(
+          file.name || "Vendor document"
+        );
+        if (!shouldReplace) continue;
+        nextSelectedDocuments = nextSelectedDocuments.filter(
+          (document) => normalizeDocumentName(document.name) !== fileName
+        );
+      } else {
+        selectedNames.add(fileName);
+      }
+
+      nextSelectedDocuments.push(file);
+    }
+
+    setSelectedDocuments(nextSelectedDocuments);
+  };
+
+  const onPressUploadDocumentFiles = async () => {
     try {
       const pickedFiles = await DocumentPicker.pick({
         allowMultiSelection: true,
         type: [types.pdf, types.images],
       });
-      const existingNames = new Set(
-        (user?.foodTruck?.documents || [])
-          .filter((document) => document?.document_status !== "ARCHIVED")
-          .map((document) => document.title || document.original_name)
-          .map(normalizeDocumentName)
-          .filter(Boolean)
-      );
-      let nextSelectedDocuments = [...selectedDocuments];
-      const selectedNames = new Set(
-        nextSelectedDocuments
-          .map((document) => document.name)
-          .map(normalizeDocumentName)
-          .filter(Boolean)
-      );
-
-      for (const file of pickedFiles) {
-        const fileName = normalizeDocumentName(file.name);
-        if (!fileName) continue;
-
-        if (existingNames.has(fileName)) {
-          const shouldReplace = await askReplaceDocument(
-            file.name || "Vendor document"
-          );
-          if (!shouldReplace) continue;
-          nextSelectedDocuments = nextSelectedDocuments.filter(
-            (document) => normalizeDocumentName(document.name) !== fileName
-          );
-          nextSelectedDocuments.push({ ...file, replaceExisting: true });
-          continue;
-        }
-
-        if (selectedNames.has(fileName)) {
-          const shouldReplace = await askReplaceDocument(
-            file.name || "Vendor document"
-          );
-          if (!shouldReplace) continue;
-          nextSelectedDocuments = nextSelectedDocuments.filter(
-            (document) => normalizeDocumentName(document.name) !== fileName
-          );
-        } else {
-          selectedNames.add(fileName);
-        }
-
-        nextSelectedDocuments.push(file);
-      }
-
-      setSelectedDocuments(nextSelectedDocuments);
+      await addSelectedDocumentsFromFiles(pickedFiles);
     } catch (error) {
       if (!DocumentPicker.isCancel(error)) {
         console.log("document picker error => ", error);
       }
     }
+  };
+
+  const onPressUploadDocumentCamera = async () => {
+    try {
+      const cameraStatus = await cameraPermissionStatus();
+      if (cameraStatus !== RESULTS.GRANTED) return;
+
+      const image = await ImagePicker.openCamera({
+        cropping: false,
+        mediaType: "photo",
+      });
+      const fallbackName = `vendor-document-${Date.now()}.jpg`;
+      const cameraDocument = {
+        mode: "camera",
+        uri: image?.path,
+        name: image?.filename || image?.path?.split("/").pop() || fallbackName,
+        type: image?.mime || "image/jpeg",
+      };
+
+      await addSelectedDocumentsFromFiles([cameraDocument]);
+    } catch (error) {
+      console.log("document camera error => ", error);
+    }
+  };
+
+  const onPressUploadDocuments = () => {
+    Alert.alert("Upload Documents", "Choose how to add your document.", [
+      { text: "Camera", onPress: onPressUploadDocumentCamera },
+      { text: "Files", onPress: onPressUploadDocumentFiles },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const onDocumentsRemovePress = (index) => {
@@ -826,7 +861,7 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
       <StatusBarManager barStyle="light-content" />
 
       {/* Header Container */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <IconButton
           icon="arrow-left"
           iconColor={AppColor.white}
@@ -1255,6 +1290,8 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
 
               {/* Social Media */}
               <View style={[styles.section, { gap: 10 }]}>
+                <Text style={styles.sectionSubtitle}>Social Media Handle</Text>
+
                 {/* media link 1 */}
                 <MediaLinksComponent
                   // dropdownData={
