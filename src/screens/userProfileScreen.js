@@ -60,10 +60,16 @@ const canUseMultipleTruckUnits = (plan) => {
   );
 };
 
+const formatEmployeeRate = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? `$${parsed.toFixed(2)}` : "Not set";
+};
+
 const UserProfileScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
   const { user } = useSelector((state) => state.userReducer);
+  const isEmployeeProfile = !!user?.employee_internal_id;
 
   const [getUserDetailLoading, setGetUserDetailLoading] = useState(false);
   const [socialMedia, setSocialMedia] = useState([]);
@@ -380,20 +386,43 @@ const UserProfileScreen = ({ navigation }) => {
             </View>
 
             {/* Edit Button */}
-            <IconButton
-              icon="pencil"
-              iconColor={AppColor.black}
-              size={24}
-              onPress={() => navigation.navigate("editProfileScreen")}
-              style={{
-                position: "absolute",
-                right: 0,
-                top: -8,
-                overflow: "hidden",
-              }}
-            />
+            {!isEmployeeProfile ? (
+              <IconButton
+                icon="pencil"
+                iconColor={AppColor.black}
+                size={24}
+                onPress={() => navigation.navigate("editProfileScreen")}
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  top: -8,
+                  overflow: "hidden",
+                }}
+              />
+            ) : null}
 
-            {canUseEmployeeLogin && !!vendorAccessCode ? (
+            {isEmployeeProfile ? (
+              <View style={styles.employeeRateBox}>
+                <View style={styles.accessCodeIconContainer}>
+                  <MaterialIcons
+                    name="attach-money"
+                    size={22}
+                    color={AppColor.primary}
+                  />
+                </View>
+                <View style={styles.accessCodeTextContainer}>
+                  <Text style={styles.accessCodeLabel}>Employee Rate</Text>
+                  <Text style={styles.accessCodeHelper}>
+                    Read-only rate set by your vendor.
+                  </Text>
+                </View>
+                <Text style={styles.accessCodeValue}>
+                  {formatEmployeeRate(user?.employee_rate)}
+                </Text>
+              </View>
+            ) : null}
+
+            {!isEmployeeProfile && canUseEmployeeLogin && !!vendorAccessCode ? (
               <View style={styles.accessCodeBox}>
                 <View style={styles.accessCodeIconContainer}>
                   <Ionicons
@@ -728,6 +757,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FFF7ED",
     borderColor: "#FED7AA",
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    marginBottom: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  employeeRateBox: {
+    alignItems: "center",
+    backgroundColor: "#F5FAFF",
+    borderColor: "#BFDBFE",
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: "row",

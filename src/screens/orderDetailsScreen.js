@@ -65,10 +65,35 @@ const isCompletedRefundWindowExpired = (order) => {
   return Date.now() - completedDate.getTime() > TEN_MINUTES_MS;
 };
 
-const getDisplayOrderStatus = (order) =>
-  order?.refundStatus === "PENDING"
-    ? "Refund Pending"
-    : orderCurrentStatusNames[order?.orderStatus];
+const isRefundedOrder = (order) =>
+  order?.paymentStatus === "REFUNDED" || order?.refundStatus === "SUCCESS";
+
+const getDisplayOrderStatus = (order) => {
+  if (isRefundedOrder(order)) return "Refunded";
+  if (order?.refundStatus === "PENDING") return "Refund Pending";
+  return orderCurrentStatusNames[order?.orderStatus];
+};
+
+const getOrderStatusTone = (order) => {
+  if (isRefundedOrder(order)) return "refunded";
+  if (
+    [orderStatusStrings.completed, orderStatusStrings.delivered].includes(
+      order?.orderStatus
+    )
+  ) {
+    return "complete";
+  }
+  if (
+    [
+      orderStatusStrings.preparing,
+      orderStatusStrings.ready_for_pickup,
+      orderStatusStrings.driver_picked_up,
+    ].includes(order?.orderStatus)
+  ) {
+    return "progress";
+  }
+  return "attention";
+};
 
 const OrderDetailsScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -413,10 +438,8 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     orderData?.guestCustomer?.phone ||
     "Walk-up Guest";
   const hasCustomerProfileImage = !!orderData?.user?.profilePic;
-  const terminalStatusLabel =
-    orderData?.paymentStatus === "REFUNDED"
-      ? "Refunded"
-      : getDisplayOrderStatus(orderData);
+  const terminalStatusLabel = getDisplayOrderStatus(orderData);
+  const statusTone = getOrderStatusTone(orderData);
 
   return (
     <View style={styles.container}>
@@ -559,9 +582,22 @@ const OrderDetailsScreen = ({ navigation, route }) => {
               <Text style={[styles.orderIdText, { color: AppColor.black }]}>
                 {"Order Status"}
               </Text>
-              <Text style={[styles.orderIdText, { color: AppColor.primary }]}>
-                {getDisplayOrderStatus(orderData)}
-              </Text>
+              <View style={[styles.statusPill, styles[`statusPill${statusTone}`]]}>
+                <View
+                  style={[
+                    styles.statusDot,
+                    styles[`statusDot${statusTone}`],
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.statusPillText,
+                    styles[`statusPillText${statusTone}`],
+                  ]}
+                >
+                  {getDisplayOrderStatus(orderData)}
+                </Text>
+              </View>
             </View>
             {/* Order ID and Location */}
             <View
@@ -1330,6 +1366,62 @@ const styles = StyleSheet.create({
     fontFamily: Mulish400,
     fontSize: 14,
     color: "#6F6F6F",
+  },
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: "rgba(252, 123, 3, 0.08)",
+  },
+  statusPillattention: {
+    backgroundColor: "rgba(244, 67, 54, 0.1)",
+  },
+  statusPillprogress: {
+    backgroundColor: "rgba(255, 152, 0, 0.12)",
+  },
+  statusPillcomplete: {
+    backgroundColor: "rgba(76, 175, 80, 0.12)",
+  },
+  statusPillrefunded: {
+    backgroundColor: "rgba(142, 142, 147, 0.14)",
+  },
+  statusPillText: {
+    fontFamily: Mulish400,
+    fontSize: 14,
+    color: AppColor.primary,
+  },
+  statusPillTextattention: {
+    color: AppColor.snackbarError,
+  },
+  statusPillTextprogress: {
+    color: AppColor.snackbarWarning,
+  },
+  statusPillTextcomplete: {
+    color: AppColor.snackbarSuccess,
+  },
+  statusPillTextrefunded: {
+    color: AppColor.gray,
+  },
+  statusDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    backgroundColor: AppColor.primary,
+  },
+  statusDotattention: {
+    backgroundColor: AppColor.snackbarError,
+  },
+  statusDotprogress: {
+    backgroundColor: AppColor.snackbarWarning,
+  },
+  statusDotcomplete: {
+    backgroundColor: AppColor.snackbarSuccess,
+  },
+  statusDotrefunded: {
+    backgroundColor: AppColor.gray,
   },
   orderHeader: {
     flexDirection: "row",

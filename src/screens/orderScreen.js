@@ -35,10 +35,35 @@ import {
 import { printOrderTickets } from "../helpers/print.helper";
 import AppImage from "../components/AppImage";
 
-const getDisplayOrderStatus = (order) =>
-  order?.refundStatus === "PENDING"
-    ? "Refund Pending"
-    : orderCurrentStatusNames[order?.orderStatus];
+const isRefundedOrder = (order) =>
+  order?.paymentStatus === "REFUNDED" || order?.refundStatus === "SUCCESS";
+
+const getDisplayOrderStatus = (order) => {
+  if (isRefundedOrder(order)) return "Refunded";
+  if (order?.refundStatus === "PENDING") return "Refund Pending";
+  return orderCurrentStatusNames[order?.orderStatus];
+};
+
+const getOrderStatusTone = (order) => {
+  if (isRefundedOrder(order)) return "refunded";
+  if (
+    [orderStatusStrings.completed, orderStatusStrings.delivered].includes(
+      order?.orderStatus
+    )
+  ) {
+    return "complete";
+  }
+  if (
+    [
+      orderStatusStrings.preparing,
+      orderStatusStrings.ready_for_pickup,
+      orderStatusStrings.driver_picked_up,
+    ].includes(order?.orderStatus)
+  ) {
+    return "progress";
+  }
+  return "attention";
+};
 
 const ACTIVE_ORDER_STATUSES = [
   orderStatusStrings.placed,
@@ -54,7 +79,6 @@ const OrderScreen = ({ navigation }) => {
   const { profileStatus } = useSelector((state) => state.userReducer);
 
   const [dataLoading, setDataLoading] = useState(false);
-  const [activeStage, setActiveStage] = useState("current");
   const [menuVisible, setMenuVisible] = useState(null);
   const [orderData, setOrderData] = useState([]);
   const [printing, setPrinting] = useState(false);
@@ -81,6 +105,7 @@ const OrderScreen = ({ navigation }) => {
     const hideActionBtns = orderIsTerminal || isVendorPosOrder(item);
     const locationData = extractAdvanceOrderLocationAndTime(item);
     const isSelectedForPrint = selectedPrintOrderIds.includes(item?._id);
+    const statusTone = getOrderStatusTone(item);
 
     return (
       <TouchableOpacity
@@ -124,7 +149,10 @@ const OrderScreen = ({ navigation }) => {
             onDismiss={handleMenuVisibility}
             anchor={
               <TouchableOpacity
-                style={styles.menuAnchorContainer}
+                style={[
+                  styles.menuAnchorContainer,
+                  styles[`menuAnchorContainer${statusTone}`],
+                ]}
                 activeOpacity={0.7}
                 onPress={() =>
                   !isPrintSelectMode &&
@@ -132,14 +160,33 @@ const OrderScreen = ({ navigation }) => {
                   handleMenuVisibility({ menuIndex: index })
                 }
               >
-                <Text style={styles.menuAnchorText}>
+                <View
+                  style={[
+                    styles.statusDot,
+                    styles[`statusDot${statusTone}`],
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.menuAnchorText,
+                    styles[`menuAnchorText${statusTone}`],
+                  ]}
+                >
                   {getDisplayOrderStatus(item)}
                 </Text>
-                <Feather
-                  name="chevron-down"
-                  size={16}
-                  color={AppColor.primary}
-                />
+                {!orderIsTerminal ? (
+                  <Feather
+                    name="chevron-down"
+                    size={16}
+                    color={
+                      statusTone === "attention"
+                        ? AppColor.snackbarError
+                        : statusTone === "progress"
+                        ? AppColor.snackbarWarning
+                        : AppColor.primary
+                    }
+                  />
+                ) : null}
               </TouchableOpacity>
             }
             contentStyle={styles.menuContent}
@@ -370,12 +417,6 @@ const OrderScreen = ({ navigation }) => {
     );
   };
 
-  // handle stage change
-  const handleStageChange = (stage) => {
-    cancelPrintSelection();
-    setActiveStage(stage);
-  };
-
   // handle hide menu
   const handleMenuVisibility = ({ menuIndex = null }) => {
     setMenuVisible(menuIndex);
@@ -477,7 +518,7 @@ const OrderScreen = ({ navigation }) => {
       });
       console.log("response => ", response);
       if (response?.success && response?.data) {
-        await getOrderDataFromAPI(1, false, activeStage === "advance");
+        await getOrderDataFromAPI(1, false);
         dispatch(
           showSnackbar({
             type: "success",
@@ -560,13 +601,13 @@ const OrderScreen = ({ navigation }) => {
   // Handle load more
   const handleLoadMore = () => {
     if (!isLoadingMore && hasMoreData) {
-      getOrderDataFromAPI(currentPage + 1, true, activeStage === "advance");
+      getOrderDataFromAPI(currentPage + 1, true);
     }
   };
 
   // Handle refresh
   const handleRefresh = () => {
-    getOrderDataFromAPI(1, false, activeStage === "advance");
+    getOrderDataFromAPI(1, false);
   };
 
   // update order status API
@@ -584,7 +625,7 @@ const OrderScreen = ({ navigation }) => {
       });
       console.log("response => ", response);
       if (response?.success && response?.data) {
-        await getOrderDataFromAPI(1, false, activeStage === "advance");
+        await getOrderDataFromAPI(1, false);
       }
     } catch (error) {
       console.log("error => ", error);
@@ -595,8 +636,7 @@ const OrderScreen = ({ navigation }) => {
   // fetch order data from API
   const getOrderDataFromAPI = async (
     page = 1,
-    isLoadMore = false,
-    advance = false
+    isLoadMore = false
   ) => {
     if (isLoadMore) {
       setIsLoadingMore(true);
@@ -608,10 +648,8 @@ const OrderScreen = ({ navigation }) => {
       let payload = {
         page,
         limit: 20,
-        advance,
-        status: advance
-          ? "PLACED, ACCEPTED, PREPARING, READY_FOR_PICKUP, DRIVER_PICKED_UP"
-          : "PLACED, ACCEPTED, PREPARING, READY_FOR_PICKUP, DRIVER_PICKED_UP",
+        advance: false,
+        status: "PLACED, ACCEPTED, PREPARING, READY_FOR_PICKUP, DRIVER_PICKED_UP",
       };
 
       const response = await getOrderList_API(payload);
@@ -649,13 +687,13 @@ const OrderScreen = ({ navigation }) => {
     setCurrentPage(1);
     setHasMoreData(true);
     setOrderData([]);
-    getOrderDataFromAPI(1, false, activeStage === "advance");
-  }, [activeStage]);
+    getOrderDataFromAPI(1, false);
+  }, []);
 
   useFocusEffect(
     React.useCallback(() => {
-      getOrderDataFromAPI(1, false, activeStage === "advance");
-    }, [activeStage])
+      getOrderDataFromAPI(1, false);
+    }, [])
   );
 
   return (
@@ -718,50 +756,6 @@ const OrderScreen = ({ navigation }) => {
 
       {profileStatus === vendorProfileStatus.approved ? (
         <>
-          {/* Button Container */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              style={
-                activeStage === "current"
-                  ? styles.activeButton
-                  : styles.inactiveButton
-              }
-              onPress={() => handleStageChange("current")}
-              disabled={dataLoading}
-            >
-              <Text
-                style={
-                  activeStage === "current"
-                    ? styles.activeButtonText
-                    : styles.inactiveButtonText
-                }
-              >
-                {"Regular Orders"}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              style={
-                activeStage === "advance"
-                  ? styles.activeButton
-                  : styles.inactiveButton
-              }
-              onPress={() => handleStageChange("advance")}
-              disabled={dataLoading}
-            >
-              <Text
-                style={
-                  activeStage === "advance"
-                    ? styles.activeButtonText
-                    : styles.inactiveButtonText
-                }
-              >
-                {"Pre-Orders"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
           <TouchableOpacity
             activeOpacity={0.7}
             style={styles.pastOrdersButton}
@@ -868,41 +862,6 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
 
-  // Button Container
-  buttonContainer: {
-    flexDirection: "row",
-    gap: 16,
-    padding: 16,
-  },
-  activeButton: {
-    height: 46,
-    flex: 1 / 2,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 4.24,
-    backgroundColor: AppColor.primary,
-  },
-  activeButtonText: {
-    fontFamily: Mulish700,
-    fontSize: 16,
-    color: AppColor.white,
-  },
-  inactiveButton: {
-    height: 46,
-    flex: 1 / 2,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 4.24,
-    borderStyle: "dashed",
-    borderWidth: 1,
-    borderColor: AppColor.primary,
-    backgroundColor: AppColor.white,
-  },
-  inactiveButtonText: {
-    fontFamily: Mulish700,
-    fontSize: 16,
-    color: AppColor.primary,
-  },
   pastOrdersButton: {
     minHeight: 46,
     marginHorizontal: 16,
@@ -1088,6 +1047,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: "rgba(252, 123, 3, 0.08)",
+  },
+  menuAnchorContainerattention: {
+    backgroundColor: "rgba(244, 67, 54, 0.1)",
+  },
+  menuAnchorContainerprogress: {
+    backgroundColor: "rgba(255, 152, 0, 0.12)",
+  },
+  menuAnchorContainercomplete: {
+    backgroundColor: "rgba(76, 175, 80, 0.12)",
+  },
+  menuAnchorContainerrefunded: {
+    backgroundColor: "rgba(142, 142, 147, 0.14)",
   },
   menuAnchorText: {
     fontFamily: Mulish400,
@@ -1095,6 +1070,36 @@ const styles = StyleSheet.create({
     color: AppColor.primary,
     textTransform: "capitalize",
     textAlign: "right",
+  },
+  menuAnchorTextattention: {
+    color: AppColor.snackbarError,
+  },
+  menuAnchorTextprogress: {
+    color: AppColor.snackbarWarning,
+  },
+  menuAnchorTextcomplete: {
+    color: AppColor.snackbarSuccess,
+  },
+  menuAnchorTextrefunded: {
+    color: AppColor.gray,
+  },
+  statusDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    backgroundColor: AppColor.primary,
+  },
+  statusDotattention: {
+    backgroundColor: AppColor.snackbarError,
+  },
+  statusDotprogress: {
+    backgroundColor: AppColor.snackbarWarning,
+  },
+  statusDotcomplete: {
+    backgroundColor: AppColor.snackbarSuccess,
+  },
+  statusDotrefunded: {
+    backgroundColor: AppColor.gray,
   },
   menuContent: {
     backgroundColor: AppColor.white,

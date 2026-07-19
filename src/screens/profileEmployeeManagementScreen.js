@@ -31,6 +31,7 @@ const initialForm = {
   first_name: "",
   last_name: "",
   zip_code: "",
+  employee_rate: "",
   assigned_location_id: "",
   assigned_truck_unit_id: "",
   pin: "",
@@ -46,6 +47,12 @@ const getGeneratedLoginPreview = ({ first_name, last_name, zip_code }) => {
 
 const normalizePin = (value) => value.replace(/\D/g, "").slice(0, 4);
 const isFourDigitPin = (value) => /^\d{4}$/.test(value);
+const normalizeRateInput = (value) =>
+  value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+const formatEmployeeRate = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? `$${parsed.toFixed(2)}` : "Not set";
+};
 const SHIFT_HISTORY_FILTERS = [
   { label: "Week", value: "week" },
   { label: "Month", value: "month" },
@@ -86,6 +93,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const [managementMode, setManagementMode] = useState(initialMode);
   const [employeeLocationDrafts, setEmployeeLocationDrafts] = useState({});
   const [employeeTruckDrafts, setEmployeeTruckDrafts] = useState({});
+  const [employeeRateDrafts, setEmployeeRateDrafts] = useState({});
   const [activeTab, setActiveTab] = useState("current");
   const [shiftHistoryRange, setShiftHistoryRange] = useState("week");
   const [shiftHistoryByEmployee, setShiftHistoryByEmployee] = useState({});
@@ -158,6 +166,14 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
               ...current,
               [matchedEmployee._id]:
                 matchedEmployee.assigned_truck_unit_id || "",
+            }));
+            setEmployeeRateDrafts((current) => ({
+              ...current,
+              [matchedEmployee._id]:
+                matchedEmployee.employee_rate !== null &&
+                matchedEmployee.employee_rate !== undefined
+                  ? String(matchedEmployee.employee_rate)
+                  : "",
             }));
             setManagementMode("manage");
           }
@@ -253,6 +269,14 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
       [employee._id]:
         current[employee._id] || employee.assigned_truck_unit_id || "",
     }));
+    setEmployeeRateDrafts((current) => ({
+      ...current,
+      [employee._id]:
+        current[employee._id] ||
+        (employee.employee_rate !== null && employee.employee_rate !== undefined
+          ? String(employee.employee_rate)
+          : ""),
+    }));
   };
 
   const loadShiftHistory = async (employee, range = shiftHistoryRange) => {
@@ -295,6 +319,27 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
       ...current,
       [employeeId]: truckUnitId,
     }));
+  };
+
+  const setEmployeeRateDraft = (employeeId, rate) => {
+    setEmployeeRateDrafts((current) => ({
+      ...current,
+      [employeeId]: normalizeRateInput(rate),
+    }));
+  };
+
+  const saveEmployeeRate = async (employee) => {
+    const draftRate = employeeRateDrafts[employee._id] ?? "";
+    const normalizedRate = draftRate === "" ? null : Number(draftRate);
+
+    if (draftRate !== "" && !Number.isFinite(normalizedRate)) {
+      Alert.alert("Rate invalid", "Enter a valid employee rate.");
+      return;
+    }
+
+    await updateEmployee(employee, {
+      employee_rate: normalizedRate,
+    });
   };
 
   const assignEmployeeLocation = async (employee) => {
@@ -472,13 +517,29 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
               </View>
             </View>
 
-            <Text style={styles.label}>Zip Code</Text>
-            <TextInput
-              value={form.zip_code}
-              onChangeText={(text) => setFormValue("zip_code", text)}
-              keyboardType="number-pad"
-              style={styles.input}
-            />
+            <View style={styles.row}>
+              <View style={styles.halfField}>
+                <Text style={styles.label}>Zip Code</Text>
+                <TextInput
+                  value={form.zip_code}
+                  onChangeText={(text) => setFormValue("zip_code", text)}
+                  keyboardType="number-pad"
+                  style={styles.input}
+                />
+              </View>
+              <View style={styles.halfField}>
+                <Text style={styles.label}>Employee Rate</Text>
+                <TextInput
+                  value={form.employee_rate}
+                  onChangeText={(text) =>
+                    setFormValue("employee_rate", normalizeRateInput(text))
+                  }
+                  keyboardType="decimal-pad"
+                  placeholder="0.00"
+                  style={styles.input}
+                />
+              </View>
+            </View>
 
             <Text style={styles.label}>Assigned Location</Text>
             <Dropdown
@@ -614,11 +675,14 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                   <Text style={styles.employeeName}>
                     {employee.first_name} {employee.last_name}
                   </Text>
-                  <Text style={styles.employeeMeta}>
-                    {employee.role} - {employee.zip_code}
-                  </Text>
-                  <Text style={styles.employeeMeta}>
-                    Assigned: {getLocationLabel(employee.assigned_location_id)}
+	                  <Text style={styles.employeeMeta}>
+	                    {employee.role} - {employee.zip_code}
+	                  </Text>
+	                  <Text style={styles.employeeMeta}>
+	                    Rate: {formatEmployeeRate(employee.employee_rate)}
+	                  </Text>
+	                  <Text style={styles.employeeMeta}>
+	                    Assigned: {getLocationLabel(employee.assigned_location_id)}
                   </Text>
                   <Text style={styles.employeeMeta}>
                     Truck:{" "}
@@ -666,11 +730,35 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                 expandedEmployeeId === employee._id ? (
                 <View style={styles.submenu}>
                   <Text style={styles.submenuTitle}>Truck Assignment</Text>
-                  <Text style={styles.helperText}>
-                    Moving an employee to another truck or location sets them off
-                    duty and ends any active session.
-                  </Text>
-                  <Text style={styles.label}>Assigned Truck</Text>
+	                  <Text style={styles.helperText}>
+	                    Moving an employee to another truck or location sets them off
+	                    duty and ends any active session.
+	                  </Text>
+	                  <Text style={styles.label}>Employee Rate</Text>
+	                  <View style={styles.rateEditRow}>
+	                    <TextInput
+	                      value={
+	                        employeeRateDrafts[employee._id] ??
+	                        (employee.employee_rate !== null &&
+	                        employee.employee_rate !== undefined
+	                          ? String(employee.employee_rate)
+	                          : "")
+	                      }
+	                      onChangeText={(text) =>
+	                        setEmployeeRateDraft(employee._id, text)
+	                      }
+	                      keyboardType="decimal-pad"
+	                      placeholder="0.00"
+	                      style={[styles.input, styles.rateInput]}
+	                    />
+	                    <TouchableOpacity
+	                      onPress={() => saveEmployeeRate(employee)}
+	                      style={styles.rateSaveButton}
+	                    >
+	                      <Text style={styles.rateSaveButtonText}>Save Rate</Text>
+	                    </TouchableOpacity>
+	                  </View>
+	                  <Text style={styles.label}>Assigned Truck</Text>
                   <Dropdown
                     data={truckOptions}
                     labelField="label"
@@ -962,7 +1050,7 @@ const styles = StyleSheet.create({
     color: AppColor.primary,
     fontFamily: Mulish700,
   },
-  row: { flexDirection: "row", gap: 10 },
+  row: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   halfField: { flex: 1 },
   label: {
     fontSize: 13,
@@ -979,7 +1067,9 @@ const styles = StyleSheet.create({
     color: AppColor.text,
     fontFamily: Mulish400,
     paddingHorizontal: 12,
-    minHeight: 46,
+    paddingVertical: 11,
+    minHeight: 48,
+    textAlignVertical: "center",
   },
   readOnlyInput: {
     borderWidth: 1,
@@ -989,7 +1079,30 @@ const styles = StyleSheet.create({
     color: AppColor.text,
     fontFamily: Mulish600,
     paddingHorizontal: 12,
-    minHeight: 46,
+    paddingVertical: 11,
+    minHeight: 48,
+    textAlignVertical: "center",
+  },
+  rateEditRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  rateInput: {
+    flex: 1,
+  },
+  rateSaveButton: {
+    minHeight: 48,
+    borderRadius: 8,
+    backgroundColor: AppColor.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 14,
+  },
+  rateSaveButtonText: {
+    color: AppColor.white,
+    fontFamily: Mulish700,
+    fontSize: 13,
   },
   helperText: {
     color: AppColor.textHighlighter,
@@ -1001,7 +1114,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: AppColor.border,
     borderRadius: 8,
-    minHeight: 46,
+    minHeight: 48,
     paddingHorizontal: 12,
     backgroundColor: AppColor.white,
   },

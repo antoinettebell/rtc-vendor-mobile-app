@@ -330,8 +330,7 @@ const HomeScreen = ({ navigation }) => {
     user?.foodTruck,
   ]);
 
-  // Location Switch
-  const handlePress = async () => {
+  const updateOrderingStatus = async ({ nextOpen, overrideReason }) => {
     if (!selectedLocation && !isOn.value) {
       Alert.alert("Please select a location");
       return;
@@ -356,7 +355,7 @@ const HomeScreen = ({ navigation }) => {
     }
 
     isOn.value = !temp_isOn;
-    setIsOpen(!temp_isOpen);
+    setIsOpen(nextOpen);
 
     try {
       const foodtruck_id = user?.foodTruck?._id;
@@ -364,7 +363,8 @@ const HomeScreen = ({ navigation }) => {
         foodtruck_id,
         location_id: selectedLocation,
         truck_unit_id: selectedTruck?._id || null,
-        isOrderingOpen: !temp_isOpen,
+        isOrderingOpen: nextOpen,
+        schedule_override_reason: overrideReason,
       });
       if (response?.success && response.data) {
         console.log("response => ", response);
@@ -373,7 +373,7 @@ const HomeScreen = ({ navigation }) => {
         dispatch(
           showSnackbar({
             message: `${selectedTruck?.label || "Truck"} is ${
-              !temp_isOpen ? "open" : "closed"
+              nextOpen ? "open" : "closed"
             }`,
             type: "success",
           })
@@ -391,6 +391,29 @@ const HomeScreen = ({ navigation }) => {
       );
     } finally {
     }
+  };
+
+  // Location Switch
+  const handlePress = async () => {
+    const nextOpen = !isOpen;
+
+    Alert.alert(
+      nextOpen ? "Are you opening early?" : "Are you closing early?",
+      nextOpen
+        ? "This will mark your selected truck/location open for customers now."
+        : "This will mark your selected truck/location closed for customers now.",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Yes",
+          onPress: () =>
+            updateOrderingStatus({
+              nextOpen,
+              overrideReason: nextOpen ? "OPENING_EARLY" : "CLOSING_EARLY",
+            }),
+        },
+      ]
+    );
   };
 
   const getUserDataFromAPI = async () => {
@@ -658,25 +681,36 @@ const HomeScreen = ({ navigation }) => {
 
   useEffect(() => {
     setLocations(user?.foodTruck?.locations || []);
+    const openUnit = activeTruckUnits.find((unit) => getTruckOpenLocationId(unit));
     const activeUnit =
       activeTruckUnits.find(
         (unit) => unit.value?.toString() === selectedTruckUnit?.toString()
-      ) || activeTruckUnits[0];
+      ) ||
+      openUnit ||
+      activeTruckUnits[0];
     const openLocationId = getTruckOpenLocationId(activeUnit);
+    const openUnitLocationId = getTruckOpenLocationId(openUnit);
+    const nextOpenUnit = openUnit || activeUnit;
 
     if (
-      activeUnit &&
-      activeUnit.value?.toString() !== selectedTruckUnit?.toString()
+      nextOpenUnit &&
+      nextOpenUnit.value?.toString() !== selectedTruckUnit?.toString()
     ) {
-      setSelectedTruckUnit(activeUnit.value || null);
+      setSelectedTruckUnit(nextOpenUnit.value || null);
     }
 
     setSelectedLocation((current) => {
+      if (openUnitLocationId) {
+        return openUnitLocationId;
+      }
+      if (openLocationId) {
+        return openLocationId;
+      }
       const stillExists = (user?.foodTruck?.locations || []).some(
         (location) => location._id?.toString() === current?.toString()
       );
       if (stillExists) return current;
-      return openLocationId || user?.foodTruck?.currentLocation || null;
+      return user?.foodTruck?.currentLocation || null;
     });
   }, [user?.foodTruck, activeTruckUnits, getTruckOpenLocationId]);
 

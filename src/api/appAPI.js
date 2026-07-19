@@ -597,12 +597,13 @@ export const updateLocationOrdering_API = async ({
   location_id,
   isOrderingOpen,
   truck_unit_id = null,
+  schedule_override_reason = null,
 }) => {
   try {
     const URL = UPDATE_LOCATION_ORDERING(foodtruck_id, location_id);
     const response = await apiClient.patch(
       URL,
-      { isOrderingOpen, truck_unit_id },
+      { isOrderingOpen, truck_unit_id, schedule_override_reason },
       { skipToken: false },
     );
     return response?.data;

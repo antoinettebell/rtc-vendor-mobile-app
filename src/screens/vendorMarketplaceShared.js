@@ -162,11 +162,12 @@ export const normalizeMarketplaceRequirementLabel = (label) => {
     return "Insurance";
   }
   if (
+    normalized === "sanitation grade" ||
     normalized === "health permit" ||
     normalized === "health department" ||
     normalized === "food handler permit"
   ) {
-    return "Health Permit";
+    return "Sanitation Grade";
   }
   if (normalized === "alcohol" || normalized === "liquor license") {
     return "Liquor License";
@@ -481,16 +482,17 @@ export const styles = StyleSheet.create({
     lineHeight: 17,
   },
   input: {
-    minHeight: 44,
+    minHeight: 48,
     borderWidth: 1,
     borderColor: "#DDE2EA",
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 11,
     fontFamily: Mulish400,
     fontSize: 14,
     color: AppColor.text,
     backgroundColor: AppColor.white,
+    textAlignVertical: "center",
   },
   formGrid: {
     flexDirection: "row",
@@ -585,7 +587,7 @@ export const styles = StyleSheet.create({
   },
   fileDropdown: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 48,
     borderWidth: 1,
     borderColor: "#DDE2EA",
     borderRadius: 8,

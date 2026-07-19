@@ -815,8 +815,8 @@ const styles = StyleSheet.create({
   },
 
   dropdown: {
-    height: 40,
-    width: "84%",
+    flex: 1,
+    minHeight: 48,
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 6,
@@ -894,7 +894,7 @@ const styles = StyleSheet.create({
   },
   timeSlotRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: 16,
     marginBottom: 16,
@@ -913,7 +913,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     borderRadius: 5,
-    padding: 10,
+    minHeight: 48,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
     borderWidth: 1,
     borderColor: AppColor.border,
   },
@@ -929,12 +931,13 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    gap: 10,
   },
   removeLocationButton: {
-    alignItems: "flex-end",
+    alignItems: "center",
     justifyContent: "center",
-    height: 40,
-    width: "16%",
+    height: 48,
+    width: 48,
   },
   divider: {
     borderBottomColor: "#E5E5EA",

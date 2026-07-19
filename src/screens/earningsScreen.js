@@ -977,20 +977,47 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
 
                 {!isEmployeesScreen ? (
                   <View style={styles.subsectionCard}>
-                    <View style={styles.activityHeader}>
+                    <View style={styles.refundSectionHeader}>
                       <Text style={styles.subsectionTitle}>Refund Requests</Text>
+                    </View>
+                    <View style={styles.refundFilterBar}>
+                      <View>
+                        <Text style={styles.refundFilterLabel}>Status</Text>
+                        <Text style={styles.refundFilterHint}>
+                          Show requests by review status
+                        </Text>
+                      </View>
                       <Pressable
-                        style={styles.compactSelect}
+                        style={styles.refundFilterSelect}
                         onPress={() => setFilterPicker("status")}
                       >
-                        <Text style={styles.compactSelectText}>
+                        <Text style={styles.refundFilterSelectText}>
                           {selectedFilterLabel(
                             statusOptions,
                             requestStatusFilter,
                             "All"
                           )}
                         </Text>
+                        <MaterialCommunityIcons
+                          name="chevron-down"
+                          size={18}
+                          color={AppColor.primary}
+                        />
                       </Pressable>
+                    </View>
+                    <View style={styles.requestStatusRow}>
+                      <Text style={styles.requestStatusText}>
+                        Pending {refundStatusCounts.pending}
+                      </Text>
+                      <Text style={styles.requestStatusText}>
+                        Approved {refundStatusCounts.approved}
+                      </Text>
+                      <Text style={styles.requestStatusText}>
+                        Rejected {refundStatusCounts.rejected}
+                      </Text>
+                      <Text style={styles.requestStatusText}>
+                        All {refundStatusCounts.all}
+                      </Text>
                     </View>
                     {refundRequests.length ? (
                       refundRequests.map((request) => {
@@ -1908,6 +1935,46 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 10,
     marginTop: 12,
+  },
+  refundSectionHeader: {
+    marginBottom: 2,
+  },
+  refundFilterBar: {
+    alignItems: "center",
+    backgroundColor: AppColor.white,
+    borderColor: "#FFE0C2",
+    borderRadius: 10,
+    borderWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    padding: 10,
+  },
+  refundFilterLabel: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  refundFilterHint: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 11,
+  },
+  refundFilterSelect: {
+    alignItems: "center",
+    backgroundColor: "#FFF5EE",
+    borderColor: AppColor.primary,
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 4,
+    minHeight: 36,
+    paddingHorizontal: 12,
+  },
+  refundFilterSelectText: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
+    fontSize: 12,
   },
   requestStatusText: {
     color: AppColor.textHighlighter,
