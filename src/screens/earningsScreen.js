@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo, useState } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -35,6 +35,9 @@ const DATE_FILTERS = [
   { label: "This Week", value: "week" },
   { label: "This Month", value: "month" },
 ];
+const EMPLOYEE_DATE_FILTERS = DATE_FILTERS.filter(
+  (item) => item.value !== "month"
+);
 
 const PAYMENT_FILTERS = [
   { label: "All", value: null },
@@ -227,22 +230,29 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
         const metrics = employee.metrics || {};
         const orders = Number(metrics.orders_processed || 0);
         const sales = Number(metrics.gross_sales || 0);
-        const requests = Number(metrics.refund_cancel_requests_submitted || 0);
+	        const requests = Number(metrics.refund_cancel_requests_submitted || 0);
+	        const grossHours = Number(metrics.gross_hours_worked || 0);
+	        const netHours = Number(metrics.net_hours_worked || 0);
 
-        return {
-          sales: acc.sales + sales,
-          orders: acc.orders + orders,
-          requests: acc.requests + requests,
-        };
-      },
-      { sales: 0, orders: 0, requests: 0 }
-    );
+	        return {
+	          sales: acc.sales + sales,
+	          orders: acc.orders + orders,
+	          requests: acc.requests + requests,
+	          grossHours: acc.grossHours + grossHours,
+	          netHours: acc.netHours + netHours,
+	        };
+	      },
+	      { sales: 0, orders: 0, requests: 0, grossHours: 0, netHours: 0 }
+	    );
 
     return {
       ...totals,
-      averageTicket: totals.orders ? totals.sales / totals.orders : 0,
-    };
-  }, []);
+	      averageTicket: totals.orders ? totals.sales / totals.orders : 0,
+	    };
+	  }, []);
+	  const activeDateFilters = isEmployeesScreen
+	    ? EMPLOYEE_DATE_FILTERS
+	    : DATE_FILTERS;
   const analyticsEmployees = isEmployeesScreen ? statusFilteredEmployees : employees;
   const analyticsSummary = useMemo(() => {
     const allEmployees = allFoodTruckAnalytics?.employees || [];
@@ -259,9 +269,41 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
     () => buildAnalyticsSummary(allFoodTruckAnalytics?.employees || []),
     [allFoodTruckAnalytics, buildAnalyticsSummary]
   );
-  const earningsSummaryRows = useMemo(
-    () => [
-      {
+	  useEffect(() => {
+	    if (isEmployeesScreen && dateFilter === "month") {
+	      setDateFilter("week");
+	    }
+	  }, [dateFilter, isEmployeesScreen]);
+
+	  const earningsSummaryRows = useMemo(
+	    () => {
+	      if (isEmployeesScreen) {
+	        return [
+	          {
+	            key: "grossSales",
+	            label: "Employee Sales",
+	            value: `$${formatMoney(analyticsSummary.sales)}`,
+	          },
+	          {
+	            key: "orders",
+	            label: "Orders Handled",
+	            value: String(analyticsSummary.orders),
+	          },
+	          {
+	            key: "grossHours",
+	            label: "With Breaks",
+	            value: `${analyticsSummary.grossHours.toFixed(2)} hrs`,
+	          },
+	          {
+	            key: "netHours",
+	            label: "Without Breaks",
+	            value: `${analyticsSummary.netHours.toFixed(2)} hrs`,
+	          },
+	        ];
+	      }
+
+	      return [
+	      {
         key: "grossSales",
         label: "Gross Sales",
         value: `$${formatMoney(allFoodTruckSummary.sales)}`,
@@ -288,10 +330,11 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
         value: `$${formatMoney(allFoodTruckSummary.averageTicket)}`,
         detailLabel: "Gross sales divided by orders",
         rawValue: allFoodTruckSummary.averageTicket,
-      },
-    ],
-    [allFoodTruckSummary]
-  );
+	      },
+	    ];
+	    },
+	    [allFoodTruckSummary, analyticsSummary, isEmployeesScreen]
+	  );
   const allFoodTruckBreakdown = useMemo(() => {
     const grouped = (allFoodTruckAnalytics?.employees || []).reduce(
       (acc, employee) => {
@@ -805,7 +848,7 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                   <>
                     <Text style={styles.filterLabel}>Date Range</Text>
                     <View style={styles.segmentedControl}>
-                      {DATE_FILTERS.map((item) => (
+	                      {DATE_FILTERS.map((item) => (
                         <SegmentButton
                           key={item.value}
                           label={item.label}
@@ -894,8 +937,8 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                   <>
                     <Text style={styles.filterLabel}>Date Range</Text>
                     <View style={styles.segmentedControl}>
-                      {DATE_FILTERS.map((item) => (
-                        <SegmentButton
+	                      {activeDateFilters.map((item) => (
+	                        <SegmentButton
                           key={item.value}
                           label={item.label}
                           selected={dateFilter === item.value}
@@ -1200,13 +1243,31 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                                   {paymentSummary}
                                 </Text>
                               </View>
-                              <View style={styles.activityMetric}>
-                                <Text style={styles.metaLabel}>Refund/Cancel</Text>
-                                <Text style={styles.metaValue}>
-                                  {metrics.refund_cancel_requests_submitted || 0}
-                                </Text>
-                              </View>
-                            </View>
+	                              <View style={styles.activityMetric}>
+	                                <Text style={styles.metaLabel}>Refund/Cancel</Text>
+	                                <Text style={styles.metaValue}>
+	                                  {metrics.refund_cancel_requests_submitted || 0}
+	                                </Text>
+	                              </View>
+	                              <View style={styles.activityMetric}>
+	                                <Text style={styles.metaLabel}>With Breaks</Text>
+	                                <Text style={styles.metaValue}>
+	                                  {Number(
+	                                    metrics.gross_hours_worked || 0
+	                                  ).toFixed(2)}{" "}
+	                                  hrs
+	                                </Text>
+	                              </View>
+	                              <View style={styles.activityMetric}>
+	                                <Text style={styles.metaLabel}>Without Breaks</Text>
+	                                <Text style={styles.metaValue}>
+	                                  {Number(
+	                                    metrics.net_hours_worked || 0
+	                                  ).toFixed(2)}{" "}
+	                                  hrs
+	                                </Text>
+	                              </View>
+	                            </View>
                             <View style={styles.metaRow}>
                               <Text style={styles.metaLabel}>Status</Text>
                               <Text style={styles.metaValue}>

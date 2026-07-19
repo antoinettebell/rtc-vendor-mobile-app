@@ -135,23 +135,15 @@ const EmployeeShiftScreen = ({ navigation }) => {
     }
   };
 
-  const handleToggleLocation = async () => {
-    if (!foodTruck?._id || !assignedLocation?._id || !assignedTruckUnit?._id) return;
-    if (!canManageStore) {
-      Alert.alert(
-        "Not scheduled",
-        "You must be Working and assigned to a truck before you can open or close the store.",
-      );
-      return;
-    }
-
+  const updateEmployeeOrderingStatus = async ({ nextOpen, overrideReason }) => {
     setLocationLoading(true);
     try {
       const response = await updateLocationOrdering_API({
         foodtruck_id: foodTruck._id,
         location_id: assignedLocation._id,
         truck_unit_id: assignedTruckUnit?._id || user?.assigned_truck_unit_id || null,
-        isOrderingOpen: !locationIsOpen,
+        isOrderingOpen: nextOpen,
+        schedule_override_reason: overrideReason,
       });
       const updatedFoodTruck = response?.data?.foodtruck;
       const updatedLocation = updatedFoodTruck?.locations?.find(
@@ -175,6 +167,36 @@ const EmployeeShiftScreen = ({ navigation }) => {
     } finally {
       setLocationLoading(false);
     }
+  };
+
+  const handleToggleLocation = async () => {
+    if (!foodTruck?._id || !assignedLocation?._id || !assignedTruckUnit?._id) return;
+    if (!canManageStore) {
+      Alert.alert(
+        "Not scheduled",
+        "You must be Working and assigned to a truck before you can open or close the store.",
+      );
+      return;
+    }
+
+    const nextOpen = !locationIsOpen;
+    Alert.alert(
+      nextOpen ? "Are you opening early?" : "Are you closing early?",
+      nextOpen
+        ? "This will mark your assigned truck/location open for customers now."
+        : "This will mark your assigned truck/location closed for customers now.",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Yes",
+          onPress: () =>
+            updateEmployeeOrderingStatus({
+              nextOpen,
+              overrideReason: nextOpen ? "OPENING_EARLY" : "CLOSING_EARLY",
+            }),
+        },
+      ],
+    );
   };
 
   const runShiftAction = async (action) => {

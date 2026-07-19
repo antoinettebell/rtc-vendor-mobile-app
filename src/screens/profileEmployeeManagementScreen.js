@@ -44,6 +44,8 @@ const initialForm = {
   address_state: "",
   address_zip: "",
   employee_id_photo_url: "",
+  employee_tax_identifier_type: "SSN",
+  employee_tax_identifier: "",
   employee_rate: "",
   assigned_location_id: "",
   assigned_truck_unit_id: "",
@@ -88,8 +90,12 @@ const formatEmployeeAddress = (employee) =>
     .filter(Boolean)
     .join("\n");
 const SHIFT_HISTORY_FILTERS = [
+  { label: "Day", value: "day" },
   { label: "Week", value: "week" },
-  { label: "Month", value: "month" },
+];
+const TAX_ID_OPTIONS = [
+  { label: "SSN", value: "SSN" },
+  { label: "EIN", value: "EIN" },
 ];
 
 const formatShiftDateTime = (value) => {
@@ -181,11 +187,16 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
     foodTruck?.name ||
     "Truck 1";
 
-  const buildEmployeeProfileDraft = (employee) =>
-    employeeProfileFields.reduce((draft, field) => {
-      draft[field] = employee?.[field] ? String(employee[field]) : "";
-      return draft;
-    }, {});
+	  const buildEmployeeProfileDraft = (employee) =>
+	    ({
+	      ...employeeProfileFields.reduce((draft, field) => {
+	      draft[field] = employee?.[field] ? String(employee[field]) : "";
+	      return draft;
+	      }, {}),
+	      employee_tax_identifier_type:
+	        employee?.employee_tax_identifier_type || "SSN",
+	      employee_tax_identifier: "",
+	    });
 
   const setFormValue = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -429,14 +440,21 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
       return;
     }
 
-    await updateEmployee(
-      employee,
-      employeeProfileFields.reduce((payload, field) => {
-        payload[field] = draft[field]?.trim() || "";
-        return payload;
-      }, {})
-    );
-  };
+	    await updateEmployee(
+	      employee,
+	      {
+	        ...employeeProfileFields.reduce((payload, field) => {
+	        payload[field] = draft[field]?.trim() || "";
+	        return payload;
+	        }, {}),
+	        employee_tax_identifier_type:
+	          draft.employee_tax_identifier_type || employee.employee_tax_identifier_type || "SSN",
+	        ...(draft.employee_tax_identifier?.trim()
+	          ? { employee_tax_identifier: draft.employee_tax_identifier.trim() }
+	          : {}),
+	      }
+	    );
+	  };
 
   const callEmployee = async (phoneNumber) => {
     const dialNumber = normalizePhoneForDial(phoneNumber);
@@ -752,15 +770,50 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
               </View>
             </View>
 
-            <Text style={styles.label}>Address Zip</Text>
-            <TextInput
-              value={form.address_zip}
-              onChangeText={(text) => setFormValue("address_zip", text)}
-              keyboardType="number-pad"
-              style={styles.input}
-            />
+	            <Text style={styles.label}>Address Zip</Text>
+	            <TextInput
+	              value={form.address_zip}
+	              onChangeText={(text) => setFormValue("address_zip", text)}
+	              keyboardType="number-pad"
+	              style={styles.input}
+	            />
 
-            <View style={styles.idUploadCard}>
+	            <View style={styles.row}>
+	              <View style={styles.halfField}>
+	                <Text style={styles.label}>Tax ID Type</Text>
+	                <Dropdown
+	                  data={TAX_ID_OPTIONS}
+	                  labelField="label"
+	                  valueField="value"
+	                  value={form.employee_tax_identifier_type}
+	                  onChange={(item) =>
+	                    setFormValue("employee_tax_identifier_type", item.value)
+	                  }
+	                  style={styles.dropdown}
+	                  placeholderStyle={styles.dropdownText}
+	                  selectedTextStyle={styles.dropdownText}
+	                  itemTextStyle={styles.dropdownText}
+	                />
+	              </View>
+	              <View style={styles.halfField}>
+	                <Text style={styles.label}>Employee EIN/SSN</Text>
+	                <TextInput
+	                  value={form.employee_tax_identifier}
+	                  onChangeText={(text) =>
+	                    setFormValue(
+	                      "employee_tax_identifier",
+	                      text.replace(/\D/g, "").slice(0, 9)
+	                    )
+	                  }
+	                  keyboardType="number-pad"
+	                  placeholder="9 digits"
+	                  secureTextEntry
+	                  style={styles.input}
+	                />
+	              </View>
+	            </View>
+
+	            <View style={styles.idUploadCard}>
               <View style={styles.idUploadCopy}>
                 <Text style={styles.toggleLabel}>Employee ID</Text>
                 <Text style={styles.employeeMeta}>
@@ -1060,16 +1113,69 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                       />
                     </View>
                   </View>
-                  <Text style={styles.label}>Address Zip</Text>
-                  <TextInput
-                    value={getEmployeeProfileDraftValue(employee, "address_zip")}
+	                  <Text style={styles.label}>Address Zip</Text>
+	                  <TextInput
+	                    value={getEmployeeProfileDraftValue(employee, "address_zip")}
                     onChangeText={(text) =>
                       setEmployeeProfileDraft(employee._id, "address_zip", text)
                     }
                     keyboardType="number-pad"
-                    style={styles.input}
-                  />
-                  <View style={styles.idUploadCard}>
+	                    style={styles.input}
+	                  />
+	                  <View style={styles.row}>
+	                    <View style={styles.halfField}>
+	                      <Text style={styles.label}>Tax ID Type</Text>
+	                      <Dropdown
+	                        data={TAX_ID_OPTIONS}
+	                        labelField="label"
+	                        valueField="value"
+	                        value={getEmployeeProfileDraftValue(
+	                          employee,
+	                          "employee_tax_identifier_type"
+	                        )}
+	                        onChange={(item) =>
+	                          setEmployeeProfileDraft(
+	                            employee._id,
+	                            "employee_tax_identifier_type",
+	                            item.value
+	                          )
+	                        }
+	                        style={styles.dropdown}
+	                        placeholderStyle={styles.dropdownText}
+	                        selectedTextStyle={styles.dropdownText}
+	                        itemTextStyle={styles.dropdownText}
+	                      />
+	                    </View>
+	                    <View style={styles.halfField}>
+	                      <Text style={styles.label}>Employee EIN/SSN</Text>
+	                      <TextInput
+	                        value={getEmployeeProfileDraftValue(
+	                          employee,
+	                          "employee_tax_identifier"
+	                        )}
+	                        onChangeText={(text) =>
+	                          setEmployeeProfileDraft(
+	                            employee._id,
+	                            "employee_tax_identifier",
+	                            text.replace(/\D/g, "").slice(0, 9)
+	                          )
+	                        }
+	                        keyboardType="number-pad"
+	                        placeholder={
+	                          employee.employee_tax_identifier_masked ||
+	                          "9 digits"
+	                        }
+	                        secureTextEntry
+	                        style={styles.input}
+	                      />
+	                    </View>
+	                  </View>
+	                  {employee.employee_tax_identifier_masked ? (
+	                    <Text style={styles.helperText}>
+	                      Saved tax ID: {employee.employee_tax_identifier_masked}
+	                    </Text>
+	                  ) : null}
+	                  <View style={styles.idUploadCard}>
                     <View style={styles.idUploadCopy}>
                       <Text style={styles.toggleLabel}>Employee ID</Text>
                       <Text style={styles.employeeMeta}>

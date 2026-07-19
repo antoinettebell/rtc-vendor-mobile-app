@@ -20,8 +20,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
 import {
-  getUserDetail_API,
-  updateFoodTruckUnit_API,
+	  getUserDetail_API,
+	  getEmployeeDashboard_API,
+	  updateFoodTruckUnit_API,
   updateFoodTruckUnits_API,
 } from "../api/appAPI";
 import { Divider, IconButton } from "react-native-paper";
@@ -64,6 +65,10 @@ const formatEmployeeRate = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? `$${parsed.toFixed(2)}` : "Not set";
 };
+const formatShiftHours = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? `${parsed.toFixed(2)} hrs` : "0.00 hrs";
+};
 
 const UserProfileScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -77,6 +82,7 @@ const UserProfileScreen = ({ navigation }) => {
   const [truckNameModal, setTruckNameModal] = useState(null);
   const [truckNameInput, setTruckNameInput] = useState("");
   const [truckPhoneInput, setTruckPhoneInput] = useState("");
+  const [employeeDashboard, setEmployeeDashboard] = useState(null);
   const canUseEmployeeLogin =
     !!user?.foodTruck?.plan?.capabilities?.employeeLogin;
   const canUseMultipleTrucks = canUseMultipleTruckUnits(
@@ -159,6 +165,18 @@ const UserProfileScreen = ({ navigation }) => {
       console.log("error => ", error);
     } finally {
       setGetUserDetailLoading(false);
+    }
+  };
+
+  const getEmployeeDashboardFromAPI = async () => {
+    if (!isEmployeeProfile) return;
+    try {
+      const response = await getEmployeeDashboard_API();
+      if (response?.success && response?.data?.dashboard) {
+        setEmployeeDashboard(response.data.dashboard);
+      }
+    } catch (error) {
+      console.log("employee dashboard error => ", error);
     }
   };
 
@@ -302,6 +320,7 @@ const UserProfileScreen = ({ navigation }) => {
 
   useEffect(() => {
     getUserDetailFromAPI();
+    getEmployeeDashboardFromAPI();
   }, []);
 
   useEffect(() => {
@@ -402,24 +421,59 @@ const UserProfileScreen = ({ navigation }) => {
             ) : null}
 
             {isEmployeeProfile ? (
-              <View style={styles.employeeRateBox}>
-                <View style={styles.accessCodeIconContainer}>
-                  <MaterialIcons
-                    name="attach-money"
-                    size={22}
-                    color={AppColor.primary}
-                  />
-                </View>
-                <View style={styles.accessCodeTextContainer}>
-                  <Text style={styles.accessCodeLabel}>Employee Rate</Text>
-                  <Text style={styles.accessCodeHelper}>
-                    Read-only rate set by your vendor.
+              <>
+                <View style={styles.employeeRateBox}>
+                  <View style={styles.accessCodeIconContainer}>
+                    <MaterialIcons
+                      name="attach-money"
+                      size={22}
+                      color={AppColor.primary}
+                    />
+                  </View>
+                  <View style={styles.accessCodeTextContainer}>
+                    <Text style={styles.accessCodeLabel}>Employee Rate</Text>
+                    <Text style={styles.accessCodeHelper}>
+                      Read-only rate set by your vendor.
+                    </Text>
+                  </View>
+                  <Text style={styles.accessCodeValue}>
+                    {formatEmployeeRate(user?.employee_rate)}
                   </Text>
                 </View>
-                <Text style={styles.accessCodeValue}>
-                  {formatEmployeeRate(user?.employee_rate)}
-                </Text>
-              </View>
+
+                <View style={styles.employeeHoursBox}>
+                  <View style={styles.employeeHoursHeader}>
+                    <MaterialIcons
+                      name="schedule"
+                      size={20}
+                      color={AppColor.primary}
+                    />
+                    <Text style={styles.accessCodeLabel}>Hours Worked</Text>
+                  </View>
+                  <Text style={styles.employeeHoursLine}>
+                    Today:{" "}
+                    {formatShiftHours(
+                      employeeDashboard?.shift_summary?.today?.gross_hours_worked
+                    )}{" "}
+                    with breaks /{" "}
+                    {formatShiftHours(
+                      employeeDashboard?.shift_summary?.today?.net_hours_worked
+                    )}{" "}
+                    without breaks
+                  </Text>
+                  <Text style={styles.employeeHoursLine}>
+                    This Week:{" "}
+                    {formatShiftHours(
+                      employeeDashboard?.shift_summary?.week?.gross_hours_worked
+                    )}{" "}
+                    with breaks /{" "}
+                    {formatShiftHours(
+                      employeeDashboard?.shift_summary?.week?.net_hours_worked
+                    )}{" "}
+                    without breaks
+                  </Text>
+                </View>
+              </>
             ) : null}
 
             {!isEmployeeProfile && canUseEmployeeLogin && !!vendorAccessCode ? (
@@ -774,6 +828,27 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingHorizontal: 12,
     paddingVertical: 12,
+  },
+  employeeHoursBox: {
+    backgroundColor: "#F8FAFC",
+    borderColor: "#DCE4F2",
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  employeeHoursHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 8,
+  },
+  employeeHoursLine: {
+    color: AppColor.subText,
+    fontFamily: Mulish400,
+    fontSize: 13,
+    lineHeight: 19,
   },
   accessCodeIconContainer: {
     alignItems: "center",
