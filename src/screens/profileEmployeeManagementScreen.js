@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Platform,
   ScrollView,
   StyleSheet,
   Switch,
@@ -12,11 +13,15 @@ import {
   View,
 } from "react-native";
 import { IconButton } from "react-native-paper";
+import ImagePicker from "react-native-image-crop-picker";
+import { RESULTS } from "react-native-permissions";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 import { Dropdown } from "react-native-element-dropdown";
 import StatusBarManager from "../components/StatusBarManager";
+import usePermission from "../hooks/usePermission";
+import { permission } from "../helpers/permission.helper";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 import {
   archiveVendorEmployee_API,
@@ -26,6 +31,7 @@ import {
   getVendorEmployees_API,
   resetVendorEmployeePin_API,
   updateVendorEmployee_API,
+  uploadImage_API,
 } from "../api/appAPI";
 
 const initialForm = {
@@ -37,6 +43,7 @@ const initialForm = {
   address_city: "",
   address_state: "",
   address_zip: "",
+  employee_id_photo_url: "",
   employee_rate: "",
   assigned_location_id: "",
   assigned_truck_unit_id: "",
@@ -68,6 +75,7 @@ const employeeProfileFields = [
   "address_city",
   "address_state",
   "address_zip",
+  "employee_id_photo_url",
 ];
 const normalizePhoneForDial = (value) => String(value || "").replace(/[^\d+]/g, "");
 const formatEmployeeAddress = (employee) =>
@@ -101,9 +109,16 @@ const formatShiftDateTime = (value) => {
     minute: "2-digit",
   });
 };
+const formatShiftHours = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? `${parsed.toFixed(2)} hrs` : "Pending";
+};
 
 const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
+  const { checkAndRequestPermission: cameraPermissionStatus } = usePermission(
+    permission.camera
+  );
   const user = useSelector((state) => state.userReducer.user);
   const foodTruck = user?.foodTruck;
   const initialMode = route?.params?.mode === "create" ? "create" : "manage";
@@ -125,6 +140,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const [shiftHistoryRange, setShiftHistoryRange] = useState("week");
   const [shiftHistoryByEmployee, setShiftHistoryByEmployee] = useState({});
   const [shiftHistoryLoadingId, setShiftHistoryLoadingId] = useState(null);
+  const [employeeIdUploading, setEmployeeIdUploading] = useState(false);
   const isManageMode = managementMode === "manage";
 
   const locationOptions = useMemo(
@@ -249,6 +265,11 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
       return false;
     }
 
+    if (!form.employee_id_photo_url) {
+      Alert.alert("Employee ID required", "Scan the employee ID before saving.");
+      return false;
+    }
+
     return true;
   };
 
@@ -275,6 +296,14 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   };
 
   const updateEmployee = async (employee, payload) => {
+    if (!employee.employee_id_photo_url && !payload.employee_id_photo_url) {
+      Alert.alert(
+        "Employee ID required",
+        "Scan and save the employee ID before making employee changes."
+      );
+      return;
+    }
+
     const previousEmployees = employees;
     setEmployees((current) =>
       current.map((item) =>
@@ -395,6 +424,11 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
       return;
     }
 
+    if (!draft.employee_id_photo_url?.trim()) {
+      Alert.alert("Employee ID required", "Scan the employee ID before saving.");
+      return;
+    }
+
     await updateEmployee(
       employee,
       employeeProfileFields.reduce((payload, field) => {
@@ -417,6 +451,54 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
       await Linking.openURL(url);
     } else {
       Alert.alert("Call unavailable", "This device cannot place phone calls.");
+    }
+  };
+
+  const uploadEmployeeIdPhoto = async (employee = null) => {
+    try {
+      const cameraStatus = await cameraPermissionStatus();
+      if (cameraStatus !== RESULTS.GRANTED) return;
+
+      setEmployeeIdUploading(true);
+      setTimeout(
+        async () => {
+          try {
+            const image = await ImagePicker.openCamera({
+              cropping: false,
+              mediaType: "photo",
+            });
+            const file = {
+              uri: image?.path,
+              name: image?.path?.split("/").pop() || `employee-id-${Date.now()}.jpg`,
+              type: image?.mime || "image/jpeg",
+            };
+            const formData = new FormData();
+            formData.append("file", file);
+            const response = await uploadImage_API(formData);
+            const uploadedUrl = response?.data?.file;
+
+            if (!response?.success || !uploadedUrl) {
+              Alert.alert("Upload failed", "Could not save the employee ID photo.");
+              return;
+            }
+
+            if (employee?._id) {
+              setEmployeeProfileDraft(employee._id, "employee_id_photo_url", uploadedUrl);
+              await updateEmployee(employee, { employee_id_photo_url: uploadedUrl });
+            } else {
+              setFormValue("employee_id_photo_url", uploadedUrl);
+            }
+          } catch (error) {
+            console.log("employee ID camera error => ", error);
+          } finally {
+            setEmployeeIdUploading(false);
+          }
+        },
+        Platform.OS === "ios" ? 600 : 0
+      );
+    } catch (error) {
+      setEmployeeIdUploading(false);
+      Alert.alert("Camera unavailable", error?.message || "Please try again.");
     }
   };
 
@@ -677,6 +759,27 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
               keyboardType="number-pad"
               style={styles.input}
             />
+
+            <View style={styles.idUploadCard}>
+              <View style={styles.idUploadCopy}>
+                <Text style={styles.toggleLabel}>Employee ID</Text>
+                <Text style={styles.employeeMeta}>
+                  {form.employee_id_photo_url ? "ID scanned" : "Required before save"}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => uploadEmployeeIdPhoto()}
+                disabled={employeeIdUploading}
+                style={[
+                  styles.idUploadButton,
+                  employeeIdUploading && styles.disabledButton,
+                ]}
+              >
+                <Text style={styles.idUploadButtonText}>
+                  {employeeIdUploading ? "Scanning..." : "Scan ID"}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             <Text style={styles.label}>Assigned Location</Text>
             <Dropdown
@@ -966,6 +1069,31 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                     keyboardType="number-pad"
                     style={styles.input}
                   />
+                  <View style={styles.idUploadCard}>
+                    <View style={styles.idUploadCopy}>
+                      <Text style={styles.toggleLabel}>Employee ID</Text>
+                      <Text style={styles.employeeMeta}>
+                        {getEmployeeProfileDraftValue(
+                          employee,
+                          "employee_id_photo_url"
+                        )
+                          ? "ID scanned"
+                          : "Required before save"}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => uploadEmployeeIdPhoto(employee)}
+                      disabled={employeeIdUploading}
+                      style={[
+                        styles.idUploadButton,
+                        employeeIdUploading && styles.disabledButton,
+                      ]}
+                    >
+                      <Text style={styles.idUploadButtonText}>
+                        {employeeIdUploading ? "Scanning..." : "Scan ID"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                   <TouchableOpacity
                     onPress={() => saveEmployeeProfile(employee)}
                     style={styles.secondaryButton}
@@ -1179,18 +1307,39 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                         key={session.employee_session_id || session._id}
                         style={styles.shiftHistoryItem}
                       >
-                        <View>
-                          <Text style={styles.shiftHistoryLabel}>Start</Text>
-                          <Text style={styles.shiftHistoryValue}>
-                            {formatShiftDateTime(session.started_at)}
-                          </Text>
+                        <View style={styles.shiftHistoryRow}>
+                          <View>
+                            <Text style={styles.shiftHistoryLabel}>Start</Text>
+                            <Text style={styles.shiftHistoryValue}>
+                              {formatShiftDateTime(session.started_at)}
+                            </Text>
+                          </View>
+                          <View style={styles.shiftHistoryEnd}>
+                            <Text style={styles.shiftHistoryLabel}>End</Text>
+                            <Text style={styles.shiftHistoryValue}>
+                              {session.ended_at
+                                ? formatShiftDateTime(session.ended_at)
+                                : "Active"}
+                            </Text>
+                          </View>
                         </View>
-                        <View style={styles.shiftHistoryEnd}>
-                          <Text style={styles.shiftHistoryLabel}>End</Text>
-                          <Text style={styles.shiftHistoryValue}>
-                            {session.ended_at
-                              ? formatShiftDateTime(session.ended_at)
-                              : "Active"}
+                        <View style={styles.shiftTotalsRow}>
+                          <View>
+                            <Text style={styles.shiftHistoryLabel}>With Breaks</Text>
+                            <Text style={styles.shiftHistoryValue}>
+                              {formatShiftHours(session.gross_hours_worked)}
+                            </Text>
+                          </View>
+                          <View style={styles.shiftHistoryEnd}>
+                            <Text style={styles.shiftHistoryLabel}>Without Breaks</Text>
+                            <Text style={styles.shiftHistoryValue}>
+                              {formatShiftHours(session.net_hours_worked)}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.shiftTotalsRow}>
+                          <Text style={styles.employeeMeta}>
+                            Breaks: {session.total_break_minutes || 0} min
                           </Text>
                         </View>
                       </View>
@@ -1491,6 +1640,34 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
     fontSize: 14,
   },
+  idUploadCard: {
+    alignItems: "center",
+    backgroundColor: "#F9FAFB",
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 12,
+    justifyContent: "space-between",
+    marginTop: 12,
+    padding: 12,
+  },
+  idUploadCopy: {
+    flex: 1,
+  },
+  idUploadButton: {
+    alignItems: "center",
+    backgroundColor: AppColor.primary,
+    borderRadius: 8,
+    justifyContent: "center",
+    minHeight: 40,
+    paddingHorizontal: 14,
+  },
+  idUploadButtonText: {
+    color: AppColor.white,
+    fontFamily: Mulish700,
+    fontSize: 13,
+  },
   resetBox: {
     borderTopWidth: 1,
     borderColor: AppColor.border,
@@ -1537,10 +1714,22 @@ const styles = StyleSheet.create({
     borderColor: AppColor.border,
     borderRadius: 8,
     borderWidth: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
     marginTop: 10,
     padding: 12,
+  },
+  shiftHistoryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  shiftTotalsRow: {
+    borderTopWidth: 1,
+    borderColor: AppColor.border,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 10,
+    paddingTop: 10,
   },
   shiftHistoryEnd: {
     alignItems: "flex-end",
