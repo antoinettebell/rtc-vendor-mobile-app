@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   ScrollView,
   StyleSheet,
   Switch,
@@ -31,6 +32,11 @@ const initialForm = {
   first_name: "",
   last_name: "",
   zip_code: "",
+  phone_number: "",
+  address_line1: "",
+  address_city: "",
+  address_state: "",
+  address_zip: "",
   employee_rate: "",
   assigned_location_id: "",
   assigned_truck_unit_id: "",
@@ -53,6 +59,26 @@ const formatEmployeeRate = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? `$${parsed.toFixed(2)}` : "Not set";
 };
+const employeeProfileFields = [
+  "first_name",
+  "last_name",
+  "zip_code",
+  "phone_number",
+  "address_line1",
+  "address_city",
+  "address_state",
+  "address_zip",
+];
+const normalizePhoneForDial = (value) => String(value || "").replace(/[^\d+]/g, "");
+const formatEmployeeAddress = (employee) =>
+  [
+    employee?.address_line1,
+    [employee?.address_city, employee?.address_state, employee?.address_zip]
+      .filter(Boolean)
+      .join(", "),
+  ]
+    .filter(Boolean)
+    .join("\n");
 const SHIFT_HISTORY_FILTERS = [
   { label: "Week", value: "week" },
   { label: "Month", value: "month" },
@@ -94,6 +120,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const [employeeLocationDrafts, setEmployeeLocationDrafts] = useState({});
   const [employeeTruckDrafts, setEmployeeTruckDrafts] = useState({});
   const [employeeRateDrafts, setEmployeeRateDrafts] = useState({});
+  const [employeeProfileDrafts, setEmployeeProfileDrafts] = useState({});
   const [activeTab, setActiveTab] = useState("current");
   const [shiftHistoryRange, setShiftHistoryRange] = useState("week");
   const [shiftHistoryByEmployee, setShiftHistoryByEmployee] = useState({});
@@ -138,6 +165,12 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
     foodTruck?.name ||
     "Truck 1";
 
+  const buildEmployeeProfileDraft = (employee) =>
+    employeeProfileFields.reduce((draft, field) => {
+      draft[field] = employee?.[field] ? String(employee[field]) : "";
+      return draft;
+    }, {});
+
   const setFormValue = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -174,6 +207,10 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                 matchedEmployee.employee_rate !== undefined
                   ? String(matchedEmployee.employee_rate)
                   : "",
+            }));
+            setEmployeeProfileDrafts((current) => ({
+              ...current,
+              [matchedEmployee._id]: buildEmployeeProfileDraft(matchedEmployee),
             }));
             setManagementMode("manage");
           }
@@ -277,6 +314,10 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
           ? String(employee.employee_rate)
           : ""),
     }));
+    setEmployeeProfileDrafts((current) => ({
+      ...current,
+      [employee._id]: current[employee._id] || buildEmployeeProfileDraft(employee),
+    }));
   };
 
   const loadShiftHistory = async (employee, range = shiftHistoryRange) => {
@@ -326,6 +367,57 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
       ...current,
       [employeeId]: normalizeRateInput(rate),
     }));
+  };
+
+  const setEmployeeProfileDraft = (employeeId, field, value) => {
+    setEmployeeProfileDrafts((current) => ({
+      ...current,
+      [employeeId]: {
+        ...(current[employeeId] || {}),
+        [field]: value,
+      },
+    }));
+  };
+
+  const getEmployeeProfileDraftValue = (employee, field) =>
+    employeeProfileDrafts[employee._id]?.[field] ?? String(employee?.[field] || "");
+
+  const saveEmployeeProfile = async (employee) => {
+    const draft = employeeProfileDrafts[employee._id] || buildEmployeeProfileDraft(employee);
+
+    if (!draft.first_name?.trim() || !draft.last_name?.trim()) {
+      Alert.alert("Name required", "Enter the employee's first and last name.");
+      return;
+    }
+
+    if (!draft.zip_code?.trim()) {
+      Alert.alert("Zip code required", "Enter the employee's zip code.");
+      return;
+    }
+
+    await updateEmployee(
+      employee,
+      employeeProfileFields.reduce((payload, field) => {
+        payload[field] = draft[field]?.trim() || "";
+        return payload;
+      }, {})
+    );
+  };
+
+  const callEmployee = async (phoneNumber) => {
+    const dialNumber = normalizePhoneForDial(phoneNumber);
+    if (!dialNumber) {
+      Alert.alert("Phone number missing", "Add a phone number for this employee first.");
+      return;
+    }
+
+    const url = `tel:${dialNumber}`;
+    const canOpen = await Linking.canOpenURL(url);
+    if (canOpen) {
+      await Linking.openURL(url);
+    } else {
+      Alert.alert("Call unavailable", "This device cannot place phone calls.");
+    }
   };
 
   const saveEmployeeRate = async (employee) => {
@@ -392,19 +484,19 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 
   const archiveEmployee = (employee) => {
     Alert.alert(
-      "Archive employee?",
+      "Terminate employee?",
       `${employee.first_name} ${employee.last_name} will be removed from active employee lists but historical activity will stay saved.`,
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Archive",
+          text: "Terminate",
           style: "destructive",
           onPress: async () => {
             try {
               await archiveVendorEmployee_API(employee._id);
               fetchEmployees();
             } catch (error) {
-              Alert.alert("Archive failed", error?.message || "Please try again.");
+              Alert.alert("Terminate failed", error?.message || "Please try again.");
             }
           },
         },
@@ -415,7 +507,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const deleteEmployee = (employee) => {
     Alert.alert(
       "Delete employee?",
-      `${employee.first_name} ${employee.last_name} will be permanently deleted if they do not have activity history. Use Archive for employees with orders, sessions, or requests.`,
+      `${employee.first_name} ${employee.last_name} will be permanently deleted if they do not have activity history. Use Terminate for employees with orders, sessions, or requests.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -429,7 +521,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
               Alert.alert(
                 "Delete failed",
                 error?.message ||
-                  "Employee cannot be deleted due to prior sales activity. Please Disable Login Access then Archive the Employee."
+                  "Employee cannot be deleted due to prior sales activity. Please Disable Login Access then Terminate the Employee."
               );
             }
           },
@@ -541,6 +633,51 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
               </View>
             </View>
 
+            <Text style={styles.label}>Phone Number</Text>
+            <TextInput
+              value={form.phone_number}
+              onChangeText={(text) => setFormValue("phone_number", text)}
+              keyboardType="phone-pad"
+              placeholder="Employee phone"
+              style={styles.input}
+            />
+
+            <Text style={styles.label}>Address</Text>
+            <TextInput
+              value={form.address_line1}
+              onChangeText={(text) => setFormValue("address_line1", text)}
+              placeholder="Street address"
+              style={styles.input}
+            />
+
+            <View style={styles.row}>
+              <View style={styles.halfField}>
+                <Text style={styles.label}>City</Text>
+                <TextInput
+                  value={form.address_city}
+                  onChangeText={(text) => setFormValue("address_city", text)}
+                  style={styles.input}
+                />
+              </View>
+              <View style={styles.halfField}>
+                <Text style={styles.label}>State</Text>
+                <TextInput
+                  value={form.address_state}
+                  onChangeText={(text) => setFormValue("address_state", text)}
+                  autoCapitalize="characters"
+                  style={styles.input}
+                />
+              </View>
+            </View>
+
+            <Text style={styles.label}>Address Zip</Text>
+            <TextInput
+              value={form.address_zip}
+              onChangeText={(text) => setFormValue("address_zip", text)}
+              keyboardType="number-pad"
+              style={styles.input}
+            />
+
             <Text style={styles.label}>Assigned Location</Text>
             <Dropdown
               data={locationOptions}
@@ -648,20 +785,20 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                 activeTab === "archived" && styles.tabTextActive,
               ]}
             >
-              Archived Employees
+              Terminated Employees
             </Text>
           </TouchableOpacity>
         </View>
 
         <Text style={styles.sectionTitle}>
-          {activeTab === "archived" ? "Archived Employees" : "Current Employees"}
+          {activeTab === "archived" ? "Terminated Employees" : "Current Employees"}
         </Text>
         {loading ? (
           <ActivityIndicator color={AppColor.primary} style={{ marginTop: 24 }} />
         ) : employees.length === 0 ? (
           <Text style={styles.emptyText}>
             {activeTab === "archived"
-              ? "No archived employees."
+              ? "No terminated employees."
               : "No current employees."}
           </Text>
         ) : (
@@ -681,6 +818,19 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 	                  <Text style={styles.employeeMeta}>
 	                    Rate: {formatEmployeeRate(employee.employee_rate)}
 	                  </Text>
+                  {employee.phone_number ? (
+                    <Text
+                      onPress={() => callEmployee(employee.phone_number)}
+                      style={[styles.employeeMeta, styles.phoneLink]}
+                    >
+                      Phone: {employee.phone_number}
+                    </Text>
+                  ) : null}
+                  {formatEmployeeAddress(employee) ? (
+                    <Text style={styles.employeeMeta}>
+                      {formatEmployeeAddress(employee)}
+                    </Text>
+                  ) : null}
 	                  <Text style={styles.employeeMeta}>
 	                    Assigned: {getLocationLabel(employee.assigned_location_id)}
                   </Text>
@@ -711,7 +861,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 	                      onPress={() => archiveEmployee(employee)}
 	                      style={styles.archivePill}
 	                    >
-	                      <Text style={styles.archiveText}>Archive</Text>
+	                      <Text style={styles.archiveText}>Terminate</Text>
 	                    </TouchableOpacity>
                     ) : null}
                     <IconButton
@@ -729,6 +879,101 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                 activeTab === "current" &&
                 expandedEmployeeId === employee._id ? (
                 <View style={styles.submenu}>
+                  <Text style={styles.submenuTitle}>Employee Profile</Text>
+                  <View style={styles.row}>
+                    <View style={styles.halfField}>
+                      <Text style={styles.label}>First Name</Text>
+                      <TextInput
+                        value={getEmployeeProfileDraftValue(employee, "first_name")}
+                        onChangeText={(text) =>
+                          setEmployeeProfileDraft(employee._id, "first_name", text)
+                        }
+                        style={styles.input}
+                      />
+                    </View>
+                    <View style={styles.halfField}>
+                      <Text style={styles.label}>Last Name</Text>
+                      <TextInput
+                        value={getEmployeeProfileDraftValue(employee, "last_name")}
+                        onChangeText={(text) =>
+                          setEmployeeProfileDraft(employee._id, "last_name", text)
+                        }
+                        style={styles.input}
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.row}>
+                    <View style={styles.halfField}>
+                      <Text style={styles.label}>Phone Number</Text>
+                      <TextInput
+                        value={getEmployeeProfileDraftValue(employee, "phone_number")}
+                        onChangeText={(text) =>
+                          setEmployeeProfileDraft(employee._id, "phone_number", text)
+                        }
+                        keyboardType="phone-pad"
+                        style={styles.input}
+                      />
+                    </View>
+                    <View style={styles.halfField}>
+                      <Text style={styles.label}>Zip Code</Text>
+                      <TextInput
+                        value={getEmployeeProfileDraftValue(employee, "zip_code")}
+                        onChangeText={(text) =>
+                          setEmployeeProfileDraft(employee._id, "zip_code", text)
+                        }
+                        keyboardType="number-pad"
+                        style={styles.input}
+                      />
+                    </View>
+                  </View>
+                  <Text style={styles.label}>Address</Text>
+                  <TextInput
+                    value={getEmployeeProfileDraftValue(employee, "address_line1")}
+                    onChangeText={(text) =>
+                      setEmployeeProfileDraft(employee._id, "address_line1", text)
+                    }
+                    style={styles.input}
+                  />
+                  <View style={styles.row}>
+                    <View style={styles.halfField}>
+                      <Text style={styles.label}>City</Text>
+                      <TextInput
+                        value={getEmployeeProfileDraftValue(employee, "address_city")}
+                        onChangeText={(text) =>
+                          setEmployeeProfileDraft(employee._id, "address_city", text)
+                        }
+                        style={styles.input}
+                      />
+                    </View>
+                    <View style={styles.halfField}>
+                      <Text style={styles.label}>State</Text>
+                      <TextInput
+                        value={getEmployeeProfileDraftValue(employee, "address_state")}
+                        onChangeText={(text) =>
+                          setEmployeeProfileDraft(employee._id, "address_state", text)
+                        }
+                        autoCapitalize="characters"
+                        style={styles.input}
+                      />
+                    </View>
+                  </View>
+                  <Text style={styles.label}>Address Zip</Text>
+                  <TextInput
+                    value={getEmployeeProfileDraftValue(employee, "address_zip")}
+                    onChangeText={(text) =>
+                      setEmployeeProfileDraft(employee._id, "address_zip", text)
+                    }
+                    keyboardType="number-pad"
+                    style={styles.input}
+                  />
+                  <TouchableOpacity
+                    onPress={() => saveEmployeeProfile(employee)}
+                    style={styles.secondaryButton}
+                  >
+                    <Text style={styles.secondaryButtonText}>Save Profile</Text>
+                  </TouchableOpacity>
+
+                  <View style={styles.subsectionDivider} />
                   <Text style={styles.submenuTitle}>Truck Assignment</Text>
 	                  <Text style={styles.helperText}>
 	                    Moving an employee to another truck or location sets them off
@@ -1181,6 +1426,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
+  phoneLink: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
+    textDecorationLine: "underline",
+  },
   employeeActions: {
     alignItems: "center",
     flexDirection: "row",
@@ -1209,6 +1459,12 @@ const styles = StyleSheet.create({
     color: AppColor.text,
     fontFamily: Mulish700,
     fontSize: 14,
+  },
+  subsectionDivider: {
+    borderTopWidth: 1,
+    borderColor: AppColor.border,
+    marginTop: 14,
+    paddingTop: 12,
   },
   toggleRow: {
     flexDirection: "row",
