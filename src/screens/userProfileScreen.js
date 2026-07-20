@@ -433,7 +433,7 @@ const UserProfileScreen = ({ navigation }) => {
                   <View style={styles.accessCodeTextContainer}>
                     <Text style={styles.accessCodeLabel}>Employee Rate</Text>
                     <Text style={styles.accessCodeHelper}>
-                      Read-only rate set by your vendor.
+                      Read-only rate set by your employer.
                     </Text>
                   </View>
                   <Text style={styles.accessCodeValue}>
