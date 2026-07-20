@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import DocumentPicker, { types } from "react-native-document-picker";
 import ImagePicker from "react-native-image-crop-picker";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { RESULTS } from "react-native-permissions";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSelector } from "react-redux";
@@ -37,9 +38,6 @@ const EXPIRING_DOCUMENT_TYPES = new Set([
   "HEALTH_PERMIT",
   "BUSINESS_LICENSE",
   "COI",
-  "PERMIT",
-  "LICENSE",
-  "CERTIFICATION",
   "CERTIFICATE_OF_INSURANCE",
 ]);
 
@@ -53,8 +51,15 @@ const formatDate = (value) => {
   if (!value) return "Not provided";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Not provided";
-  return date.toLocaleDateString();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${month}/${day}/${date.getFullYear()}`;
 };
+
+const formatDateForPayload = (value) => formatDate(value);
+
+const getSelectedDateLabel = (value) =>
+  value ? formatDate(value) : "Select expiration date";
 
 const getDocumentName = (document = {}) =>
   document?.title || document?.original_name || "Uploaded document";
@@ -104,6 +109,8 @@ const VendorComplianceScreen = ({ navigation }) => {
   const [uploadingType, setUploadingType] = useState(null);
   const [summary, setSummary] = useState(null);
   const [history, setHistory] = useState([]);
+  const [expirationDates, setExpirationDates] = useState({});
+  const [datePickerRequirement, setDatePickerRequirement] = useState(null);
   const { checkAndRequestPermission: cameraPermissionStatus } = usePermission(
     permission.camera
   );
@@ -130,9 +137,21 @@ const VendorComplianceScreen = ({ navigation }) => {
   }, [loadCompliance]);
 
   const uploadComplianceFile = async (requirement, file) => {
+    const selectedExpirationDate = expirationDates[requirement.type];
+    if (EXPIRING_DOCUMENT_TYPES.has(requirement.type) && !selectedExpirationDate) {
+      Alert.alert(
+        "Expiration Date Required",
+        "Please enter the expiration date shown on the document before uploading."
+      );
+      return;
+    }
+
     const payload = new FormData();
     payload.append("document_type", requirement.type);
     payload.append("title", requirement.label);
+    if (selectedExpirationDate) {
+      payload.append("expiration_date", formatDateForPayload(selectedExpirationDate));
+    }
     payload.append("file", {
       uri: file.uri,
       name: file.name || `${requirement.type}.pdf`,
@@ -224,6 +243,20 @@ const VendorComplianceScreen = ({ navigation }) => {
     ]);
   };
 
+  const openExpirationDatePicker = (requirement) => {
+    setDatePickerRequirement(requirement);
+  };
+
+  const handleExpirationDateConfirm = (date) => {
+    if (datePickerRequirement?.type) {
+      setExpirationDates((prev) => ({
+        ...prev,
+        [datePickerRequirement.type]: date,
+      }));
+    }
+    setDatePickerRequirement(null);
+  };
+
   const openDocument = (document) => {
     const url = document?.file_url;
     if (!url) return;
@@ -288,8 +321,12 @@ const VendorComplianceScreen = ({ navigation }) => {
           <Text style={styles.sectionTitle}>Required Documents</Text>
           {requirements.map((requirement) => {
             const document = requirement.document;
-	            const status = getExpiringDocumentStatus(requirement);
-	            const isUploading = uploadingType === requirement.type;
+		            const status = getExpiringDocumentStatus(requirement);
+		            const isUploading = uploadingType === requirement.type;
+            const requiresExpirationDate = EXPIRING_DOCUMENT_TYPES.has(
+              requirement.type
+            );
+            const selectedExpirationDate = expirationDates[requirement.type];
 
             return (
               <View key={requirement.type} style={styles.documentCard}>
@@ -316,6 +353,36 @@ const VendorComplianceScreen = ({ navigation }) => {
                 <Text style={styles.documentMeta}>
                   Expires {formatDate(document?.expiration_date)}
                 </Text>
+                {requiresExpirationDate ? (
+                  <View style={styles.expirationInputGroup}>
+                    <Text style={styles.expirationInputLabel}>
+                      Expiration date on document *
+                    </Text>
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => openExpirationDatePicker(requirement)}
+                      style={styles.expirationDateButton}
+                    >
+                      <Text
+                        style={[
+                          styles.expirationDateText,
+                          !selectedExpirationDate &&
+                            styles.expirationDatePlaceholder,
+                        ]}
+                      >
+                        {getSelectedDateLabel(selectedExpirationDate)}
+                      </Text>
+                      <Ionicons
+                        name="calendar-outline"
+                        size={18}
+                        color={AppColor.primary}
+                      />
+                    </TouchableOpacity>
+                    <Text style={styles.expirationHelpText}>
+                      OCR will still scan the document as a safety check before admin review.
+                    </Text>
+                  </View>
+                ) : null}
                 {document ? (
                   <View style={styles.uploadedDocumentRow}>
                     <View style={styles.uploadedDocumentTextContainer}>
@@ -376,6 +443,14 @@ const VendorComplianceScreen = ({ navigation }) => {
           ) : (
             <Text style={styles.emptyText}>No compliance documents uploaded yet.</Text>
           )}
+          <DateTimePickerModal
+            isVisible={!!datePickerRequirement}
+            mode="date"
+            minimumDate={new Date()}
+            date={expirationDates[datePickerRequirement?.type] || new Date()}
+            onConfirm={handleExpirationDateConfirm}
+            onCancel={() => setDatePickerRequirement(null)}
+          />
         </ScrollView>
       )}
     </View>
@@ -518,6 +593,41 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: AppColor.subText,
     marginTop: 10,
+  },
+  expirationInputGroup: {
+    marginTop: 12,
+  },
+  expirationInputLabel: {
+    fontFamily: Mulish600,
+    fontSize: 12,
+    color: AppColor.black,
+    marginBottom: 6,
+  },
+  expirationDateButton: {
+    minHeight: 42,
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexDirection: "row",
+    backgroundColor: "#FAFAFA",
+  },
+  expirationDateText: {
+    fontFamily: Mulish600,
+    fontSize: 13,
+    color: AppColor.black,
+  },
+  expirationDatePlaceholder: {
+    color: AppColor.subText,
+  },
+  expirationHelpText: {
+    fontFamily: Mulish400,
+    fontSize: 11,
+    color: AppColor.subText,
+    lineHeight: 16,
+    marginTop: 6,
   },
   uploadedDocumentRow: {
     flexDirection: "row",
