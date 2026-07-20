@@ -17,6 +17,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import moment from "moment";
 import Entypo from "react-native-vector-icons/Entypo";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { vendorProfileStatus } from "../utils/constants";
 import {
