@@ -360,6 +360,33 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
     }));
   };
 
+  const openEmployeeEditor = (employee) => {
+    setActiveTab("current");
+    setManagementMode("manage");
+    setExpandedEmployeeId(employee._id);
+    setEmployeeLocationDrafts((current) => ({
+      ...current,
+      [employee._id]: current[employee._id] || employee.assigned_location_id,
+    }));
+    setEmployeeTruckDrafts((current) => ({
+      ...current,
+      [employee._id]:
+        current[employee._id] || employee.assigned_truck_unit_id || "",
+    }));
+    setEmployeeRateDrafts((current) => ({
+      ...current,
+      [employee._id]:
+        current[employee._id] ||
+        (employee.employee_rate !== null && employee.employee_rate !== undefined
+          ? String(employee.employee_rate)
+          : ""),
+    }));
+    setEmployeeProfileDrafts((current) => ({
+      ...current,
+      [employee._id]: current[employee._id] || buildEmployeeProfileDraft(employee),
+    }));
+  };
+
   const loadShiftHistory = async (employee, range = shiftHistoryRange) => {
     if (!employee?._id) return;
 
@@ -962,7 +989,11 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
             <View key={employee._id} style={styles.employeeCard}>
               <View style={styles.employeeHeader}>
                 <TouchableOpacity
-                  onPress={() => toggleEmployeeDetails(employee)}
+                  onPress={() =>
+                    activeTab === "current"
+                      ? openEmployeeEditor(employee)
+                      : toggleEmployeeDetails(employee)
+                  }
                   style={styles.employeeSummary}
                 >
                   <Text style={styles.employeeName}>
@@ -998,8 +1029,19 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                     )}
                   </Text>
                 </TouchableOpacity>
-                {isManageMode ? (
-                  <View style={styles.employeeActions}>
+                <View style={styles.employeeActions}>
+                  {activeTab === "current" ? (
+                    <IconButton
+                      icon="pencil"
+                      iconColor={AppColor.primary}
+                      size={22}
+                      style={styles.trashButton}
+                      onPress={() => openEmployeeEditor(employee)}
+                      accessibilityLabel={`Edit ${employee.first_name} ${employee.last_name}`}
+                    />
+                  ) : null}
+                  {isManageMode ? (
+                    <>
                     <IconButton
                       icon={
                         expandedEmployeeId === employee._id
@@ -1028,8 +1070,9 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                       onPress={() => deleteEmployee(employee)}
                       accessibilityLabel={`Delete ${employee.first_name} ${employee.last_name}`}
                     />
-                  </View>
-                ) : null}
+                    </>
+                  ) : null}
+                </View>
               </View>
               {isManageMode &&
                 activeTab === "current" &&
