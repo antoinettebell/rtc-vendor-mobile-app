@@ -214,7 +214,7 @@ const VendorComplianceScreen = ({ navigation }) => {
 
   const pickAndUpload = (requirement) => {
     Alert.alert(`Upload ${requirement.label}`, "Choose how to add the document.", [
-      { text: "Photos", onPress: () => pickPhotoAndUpload(requirement) },
+      { text: "Photo Library", onPress: () => pickPhotoAndUpload(requirement) },
       { text: "Camera", onPress: () => captureAndUpload(requirement) },
       { text: "Files", onPress: () => pickFileAndUpload(requirement) },
       { text: "Cancel", style: "cancel" },
