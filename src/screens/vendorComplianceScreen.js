@@ -64,6 +64,14 @@ const getSelectedDateLabel = (value) =>
 const getDocumentName = (document = {}) =>
   document?.title || document?.original_name || "Uploaded document";
 
+const getOcrStatusText = (document = {}) => {
+  if (!document?.ocr_status) return "";
+  const status = formatLabel(document.ocr_status);
+  return document.ocr_error_message
+    ? `OCR: ${status} - ${document.ocr_error_message}`
+    : `OCR: ${status}`;
+};
+
 const getExpiringDocumentStatus = (requirement = {}) => {
   const rawType = String(requirement.type || "").toUpperCase();
   const daysUntilExpiration = requirement.days_until_expiration;
@@ -436,10 +444,23 @@ const VendorComplianceScreen = ({ navigation }) => {
 	                          <Text style={styles.uploadedDocumentName} numberOfLines={1}>
 	                            {getDocumentName(document)}
 	                          </Text>
-	                          <Text style={styles.uploadedDocumentDate}>
-	                            {formatDate(document.created_at || document.uploaded_at)}
-	                          </Text>
-	                        </View>
+                          <Text style={styles.uploadedDocumentDate}>
+                            {formatDate(document.created_at || document.uploaded_at)}
+                          </Text>
+                          {getOcrStatusText(document) ? (
+                            <Text
+                              style={[
+                                styles.ocrStatusText,
+                                document.ocr_status === "failed" ||
+                                document.ocr_status === "manual_review"
+                                  ? styles.ocrStatusWarning
+                                  : null,
+                              ]}
+                            >
+                              {getOcrStatusText(document)}
+                            </Text>
+                          ) : null}
+                        </View>
 	                        {document.file_url ? (
 	                          <TouchableOpacity
 	                            onPress={() => openDocument(document)}
@@ -707,6 +728,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: AppColor.subText,
     marginTop: 2,
+  },
+  ocrStatusText: {
+    fontFamily: Mulish400,
+    fontSize: 11,
+    color: AppColor.subText,
+    lineHeight: 15,
+    marginTop: 4,
+  },
+  ocrStatusWarning: {
+    color: SCORE_FALLBACK.yellow,
   },
   openDocumentButton: {
     minWidth: 62,
