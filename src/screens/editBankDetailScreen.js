@@ -126,6 +126,14 @@ const validatePostalcode = (value) => {
   return "";
 };
 
+const maskAccountNumber = (value) => {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  return `${"*".repeat(Math.max(0, digits.length - 4))}${digits.slice(-4)}`;
+};
+
+const isMaskedAccountNumber = (value) => /^\*+\d{4}$/.test(String(value || ""));
+
 const EditBankDetailScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -133,6 +141,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [bankData, setBankData] = useState(null);
+  const [savedAccountNumber, setSavedAccountNumber] = useState("");
   const [accountHolderName, setAccountHolderName] = useState("");
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
@@ -202,7 +211,9 @@ const EditBankDetailScreen = ({ navigation, route }) => {
       const payload = {
         accountHolderName,
         bankName,
-        accountNumber,
+        accountNumber: isMaskedAccountNumber(accountNumber)
+          ? savedAccountNumber
+          : accountNumber,
         routingNumber,
         accountType: selectedAccountType,
         remittanceEmail,
@@ -238,9 +249,10 @@ const EditBankDetailScreen = ({ navigation, route }) => {
 
   const setAPIDataToLocalState = (data = null) => {
     setBankData(data); // keep original data
+    setSavedAccountNumber(data?.accountNumber || "");
     setAccountHolderName(data?.accountHolderName || "");
     setBankName(data?.bankName || "");
-    setAccountNumber(data?.accountNumber || "");
+    setAccountNumber(maskAccountNumber(data?.accountNumber || ""));
     setRoutingNumber(data?.routingNumber || "");
     setSelectedAccountType(data?.accountType || "");
     setRemittanceEmail(data?.remittanceEmail || "");
