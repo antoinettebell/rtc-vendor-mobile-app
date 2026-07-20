@@ -56,6 +56,9 @@ const formatDate = (value) => {
   return date.toLocaleDateString();
 };
 
+const getDocumentName = (document = {}) =>
+  document?.title || document?.original_name || "Uploaded document";
+
 const getExpiringDocumentStatus = (requirement = {}) => {
   const rawType = String(requirement.type || "").toUpperCase();
   const daysUntilExpiration = requirement.days_until_expiration;
@@ -221,6 +224,14 @@ const VendorComplianceScreen = ({ navigation }) => {
     ]);
   };
 
+  const openDocument = (document) => {
+    const url = document?.file_url;
+    if (!url) return;
+    Linking.openURL(url).catch(() => {
+      Alert.alert("Document", "Unable to open this document.");
+    });
+  };
+
 	  const scoreColor =
 	    summary?.score_color_hex ||
 	    SCORE_FALLBACK[summary?.score_color] ||
@@ -305,6 +316,27 @@ const VendorComplianceScreen = ({ navigation }) => {
                 <Text style={styles.documentMeta}>
                   Expires {formatDate(document?.expiration_date)}
                 </Text>
+                {document ? (
+                  <View style={styles.uploadedDocumentRow}>
+                    <View style={styles.uploadedDocumentTextContainer}>
+                      <Text style={styles.uploadedDocumentLabel}>Uploaded</Text>
+                      <Text style={styles.uploadedDocumentName} numberOfLines={1}>
+                        {getDocumentName(document)}
+                      </Text>
+                      <Text style={styles.uploadedDocumentDate}>
+                        {formatDate(document.created_at || document.uploaded_at)}
+                      </Text>
+                    </View>
+                    {document.file_url ? (
+                      <TouchableOpacity
+                        onPress={() => openDocument(document)}
+                        style={styles.openDocumentButton}
+                      >
+                        <Text style={styles.openDocumentButtonText}>Open</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                ) : null}
                 <TouchableOpacity
                   disabled={isUploading}
                   onPress={() => pickAndUpload(requirement)}
@@ -334,6 +366,11 @@ const VendorComplianceScreen = ({ navigation }) => {
                   v{document.version} · {formatLabel(document.review_status)} ·{" "}
                   {formatDate(document.created_at)}
                 </Text>
+                {document.file_url ? (
+                  <TouchableOpacity onPress={() => openDocument(document)}>
+                    <Text style={styles.historyOpenLink}>Open document</Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
             ))
           ) : (
@@ -482,6 +519,53 @@ const styles = StyleSheet.create({
     color: AppColor.subText,
     marginTop: 10,
   },
+  uploadedDocumentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 10,
+    backgroundColor: "#FAFAFA",
+  },
+  uploadedDocumentTextContainer: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  uploadedDocumentLabel: {
+    fontFamily: Mulish700,
+    fontSize: 11,
+    color: AppColor.primary,
+    textTransform: "uppercase",
+  },
+  uploadedDocumentName: {
+    fontFamily: Mulish600,
+    fontSize: 13,
+    color: AppColor.black,
+    marginTop: 2,
+  },
+  uploadedDocumentDate: {
+    fontFamily: Mulish400,
+    fontSize: 12,
+    color: AppColor.subText,
+    marginTop: 2,
+  },
+  openDocumentButton: {
+    minWidth: 62,
+    height: 34,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: AppColor.primary,
+  },
+  openDocumentButtonText: {
+    fontFamily: Mulish700,
+    fontSize: 13,
+    color: AppColor.primary,
+  },
   uploadButton: {
     height: 42,
     borderRadius: 8,
@@ -512,6 +596,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: AppColor.subText,
     marginTop: 3,
+  },
+  historyOpenLink: {
+    fontFamily: Mulish700,
+    fontSize: 12,
+    color: AppColor.primary,
+    marginTop: 6,
   },
   emptyText: {
     fontFamily: Mulish400,
