@@ -1333,7 +1333,7 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                     )}
 
                     <View style={styles.subsectionCard}>
-                      <View style={styles.activityHeader}>
+                      <View style={styles.refundSectionHeader}>
                         <View>
                           <Text style={styles.subsectionTitle}>
                             Employee Refund Activity
@@ -1342,17 +1342,30 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                             View refund/cancel activity by employee.
                           </Text>
                         </View>
+                      </View>
+                      <View style={styles.refundFilterBar}>
+                        <View>
+                          <Text style={styles.refundFilterLabel}>Status</Text>
+                          <Text style={styles.refundFilterHint}>
+                            Show requests by review status
+                          </Text>
+                        </View>
                         <Pressable
-                          style={styles.compactSelect}
+                          style={styles.refundFilterSelect}
                           onPress={() => setFilterPicker("status")}
                         >
-                          <Text style={styles.compactSelectText}>
+                          <Text style={styles.refundFilterSelectText}>
                             {selectedFilterLabel(
                               statusOptions,
                               requestStatusFilter,
                               "All"
                             )}
                           </Text>
+                          <MaterialCommunityIcons
+                            name="chevron-down"
+                            size={18}
+                            color={AppColor.primary}
+                          />
                         </Pressable>
                       </View>
                       <View style={styles.requestStatusRow}>

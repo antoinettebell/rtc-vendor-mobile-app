@@ -1005,6 +1005,14 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 	                  <Text style={styles.employeeMeta}>
 	                    Rate: {formatEmployeeRate(employee.employee_rate)}
 	                  </Text>
+                  <Text style={styles.employeeHoursSummary}>
+                    Today: {formatShiftHours(employee.shift_summary?.today?.gross_hours_worked)} with breaks /{" "}
+                    {formatShiftHours(employee.shift_summary?.today?.net_hours_worked)} without
+                  </Text>
+                  <Text style={styles.employeeHoursSummary}>
+                    This Week: {formatShiftHours(employee.shift_summary?.week?.gross_hours_worked)} with breaks /{" "}
+                    {formatShiftHours(employee.shift_summary?.week?.net_hours_worked)} without
+                  </Text>
                   {employee.phone_number ? (
                     <Text
                       onPress={() => callEmployee(employee.phone_number)}
@@ -1723,6 +1731,12 @@ const styles = StyleSheet.create({
     fontFamily: Mulish400,
     fontSize: 12,
     marginTop: 2,
+  },
+  employeeHoursSummary: {
+    color: AppColor.black,
+    fontFamily: Mulish600,
+    fontSize: 12,
+    marginTop: 3,
   },
   phoneLink: {
     color: AppColor.primary,
