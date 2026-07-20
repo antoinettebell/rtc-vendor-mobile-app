@@ -187,8 +187,34 @@ const VendorComplianceScreen = ({ navigation }) => {
     }
   };
 
+  const pickPhotoAndUpload = async (requirement) => {
+    try {
+      const image = await ImagePicker.openPicker({
+        cropping: false,
+        mediaType: "photo",
+      });
+      const file = {
+        uri: image?.path,
+        name:
+          image?.filename ||
+          image?.path?.split("/").pop() ||
+          `${requirement.type}-${Date.now()}.jpg`,
+        type: image?.mime || "image/jpeg",
+      };
+
+      await uploadComplianceFile(requirement, file);
+    } catch (error) {
+      if (error?.code !== "E_PICKER_CANCELLED") {
+        Alert.alert("Upload Failed", error?.message || "Please try again.");
+      }
+    } finally {
+      setUploadingType(null);
+    }
+  };
+
   const pickAndUpload = (requirement) => {
     Alert.alert(`Upload ${requirement.label}`, "Choose how to add the document.", [
+      { text: "Photos", onPress: () => pickPhotoAndUpload(requirement) },
       { text: "Camera", onPress: () => captureAndUpload(requirement) },
       { text: "Files", onPress: () => pickFileAndUpload(requirement) },
       { text: "Cancel", style: "cancel" },
