@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Linking,
   Platform,
   ScrollView,
@@ -42,7 +43,6 @@ const initialForm = {
   address_line1: "",
   address_city: "",
   address_state: "",
-  address_zip: "",
   employee_id_photo_url: "",
   employee_tax_identifier_type: "SSN",
   employee_tax_identifier: "",
@@ -76,19 +76,20 @@ const employeeProfileFields = [
   "address_line1",
   "address_city",
   "address_state",
-  "address_zip",
   "employee_id_photo_url",
 ];
 const normalizePhoneForDial = (value) => String(value || "").replace(/[^\d+]/g, "");
 const formatEmployeeAddress = (employee) =>
   [
     employee?.address_line1,
-    [employee?.address_city, employee?.address_state, employee?.address_zip]
+    [employee?.address_city, employee?.address_state]
       .filter(Boolean)
       .join(", "),
   ]
     .filter(Boolean)
     .join("\n");
+const getEmployeeIdPhotoUrl = (employee, draft = {}) =>
+  draft.employee_id_photo_url || employee?.employee_id_photo_url || "";
 const SHIFT_HISTORY_FILTERS = [
   { label: "Day", value: "day" },
   { label: "Week", value: "week" },
@@ -276,11 +277,6 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
       return false;
     }
 
-    if (!form.employee_id_photo_url) {
-      Alert.alert("Employee ID required", "Scan the employee ID before saving.");
-      return false;
-    }
-
     return true;
   };
 
@@ -307,14 +303,6 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   };
 
   const updateEmployee = async (employee, payload) => {
-    if (!employee.employee_id_photo_url && !payload.employee_id_photo_url) {
-      Alert.alert(
-        "Employee ID required",
-        "Scan and save the employee ID before making employee changes."
-      );
-      return;
-    }
-
     const previousEmployees = employees;
     setEmployees((current) =>
       current.map((item) =>
@@ -459,11 +447,6 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 
     if (!draft.zip_code?.trim()) {
       Alert.alert("Zip code required", "Enter the employee's zip code.");
-      return;
-    }
-
-    if (!draft.employee_id_photo_url?.trim()) {
-      Alert.alert("Employee ID required", "Scan the employee ID before saving.");
       return;
     }
 
@@ -797,14 +780,6 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
               </View>
             </View>
 
-	            <Text style={styles.label}>Address Zip</Text>
-	            <TextInput
-	              value={form.address_zip}
-	              onChangeText={(text) => setFormValue("address_zip", text)}
-	              keyboardType="number-pad"
-	              style={styles.input}
-	            />
-
 	            <View style={styles.row}>
 	              <View style={styles.halfField}>
 	                <Text style={styles.label}>Tax ID Type</Text>
@@ -844,7 +819,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
               <View style={styles.idUploadCopy}>
                 <Text style={styles.toggleLabel}>Employee ID</Text>
                 <Text style={styles.employeeMeta}>
-                  {form.employee_id_photo_url ? "ID scanned" : "Required before save"}
+                  {form.employee_id_photo_url ? "ID scanned" : "Optional"}
                 </Text>
               </View>
               <TouchableOpacity
@@ -1164,15 +1139,6 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                       />
                     </View>
                   </View>
-	                  <Text style={styles.label}>Address Zip</Text>
-	                  <TextInput
-	                    value={getEmployeeProfileDraftValue(employee, "address_zip")}
-                    onChangeText={(text) =>
-                      setEmployeeProfileDraft(employee._id, "address_zip", text)
-                    }
-                    keyboardType="number-pad"
-	                    style={styles.input}
-	                  />
 	                  <View style={styles.row}>
 	                    <View style={styles.halfField}>
 	                      <Text style={styles.label}>Tax ID Type</Text>
@@ -1226,7 +1192,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 	                      Saved tax ID: {employee.employee_tax_identifier_masked}
 	                    </Text>
 	                  ) : null}
-	                  <View style={styles.idUploadCard}>
+                  <View style={styles.idUploadCard}>
                     <View style={styles.idUploadCopy}>
                       <Text style={styles.toggleLabel}>Employee ID</Text>
                       <Text style={styles.employeeMeta}>
@@ -1235,7 +1201,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                           "employee_id_photo_url"
                         )
                           ? "ID scanned"
-                          : "Required before save"}
+                          : "Optional"}
                       </Text>
                     </View>
                     <TouchableOpacity
@@ -1250,6 +1216,34 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                         {employeeIdUploading ? "Scanning..." : "Scan ID"}
                       </Text>
                     </TouchableOpacity>
+                    {getEmployeeIdPhotoUrl(
+                      employee,
+                      employeeProfileDrafts[employee._id]
+                    ) ? (
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        style={styles.idPreviewRow}
+                        onPress={() =>
+                          Linking.openURL(
+                            getEmployeeIdPhotoUrl(
+                              employee,
+                              employeeProfileDrafts[employee._id]
+                            )
+                          )
+                        }
+                      >
+                        <Image
+                          source={{
+                            uri: getEmployeeIdPhotoUrl(
+                              employee,
+                              employeeProfileDrafts[employee._id]
+                            ),
+                          }}
+                          style={styles.idPreviewImage}
+                        />
+                        <Text style={styles.idPreviewText}>View saved ID</Text>
+                      </TouchableOpacity>
+                    ) : null}
                   </View>
                   <TouchableOpacity
                     onPress={() => saveEmployeeProfile(employee)}
@@ -1810,6 +1804,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
     justifyContent: "space-between",
     marginTop: 12,
@@ -1828,6 +1823,29 @@ const styles = StyleSheet.create({
   },
   idUploadButtonText: {
     color: AppColor.white,
+    fontFamily: Mulish700,
+    fontSize: 13,
+  },
+  idPreviewRow: {
+    alignItems: "center",
+    backgroundColor: AppColor.white,
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 10,
+    padding: 8,
+    width: "100%",
+  },
+  idPreviewImage: {
+    backgroundColor: "#E5E7EB",
+    borderRadius: 6,
+    height: 44,
+    width: 44,
+  },
+  idPreviewText: {
+    color: AppColor.primary,
+    flex: 1,
     fontFamily: Mulish700,
     fontSize: 13,
   },

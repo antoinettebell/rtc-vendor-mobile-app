@@ -89,6 +89,7 @@ import {
   VENDOR_COMPLIANCE_HISTORY,
   VENDOR_COMPLIANCE_ME,
   VENDOR_COMPLIANCE_REQUIREMENTS,
+  VENDOR_COMPLIANCE_SUBMIT,
 } from "./apiEndPoint";
 
 /**
@@ -194,6 +195,19 @@ export const getVendorComplianceHistory_API = async ({ foodtruck_id }) => {
   try {
     const response = await apiClient.get(
       VENDOR_COMPLIANCE_HISTORY(foodtruck_id),
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const submitVendorComplianceForOcr_API = async ({ foodtruck_id }) => {
+  try {
+    const response = await apiClient.post(
+      VENDOR_COMPLIANCE_SUBMIT(foodtruck_id),
+      {},
       { skipToken: false },
     );
     return response?.data;

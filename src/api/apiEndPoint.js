@@ -26,6 +26,8 @@ export const VENDOR_COMPLIANCE_FOOD_TRUCK = (foodtruck_id) =>
   `/vendor-compliance/food-truck/${foodtruck_id}`;
 export const VENDOR_COMPLIANCE_DOCUMENTS = (foodtruck_id) =>
   `/vendor-compliance/food-truck/${foodtruck_id}/documents`;
+export const VENDOR_COMPLIANCE_SUBMIT = (foodtruck_id) =>
+  `/vendor-compliance/food-truck/${foodtruck_id}/submit`;
 export const VENDOR_COMPLIANCE_HISTORY = (foodtruck_id) =>
   `/vendor-compliance/food-truck/${foodtruck_id}/history`;
 

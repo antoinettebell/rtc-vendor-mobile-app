@@ -17,8 +17,8 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-  getVendorComplianceHistory_API,
   getVendorComplianceSummary_API,
+  submitVendorComplianceForOcr_API,
   uploadVendorComplianceDocument_API,
 } from "../api/appAPI";
 import StatusBarManager from "../components/StatusBarManager";
@@ -107,9 +107,10 @@ const VendorComplianceScreen = ({ navigation }) => {
   const foodTruckId = user?.foodTruck?._id;
   const [loading, setLoading] = useState(true);
   const [uploadingType, setUploadingType] = useState(null);
+  const [submittingOcr, setSubmittingOcr] = useState(false);
   const [summary, setSummary] = useState(null);
-  const [history, setHistory] = useState([]);
   const [expirationDates, setExpirationDates] = useState({});
+  const [expandedDocuments, setExpandedDocuments] = useState({});
   const [datePickerRequirement, setDatePickerRequirement] = useState(null);
   const { checkAndRequestPermission: cameraPermissionStatus } = usePermission(
     permission.camera
@@ -119,12 +120,10 @@ const VendorComplianceScreen = ({ navigation }) => {
     if (!foodTruckId) return;
     setLoading(true);
     try {
-      const [summaryResponse, historyResponse] = await Promise.all([
-        getVendorComplianceSummary_API({ foodtruck_id: foodTruckId }),
-        getVendorComplianceHistory_API({ foodtruck_id: foodTruckId }),
-      ]);
+      const summaryResponse = await getVendorComplianceSummary_API({
+        foodtruck_id: foodTruckId,
+      });
       setSummary(summaryResponse?.data?.compliance || null);
-      setHistory(historyResponse?.data?.complianceDocumentList || []);
     } catch (error) {
       Alert.alert("Compliance", error?.message || "Compliance details unavailable.");
     } finally {
@@ -247,6 +246,36 @@ const VendorComplianceScreen = ({ navigation }) => {
     setDatePickerRequirement(requirement);
   };
 
+  const toggleDocumentExpanded = (requirementType) => {
+    setExpandedDocuments((current) => ({
+      ...current,
+      [requirementType]: !current[requirementType],
+    }));
+  };
+
+  const submitForOcr = async () => {
+    if (!foodTruckId) return;
+    setSubmittingOcr(true);
+    try {
+      const response = await submitVendorComplianceForOcr_API({
+        foodtruck_id: foodTruckId,
+      });
+      setSummary(response?.data?.compliance || summary);
+      Alert.alert(
+        "Compliance Saved",
+        "Your documents were saved and submitted for OCR review."
+      );
+      await loadCompliance();
+    } catch (error) {
+      Alert.alert(
+        "Compliance",
+        error?.message || "Unable to submit compliance documents for OCR."
+      );
+    } finally {
+      setSubmittingOcr(false);
+    }
+  };
+
   const handleExpirationDateConfirm = (date) => {
     if (datePickerRequirement?.type) {
       setExpirationDates((prev) => ({
@@ -326,16 +355,22 @@ const VendorComplianceScreen = ({ navigation }) => {
             const requiresExpirationDate = EXPIRING_DOCUMENT_TYPES.has(
               requirement.type
             );
-            const selectedExpirationDate = expirationDates[requirement.type];
+	            const selectedExpirationDate = expirationDates[requirement.type];
+	            const isExpanded =
+	              expandedDocuments[requirement.type] ?? !document;
 
-            return (
-              <View key={requirement.type} style={styles.documentCard}>
-                <View style={styles.documentHeader}>
-                  <View style={styles.documentIcon}>
-                    <Ionicons name="document-text-outline" size={22} color={AppColor.primary} />
-                  </View>
-                  <View style={styles.documentTitleContainer}>
-                    <Text style={styles.documentTitle}>{requirement.label}</Text>
+	            return (
+	              <View key={requirement.type} style={styles.documentCard}>
+	                <TouchableOpacity
+	                  activeOpacity={0.75}
+	                  onPress={() => toggleDocumentExpanded(requirement.type)}
+	                  style={styles.documentHeader}
+	                >
+	                  <View style={styles.documentIcon}>
+	                    <Ionicons name="document-text-outline" size={22} color={AppColor.primary} />
+	                  </View>
+	                  <View style={styles.documentTitleContainer}>
+	                    <Text style={styles.documentTitle}>{requirement.label}</Text>
 	                    <Text style={styles.documentSubtitle}>{status.label}</Text>
 	                  </View>
 	                  <Text
@@ -349,101 +384,109 @@ const VendorComplianceScreen = ({ navigation }) => {
 	                  >
 	                    {status.countdown}
 	                  </Text>
-                </View>
-                <Text style={styles.documentMeta}>
-                  Expires {formatDate(document?.expiration_date)}
-                </Text>
-                {requiresExpirationDate ? (
-                  <View style={styles.expirationInputGroup}>
-                    <Text style={styles.expirationInputLabel}>
-                      Expiration date on document *
-                    </Text>
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      onPress={() => openExpirationDatePicker(requirement)}
-                      style={styles.expirationDateButton}
-                    >
-                      <Text
-                        style={[
-                          styles.expirationDateText,
-                          !selectedExpirationDate &&
-                            styles.expirationDatePlaceholder,
-                        ]}
-                      >
-                        {getSelectedDateLabel(selectedExpirationDate)}
-                      </Text>
-                      <Ionicons
-                        name="calendar-outline"
-                        size={18}
-                        color={AppColor.primary}
-                      />
-                    </TouchableOpacity>
-                    <Text style={styles.expirationHelpText}>
-                      OCR will still scan the document as a safety check before admin review.
-                    </Text>
-                  </View>
-                ) : null}
-                {document ? (
-                  <View style={styles.uploadedDocumentRow}>
-                    <View style={styles.uploadedDocumentTextContainer}>
-                      <Text style={styles.uploadedDocumentLabel}>Uploaded</Text>
-                      <Text style={styles.uploadedDocumentName} numberOfLines={1}>
-                        {getDocumentName(document)}
-                      </Text>
-                      <Text style={styles.uploadedDocumentDate}>
-                        {formatDate(document.created_at || document.uploaded_at)}
-                      </Text>
-                    </View>
-                    {document.file_url ? (
-                      <TouchableOpacity
-                        onPress={() => openDocument(document)}
-                        style={styles.openDocumentButton}
-                      >
-                        <Text style={styles.openDocumentButtonText}>Open</Text>
-                      </TouchableOpacity>
-                    ) : null}
-                  </View>
-                ) : null}
-                <TouchableOpacity
-                  disabled={isUploading}
-                  onPress={() => pickAndUpload(requirement)}
-                  style={styles.uploadButton}
-                >
-                  {isUploading ? (
-                    <ActivityIndicator size="small" color={AppColor.white} />
-                  ) : (
-                    <>
-                      <Ionicons name="cloud-upload-outline" size={18} color={AppColor.white} />
-                      <Text style={styles.uploadButtonText}>
-                        {document ? "Replace Document" : "Upload Document"}
-                      </Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-            );
-          })}
+	                  <Ionicons
+	                    name={isExpanded ? "chevron-up" : "chevron-down"}
+	                    size={20}
+	                    color={AppColor.subText}
+	                    style={styles.expandIcon}
+	                  />
+	                </TouchableOpacity>
+	                {isExpanded ? (
+	                  <>
+	                    <Text style={styles.documentMeta}>
+	                      Expires {formatDate(document?.expiration_date)}
+	                    </Text>
+	                    {requiresExpirationDate ? (
+	                      <View style={styles.expirationInputGroup}>
+	                        <Text style={styles.expirationInputLabel}>
+	                          Expiration date on document *
+	                        </Text>
+	                        <TouchableOpacity
+	                          activeOpacity={0.7}
+	                          onPress={() => openExpirationDatePicker(requirement)}
+	                          style={styles.expirationDateButton}
+	                        >
+	                          <Text
+	                            style={[
+	                              styles.expirationDateText,
+	                              !selectedExpirationDate &&
+	                                !document?.expiration_date &&
+	                                styles.expirationDatePlaceholder,
+	                            ]}
+	                          >
+	                            {getSelectedDateLabel(
+	                              selectedExpirationDate || document?.expiration_date
+	                            )}
+	                          </Text>
+	                          <Ionicons
+	                            name="calendar-outline"
+	                            size={18}
+	                            color={AppColor.primary}
+	                          />
+	                        </TouchableOpacity>
+	                        <Text style={styles.expirationHelpText}>
+	                          OCR runs when you tap Save & Run OCR.
+	                        </Text>
+	                      </View>
+	                    ) : null}
+	                    {document ? (
+	                      <View style={styles.uploadedDocumentRow}>
+	                        <View style={styles.uploadedDocumentTextContainer}>
+	                          <Text style={styles.uploadedDocumentLabel}>Uploaded</Text>
+	                          <Text style={styles.uploadedDocumentName} numberOfLines={1}>
+	                            {getDocumentName(document)}
+	                          </Text>
+	                          <Text style={styles.uploadedDocumentDate}>
+	                            {formatDate(document.created_at || document.uploaded_at)}
+	                          </Text>
+	                        </View>
+	                        {document.file_url ? (
+	                          <TouchableOpacity
+	                            onPress={() => openDocument(document)}
+	                            style={styles.openDocumentButton}
+	                          >
+	                            <Text style={styles.openDocumentButtonText}>Open</Text>
+	                          </TouchableOpacity>
+	                        ) : null}
+	                      </View>
+	                    ) : null}
+	                    <TouchableOpacity
+	                      disabled={isUploading}
+	                      onPress={() => pickAndUpload(requirement)}
+	                      style={styles.uploadButton}
+	                    >
+	                      {isUploading ? (
+	                        <ActivityIndicator size="small" color={AppColor.white} />
+	                      ) : (
+	                        <>
+	                          <Ionicons name="cloud-upload-outline" size={18} color={AppColor.white} />
+	                          <Text style={styles.uploadButtonText}>
+	                            {document ? "Replace Document" : "Upload Document"}
+	                          </Text>
+	                        </>
+	                      )}
+	                    </TouchableOpacity>
+	                  </>
+	                ) : null}
+	              </View>
+	            );
+	          })}
 
-          <Text style={styles.sectionTitle}>History</Text>
-          {history.length ? (
-            history.map((document) => (
-              <View key={document.document_id} style={styles.historyRow}>
-                <Text style={styles.historyTitle}>{formatLabel(document.document_type)}</Text>
-                <Text style={styles.historyMeta}>
-                  v{document.version} · {formatLabel(document.review_status)} ·{" "}
-                  {formatDate(document.created_at)}
-                </Text>
-                {document.file_url ? (
-                  <TouchableOpacity onPress={() => openDocument(document)}>
-                    <Text style={styles.historyOpenLink}>Open document</Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            ))
-          ) : (
-            <Text style={styles.emptyText}>No compliance documents uploaded yet.</Text>
-          )}
-          <DateTimePickerModal
+	          <TouchableOpacity
+	            disabled={submittingOcr}
+	            onPress={submitForOcr}
+	            style={[styles.saveButton, submittingOcr && styles.disabledButton]}
+	          >
+	            {submittingOcr ? (
+	              <ActivityIndicator size="small" color={AppColor.white} />
+	            ) : (
+	              <>
+	                <Ionicons name="save-outline" size={18} color={AppColor.white} />
+	                <Text style={styles.saveButtonText}>Save & Run OCR</Text>
+	              </>
+	            )}
+	          </TouchableOpacity>
+	          <DateTimePickerModal
             isVisible={!!datePickerRequirement}
             mode="date"
             minimumDate={new Date()}
@@ -588,6 +631,9 @@ const styles = StyleSheet.create({
 	  statusExpired: {
 	    color: SCORE_FALLBACK.red,
 	  },
+	  expandIcon: {
+	    marginLeft: 8,
+	  },
   documentMeta: {
     fontFamily: Mulish400,
     fontSize: 12,
@@ -685,12 +731,31 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexDirection: "row",
   },
-  uploadButtonText: {
-    fontFamily: Mulish700,
-    fontSize: 14,
-    color: AppColor.white,
-    marginLeft: 8,
-  },
+	  uploadButtonText: {
+	    fontFamily: Mulish700,
+	    fontSize: 14,
+	    color: AppColor.white,
+	    marginLeft: 8,
+	  },
+	  saveButton: {
+	    height: 46,
+	    borderRadius: 8,
+	    backgroundColor: AppColor.primary,
+	    marginTop: 8,
+	    marginBottom: 18,
+	    alignItems: "center",
+	    justifyContent: "center",
+	    flexDirection: "row",
+	  },
+	  saveButtonText: {
+	    fontFamily: Mulish700,
+	    fontSize: 15,
+	    color: AppColor.white,
+	    marginLeft: 8,
+	  },
+	  disabledButton: {
+	    opacity: 0.7,
+	  },
   historyRow: {
     borderBottomWidth: 1,
     borderBottomColor: "#E5E5EA",
