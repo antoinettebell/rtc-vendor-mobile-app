@@ -181,6 +181,64 @@ export const normalizeMarketplaceRequirementLabel = (label) => {
   return value;
 };
 
+export const getComplianceRequirementLabel = (documentType) => {
+  const normalized = String(documentType || "").trim().toUpperCase();
+
+  if (normalized === "COI") return "Insurance";
+  if (normalized === "HEALTH_PERMIT") return "Sanitation Grade";
+  if (normalized === "BUSINESS_LICENSE") return "Business License";
+  if (normalized === "EIN") return "EIN";
+  if (normalized === "W9") return "W-9";
+
+  return normalizeMarketplaceRequirementLabel(documentType);
+};
+
+export const getVerifiedComplianceRequirementFiles = (
+  compliance,
+  requiredLabels = [],
+) => {
+  const requiredSet = new Set(
+    (requiredLabels || [])
+      .map((label) => normalizeMarketplaceRequirementLabel(label))
+      .filter(Boolean),
+  );
+
+  if (!requiredSet.size || !Array.isArray(compliance?.requirements)) {
+    return [];
+  }
+
+  return compliance.requirements
+    .map((requirement) => {
+      const label = normalizeMarketplaceRequirementLabel(
+        getComplianceRequirementLabel(requirement?.type || requirement?.document_type),
+      );
+      const document = requirement?.document;
+
+      if (
+        !label ||
+        !requiredSet.has(label) ||
+        requirement?.status !== "verified" ||
+        !document?.file_url
+      ) {
+        return null;
+      }
+
+      return {
+        attachment_id: `profile-${document.document_id || document.file_key || label}`,
+        attachment_type: "REQUIREMENT_DOCUMENT",
+        requirement_label: label,
+        requirement_key: label.toLowerCase().replace(/[^a-z0-9]+/g, "_"),
+        file_url: document.file_url,
+        file_key: document.file_key,
+        original_name: document.original_name || document.title || label,
+        name: document.original_name || document.title || label,
+        from_profile_compliance: true,
+        compliance_document_id: document.document_id,
+      };
+    })
+    .filter(Boolean);
+};
+
 export const getMarketplaceRequirementLabels = (event = {}) => {
   const labels = [];
   const addLabel = (label) => {

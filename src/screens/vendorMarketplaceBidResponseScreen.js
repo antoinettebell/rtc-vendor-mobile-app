@@ -15,11 +15,13 @@ import ImagePicker from "react-native-image-crop-picker";
 import { RESULTS } from "react-native-permissions";
 import DocumentPicker, { types } from "react-native-document-picker";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StatusBarManager from "../components/StatusBarManager";
 import { AppColor } from "../utils/theme";
 import {
   getMarketplaceEventById_API,
+  getVendorComplianceSummary_API,
   deleteMarketplaceBidAttachment_API,
   returnMarketplaceVendorAgreement_API,
   startMarketplaceVendorAgreementSigning_API,
@@ -36,6 +38,7 @@ import {
   getEventLocation,
   getMarketplaceNotesError,
   getMarketplaceRequirementLabels,
+  getVerifiedComplianceRequirementFiles,
   isBidRevisionRequested,
   isVendorPaysToAttendEvent,
   normalizeMarketplaceRequirementLabel,
@@ -84,6 +87,8 @@ const currencyDraftValue = (value) =>
 
 const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
+  const user = useSelector((state) => state.userReducer.user);
+  const foodTruck = user?.foodTruck || {};
   const initialBid = route?.params?.bid || null;
   const initialEvent =
     route?.params?.event ||
@@ -197,6 +202,44 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   );
   const isCoordinatorPaysEvent = event ? !isVendorPaysToAttendEvent(event) : true;
 
+  const applyProfileRequirementFiles = useCallback(
+    (profileFiles = []) => {
+      if (!profileFiles.length) return;
+      setRequirementFiles((prev) => {
+        const labelsAlreadySelected = new Set(
+          prev
+            .map((file) => normalizeMarketplaceRequirementLabel(file.requirement_label))
+            .filter(Boolean),
+        );
+        const missingProfileFiles = profileFiles.filter((file) => {
+          const label = normalizeMarketplaceRequirementLabel(file.requirement_label);
+          return label && !labelsAlreadySelected.has(label);
+        });
+        return missingProfileFiles.length ? [...prev, ...missingProfileFiles] : prev;
+      });
+    },
+    [],
+  );
+
+  const loadProfileRequirementFiles = useCallback(async () => {
+    if (!requiredRequirementLabels.length) return;
+    try {
+      const response = await getVendorComplianceSummary_API({
+        foodtruck_id: foodTruck._id,
+      });
+      if (response?.success) {
+        applyProfileRequirementFiles(
+          getVerifiedComplianceRequirementFiles(
+            response.data?.compliance,
+            requiredRequirementLabels,
+          ),
+        );
+      }
+    } catch (error) {
+      console.log("Marketplace profile requirement docs error", error);
+    }
+  }, [applyProfileRequirementFiles, foodTruck?._id, requiredRequirementLabels]);
+
   const canSaveDraft = useMemo(
     () =>
       !!eventId &&
@@ -272,6 +315,10 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       setSelectedRequirementLabel(requiredRequirementLabels[0]);
     }
   }, [requiredRequirementLabels, selectedRequirementLabel]);
+
+  useEffect(() => {
+    loadProfileRequirementFiles();
+  }, [loadProfileRequirementFiles]);
 
   const saveBidDraft = async (bidStatus = "DRAFT") => {
     if (notesError) {
@@ -485,14 +532,24 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     }
   };
 
-  const pickMenuPdf = async () => {
+  const setSelectedMenuFile = (file) => {
+    if (!file?.uri) return;
+    setMenuPdf({
+      uri: file.uri,
+      name: file.name || "menu-upload",
+      type: file.type || "application/octet-stream",
+      size: file.size,
+    });
+  };
+
+  const chooseMenuFile = async () => {
     try {
-      const [file] = await DocumentPicker.pick({ type: [types.pdf] });
+      const [file] = await DocumentPicker.pick({ type: [types.pdf, types.images] });
       if (file) {
-        setMenuPdf({
+        setSelectedMenuFile({
           uri: file.uri,
-          name: file.name || "menu.pdf",
-          type: file.type || "application/pdf",
+          name: file.name || "menu-upload",
+          type: file.type || "application/octet-stream",
           size: file.size,
         });
       }
@@ -501,6 +558,59 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
         Alert.alert("PDF Not Selected", error?.message || "Please try again.");
       }
     }
+  };
+
+  const chooseMenuPhoto = async () => {
+    try {
+      const photosStatus = await photosPermissionStatus();
+      if (
+        photosStatus !== RESULTS.GRANTED &&
+        photosStatus !== RESULTS.LIMITED
+      ) {
+        return;
+      }
+      const image = await ImagePicker.openPicker({ mediaType: "photo" });
+      setSelectedMenuFile({
+        uri: image?.path,
+        name: image?.filename || image?.path?.split("/").pop() || "menu.jpg",
+        type: image?.mime || "image/jpeg",
+        size: image?.size,
+      });
+    } catch (error) {
+      if (error?.code !== "E_PICKER_CANCELLED") {
+        Alert.alert("Photo Not Selected", error?.message || "Please try again.");
+      }
+    }
+  };
+
+  const takeMenuPhoto = async () => {
+    try {
+      const cameraStatus = await cameraPermissionStatus();
+      if (cameraStatus !== RESULTS.GRANTED) return;
+      const image = await ImagePicker.openCamera({
+        cropping: false,
+        mediaType: "photo",
+      });
+      setSelectedMenuFile({
+        uri: image?.path,
+        name: image?.filename || image?.path?.split("/").pop() || "menu.jpg",
+        type: image?.mime || "image/jpeg",
+        size: image?.size,
+      });
+    } catch (error) {
+      if (error?.code !== "E_PICKER_CANCELLED") {
+        Alert.alert("Photo Not Taken", error?.message || "Please try again.");
+      }
+    }
+  };
+
+  const pickMenuPdf = () => {
+    Alert.alert("Sample Menu", "Choose how to add your sample menu.", [
+      { text: "Take Photo", onPress: takeMenuPhoto },
+      { text: "Choose Photo", onPress: chooseMenuPhoto },
+      { text: "Choose File or PDF", onPress: chooseMenuFile },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const uploadSelectedRequirementFile = async (file) => {
@@ -515,7 +625,9 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     if (uploadResponse?.data?.marketplaceAttachment) {
       setRequirementFiles((prev) => [
         ...prev.filter(
-          (item) => item.requirement_label !== selectedRequirementLabel,
+          (item) =>
+            normalizeMarketplaceRequirementLabel(item.requirement_label) !==
+            normalizeMarketplaceRequirementLabel(selectedRequirementLabel),
         ),
         uploadResponse.data.marketplaceAttachment,
       ]);
@@ -646,7 +758,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
 
   const removeRequirementFile = async (file) => {
     try {
-      if (savedBid?.bid_id && file?.attachment_id) {
+      if (savedBid?.bid_id && file?.attachment_id && !file?.from_profile_compliance) {
         await deleteMarketplaceBidAttachment_API({
           bid_id: savedBid.bid_id,
           attachment_id: file.attachment_id,
@@ -861,6 +973,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                   <Text style={[styles.meta, styles.flex]} numberOfLines={1}>
                     {file.requirement_label || "Requirement"}:{" "}
                     {file.original_name || file.name || "Uploaded file"}
+                    {file.from_profile_compliance ? " (Profile document)" : ""}
                   </Text>
                   <TouchableOpacity
                     activeOpacity={0.7}
