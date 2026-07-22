@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import FastImage from "@d11/react-native-fast-image";
 import { AppColor } from "../utils/theme";
@@ -16,23 +16,61 @@ const AppImage = ({
   cache = FastImage.cacheControl.immutable,
   ...props
 }) => {
-  const [loading, setLoading] = useState(!!uri);
+  const loadTimeoutRef = useRef(null);
+  const isRemoteUri = typeof uri === "string" && /^https?:\/\//i.test(uri);
+  const [loading, setLoading] = useState(isRemoteUri);
   const [error, setError] = useState(false);
+  const imageSource =
+    error || !isRemoteUri ? placeholderImageSource : { uri, priority, cache };
+
+  const clearLoadTimeout = () => {
+    if (loadTimeoutRef.current) {
+      clearTimeout(loadTimeoutRef.current);
+      loadTimeoutRef.current = null;
+    }
+  };
 
   useEffect(() => {
     setError(false);
-    setLoading(!!uri);
-  }, [uri]);
+    setLoading(isRemoteUri);
+    clearLoadTimeout();
+
+    return clearLoadTimeout;
+  }, [isRemoteUri, uri]);
+
+  const handleLoadStart = () => {
+    if (!isRemoteUri) return;
+    setLoading(true);
+    clearLoadTimeout();
+    loadTimeoutRef.current = setTimeout(() => {
+      setLoading(false);
+      setError(true);
+    }, 8000);
+  };
+
+  const handleLoadEnd = () => {
+    clearLoadTimeout();
+    setLoading(false);
+  };
+
+  const handleError = () => {
+    clearLoadTimeout();
+    setLoading(false);
+    setError(true);
+  };
 
   return (
     <View
       style={[
         styles.container,
         containerStyle,
-        (error || !uri) && { justifyContent: "center", alignItems: "center" },
+        (error || !isRemoteUri) && {
+          justifyContent: "center",
+          alignItems: "center",
+        },
       ]}
     >
-      {loading && !!uri && (
+      {loading && isRemoteUri && (
         <ActivityIndicator
           size="small"
           color={AppColor.primary}
@@ -44,20 +82,13 @@ const AppImage = ({
         style={[
           styles.image,
           imageStyle,
-          (error || !uri) && { height: "60%", width: "60%" },
+          (error || !isRemoteUri) && { height: "60%", width: "60%" },
         ]}
-        source={
-          error || !uri
-            ? placeholderImageSource // local placeholder
-            : { uri, priority, cache }
-        }
+        source={imageSource}
         resizeMode={resizeMode}
-        onLoadStart={() => setLoading(!!uri)}
-        onLoadEnd={() => setLoading(false)}
-        onError={() => {
-          setLoading(false);
-          setError(true);
-        }}
+        onLoadStart={handleLoadStart}
+        onLoadEnd={handleLoadEnd}
+        onError={handleError}
         {...props}
       />
     </View>
