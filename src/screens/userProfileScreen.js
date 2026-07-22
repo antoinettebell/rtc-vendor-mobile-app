@@ -534,71 +534,36 @@ const UserProfileScreen = ({ navigation }) => {
               </View>
             ) : null}
 
-            <View style={styles.truckSection}>
-              <View style={styles.truckSectionHeader}>
-                <View>
-                  <Text style={styles.socialMediaTitle}>Food Trucks</Text>
-                  <Text style={styles.accessCodeHelper}>
-                    {visibleTruckUnits.length} active
-                  </Text>
-                </View>
-                {canUseMultipleTrucks ? (
-                  <TouchableOpacity
-                    onPress={() => openTruckNameModal("create")}
-                    disabled={truckSaving}
-                    style={styles.truckAddButton}
-                  >
-                    <Ionicons name="add" size={18} color={AppColor.primary} />
-                    <Text style={styles.truckAddText}>Add</Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-
-              {visibleTruckUnits.map((truck, index) => (
-                <View
-                  key={`active-truck-${truck._id || truck.name || index}`}
-                  style={styles.truckRow}
-                >
-                  <View style={styles.truckTextBlock}>
-                    <Text style={styles.itemText} numberOfLines={1}>
-                      {truck.name || `Truck ${index + 1}`}
-                    </Text>
-                    {truck.phone ? (
-                      <Text style={styles.truckPhoneText} numberOfLines={1}>
-                        {formatPhoneNumber(truck.phone)}
+            {!isEmployeeProfile ? (
+              <>
+                <View style={styles.truckSection}>
+                  <View style={styles.truckSectionHeader}>
+                    <View>
+                      <Text style={styles.socialMediaTitle}>Food Trucks</Text>
+                      <Text style={styles.accessCodeHelper}>
+                        {visibleTruckUnits.length} active
                       </Text>
+                    </View>
+                    {canUseMultipleTrucks ? (
+                      <TouchableOpacity
+                        onPress={() => openTruckNameModal("create")}
+                        disabled={truckSaving}
+                        style={styles.truckAddButton}
+                      >
+                        <Ionicons name="add" size={18} color={AppColor.primary} />
+                        <Text style={styles.truckAddText}>Add</Text>
+                      </TouchableOpacity>
                     ) : null}
                   </View>
-                  {truck.is_primary ? (
-                    <Text style={styles.lockedText}>Locked</Text>
-                  ) : (
-                    <View style={styles.truckActions}>
-                      <IconButton
-                        icon="pencil"
-                        iconColor={AppColor.black}
-                        size={18}
-                        onPress={() => openTruckNameModal("edit", truck)}
-                      />
-                      <IconButton
-                        icon="archive-outline"
-                        iconColor={AppColor.red}
-                        size={18}
-                        onPress={() => archiveTruckUnit(truck)}
-                      />
-                    </View>
-                  )}
-                </View>
-              ))}
 
-              {canUseMultipleTrucks
-                ? archivedTruckUnits.map((truck, index) => (
+                  {visibleTruckUnits.map((truck, index) => (
                     <View
-                      key={`archived-truck-${truck._id || truck.name || index}`}
+                      key={`active-truck-${truck._id || truck.name || index}`}
                       style={styles.truckRow}
                     >
                       <View style={styles.truckTextBlock}>
                         <Text style={styles.itemText} numberOfLines={1}>
-                          {truck.name}
+                          {truck.name || `Truck ${index + 1}`}
                         </Text>
                         {truck.phone ? (
                           <Text style={styles.truckPhoneText} numberOfLines={1}>
@@ -606,44 +571,80 @@ const UserProfileScreen = ({ navigation }) => {
                           </Text>
                         ) : null}
                       </View>
-                      <TouchableOpacity
-                        onPress={() => reactivateTruckUnit(truck)}
-                        disabled={truckSaving}
-                        style={styles.reactivateButton}
-                      >
-                        <Text style={styles.reactivateText}>Reactivate</Text>
-                      </TouchableOpacity>
+                      {truck.is_primary ? (
+                        <Text style={styles.lockedText}>Locked</Text>
+                      ) : (
+                        <View style={styles.truckActions}>
+                          <IconButton
+                            icon="pencil"
+                            iconColor={AppColor.black}
+                            size={18}
+                            onPress={() => openTruckNameModal("edit", truck)}
+                          />
+                          <IconButton
+                            icon="archive-outline"
+                            iconColor={AppColor.red}
+                            size={18}
+                            onPress={() => archiveTruckUnit(truck)}
+                          />
+                        </View>
+                      )}
                     </View>
-                  ))
-                : null}
-            </View>
+                  ))}
 
-            {/* Email - Removed as it's now in the profile header */}
+                  {canUseMultipleTrucks
+                    ? archivedTruckUnits.map((truck, index) => (
+                        <View
+                          key={`archived-truck-${truck._id || truck.name || index}`}
+                          style={styles.truckRow}
+                        >
+                          <View style={styles.truckTextBlock}>
+                            <Text style={styles.itemText} numberOfLines={1}>
+                              {truck.name}
+                            </Text>
+                            {truck.phone ? (
+                              <Text style={styles.truckPhoneText} numberOfLines={1}>
+                                {formatPhoneNumber(truck.phone)}
+                              </Text>
+                            ) : null}
+                          </View>
+                          <TouchableOpacity
+                            onPress={() => reactivateTruckUnit(truck)}
+                            disabled={truckSaving}
+                            style={styles.reactivateButton}
+                          >
+                            <Text style={styles.reactivateText}>Reactivate</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))
+                    : null}
+                </View>
 
-            {socialMedia?.length > 0 && <Divider />}
+                {socialMedia?.length > 0 && <Divider />}
 
-            {/* Social Media */}
-            {socialMedia?.length > 0 && (
-              <View style={styles.socialMediaContainer}>
-                <Text style={styles.socialMediaTitle}>Social Media</Text>
-                {socialMedia?.map((item, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    activeOpacity={0.7}
-                    onPress={() => onSocialLinkPress(item.mediaUrl)}
-                    style={styles.socialMediaItem}
-                  >
-                    <FastImage
-                      source={MEDIA_IMAGE_TYPE[item.mediaType]}
-                      style={styles.socialMediaIcon}
-                    />
-                    <Text style={styles.socialMediaText} numberOfLines={1}>
-                      {item.mediaUrl}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+                {socialMedia?.length > 0 && (
+                  <View style={styles.socialMediaContainer}>
+                    <Text style={styles.socialMediaTitle}>Social Media</Text>
+                    {socialMedia?.map((item, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        activeOpacity={0.7}
+                        onPress={() => onSocialLinkPress(item.mediaUrl)}
+                        style={styles.socialMediaItem}
+                      >
+                        <FastImage
+                          source={MEDIA_IMAGE_TYPE[item.mediaType]}
+                          style={styles.socialMediaIcon}
+                        />
+                        <Text style={styles.socialMediaText} numberOfLines={1}>
+                          {item.mediaUrl}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </>
+            ) : null}
 
             {!isEmployeeProfile ? <Divider /> : null}
             {!isEmployeeProfile ? (

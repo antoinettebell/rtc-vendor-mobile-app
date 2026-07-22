@@ -734,6 +734,13 @@ const EmployeeSessionScreen = ({ navigation }) => {
             <View style={styles.bottomActionPanel}>
               <TouchableOpacity
                 activeOpacity={0.8}
+                style={styles.secondaryButton}
+                onPress={() => navigation.navigate("userProfileScreen")}
+              >
+                <Text style={styles.secondaryButtonText}>My Profile</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.8}
                 style={styles.primaryButton}
                 onPress={() => navigation.navigate("employeeShiftScreen")}
               >
@@ -1048,6 +1055,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: AppColor.primary,
     borderRadius: 6,
+    flex: 1,
     minHeight: 48,
     justifyContent: "center",
   },
@@ -1059,7 +1067,24 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
     fontSize: 16,
   },
+  secondaryButton: {
+    alignItems: "center",
+    backgroundColor: AppColor.white,
+    borderColor: AppColor.primary,
+    borderRadius: 6,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 48,
+  },
+  secondaryButtonText: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
+    fontSize: 16,
+  },
   bottomActionPanel: {
+    flexDirection: "row",
+    gap: 10,
     marginBottom: 14,
   },
   queueTitle: {

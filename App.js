@@ -454,6 +454,7 @@ const EmployeeAppNavigator = () => (
       name="employeeShiftScreen"
       component={EmployeeShiftScreen}
     />
+    <Stack.Screen name="userProfileScreen" component={UserProfileScreen} />
     <Stack.Screen name="vendorPosMenuScreen" component={VendorPosMenuScreen} />
     <Stack.Screen
       name="vendorPosCheckoutScreen"
