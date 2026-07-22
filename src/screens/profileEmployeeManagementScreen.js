@@ -143,6 +143,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const [employeeTruckDrafts, setEmployeeTruckDrafts] = useState({});
   const [employeeRateDrafts, setEmployeeRateDrafts] = useState({});
   const [employeeProfileDrafts, setEmployeeProfileDrafts] = useState({});
+  const [editingEmployeeId, setEditingEmployeeId] = useState(null);
   const [activeTab, setActiveTab] = useState("current");
   const [shiftHistoryRange, setShiftHistoryRange] = useState("week");
   const [shiftHistoryByEmployee, setShiftHistoryByEmployee] = useState({});
@@ -219,6 +220,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
           );
           if (matchedEmployee) {
             setExpandedEmployeeId(matchedEmployee._id);
+            setEditingEmployeeId(null);
             setEmployeeLocationDrafts((current) => ({
               ...current,
               [matchedEmployee._id]: matchedEmployee.assigned_location_id,
@@ -315,16 +317,22 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
         employee_id: employee._id,
         payload,
       });
+      return true;
     } catch (error) {
       setEmployees(previousEmployees);
       Alert.alert("Update failed", error?.message || "Please try again.");
+      return false;
     }
   };
 
   const toggleEmployeeDetails = (employee) => {
+    const willCollapse = expandedEmployeeId === employee._id;
     setExpandedEmployeeId((current) =>
       current === employee._id ? null : employee._id
     );
+    if (willCollapse) {
+      setEditingEmployeeId(null);
+    }
     setEmployeeLocationDrafts((current) => ({
       ...current,
       [employee._id]: current[employee._id] || employee.assigned_location_id,
@@ -352,6 +360,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
     setActiveTab("current");
     setManagementMode("manage");
     setExpandedEmployeeId(employee._id);
+    setEditingEmployeeId(employee._id);
     setEmployeeLocationDrafts((current) => ({
       ...current,
       [employee._id]: current[employee._id] || employee.assigned_location_id,
@@ -437,6 +446,8 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const getEmployeeProfileDraftValue = (employee, field) =>
     employeeProfileDrafts[employee._id]?.[field] ?? String(employee?.[field] || "");
 
+  const isEmployeeEditing = (employee) => editingEmployeeId === employee?._id;
+
   const saveEmployeeProfile = async (employee) => {
     const draft = employeeProfileDrafts[employee._id] || buildEmployeeProfileDraft(employee);
 
@@ -450,7 +461,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
       return;
     }
 
-	    await updateEmployee(
+	    const saved = await updateEmployee(
 	      employee,
 	      {
 	        ...employeeProfileFields.reduce((payload, field) => {
@@ -463,8 +474,11 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 	          ? { employee_tax_identifier: draft.employee_tax_identifier.trim() }
 	          : {}),
 	      }
-	    );
-	  };
+		    );
+	    if (saved) {
+	      setEditingEmployeeId(null);
+	    }
+		  };
 
   const callEmployee = async (phoneNumber) => {
     const dialNumber = normalizePhoneForDial(phoneNumber);
@@ -539,9 +553,12 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
       return;
     }
 
-    await updateEmployee(employee, {
+    const saved = await updateEmployee(employee, {
       employee_rate: normalizedRate,
     });
+    if (saved) {
+      setEditingEmployeeId(null);
+    }
   };
 
   const assignEmployeeLocation = async (employee) => {
@@ -566,11 +583,14 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
       return;
     }
 
-    await updateEmployee(employee, {
+    const saved = await updateEmployee(employee, {
       assigned_location_id: assignedLocationId,
       assigned_truck_unit_id: assignedTruckUnitId || null,
       is_working: false,
     });
+    if (saved) {
+      setEditingEmployeeId(null);
+    }
   };
 
   const resetEmployeePin = async (employee) => {
@@ -963,14 +983,10 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
           employees.map((employee) => (
             <View key={employee._id} style={styles.employeeCard}>
               <View style={styles.employeeHeader}>
-                <TouchableOpacity
-                  onPress={() =>
-                    activeTab === "current"
-                      ? openEmployeeEditor(employee)
-                      : toggleEmployeeDetails(employee)
-                  }
-                  style={styles.employeeSummary}
-                >
+	                <TouchableOpacity
+	                  onPress={() => toggleEmployeeDetails(employee)}
+	                  style={styles.employeeSummary}
+	                >
                   <Text style={styles.employeeName}>
                     {employee.first_name} {employee.last_name}
                   </Text>
@@ -1060,28 +1076,38 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
               {isManageMode &&
                 activeTab === "current" &&
                 expandedEmployeeId === employee._id ? (
-                <View style={styles.submenu}>
-                  <Text style={styles.submenuTitle}>Employee Profile</Text>
-                  <View style={styles.row}>
+	                  <View style={styles.submenu}>
+	                  <Text style={styles.submenuTitle}>
+	                    Employee Profile {isEmployeeEditing(employee) ? "(Editing)" : ""}
+	                  </Text>
+	                  <View style={styles.row}>
                     <View style={styles.halfField}>
                       <Text style={styles.label}>First Name</Text>
                       <TextInput
                         value={getEmployeeProfileDraftValue(employee, "first_name")}
-                        onChangeText={(text) =>
-                          setEmployeeProfileDraft(employee._id, "first_name", text)
-                        }
-                        style={styles.input}
-                      />
+	                        onChangeText={(text) =>
+	                          setEmployeeProfileDraft(employee._id, "first_name", text)
+	                        }
+	                        editable={isEmployeeEditing(employee)}
+	                        style={[
+	                          styles.input,
+	                          !isEmployeeEditing(employee) && styles.readOnlyInput,
+	                        ]}
+	                      />
                     </View>
                     <View style={styles.halfField}>
                       <Text style={styles.label}>Last Name</Text>
                       <TextInput
                         value={getEmployeeProfileDraftValue(employee, "last_name")}
-                        onChangeText={(text) =>
-                          setEmployeeProfileDraft(employee._id, "last_name", text)
-                        }
-                        style={styles.input}
-                      />
+	                        onChangeText={(text) =>
+	                          setEmployeeProfileDraft(employee._id, "last_name", text)
+	                        }
+	                        editable={isEmployeeEditing(employee)}
+	                        style={[
+	                          styles.input,
+	                          !isEmployeeEditing(employee) && styles.readOnlyInput,
+	                        ]}
+	                      />
                     </View>
                   </View>
                   <View style={styles.row}>
@@ -1089,43 +1115,59 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                       <Text style={styles.label}>Phone Number</Text>
                       <TextInput
                         value={getEmployeeProfileDraftValue(employee, "phone_number")}
-                        onChangeText={(text) =>
-                          setEmployeeProfileDraft(employee._id, "phone_number", text)
-                        }
-                        keyboardType="phone-pad"
-                        style={styles.input}
-                      />
+	                        onChangeText={(text) =>
+	                          setEmployeeProfileDraft(employee._id, "phone_number", text)
+	                        }
+	                        keyboardType="phone-pad"
+	                        editable={isEmployeeEditing(employee)}
+	                        style={[
+	                          styles.input,
+	                          !isEmployeeEditing(employee) && styles.readOnlyInput,
+	                        ]}
+	                      />
                     </View>
                     <View style={styles.halfField}>
                       <Text style={styles.label}>Zip Code</Text>
                       <TextInput
                         value={getEmployeeProfileDraftValue(employee, "zip_code")}
-                        onChangeText={(text) =>
-                          setEmployeeProfileDraft(employee._id, "zip_code", text)
-                        }
-                        keyboardType="number-pad"
-                        style={styles.input}
-                      />
+	                        onChangeText={(text) =>
+	                          setEmployeeProfileDraft(employee._id, "zip_code", text)
+	                        }
+	                        keyboardType="number-pad"
+	                        editable={isEmployeeEditing(employee)}
+	                        style={[
+	                          styles.input,
+	                          !isEmployeeEditing(employee) && styles.readOnlyInput,
+	                        ]}
+	                      />
                     </View>
                   </View>
                   <Text style={styles.label}>Address</Text>
                   <TextInput
                     value={getEmployeeProfileDraftValue(employee, "address_line1")}
-                    onChangeText={(text) =>
-                      setEmployeeProfileDraft(employee._id, "address_line1", text)
-                    }
-                    style={styles.input}
-                  />
+	                    onChangeText={(text) =>
+	                      setEmployeeProfileDraft(employee._id, "address_line1", text)
+	                    }
+	                    editable={isEmployeeEditing(employee)}
+	                    style={[
+	                      styles.input,
+	                      !isEmployeeEditing(employee) && styles.readOnlyInput,
+	                    ]}
+	                  />
                   <View style={styles.row}>
                     <View style={styles.halfField}>
                       <Text style={styles.label}>City</Text>
                       <TextInput
                         value={getEmployeeProfileDraftValue(employee, "address_city")}
-                        onChangeText={(text) =>
-                          setEmployeeProfileDraft(employee._id, "address_city", text)
-                        }
-                        style={styles.input}
-                      />
+	                        onChangeText={(text) =>
+	                          setEmployeeProfileDraft(employee._id, "address_city", text)
+	                        }
+	                        editable={isEmployeeEditing(employee)}
+	                        style={[
+	                          styles.input,
+	                          !isEmployeeEditing(employee) && styles.readOnlyInput,
+	                        ]}
+	                      />
                     </View>
                     <View style={styles.halfField}>
                       <Text style={styles.label}>State</Text>
@@ -1134,9 +1176,13 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                         onChangeText={(text) =>
                           setEmployeeProfileDraft(employee._id, "address_state", text)
                         }
-                        autoCapitalize="characters"
-                        style={styles.input}
-                      />
+	                        autoCapitalize="characters"
+	                        editable={isEmployeeEditing(employee)}
+	                        style={[
+	                          styles.input,
+	                          !isEmployeeEditing(employee) && styles.readOnlyInput,
+	                        ]}
+	                      />
                     </View>
                   </View>
 	                  <View style={styles.row}>
@@ -1150,17 +1196,21 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 	                          employee,
 	                          "employee_tax_identifier_type"
 	                        )}
-	                        onChange={(item) =>
-	                          setEmployeeProfileDraft(
-	                            employee._id,
-	                            "employee_tax_identifier_type",
-	                            item.value
-	                          )
-	                        }
-	                        style={styles.dropdown}
-	                        placeholderStyle={styles.dropdownText}
-	                        selectedTextStyle={styles.dropdownText}
-	                        itemTextStyle={styles.dropdownText}
+		                        onChange={(item) =>
+		                          setEmployeeProfileDraft(
+		                            employee._id,
+		                            "employee_tax_identifier_type",
+		                            item.value
+		                          )
+		                        }
+		                        disable={!isEmployeeEditing(employee)}
+		                        style={[
+		                          styles.dropdown,
+		                          !isEmployeeEditing(employee) && styles.readOnlyInput,
+		                        ]}
+		                        placeholderStyle={styles.dropdownText}
+		                        selectedTextStyle={styles.dropdownText}
+		                        itemTextStyle={styles.dropdownText}
 	                      />
 	                    </View>
 	                    <View style={styles.halfField}>
@@ -1178,13 +1228,17 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 	                          )
 	                        }
 	                        keyboardType="number-pad"
-	                        placeholder={
-	                          employee.employee_tax_identifier_masked ||
-	                          "9 digits"
-	                        }
-	                        secureTextEntry
-	                        style={styles.input}
-	                      />
+		                        placeholder={
+		                          employee.employee_tax_identifier_masked ||
+		                          "9 digits"
+		                        }
+		                        secureTextEntry
+		                        editable={isEmployeeEditing(employee)}
+		                        style={[
+		                          styles.input,
+		                          !isEmployeeEditing(employee) && styles.readOnlyInput,
+		                        ]}
+		                      />
 	                    </View>
 	                  </View>
 	                  {employee.employee_tax_identifier_masked ? (
@@ -1204,14 +1258,15 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                           : "Optional"}
                       </Text>
                     </View>
-                    <TouchableOpacity
-                      onPress={() => uploadEmployeeIdPhoto(employee)}
-                      disabled={employeeIdUploading}
-                      style={[
-                        styles.idUploadButton,
-                        employeeIdUploading && styles.disabledButton,
-                      ]}
-                    >
+	                    <TouchableOpacity
+	                      onPress={() => uploadEmployeeIdPhoto(employee)}
+	                      disabled={employeeIdUploading || !isEmployeeEditing(employee)}
+	                      style={[
+	                        styles.idUploadButton,
+	                        (employeeIdUploading || !isEmployeeEditing(employee)) &&
+	                          styles.disabledButton,
+	                      ]}
+	                    >
                       <Text style={styles.idUploadButtonText}>
                         {employeeIdUploading ? "Scanning..." : "Scan ID"}
                       </Text>
@@ -1245,12 +1300,14 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                       </TouchableOpacity>
                     ) : null}
                   </View>
-                  <TouchableOpacity
-                    onPress={() => saveEmployeeProfile(employee)}
-                    style={styles.secondaryButton}
-                  >
-                    <Text style={styles.secondaryButtonText}>Save Profile</Text>
-                  </TouchableOpacity>
+	                  {isEmployeeEditing(employee) ? (
+	                    <TouchableOpacity
+	                      onPress={() => saveEmployeeProfile(employee)}
+	                      style={styles.secondaryButton}
+	                    >
+	                      <Text style={styles.secondaryButtonText}>Save Profile</Text>
+	                    </TouchableOpacity>
+	                  ) : null}
 
                   <View style={styles.subsectionDivider} />
                   <Text style={styles.submenuTitle}>Truck Assignment</Text>
@@ -1268,19 +1325,26 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 	                          ? String(employee.employee_rate)
 	                          : "")
 	                      }
-	                      onChangeText={(text) =>
-	                        setEmployeeRateDraft(employee._id, text)
-	                      }
-	                      keyboardType="decimal-pad"
-	                      placeholder="0.00"
-	                      style={[styles.input, styles.rateInput]}
-	                    />
-	                    <TouchableOpacity
-	                      onPress={() => saveEmployeeRate(employee)}
-	                      style={styles.rateSaveButton}
-	                    >
-	                      <Text style={styles.rateSaveButtonText}>Save Rate</Text>
-	                    </TouchableOpacity>
+		                      onChangeText={(text) =>
+		                        setEmployeeRateDraft(employee._id, text)
+		                      }
+		                      keyboardType="decimal-pad"
+		                      placeholder="0.00"
+		                      editable={isEmployeeEditing(employee)}
+		                      style={[
+		                        styles.input,
+		                        styles.rateInput,
+		                        !isEmployeeEditing(employee) && styles.readOnlyInput,
+		                      ]}
+		                    />
+		                    {isEmployeeEditing(employee) ? (
+		                      <TouchableOpacity
+		                        onPress={() => saveEmployeeRate(employee)}
+		                        style={styles.rateSaveButton}
+		                      >
+		                        <Text style={styles.rateSaveButtonText}>Save Rate</Text>
+		                      </TouchableOpacity>
+		                    ) : null}
 	                  </View>
 	                  <Text style={styles.label}>Assigned Truck</Text>
                   <Dropdown
@@ -1292,14 +1356,18 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                       employee.assigned_truck_unit_id ||
                       ""
                     }
-                    onChange={(item) =>
-                      setEmployeeTruckDraft(employee._id, item.value)
-                    }
-                    placeholder="Select truck"
-                    style={styles.dropdown}
-                    selectedTextStyle={styles.dropdownText}
-                    placeholderStyle={styles.placeholderText}
-                    itemTextStyle={styles.dropdownText}
+	                    onChange={(item) =>
+	                      setEmployeeTruckDraft(employee._id, item.value)
+	                    }
+	                    placeholder="Select truck"
+	                    disable={!isEmployeeEditing(employee)}
+	                    style={[
+	                      styles.dropdown,
+	                      !isEmployeeEditing(employee) && styles.readOnlyInput,
+	                    ]}
+	                    selectedTextStyle={styles.dropdownText}
+	                    placeholderStyle={styles.placeholderText}
+	                    itemTextStyle={styles.dropdownText}
                   />
                   <Text style={styles.label}>Assigned Location</Text>
                   <Dropdown
@@ -1310,21 +1378,27 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                       employeeLocationDrafts[employee._id] ||
                       employee.assigned_location_id
                     }
-                    onChange={(item) =>
-                      setEmployeeLocationDraft(employee._id, item.value)
-                    }
-                    placeholder="Select location"
-                    style={styles.dropdown}
-                    selectedTextStyle={styles.dropdownText}
-                    placeholderStyle={styles.placeholderText}
-                    itemTextStyle={styles.dropdownText}
-                  />
-                  <TouchableOpacity
-                    onPress={() => assignEmployeeLocation(employee)}
-                    style={styles.secondaryButton}
-                  >
-                    <Text style={styles.secondaryButtonText}>Save Assignment</Text>
-                  </TouchableOpacity>
+	                    onChange={(item) =>
+	                      setEmployeeLocationDraft(employee._id, item.value)
+	                    }
+	                    placeholder="Select location"
+	                    disable={!isEmployeeEditing(employee)}
+	                    style={[
+	                      styles.dropdown,
+	                      !isEmployeeEditing(employee) && styles.readOnlyInput,
+	                    ]}
+	                    selectedTextStyle={styles.dropdownText}
+	                    placeholderStyle={styles.placeholderText}
+	                    itemTextStyle={styles.dropdownText}
+	                  />
+	                  {isEmployeeEditing(employee) ? (
+	                    <TouchableOpacity
+	                      onPress={() => assignEmployeeLocation(employee)}
+	                      style={styles.secondaryButton}
+	                    >
+	                      <Text style={styles.secondaryButtonText}>Save Assignment</Text>
+	                    </TouchableOpacity>
+	                  ) : null}
                 </View>
               ) : null}
 
