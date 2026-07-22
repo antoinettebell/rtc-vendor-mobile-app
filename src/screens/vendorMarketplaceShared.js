@@ -173,7 +173,13 @@ export const normalizeMarketplaceRequirementLabel = (label) => {
     return "Liquor License";
   }
   if (normalized === "fire permit") return "Fire Permit";
-  if (normalized === "business license") return "Business License";
+  if (
+    normalized === "business license" ||
+    normalized === "business license/permit" ||
+    normalized === "license"
+  ) {
+    return "Business License/Permit";
+  }
   if (normalized === "city permit") return "City Permit";
   if (normalized === "food vendor") return "Food Vendor Permit";
   if (normalized === "other") return "Other";
@@ -186,7 +192,7 @@ export const getComplianceRequirementLabel = (documentType) => {
 
   if (normalized === "COI") return "Insurance";
   if (normalized === "HEALTH_PERMIT") return "Sanitation Grade";
-  if (normalized === "BUSINESS_LICENSE") return "Business License";
+  if (normalized === "BUSINESS_LICENSE") return "Business License/Permit";
   if (normalized === "EIN") return "EIN";
   if (normalized === "W9") return "W-9";
   if (normalized === "LIQUOR_LICENSE") return "Liquor License";

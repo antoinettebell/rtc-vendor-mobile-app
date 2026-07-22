@@ -31,7 +31,7 @@ const attachmentLabel = (type) => {
     case "BID_IMAGE":
       return "Food Photo";
     case "PERMIT_LICENSE":
-      return "Permit / License";
+      return "Business License/Permit";
     case "REQUIREMENT_DOCUMENT":
       return "Requirement";
     case "AGREEMENT_DOCUMENT":
