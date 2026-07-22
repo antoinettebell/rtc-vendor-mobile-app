@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
 import {
+  Alert,
   ActivityIndicator,
   FlatList,
   RefreshControl,
@@ -12,7 +13,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import StatusBarManager from "../components/StatusBarManager";
 import { AppColor } from "../utils/theme";
-import { getMarketplaceMyApplications_API } from "../api/appAPI";
+import {
+  getMarketplaceMyApplications_API,
+  withdrawMarketplaceApplication_API,
+} from "../api/appAPI";
 import {
   MarketplaceHeader,
   formatDate,
@@ -61,6 +65,11 @@ const isEditableApplication = (application) =>
     String(application?.application_status || "DRAFT"),
   ) || isApplicationRevisionRequested(application);
 
+const canWithdrawApplication = (application) =>
+  ["SUBMITTED", "UNDER_REVIEW", "PENDING_SIGNATURE"].includes(
+    String(application?.application_status || "").toUpperCase(),
+  );
+
 const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const [applications, setApplications] = useState([]);
@@ -108,6 +117,31 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
       }),
     [applications, statusFilter],
   );
+
+  const withdrawApplication = (application) => {
+    if (!application?.application_id) return;
+    Alert.alert(
+      "Withdraw Application",
+      "Withdraw this application? The coordinator will see it as withdrawn and will not be able to select it.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Withdraw",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await withdrawMarketplaceApplication_API({
+                application_id: application.application_id,
+              });
+              await loadApplications();
+            } catch (error) {
+              Alert.alert("Withdraw Failed", error?.message || "Please try again.");
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const renderApplication = ({ item }) => {
     const event = getApplicationEvent(item);
@@ -196,6 +230,21 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
             />
             <Text style={[styles.secondaryButtonText, { marginLeft: 8 }]}>
               Messages
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+        {canWithdrawApplication(item) ? (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={[
+              styles.secondaryButton,
+              { marginTop: 10, borderColor: AppColor.red || "#D93025" },
+            ]}
+            onPress={() => withdrawApplication(item)}
+          >
+            <MaterialIcons name="remove-circle-outline" size={18} color="#D93025" />
+            <Text style={[styles.secondaryButtonText, { marginLeft: 8, color: "#D93025" }]}>
+              Withdraw Application
             </Text>
           </TouchableOpacity>
         ) : null}

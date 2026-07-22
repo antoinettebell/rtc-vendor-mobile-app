@@ -39,6 +39,7 @@ const EXPIRING_DOCUMENT_TYPES = new Set([
   "BUSINESS_LICENSE",
   "COI",
   "CERTIFICATE_OF_INSURANCE",
+  "LIQUOR_LICENSE",
 ]);
 
 const formatLabel = (value = "") =>
@@ -355,7 +356,7 @@ const VendorComplianceScreen = ({ navigation }) => {
             </View>
           </View>
 
-          <Text style={styles.sectionTitle}>Required Documents</Text>
+          <Text style={styles.sectionTitle}>Compliance Documents</Text>
           {requirements.map((requirement) => {
             const document = requirement.document;
 		            const status = getExpiringDocumentStatus(requirement);

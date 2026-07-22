@@ -84,6 +84,10 @@ export const MARKETPLACE_VENDOR_AGREEMENT_RETURN = (agreement_id) =>
   `/marketplace/vendor-agreements/${agreement_id}/return`;
 export const MARKETPLACE_MY_BIDS = "/marketplace/bids/my";
 export const MARKETPLACE_MY_APPLICATIONS = "/marketplace/applications/my";
+export const MARKETPLACE_BID_WITHDRAW = (bid_id) =>
+  `/marketplace/bids/${bid_id}/withdraw`;
+export const MARKETPLACE_APPLICATION_WITHDRAW = (application_id) =>
+  `/marketplace/applications/${application_id}/withdraw`;
 export const MARKETPLACE_AWARDED_BIDS = "/marketplace/bids/awarded";
 export const MARKETPLACE_PAYMENT_BY_ID = (payment_id) =>
   `/marketplace/payments/${payment_id}`;

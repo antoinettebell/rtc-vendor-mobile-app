@@ -31,10 +31,12 @@ import {
   GET_USER_DETAILS,
   MARKETPLACE_APPLICATION_ATTACHMENTS,
   MARKETPLACE_APPLICATION_ATTACHMENT,
+  MARKETPLACE_APPLICATION_WITHDRAW,
   MARKETPLACE_APPLICATION_VENDOR_FEE_PAYMENT,
   MARKETPLACE_AWARDED_BIDS,
   MARKETPLACE_BID_ATTACHMENT,
   MARKETPLACE_BID_ATTACHMENTS,
+  MARKETPLACE_BID_WITHDRAW,
   MARKETPLACE_EVENT_APPLICATIONS,
   MARKETPLACE_EVENT_BIDS,
   MARKETPLACE_EVENT_BY_ID,
@@ -323,11 +325,37 @@ export const deleteMarketplaceBidAttachment_API = async ({
   }
 };
 
+export const withdrawMarketplaceBid_API = async ({ bid_id }) => {
+  try {
+    const response = await apiClient.patch(
+      MARKETPLACE_BID_WITHDRAW(bid_id),
+      {},
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
 export const submitMarketplaceApplication_API = async ({ event_id, payload }) => {
   try {
     const response = await apiClient.post(
       MARKETPLACE_EVENT_APPLICATIONS(event_id),
       payload,
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const withdrawMarketplaceApplication_API = async ({ application_id }) => {
+  try {
+    const response = await apiClient.patch(
+      MARKETPLACE_APPLICATION_WITHDRAW(application_id),
+      {},
       { skipToken: false },
     );
     return response?.data;

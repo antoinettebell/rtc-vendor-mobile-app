@@ -222,23 +222,19 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   );
 
   const loadProfileRequirementFiles = useCallback(async () => {
-    if (!requiredRequirementLabels.length) return;
     try {
       const response = await getVendorComplianceSummary_API({
         foodtruck_id: foodTruck._id,
       });
       if (response?.success) {
         applyProfileRequirementFiles(
-          getVerifiedComplianceRequirementFiles(
-            response.data?.compliance,
-            requiredRequirementLabels,
-          ),
+          getVerifiedComplianceRequirementFiles(response.data?.compliance),
         );
       }
     } catch (error) {
       console.log("Marketplace profile requirement docs error", error);
     }
-  }, [applyProfileRequirementFiles, foodTruck?._id, requiredRequirementLabels]);
+  }, [applyProfileRequirementFiles, foodTruck?._id]);
 
   const canSaveDraft = useMemo(
     () =>
@@ -425,12 +421,15 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       Alert.alert("Bid Submitted", "Your bid has been submitted.", [
         {
           text: "OK",
-          onPress: () => {
-            isLeavingRef.current = true;
-            navigation.navigate("VendorMyBidsScreen");
+            onPress: () => {
+              isLeavingRef.current = true;
+              navigation.reset({
+                index: 0,
+                routes: [{ name: "homeScreen" }],
+              });
+            },
           },
-        },
-      ]);
+        ]);
     }
   };
 

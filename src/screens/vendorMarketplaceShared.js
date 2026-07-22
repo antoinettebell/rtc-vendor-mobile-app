@@ -189,6 +189,7 @@ export const getComplianceRequirementLabel = (documentType) => {
   if (normalized === "BUSINESS_LICENSE") return "Business License";
   if (normalized === "EIN") return "EIN";
   if (normalized === "W9") return "W-9";
+  if (normalized === "LIQUOR_LICENSE") return "Liquor License";
 
   return normalizeMarketplaceRequirementLabel(documentType);
 };
@@ -203,9 +204,11 @@ export const getVerifiedComplianceRequirementFiles = (
       .filter(Boolean),
   );
 
-  if (!requiredSet.size || !Array.isArray(compliance?.requirements)) {
+  if (!Array.isArray(compliance?.requirements)) {
     return [];
   }
+
+  const now = Date.now();
 
   return compliance.requirements
     .map((requirement) => {
@@ -213,12 +216,16 @@ export const getVerifiedComplianceRequirementFiles = (
         getComplianceRequirementLabel(requirement?.type || requirement?.document_type),
       );
       const document = requirement?.document;
+      const expirationTime = document?.expiration_date
+        ? new Date(document.expiration_date).getTime()
+        : null;
 
       if (
         !label ||
-        !requiredSet.has(label) ||
+        (requiredSet.size && !requiredSet.has(label)) ||
         requirement?.status !== "verified" ||
-        !document?.file_url
+        !document?.file_url ||
+        (expirationTime && !Number.isNaN(expirationTime) && expirationTime < now)
       ) {
         return null;
       }

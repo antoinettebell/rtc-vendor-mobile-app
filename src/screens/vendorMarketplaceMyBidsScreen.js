@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
 import {
+  Alert,
   ActivityIndicator,
   FlatList,
   RefreshControl,
@@ -12,7 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import StatusBarManager from "../components/StatusBarManager";
 import { AppColor } from "../utils/theme";
-import { getMarketplaceMyBids_API } from "../api/appAPI";
+import { getMarketplaceMyBids_API, withdrawMarketplaceBid_API } from "../api/appAPI";
 import {
   MarketplaceHeader,
   formatDate,
@@ -38,6 +39,11 @@ const BID_STATUS_FILTERS = [
 const isEditableBid = (bid) =>
   ["DRAFT", "PENDING_SIGNATURE"].includes(String(bid?.bid_status || "DRAFT")) ||
   isBidRevisionRequested(bid);
+
+const canWithdrawBid = (bid) =>
+  ["SUBMITTED", "UNDER_REVIEW", "PENDING_SIGNATURE"].includes(
+    String(bid?.bid_status || "").toUpperCase(),
+  );
 
 const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -83,6 +89,29 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
       }),
     [bids, statusFilter],
   );
+
+  const withdrawBid = (bid) => {
+    if (!bid?.bid_id) return;
+    Alert.alert(
+      "Withdraw Bid",
+      "Withdraw this bid? The coordinator will see it as withdrawn and will not be able to award it.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Withdraw",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await withdrawMarketplaceBid_API({ bid_id: bid.bid_id });
+              await loadBids();
+            } catch (error) {
+              Alert.alert("Withdraw Failed", error?.message || "Please try again.");
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const renderBid = ({ item }) => {
     const event = getBidEvent(item);
@@ -172,6 +201,21 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
             />
             <Text style={[styles.secondaryButtonText, { marginLeft: 8 }]}>
               Messages
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+        {canWithdrawBid(item) ? (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={[
+              styles.secondaryButton,
+              { marginTop: 10, borderColor: AppColor.red || "#D93025" },
+            ]}
+            onPress={() => withdrawBid(item)}
+          >
+            <MaterialIcons name="remove-circle-outline" size={18} color="#D93025" />
+            <Text style={[styles.secondaryButtonText, { marginLeft: 8, color: "#D93025" }]}>
+              Withdraw Bid
             </Text>
           </TouchableOpacity>
         ) : null}

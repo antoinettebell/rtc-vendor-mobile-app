@@ -218,23 +218,19 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
   );
 
   const loadProfileRequirementFiles = useCallback(async () => {
-    if (!requiredRequirementLabels.length) return;
     try {
       const response = await getVendorComplianceSummary_API({
         foodtruck_id: foodTruck._id,
       });
       if (response?.success) {
         applyProfileRequirementFiles(
-          getVerifiedComplianceRequirementFiles(
-            response.data?.compliance,
-            requiredRequirementLabels,
-          ),
+          getVerifiedComplianceRequirementFiles(response.data?.compliance),
         );
       }
     } catch (error) {
       console.log("Marketplace profile requirement docs error", error);
     }
-  }, [applyProfileRequirementFiles, foodTruck?._id, requiredRequirementLabels]);
+  }, [applyProfileRequirementFiles, foodTruck?._id]);
 
   const canSaveDraft = useMemo(
     () =>
@@ -472,12 +468,15 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
       Alert.alert("Application Submitted", "Your application has been submitted.", [
         {
           text: "OK",
-          onPress: () => {
-            isLeavingRef.current = true;
-            navigation.navigate("VendorMyApplicationsScreen");
+            onPress: () => {
+              isLeavingRef.current = true;
+              navigation.reset({
+                index: 0,
+                routes: [{ name: "homeScreen" }],
+              });
+            },
           },
-        },
-      ]);
+        ]);
     }
   };
 
