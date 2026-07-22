@@ -681,28 +681,25 @@ const HomeScreen = ({ navigation }) => {
 
   useEffect(() => {
     setLocations(user?.foodTruck?.locations || []);
+    const selectedUnit = activeTruckUnits.find(
+      (unit) => unit.value?.toString() === selectedTruckUnit?.toString()
+    );
     const openUnit = activeTruckUnits.find((unit) => getTruckOpenLocationId(unit));
     const activeUnit =
-      activeTruckUnits.find(
-        (unit) => unit.value?.toString() === selectedTruckUnit?.toString()
-      ) ||
+      selectedUnit ||
       openUnit ||
       activeTruckUnits[0];
     const openLocationId = getTruckOpenLocationId(activeUnit);
-    const openUnitLocationId = getTruckOpenLocationId(openUnit);
-    const nextOpenUnit = openUnit || activeUnit;
 
     if (
-      nextOpenUnit &&
-      nextOpenUnit.value?.toString() !== selectedTruckUnit?.toString()
+      !selectedUnit &&
+      activeUnit &&
+      activeUnit.value?.toString() !== selectedTruckUnit?.toString()
     ) {
-      setSelectedTruckUnit(nextOpenUnit.value || null);
+      setSelectedTruckUnit(activeUnit.value || null);
     }
 
     setSelectedLocation((current) => {
-      if (openUnitLocationId) {
-        return openUnitLocationId;
-      }
       if (openLocationId) {
         return openLocationId;
       }
@@ -712,7 +709,7 @@ const HomeScreen = ({ navigation }) => {
       if (stillExists) return current;
       return user?.foodTruck?.currentLocation || null;
     });
-  }, [user?.foodTruck, activeTruckUnits, getTruckOpenLocationId]);
+  }, [user?.foodTruck, activeTruckUnits, getTruckOpenLocationId, selectedTruckUnit]);
 
   useEffect(() => {
     const pairOpen = isSelectedPairOpen();
