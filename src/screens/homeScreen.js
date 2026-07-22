@@ -401,7 +401,7 @@ const HomeScreen = ({ navigation }) => {
       nextOpen ? "Are you opening early?" : "Are you closing early?",
       nextOpen
         ? "This will mark your selected truck/location open for customers now."
-        : "This will mark your selected truck/location closed for customers now.",
+        : "Close for today? This overrides today's schedule. You'll need to reopen manually if you change your mind. Tomorrow will automatically follow your open/closed schedule.",
       [
         { text: "No", style: "cancel" },
         {
