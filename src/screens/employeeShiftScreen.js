@@ -182,9 +182,7 @@ const EmployeeShiftScreen = ({ navigation }) => {
     const nextOpen = !locationIsOpen;
     Alert.alert(
       nextOpen ? "Are you opening early?" : "Are you closing early?",
-      nextOpen
-        ? "This will mark your assigned truck/location open for customers now."
-        : "Close for today? This overrides today's schedule. You'll need to reopen manually if you change your mind. Tomorrow will automatically follow your open/closed schedule.",
+      "This change will override the weekly schedule. You will need to manually open/close for the rest of the day. The automatic open/close feature will resume after midnight.",
       [
         { text: "No", style: "cancel" },
         {
