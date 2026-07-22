@@ -1,10 +1,15 @@
 import moment from "moment";
 import { v4 as uuidv4 } from "uuid";
 
-export const transformLocationsForAPI = (data) => {
+export const transformLocationsForAPI = (data, options = {}) => {
+  const requireTruckUnit = !!options.requireTruckUnit;
   return data.flatMap((dayItem) =>
     dayItem.locations
-      .filter((location) => location.value) // keep only that items, which have location
+      .filter(
+        (location) =>
+          location.value &&
+          (!requireTruckUnit || !location.enabled || location.truckUnitId)
+      )
       .map((location) => {
         return {
           ...(location?._id && { _id: location._id }), // Keep existing ID if available

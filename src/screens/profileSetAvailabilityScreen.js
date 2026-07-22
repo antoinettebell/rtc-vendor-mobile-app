@@ -93,6 +93,7 @@ export default function ProfileAvailabilityScreen({ navigation }) {
       label: unit.name || `Truck ${index + 1}`,
       value: unit._id,
     }));
+  const requiresTruckUnitSelection = truckUnitOptions.length > 1;
 
   const getDataFromAPI = async () => {
     setDataLoading(true);
@@ -199,8 +200,8 @@ export default function ProfileAvailabilityScreen({ navigation }) {
     const updated = [...availability];
     updated[dayIndex].locations[locIndex] = {
       ...updated[dayIndex].locations[locIndex],
-      truckUnitId: selectedItem.value,
-      truckUnitName: selectedItem.label,
+      truckUnitId: selectedItem.value || selectedItem._id || null,
+      truckUnitName: selectedItem.label || selectedItem.name || "",
     };
     setAvailability(updated);
   };
@@ -273,6 +274,13 @@ export default function ProfileAvailabilityScreen({ navigation }) {
             );
             return;
           }
+          if (requiresTruckUnitSelection && loc.enabled && !loc.truckUnitId) {
+            Alert.alert(
+              "Missing Food Truck",
+              `Please select a food truck for ${fullDayNames[day.day] || day.day} before saving.`
+            );
+            return;
+          }
         }
       }
     }
@@ -339,8 +347,22 @@ export default function ProfileAvailabilityScreen({ navigation }) {
     // }
     // --- END COMBINED VALIDATION ---
 
-    const finalResult = transformLocationsForAPI(availability);
+    const finalResult = transformLocationsForAPI(availability, {
+      requireTruckUnit: requiresTruckUnitSelection,
+    });
     console.log("finalResult => ", finalResult);
+    const incompleteScheduleRow = finalResult.find(
+      (row) =>
+        row.available &&
+        (!row.locationId || (requiresTruckUnitSelection && !row.truckUnitId))
+    );
+    if (incompleteScheduleRow) {
+      Alert.alert(
+        "Missing Food Truck",
+        "Please select a food truck for every active weekly schedule row before saving."
+      );
+      return;
+    }
 
     // if (finalResult?.length < 1) {
     //   Alert.alert(

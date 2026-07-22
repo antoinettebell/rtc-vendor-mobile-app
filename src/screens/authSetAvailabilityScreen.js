@@ -111,6 +111,7 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
       label: unit.name || `Truck ${index + 1}`,
       value: unit._id,
     }));
+  const requiresTruckUnitSelection = truckUnitOptions.length > 1;
 
   const showTimePicker = (dayIndex, locIndex, field) => {
     setActiveDayIndex(dayIndex);
@@ -174,8 +175,8 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
     const updated = [...availability];
     updated[dayIndex].locations[locIndex] = {
       ...updated[dayIndex].locations[locIndex],
-      truckUnitId: selectedItem.value,
-      truckUnitName: selectedItem.label,
+      truckUnitId: selectedItem.value || selectedItem._id || null,
+      truckUnitName: selectedItem.label || selectedItem.name || "",
     };
     setAvailability(updated);
   };
@@ -247,6 +248,13 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
             );
             return;
           }
+          if (requiresTruckUnitSelection && loc.enabled && !loc.truckUnitId) {
+            Alert.alert(
+              "Missing Food Truck",
+              `Please select a food truck for ${fullDayNames[day.day] || day.day} before continuing.`
+            );
+            return;
+          }
         }
       }
     }
@@ -313,8 +321,22 @@ const AuthSetAvailabilityScreen = ({ navigation }) => {
     // }
     // --- END COMBINED VALIDATION ---
 
-    const preOrderData = transformLocationsForAPI(availability);
+    const preOrderData = transformLocationsForAPI(availability, {
+      requireTruckUnit: requiresTruckUnitSelection,
+    });
     console.log("preOrderData => ", preOrderData);
+    const incompleteScheduleRow = preOrderData.find(
+      (row) =>
+        row.available &&
+        (!row.locationId || (requiresTruckUnitSelection && !row.truckUnitId))
+    );
+    if (incompleteScheduleRow) {
+      Alert.alert(
+        "Missing Food Truck",
+        "Please select a food truck for every active weekly schedule row before continuing."
+      );
+      return;
+    }
 
     // if (preOrderData?.length < 1) {
     //   Alert.alert(

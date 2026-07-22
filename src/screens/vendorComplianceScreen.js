@@ -4,6 +4,7 @@ import {
 	  Alert,
 	  Linking,
 	  ScrollView,
+	  TextInput,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -65,6 +66,17 @@ const getSelectedDateLabel = (value) =>
 const getDocumentName = (document = {}) =>
   document?.title || document?.original_name || "Uploaded document";
 
+const getSanitationGradeFromDocument = (document = {}) => {
+  const fields = document?.extracted_fields || {};
+  return (
+    fields.sanitation_grade ||
+    fields.manual_sanitation_grade ||
+    fields.grade ||
+    fields.letter_grade ||
+    ""
+  );
+};
+
 const getOcrStatusText = (document = {}) => {
   if (!document?.ocr_status) return "";
   const status = formatLabel(document.ocr_status);
@@ -119,6 +131,7 @@ const VendorComplianceScreen = ({ navigation }) => {
   const [submittingOcr, setSubmittingOcr] = useState(false);
   const [summary, setSummary] = useState(null);
   const [expirationDates, setExpirationDates] = useState({});
+  const [sanitationGrades, setSanitationGrades] = useState({});
   const [expandedDocuments, setExpandedDocuments] = useState({});
   const [datePickerRequirement, setDatePickerRequirement] = useState(null);
   const { checkAndRequestPermission: cameraPermissionStatus } = usePermission(
@@ -146,10 +159,22 @@ const VendorComplianceScreen = ({ navigation }) => {
 
   const uploadComplianceFile = async (requirement, file) => {
     const selectedExpirationDate = expirationDates[requirement.type];
+    const selectedSanitationGrade = String(
+      sanitationGrades[requirement.type] || ""
+    )
+      .trim()
+      .toUpperCase();
     if (EXPIRING_DOCUMENT_TYPES.has(requirement.type) && !selectedExpirationDate) {
       Alert.alert(
         "Expiration Date Required",
         "Please enter the expiration date shown on the document before uploading."
+      );
+      return;
+    }
+    if (requirement.type === "HEALTH_PERMIT" && !selectedSanitationGrade) {
+      Alert.alert(
+        "Sanitation Grade Required",
+        "Please enter the grade shown on the Sanitation Grade document before uploading."
       );
       return;
     }
@@ -159,6 +184,9 @@ const VendorComplianceScreen = ({ navigation }) => {
     payload.append("title", requirement.label);
     if (selectedExpirationDate) {
       payload.append("expiration_date", formatDateForPayload(selectedExpirationDate));
+    }
+    if (requirement.type === "HEALTH_PERMIT") {
+      payload.append("sanitation_grade", selectedSanitationGrade);
     }
     payload.append("file", {
       uri: file.uri,
@@ -404,12 +432,18 @@ const VendorComplianceScreen = ({ navigation }) => {
 	                  <>
 	                    <Text style={styles.documentMeta}>
 	                      Expires {formatDate(document?.expiration_date)}
+	                  </Text>
+	                  {requirement.type === "HEALTH_PERMIT" &&
+	                  getSanitationGradeFromDocument(document) ? (
+	                    <Text style={styles.documentMeta}>
+	                      Grade {String(getSanitationGradeFromDocument(document)).toUpperCase()}
 	                    </Text>
-	                    {requiresExpirationDate ? (
-	                      <View style={styles.expirationInputGroup}>
-	                        <Text style={styles.expirationInputLabel}>
-	                          Expiration date on document *
-	                        </Text>
+	                  ) : null}
+		                  {requiresExpirationDate ? (
+		                      <View style={styles.expirationInputGroup}>
+		                        <Text style={styles.expirationInputLabel}>
+		                          Expiration date on document *
+		                        </Text>
 	                        <TouchableOpacity
 	                          activeOpacity={0.7}
 	                          onPress={() => openExpirationDatePicker(requirement)}
@@ -433,12 +467,41 @@ const VendorComplianceScreen = ({ navigation }) => {
 	                            color={AppColor.primary}
 	                          />
 	                        </TouchableOpacity>
-	                        <Text style={styles.expirationHelpText}>
-	                          OCR runs when you tap Save & Run OCR.
-	                        </Text>
-	                      </View>
-	                    ) : null}
-	                    {document ? (
+		                        <Text style={styles.expirationHelpText}>
+		                          OCR runs when you tap Save & Run OCR.
+		                        </Text>
+		                      </View>
+		                    ) : null}
+		                    {requirement.type === "HEALTH_PERMIT" ? (
+		                      <View style={styles.expirationInputGroup}>
+		                        <Text style={styles.expirationInputLabel}>
+		                          Sanitation Grade on document *
+		                        </Text>
+		                        <TextInput
+		                          value={
+		                            sanitationGrades[requirement.type] ||
+		                            getSanitationGradeFromDocument(document)
+		                          }
+		                          onChangeText={(value) =>
+		                            setSanitationGrades((prev) => ({
+		                              ...prev,
+		                              [requirement.type]: value
+		                                .replace(/[^a-fA-F]/g, "")
+		                                .slice(0, 1)
+		                                .toUpperCase(),
+		                            }))
+		                          }
+		                          placeholder="A, B, C, D, or F"
+		                          autoCapitalize="characters"
+		                          maxLength={1}
+		                          style={styles.gradeInput}
+		                        />
+		                        <Text style={styles.expirationHelpText}>
+		                          Used as a backup if OCR cannot read the grade.
+		                        </Text>
+		                      </View>
+		                    ) : null}
+		                    {document ? (
 	                      <View style={styles.uploadedDocumentRow}>
 	                        <View style={styles.uploadedDocumentTextContainer}>
 	                          <Text style={styles.uploadedDocumentLabel}>Uploaded</Text>
@@ -689,6 +752,17 @@ const styles = StyleSheet.create({
   },
   expirationDatePlaceholder: {
     color: AppColor.subText,
+  },
+  gradeInput: {
+    minHeight: 42,
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontFamily: Mulish600,
+    fontSize: 13,
+    color: AppColor.black,
+    backgroundColor: "#FAFAFA",
   },
   expirationHelpText: {
     fontFamily: Mulish400,

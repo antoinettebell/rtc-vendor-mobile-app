@@ -283,23 +283,27 @@ const VendorPosMenuScreen = ({ navigation }) => {
       return;
     }
 
-    const currentLocation = isEmployeeSession
-      ? user?.assignedLocation
-      : foodTruck?.locations?.find(
-          (location) => location._id === foodTruck?.currentLocation
-        ) || foodTruck?.locations?.[0];
     const activeTruckUnits = (foodTruck?.truck_units || []).filter(
       (unit) => !unit.is_archived
     );
+    const openTruckUnit = activeTruckUnits.find((unit) =>
+      (unit.open_locations || []).some((openLocation) => openLocation.isOrderingOpen)
+    );
+    const openLocationId = (openTruckUnit?.open_locations || []).find(
+      (openLocation) => openLocation.isOrderingOpen
+    )?.locationId;
+    const currentLocation = isEmployeeSession
+      ? user?.assignedLocation
+      : foodTruck?.locations?.find(
+          (location) => location._id?.toString() === openLocationId?.toString()
+        ) ||
+        foodTruck?.locations?.find(
+          (location) => location._id === foodTruck?.currentLocation
+        ) ||
+        foodTruck?.locations?.[0];
     const currentTruckUnit = isEmployeeSession
       ? user?.assignedTruckUnit || null
-      : activeTruckUnits.find((unit) =>
-          (unit.open_locations || []).some(
-            (openLocation) =>
-              openLocation.locationId?.toString() ===
-                currentLocation?._id?.toString() && openLocation.isOrderingOpen
-          )
-        ) ||
+      : openTruckUnit ||
         activeTruckUnits.find((unit) => unit.is_primary) ||
         activeTruckUnits[0] ||
         null;
