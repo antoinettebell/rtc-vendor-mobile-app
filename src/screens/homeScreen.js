@@ -397,19 +397,26 @@ const HomeScreen = ({ navigation }) => {
   const handlePress = async () => {
     const nextOpen = !isOpen;
 
+    if (nextOpen) {
+      Alert.alert(
+        "Update weekly schedule",
+        "To reopen, please update your weekly schedule. Manual closing is allowed for today, but reopening must be scheduled.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
     Alert.alert(
-      nextOpen ? "Are you opening early?" : "Are you closing early?",
-      nextOpen
-        ? "This will mark your selected truck/location open for customers now."
-        : "Close for today? This overrides today's schedule. You'll need to reopen manually if you change your mind. Tomorrow will automatically follow your open/closed schedule.",
+      "Close for today?",
+      "This overrides today's schedule. To reopen, update your weekly schedule. Tomorrow will automatically follow your open/closed schedule.",
       [
         { text: "No", style: "cancel" },
         {
           text: "Yes",
           onPress: () =>
             updateOrderingStatus({
-              nextOpen,
-              overrideReason: nextOpen ? "OPENING_EARLY" : "CLOSING_EARLY",
+              nextOpen: false,
+              overrideReason: "CLOSING_EARLY",
             }),
         },
       ]

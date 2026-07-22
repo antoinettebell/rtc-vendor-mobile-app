@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Alert,
@@ -84,6 +84,20 @@ const dropdownData = [
 ];
 
 const { width } = Dimensions.get("window");
+
+const VENDOR_PROFILE_DOCUMENT_TYPES = [
+  { label: "Sanitation Grade", value: "SANITATION_GRADE" },
+  { label: "Business License/Permit", value: "BUSINESS_LICENSE" },
+  { label: "Certificate of Insurance", value: "COI" },
+  { label: "Liquor License", value: "LIQUOR_LICENSE" },
+  { label: "EIN", value: "EIN" },
+  { label: "W-9", value: "W9" },
+  { label: "Other", value: "OTHER" },
+];
+
+const documentTypeLabel = (value) =>
+  VENDOR_PROFILE_DOCUMENT_TYPES.find((item) => item.value === value)?.label ||
+  "Vendor document";
 
 const validateEinNumber = (text) => {
   const digitsOnly = text.replace(/\D/g, "");
@@ -264,6 +278,21 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
   const { checkAndRequestPermission: cameraPermissionStatus } = usePermission(
     permission.camera
   );
+
+  useEffect(() => {
+    const foodTruck = user?.foodTruck;
+    if (!foodTruck) return;
+
+    if (!selectedLogo && foodTruck.logo) {
+      setSelectedLogo({ uri: foodTruck.logo, old: true });
+    }
+
+    if (!selectedPhotos.length && foodTruck.photos?.length) {
+      setSelectedPhotos(
+        foodTruck.photos.map((photo) => ({ uri: photo, old: true }))
+      );
+    }
+  }, [user?.foodTruck?._id]);
 
   const getPlanLimits = () => {
     switch (selectedPlan?.slug) {
@@ -480,7 +509,9 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
       );
     });
 
-  const addSelectedDocumentsFromFiles = async (files = []) => {
+  const addSelectedDocumentsFromFiles = async (files = [], selectedType) => {
+    const documentType = selectedType?.value || "OTHER";
+    const documentLabel = selectedType?.label || documentTypeLabel(documentType);
     const existingNames = new Set(
       (user?.foodTruck?.documents || [])
         .filter((document) => document?.document_status !== "ARCHIVED")
@@ -488,55 +519,73 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
         .map(normalizeDocumentName)
         .filter(Boolean)
     );
+    const existingTypes = new Set(
+      (user?.foodTruck?.documents || [])
+        .filter((document) => document?.document_status !== "ARCHIVED")
+        .map((document) => document.document_type_label || document.title)
+        .map(normalizeDocumentName)
+        .filter(Boolean)
+    );
     let nextSelectedDocuments = [...selectedDocuments];
     const selectedNames = new Set(
       nextSelectedDocuments
-        .map((document) => document.name)
+        .map((document) => document.documentLabel || document.name)
         .map(normalizeDocumentName)
         .filter(Boolean)
     );
 
     for (const file of files) {
       const fileName = normalizeDocumentName(file.name);
-      if (!fileName) continue;
+      const labelName = normalizeDocumentName(documentLabel);
+      if (!fileName && !labelName) continue;
 
-      if (existingNames.has(fileName)) {
+      if (existingNames.has(fileName) || existingTypes.has(labelName)) {
         const shouldReplace = await askReplaceDocument(
-          file.name || "Vendor document"
+          documentLabel || file.name || "Vendor document"
         );
         if (!shouldReplace) continue;
         nextSelectedDocuments = nextSelectedDocuments.filter(
-          (document) => normalizeDocumentName(document.name) !== fileName
+          (document) =>
+            normalizeDocumentName(document.name) !== fileName &&
+            normalizeDocumentName(document.documentLabel) !== labelName
         );
-        nextSelectedDocuments.push({ ...file, replaceExisting: true });
+        nextSelectedDocuments.push({
+          ...file,
+          documentType,
+          documentLabel,
+          replaceExisting: true,
+        });
         continue;
       }
 
-      if (selectedNames.has(fileName)) {
+      if (selectedNames.has(labelName) || selectedNames.has(fileName)) {
         const shouldReplace = await askReplaceDocument(
-          file.name || "Vendor document"
+          documentLabel || file.name || "Vendor document"
         );
         if (!shouldReplace) continue;
         nextSelectedDocuments = nextSelectedDocuments.filter(
-          (document) => normalizeDocumentName(document.name) !== fileName
+          (document) =>
+            normalizeDocumentName(document.name) !== fileName &&
+            normalizeDocumentName(document.documentLabel) !== labelName
         );
       } else {
+        selectedNames.add(labelName);
         selectedNames.add(fileName);
       }
 
-      nextSelectedDocuments.push(file);
+      nextSelectedDocuments.push({ ...file, documentType, documentLabel });
     }
 
     setSelectedDocuments(nextSelectedDocuments);
   };
 
-  const onPressUploadDocumentFiles = async () => {
+  const onPressUploadDocumentFiles = async (selectedType) => {
     try {
       const pickedFiles = await DocumentPicker.pick({
         allowMultiSelection: true,
         type: [types.pdf, types.images],
       });
-      await addSelectedDocumentsFromFiles(pickedFiles);
+      await addSelectedDocumentsFromFiles(pickedFiles, selectedType);
     } catch (error) {
       if (!DocumentPicker.isCancel(error)) {
         console.log("document picker error => ", error);
@@ -544,7 +593,34 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
     }
   };
 
-  const onPressUploadDocumentCamera = async () => {
+  const onPressUploadDocumentPhotos = async (selectedType) => {
+    try {
+      const permissionStatus = await photosPermissionStatus();
+      if (permissionStatus !== RESULTS.GRANTED) return;
+
+      const images = await ImagePicker.openPicker({
+        multiple: true,
+        cropping: false,
+        mediaType: "photo",
+      });
+      const imageList = Array.isArray(images) ? images : [images];
+      const documents = imageList.map((image, index) => ({
+        mode: "photo",
+        uri: image?.path,
+        name:
+          image?.filename ||
+          image?.path?.split("/").pop() ||
+          `vendor-document-${Date.now()}-${index}.jpg`,
+        type: image?.mime || "image/jpeg",
+      }));
+
+      await addSelectedDocumentsFromFiles(documents, selectedType);
+    } catch (error) {
+      console.log("document photo picker error => ", error);
+    }
+  };
+
+  const onPressUploadDocumentCamera = async (selectedType) => {
     try {
       const cameraStatus = await cameraPermissionStatus();
       if (cameraStatus !== RESULTS.GRANTED) return;
@@ -561,18 +637,33 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
         type: image?.mime || "image/jpeg",
       };
 
-      await addSelectedDocumentsFromFiles([cameraDocument]);
+      await addSelectedDocumentsFromFiles([cameraDocument], selectedType);
     } catch (error) {
       console.log("document camera error => ", error);
     }
   };
 
-  const onPressUploadDocuments = () => {
-    Alert.alert("Upload Documents", "Choose how to add your document.", [
-      { text: "Camera", onPress: onPressUploadDocumentCamera },
-      { text: "Files", onPress: onPressUploadDocumentFiles },
+  const showDocumentSourceOptions = (selectedType) => {
+    Alert.alert(`Upload ${selectedType.label}`, "Choose how to add this document.", [
+      { text: "Camera", onPress: () => onPressUploadDocumentCamera(selectedType) },
+      { text: "Photos", onPress: () => onPressUploadDocumentPhotos(selectedType) },
+      { text: "Files", onPress: () => onPressUploadDocumentFiles(selectedType) },
       { text: "Cancel", style: "cancel" },
     ]);
+  };
+
+  const onPressUploadDocuments = () => {
+    Alert.alert(
+      "Document Type",
+      "Select the type of document you are uploading.",
+      [
+        ...VENDOR_PROFILE_DOCUMENT_TYPES.map((documentType) => ({
+          text: documentType.label,
+          onPress: () => showDocumentSourceOptions(documentType),
+        })),
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
   };
 
   const onDocumentsRemovePress = (index) => {
@@ -706,7 +797,7 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
     try {
       // upload logo
       let logoResult = null;
-      if (selectedLogo) {
+      if (selectedLogo && selectedLogo.old === undefined) {
         const formData = new FormData();
         formData.append("file", {
           uri: selectedLogo.uri,
@@ -724,12 +815,24 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
         } catch (error) {
           console.log("error => ", error);
         }
+      } else if (selectedLogo && selectedLogo.old) {
+        logoResult = {
+          ...selectedLogo,
+          serverResponse: selectedLogo.uri,
+        };
       }
 
       // upload selected photos
       const imageResult = [];
       for (const image of selectedPhotos) {
         console.log("image => ", image);
+        if (image.old) {
+          imageResult.push({
+            ...image,
+            serverResponse: image.uri,
+          });
+          continue;
+        }
         const formData = new FormData();
         formData.append("file", {
           uri: image.uri,
@@ -801,8 +904,11 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
             name: document.name || "vendor-document",
             type: document.type || "application/octet-stream",
           });
-          formData.append("title", document.name || "Vendor document");
-          formData.append("document_type", "LICENSE");
+          formData.append(
+            "title",
+            document.documentLabel || document.name || "Vendor document"
+          );
+          formData.append("document_type", document.documentType || "OTHER");
           if (document.replaceExisting) {
             formData.append("replace_existing", "true");
           }
@@ -1130,10 +1236,10 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
                       >
                         <View style={{ flex: 1 }}>
                           <Text style={styles.documentName} numberOfLines={1}>
-                            {document.name || "Vendor document"}
+                            {document.documentLabel || "Vendor document"}
                           </Text>
                           <Text style={styles.documentMeta} numberOfLines={1}>
-                            {document.type || "Document"}
+                            {document.name || document.type || "Document"}
                           </Text>
                         </View>
                         <TouchableOpacity

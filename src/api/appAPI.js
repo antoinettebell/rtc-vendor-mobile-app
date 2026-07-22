@@ -29,11 +29,13 @@ import {
   GET_REVIEW_BY_FOODTRUCK_ID,
   GET_REVIEW_STATS_BY_FOODTRUCK_ID,
   GET_USER_DETAILS,
+  MARKETPLACE_APPLICATION,
   MARKETPLACE_APPLICATION_ATTACHMENTS,
   MARKETPLACE_APPLICATION_ATTACHMENT,
   MARKETPLACE_APPLICATION_WITHDRAW,
   MARKETPLACE_APPLICATION_VENDOR_FEE_PAYMENT,
   MARKETPLACE_AWARDED_BIDS,
+  MARKETPLACE_BID,
   MARKETPLACE_BID_ATTACHMENT,
   MARKETPLACE_BID_ATTACHMENTS,
   MARKETPLACE_BID_WITHDRAW,
@@ -338,6 +340,17 @@ export const withdrawMarketplaceBid_API = async ({ bid_id }) => {
   }
 };
 
+export const deleteMarketplaceBidDraft_API = async ({ bid_id }) => {
+  try {
+    const response = await apiClient.delete(MARKETPLACE_BID(bid_id), {
+      skipToken: false,
+    });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
 export const submitMarketplaceApplication_API = async ({ event_id, payload }) => {
   try {
     const response = await apiClient.post(
@@ -356,6 +369,20 @@ export const withdrawMarketplaceApplication_API = async ({ application_id }) => 
     const response = await apiClient.patch(
       MARKETPLACE_APPLICATION_WITHDRAW(application_id),
       {},
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const deleteMarketplaceApplicationDraft_API = async ({
+  application_id,
+}) => {
+  try {
+    const response = await apiClient.delete(
+      MARKETPLACE_APPLICATION(application_id),
       { skipToken: false },
     );
     return response?.data;

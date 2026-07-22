@@ -13,7 +13,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import StatusBarManager from "../components/StatusBarManager";
 import { AppColor } from "../utils/theme";
-import { getMarketplaceMyBids_API, withdrawMarketplaceBid_API } from "../api/appAPI";
+import {
+  deleteMarketplaceBidDraft_API,
+  getMarketplaceMyBids_API,
+  withdrawMarketplaceBid_API,
+} from "../api/appAPI";
 import {
   MarketplaceHeader,
   formatDate,
@@ -44,6 +48,9 @@ const canWithdrawBid = (bid) =>
   ["SUBMITTED", "UNDER_REVIEW", "PENDING_SIGNATURE"].includes(
     String(bid?.bid_status || "").toUpperCase(),
   );
+
+const canDeleteBidDraft = (bid) =>
+  String(bid?.bid_status || "").toUpperCase() === "DRAFT";
 
 const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -106,6 +113,29 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
               await loadBids();
             } catch (error) {
               Alert.alert("Withdraw Failed", error?.message || "Please try again.");
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const deleteDraftBid = (bid) => {
+    if (!bid?.bid_id) return;
+    Alert.alert(
+      "Delete Draft",
+      "Delete this draft and start over? This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteMarketplaceBidDraft_API({ bid_id: bid.bid_id });
+              await loadBids();
+            } catch (error) {
+              Alert.alert("Delete Failed", error?.message || "Please try again.");
             }
           },
         },
@@ -216,6 +246,21 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
             <MaterialIcons name="remove-circle-outline" size={18} color="#D93025" />
             <Text style={[styles.secondaryButtonText, { marginLeft: 8, color: "#D93025" }]}>
               Withdraw Bid
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+        {canDeleteBidDraft(item) ? (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={[
+              styles.secondaryButton,
+              { marginTop: 10, borderColor: AppColor.red || "#D93025" },
+            ]}
+            onPress={() => deleteDraftBid(item)}
+          >
+            <MaterialIcons name="delete-outline" size={18} color="#D93025" />
+            <Text style={[styles.secondaryButtonText, { marginLeft: 8, color: "#D93025" }]}>
+              Delete Draft
             </Text>
           </TouchableOpacity>
         ) : null}

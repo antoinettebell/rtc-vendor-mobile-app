@@ -14,6 +14,7 @@ import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import StatusBarManager from "../components/StatusBarManager";
 import { AppColor } from "../utils/theme";
 import {
+  deleteMarketplaceApplicationDraft_API,
   getMarketplaceMyApplications_API,
   withdrawMarketplaceApplication_API,
 } from "../api/appAPI";
@@ -69,6 +70,9 @@ const canWithdrawApplication = (application) =>
   ["SUBMITTED", "UNDER_REVIEW", "PENDING_SIGNATURE"].includes(
     String(application?.application_status || "").toUpperCase(),
   );
+
+const canDeleteApplicationDraft = (application) =>
+  String(application?.application_status || "").toUpperCase() === "DRAFT";
 
 const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -136,6 +140,31 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
               await loadApplications();
             } catch (error) {
               Alert.alert("Withdraw Failed", error?.message || "Please try again.");
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const deleteDraftApplication = (application) => {
+    if (!application?.application_id) return;
+    Alert.alert(
+      "Delete Draft",
+      "Delete this draft and start over? This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteMarketplaceApplicationDraft_API({
+                application_id: application.application_id,
+              });
+              await loadApplications();
+            } catch (error) {
+              Alert.alert("Delete Failed", error?.message || "Please try again.");
             }
           },
         },
@@ -245,6 +274,21 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
             <MaterialIcons name="remove-circle-outline" size={18} color="#D93025" />
             <Text style={[styles.secondaryButtonText, { marginLeft: 8, color: "#D93025" }]}>
               Withdraw Application
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+        {canDeleteApplicationDraft(item) ? (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={[
+              styles.secondaryButton,
+              { marginTop: 10, borderColor: AppColor.red || "#D93025" },
+            ]}
+            onPress={() => deleteDraftApplication(item)}
+          >
+            <MaterialIcons name="delete-outline" size={18} color="#D93025" />
+            <Text style={[styles.secondaryButtonText, { marginLeft: 8, color: "#D93025" }]}>
+              Delete Draft
             </Text>
           </TouchableOpacity>
         ) : null}
