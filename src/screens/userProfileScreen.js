@@ -69,6 +69,20 @@ const formatShiftHours = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? `${parsed.toFixed(2)} hrs` : "0.00 hrs";
 };
+const compactText = (...parts) =>
+  parts
+    .map((part) => String(part || "").trim())
+    .filter(Boolean)
+    .join(", ");
+const getEmployeeAddressText = (employee = {}, fallback = {}) => {
+  const street = employee.address_line1 || fallback.address_line1;
+  const city = employee.address_city || fallback.address_city;
+  const state = employee.address_state || fallback.address_state;
+  const zip = employee.zip_code || fallback.zip_code || employee.address_zip;
+  const cityState = [city, state].filter(Boolean).join(", ");
+  const cityStateZip = [cityState, zip].filter(Boolean).join(" ");
+  return compactText(street, cityStateZip) || "Not set";
+};
 
 const UserProfileScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -109,6 +123,16 @@ const UserProfileScreen = ({ navigation }) => {
           is_primary: true,
         },
       ];
+  const employeeProfile = employeeDashboard?.employee || {};
+  const employeeAddressText = getEmployeeAddressText(employeeProfile, user);
+  const employeePhoneText = formatPhoneNumber(
+    employeeProfile.phone_number || user?.phone_number || user?.mobileNumber || ""
+  );
+  const employeeRate =
+    employeeProfile.employee_rate !== undefined &&
+    employeeProfile.employee_rate !== null
+      ? employeeProfile.employee_rate
+      : user?.employee_rate;
 
   const updateStateOnDataFetch = (USER_DATA, FOOD_TRUCK_DATA) => {
     setSocialMedia(FOOD_TRUCK_DATA?.socialMedia || []);
@@ -421,59 +445,72 @@ const UserProfileScreen = ({ navigation }) => {
             ) : null}
 
             {isEmployeeProfile ? (
-              <>
-                <View style={styles.employeeRateBox}>
+              <View style={styles.employeeProfileBox}>
+                <View style={styles.employeeProfileHeader}>
                   <View style={styles.accessCodeIconContainer}>
                     <MaterialIcons
-                      name="attach-money"
+                      name="badge"
                       size={22}
                       color={AppColor.primary}
                     />
                   </View>
                   <View style={styles.accessCodeTextContainer}>
-                    <Text style={styles.accessCodeLabel}>Employee Rate</Text>
+                    <Text style={styles.employeeProfileTitle}>
+                      Employee Profile
+                    </Text>
                     <Text style={styles.accessCodeHelper}>
-                      Read-only rate set by your employer.
+                      Read-only details set by your employer.
                     </Text>
                   </View>
-                  <Text style={styles.accessCodeValue}>
-                    {formatEmployeeRate(user?.employee_rate)}
-                  </Text>
                 </View>
 
-                <View style={styles.employeeHoursBox}>
-                  <View style={styles.employeeHoursHeader}>
-                    <MaterialIcons
-                      name="schedule"
-                      size={20}
-                      color={AppColor.primary}
-                    />
-                    <Text style={styles.accessCodeLabel}>Hours Worked</Text>
+                <View style={styles.employeeProfileGrid}>
+                  <View style={styles.employeeProfileRow}>
+                    <Text style={styles.employeeProfileLabel}>Hourly Pay</Text>
+                    <Text style={styles.employeeProfileValue}>
+                      {formatEmployeeRate(employeeRate)}
+                    </Text>
                   </View>
-                  <Text style={styles.employeeHoursLine}>
-                    Today:{" "}
-                    {formatShiftHours(
-                      employeeDashboard?.shift_summary?.today?.gross_hours_worked
-                    )}{" "}
-                    with breaks /{" "}
-                    {formatShiftHours(
-                      employeeDashboard?.shift_summary?.today?.net_hours_worked
-                    )}{" "}
-                    without breaks
-                  </Text>
-                  <Text style={styles.employeeHoursLine}>
-                    This Week:{" "}
-                    {formatShiftHours(
-                      employeeDashboard?.shift_summary?.week?.gross_hours_worked
-                    )}{" "}
-                    with breaks /{" "}
-                    {formatShiftHours(
-                      employeeDashboard?.shift_summary?.week?.net_hours_worked
-                    )}{" "}
-                    without breaks
-                  </Text>
+                  <View style={styles.employeeProfileRow}>
+                    <Text style={styles.employeeProfileLabel}>Today</Text>
+                    <Text style={styles.employeeProfileValue}>
+                      {formatShiftHours(
+                        employeeDashboard?.shift_summary?.today?.gross_hours_worked
+                      )}{" "}
+                      with breaks /{" "}
+                      {formatShiftHours(
+                        employeeDashboard?.shift_summary?.today?.net_hours_worked
+                      )}{" "}
+                      without
+                    </Text>
+                  </View>
+                  <View style={styles.employeeProfileRow}>
+                    <Text style={styles.employeeProfileLabel}>This Week</Text>
+                    <Text style={styles.employeeProfileValue}>
+                      {formatShiftHours(
+                        employeeDashboard?.shift_summary?.week?.gross_hours_worked
+                      )}{" "}
+                      with breaks /{" "}
+                      {formatShiftHours(
+                        employeeDashboard?.shift_summary?.week?.net_hours_worked
+                      )}{" "}
+                      without
+                    </Text>
+                  </View>
+                  <View style={styles.employeeProfileRow}>
+                    <Text style={styles.employeeProfileLabel}>Address</Text>
+                    <Text style={styles.employeeProfileValue}>
+                      {employeeAddressText}
+                    </Text>
+                  </View>
+                  <View style={styles.employeeProfileRow}>
+                    <Text style={styles.employeeProfileLabel}>Phone</Text>
+                    <Text style={styles.employeeProfileValue}>
+                      {employeePhoneText || "Not set"}
+                    </Text>
+                  </View>
                 </View>
-              </>
+              </View>
             ) : null}
 
             {!isEmployeeProfile && canUseEmployeeLogin && !!vendorAccessCode ? (
@@ -608,7 +645,8 @@ const UserProfileScreen = ({ navigation }) => {
               </View>
             )}
 
-            <Divider />
+            {!isEmployeeProfile ? <Divider /> : null}
+            {!isEmployeeProfile ? (
             <View style={styles.socialMediaContainer}>
               <Text style={styles.socialMediaTitle}>Mailing Address</Text>
 
@@ -690,6 +728,7 @@ const UserProfileScreen = ({ navigation }) => {
                 }}
               />
             </View>
+            ) : null}
           </View>
         </ScrollView>
       )}
@@ -818,37 +857,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
-  employeeRateBox: {
-    alignItems: "center",
+  employeeProfileBox: {
     backgroundColor: "#F5FAFF",
     borderColor: "#BFDBFE",
     borderRadius: 8,
     borderWidth: 1,
-    flexDirection: "row",
     marginBottom: 16,
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
-  employeeHoursBox: {
-    backgroundColor: "#F8FAFC",
-    borderColor: "#DCE4F2",
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
-  employeeHoursHeader: {
+  employeeProfileHeader: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 8,
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  employeeHoursLine: {
+  employeeProfileTitle: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 16,
+  },
+  employeeProfileGrid: {
+    gap: 10,
+  },
+  employeeProfileRow: {
+    borderTopColor: "#DCE4F2",
+    borderTopWidth: 1,
+    paddingTop: 10,
+  },
+  employeeProfileLabel: {
     color: AppColor.subText,
     fontFamily: Mulish400,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    marginBottom: 3,
+  },
+  employeeProfileValue: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 14,
+    lineHeight: 20,
   },
   accessCodeIconContainer: {
     alignItems: "center",
