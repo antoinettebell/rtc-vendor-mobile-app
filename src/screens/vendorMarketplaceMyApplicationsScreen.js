@@ -74,6 +74,9 @@ const canWithdrawApplication = (application) =>
 const canDeleteApplicationDraft = (application) =>
   String(application?.application_status || "").toUpperCase() === "DRAFT";
 
+const hasAttachedEvent = (event) =>
+  !!event && typeof event === "object" && Object.keys(event).length > 0;
+
 const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const [applications, setApplications] = useState([]);
@@ -111,12 +114,13 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
     () =>
       applications.filter((application) => {
         const event = getApplicationEvent(application);
-        if (!isVendorPaysToAttendEvent(event)) {
+        if (hasAttachedEvent(event) && !isVendorPaysToAttendEvent(event)) {
           return false;
         }
         return (
           statusFilter === "ALL" ||
-          application.application_status === statusFilter
+          String(application.application_status || "").toUpperCase() ===
+            statusFilter
         );
       }),
     [applications, statusFilter],

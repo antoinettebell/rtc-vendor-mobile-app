@@ -52,6 +52,9 @@ const canWithdrawBid = (bid) =>
 const canDeleteBidDraft = (bid) =>
   String(bid?.bid_status || "").toUpperCase() === "DRAFT";
 
+const hasAttachedEvent = (event) =>
+  !!event && typeof event === "object" && Object.keys(event).length > 0;
+
 const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const [bids, setBids] = useState([]);
@@ -89,10 +92,13 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
     () =>
       bids.filter((bid) => {
         const event = getBidEvent(bid);
-        if (isVendorPaysToAttendEvent(event)) {
+        if (hasAttachedEvent(event) && isVendorPaysToAttendEvent(event)) {
           return false;
         }
-        return statusFilter === "ALL" || bid.bid_status === statusFilter;
+        return (
+          statusFilter === "ALL" ||
+          String(bid.bid_status || "").toUpperCase() === statusFilter
+        );
       }),
     [bids, statusFilter],
   );
