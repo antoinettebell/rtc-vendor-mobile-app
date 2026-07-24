@@ -17,11 +17,16 @@ const AppImage = ({
   ...props
 }) => {
   const loadTimeoutRef = useRef(null);
+  const hasUri = typeof uri === "string" && uri.trim().length > 0;
   const isRemoteUri = typeof uri === "string" && /^https?:\/\//i.test(uri);
   const [loading, setLoading] = useState(isRemoteUri);
   const [error, setError] = useState(false);
   const imageSource =
-    error || !isRemoteUri ? placeholderImageSource : { uri, priority, cache };
+    error || !hasUri
+      ? placeholderImageSource
+      : isRemoteUri
+        ? { uri, priority, cache }
+        : { uri };
 
   const clearLoadTimeout = () => {
     if (loadTimeoutRef.current) {
@@ -64,7 +69,7 @@ const AppImage = ({
       style={[
         styles.container,
         containerStyle,
-        (error || !isRemoteUri) && {
+        (error || !hasUri) && {
           justifyContent: "center",
           alignItems: "center",
         },
@@ -82,7 +87,7 @@ const AppImage = ({
         style={[
           styles.image,
           imageStyle,
-          (error || !isRemoteUri) && { height: "60%", width: "60%" },
+          (error || !hasUri) && { height: "60%", width: "60%" },
         ]}
         source={imageSource}
         resizeMode={resizeMode}

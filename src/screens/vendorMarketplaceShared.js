@@ -2,7 +2,13 @@ import React from "react";
 import { Linking, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
 import Entypo from "react-native-vector-icons/Entypo";
-import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
+import {
+  AppColor,
+  vendorTheme,
+  Mulish400,
+  Mulish600,
+  Mulish700,
+} from "../utils/theme";
 
 export const MARKETPLACE_PAYMENT_TYPES = {
   COORDINATOR_PAYS_VENDOR: "COORDINATOR_PAYS_VENDOR",
@@ -690,20 +696,20 @@ export const styles = StyleSheet.create({
     fontSize: 11,
   },
   paymentBadgeGreen: {
-    backgroundColor: "#EAF7EE",
-    borderColor: "#B8E2C3",
+    backgroundColor: vendorTheme.status.successSoft,
+    borderColor: vendorTheme.status.success,
     borderWidth: 1,
   },
   paymentBadgeOrange: {
-    backgroundColor: "#FFF1E6",
-    borderColor: "#FFD1B0",
+    backgroundColor: vendorTheme.status.pendingSoft,
+    borderColor: vendorTheme.status.pending,
     borderWidth: 1,
   },
   paymentBadgeTextGreen: {
-    color: "#168A46",
+    color: vendorTheme.status.success,
   },
   paymentBadgeTextOrange: {
-    color: AppColor.primary,
+    color: vendorTheme.status.pending,
   },
   cardImage: {
     height: 132,

@@ -9,17 +9,21 @@ import {
   FlatList,
   Alert,
   ActivityIndicator as NativeIndicator,
+  Image,
 } from "react-native";
 import { AppColor, Mulish700, Mulish400, Mulish600 } from "../utils/theme";
 import { ActivityIndicator, IconButton } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
-import Feather from "react-native-vector-icons/Feather";
 import Octicons from "react-native-vector-icons/Octicons";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
 import { getAddOnsPlans_API, getPlansData_API } from "../api/appAPI";
-import { clearUserSlice, setSelectedPlan } from "../redux/slices/userSlice";
+import {
+  clearUserSlice,
+  setSelectedPlan,
+  setSelectedSignupAddOns,
+} from "../redux/slices/userSlice";
 import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlice";
 import { onSignOut } from "../redux/slices/authSlice";
 import StatusBarManager from "../components/StatusBarManager";
@@ -46,18 +50,18 @@ const isElitePlan = (plan) => {
   );
 };
 
-const AuthFoodTruckPlansScreen = ({ navigation }) => {
+const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
 
   const { selectedPlan } = useSelector((state) => state.userReducer);
+  const isSignupFlow = route?.params?.signupFlow === true;
 
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
   const [plansData, setPlansData] = useState([]);
   const [addOnsData, setAddOnsData] = useState([]);
   const [selectedPlanId, setSelectedPlanId] = useState(null);
-  const [expandedPlanId, setExpandedPlanId] = useState(null);
   const [agreed, setAgreed] = useState(false);
   const [selectedAddOns, setSelectedAddOns] = useState([]);
   const selectedPlanObject = useMemo(
@@ -95,9 +99,14 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
       console.log("Selected Add-Ons:", submittedAddOns);
       const temp_plan = plansData.find((plan) => plan._id === selectedPlanId);
       dispatch(setSelectedPlan(temp_plan));
-      navigation.navigate("authFoodTruckProfileScreen", {
-        addOns: submittedAddOns,
-      });
+      dispatch(setSelectedSignupAddOns(submittedAddOns));
+      if (isSignupFlow) {
+        navigation.navigate("signup");
+      } else {
+        navigation.navigate("authFoodTruckProfileScreen", {
+          addOns: submittedAddOns,
+        });
+      }
     } catch (error) {
       console.error("error => ", error);
     } finally {
@@ -126,7 +135,6 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
 
   const onSelectePlan = (item) => {
     setSelectedPlanId(item._id);
-    setExpandedPlanId(item._id);
     if (isElitePlan(item)) {
       setSelectedAddOns((prevSelectedAddOns) =>
         prevSelectedAddOns.filter((id) => {
@@ -160,6 +168,51 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
   const isUnavailableBenefit = (benefit) =>
     /^no\b/i.test(String(benefit || "").trim());
 
+  const isRemovedBenefit = (plan, benefit) => {
+    const planSlug = String(plan?.slug || "").toUpperCase();
+    const benefitText = String(benefit || "");
+    const isPlatinumOrElite = ["SUB_PLATINUM", "SUB_ELITE"].includes(planSlug);
+
+    if (
+      isPlatinumOrElite &&
+      /(advanced|customized|customizable) reporting/i.test(benefitText)
+    ) {
+      return true;
+    }
+
+    return planSlug === "SUB_ELITE" && /qr ordering/i.test(benefitText);
+  };
+
+  const getVisibleBenefits = (plan) =>
+    (plan?.details || []).filter(
+      (benefit) =>
+        !isUnavailableBenefit(benefit) && !isRemovedBenefit(plan, benefit),
+    );
+
+  const getPlanDescription = (plan) => {
+    switch (String(plan?.slug || "").toUpperCase()) {
+      case "SUB_BASIC":
+        return "A strong start for new food truck businesses.";
+      case "SUB_PLATINUM":
+        return "More tools to help your business run and grow.";
+      case "SUB_ELITE":
+        return "Built for established and growing businesses.";
+      default:
+        return "Choose the features that fit your business.";
+    }
+  };
+
+  const getPlanIcon = (plan) => {
+    switch (String(plan?.slug || "").toUpperCase()) {
+      case "SUB_ELITE":
+        return "crown";
+      case "SUB_PLATINUM":
+        return "truck-fast";
+      default:
+        return "seedling";
+    }
+  };
+
   const renderAddOnCard = ({ item }) => {
     const isSelected = selectedAddOns.includes(item._id);
 
@@ -189,146 +242,80 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
 
   const renderPlanCard = ({ item }) => {
     const isSelected = selectedPlanId === item._id;
-    const isExpanded = expandedPlanId === item._id;
+    const visibleBenefits = getVisibleBenefits(item);
 
     return (
       <TouchableOpacity
         onPress={() => onSelectePlan(item)}
         activeOpacity={0.9}
         style={[
+          styles.planCard,
           {
-            borderWidth: 1,
-            borderColor: isSelected ? item.titleColor : "#E5E5EA",
-            borderRadius: 10,
-            marginVertical: 8,
-            backgroundColor: isSelected
-              ? "rgba(252, 123, 3, 0.08)"
-              : AppColor.white,
-            padding: 16,
+            borderColor: isSelected ? item.titleColor : AppColor.border,
           },
         ]}
       >
-        {/* Top Row: Name, Popular, Checkmark */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
+        {item.isPopular ? (
           <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-            }}
+            style={[styles.popularBadge, { backgroundColor: item.titleColor }]}
           >
-            <Text
-              style={{
-                color: item.titleColor,
-                fontWeight: "600",
-                fontSize: 16,
-              }}
-            >
-              {item.name}
-            </Text>
-            {item.isPopular && (
-              <View
-                style={{
-                  backgroundColor: isSelected
-                    ? AppColor.white
-                    : "rgba(252, 123, 3, 0.08)",
-                  borderRadius: 8,
-                  marginLeft: 8,
-                  paddingHorizontal: 8,
-                  paddingVertical: 2,
-                }}
+            <FontAwesome6 name="star" size={11} color={AppColor.white} />
+            <Text style={styles.popularBadgeText}>MOST POPULAR</Text>
+          </View>
+        ) : null}
+
+        <View style={styles.planHeaderRow}>
+          <View style={styles.planIdentityRow}>
+            <View style={styles.planIconCircle}>
+              <FontAwesome6
+                name={getPlanIcon(item)}
+                size={24}
+                color={item.titleColor}
+              />
+            </View>
+            <View style={styles.planTitleWrap}>
+              <Text
+                style={[styles.planName, { color: item.titleColor }]}
               >
-                <Text
-                  style={{ color: "#1DBF73", fontSize: 11, fontWeight: "600" }}
-                >
-                  Popular
-                </Text>
-              </View>
-            )}
+                {item.name}
+              </Text>
+              <Text style={styles.planDescription}>
+                {getPlanDescription(item)}
+              </Text>
+            </View>
           </View>
 
-          <Ionicons
-            name="checkmark-circle"
-            size={22}
-            color={isSelected ? item.titleColor : "#D1D1D6"}
-            style={{ position: "absolute", right: 0, top: 0 }}
-          />
+          <View style={styles.planRateWrap}>
+            <Text style={styles.planRate}>{item.rate}%</Text>
+            <Text style={styles.planRateLabel}>per sale</Text>
+          </View>
         </View>
 
-        {/* Rate */}
-        <Text style={{ fontSize: 28, fontWeight: "700", marginTop: 8 }}>
-          {item.rate}%
-        </Text>
-
-        {/* See all benefits */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => setExpandedPlanId(isExpanded ? null : item._id)}
-          style={{
-            marginTop: 8,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 4,
-          }}
-        >
-          <Text
-            style={{
-              color: isExpanded ? AppColor.text : "#888",
-              fontWeight: "400",
-              fontSize: 14,
-            }}
-          >
-            {"See all benefits"}
-          </Text>
-          <Feather
-            name={isExpanded ? "chevron-up" : "chevron-down"}
-            size={16}
-            color={isExpanded ? AppColor.text : "#888"}
-          />
-        </TouchableOpacity>
-
-        {/* Benefits List */}
-        {isExpanded && (
-          <View style={{ marginTop: 8 }}>
-            {item.details
-              .map((benefit, idx) => {
-              const unavailable = isUnavailableBenefit(benefit);
+        <View style={styles.benefitsWrap}>
+          {visibleBenefits.map((benefit, idx) => {
               return (
-                <View
-                  key={idx}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "flex-start",
-                    marginVertical: 5,
-                    gap: 10,
-                  }}
-                >
-                  <FontAwesome6
-                    name={unavailable ? "xmark" : "check"}
-                    size={14}
-                    color={unavailable ? "#D92D20" : item.titleColor}
-                  />
-                  <Text
-                    style={{
-                      flex: 1,
-                      color: "#111520",
-                      fontSize: 12,
-                      fontWeight: "600",
-                      flexWrap: "wrap",
-                    }}
-                  >
+                <View key={`${item._id}-${idx}`} style={styles.benefitRow}>
+                  <View style={styles.benefitCheckCircle}>
+                    <FontAwesome6 name="check" size={10} color={item.titleColor} />
+                  </View>
+                  <Text style={styles.benefitText}>
                     {getBenefitLabel(item, benefit)}
                   </Text>
                 </View>
               );
             })}
-          </View>
-        )}
+        </View>
+
+        <View style={styles.selectedPlanRow}>
+          <Ionicons
+            name={isSelected ? "radio-button-on" : "radio-button-off"}
+            size={22}
+            color={isSelected ? item.titleColor : AppColor.border}
+          />
+          <Text style={styles.selectedPlanText}>
+            {isSelected ? "Selected" : `Choose ${item.name}`}
+          </Text>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -343,11 +330,9 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
         if (selectedPlan) {
           // if selected plan is already set, then set the selected plan id and expanded plan id
           setSelectedPlanId(selectedPlan._id);
-          setExpandedPlanId(selectedPlan._id);
         } else {
           // if selected plan is not set, then set the first plan as selected plan
           setSelectedPlanId(response.data.planList[0]._id);
-          setExpandedPlanId(response.data.planList[0]._id);
         }
       }
 
@@ -380,16 +365,17 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <IconButton
-          icon={(props) => (
-            <Octicons
-              name="sign-out"
-              size={props.size}
-              color={AppColor.white}
-            />
-          )}
-          onPress={handleSignout}
+          icon={isSignupFlow ? "arrow-left" : (props) => (
+              <Octicons
+                name="sign-out"
+                size={props.size}
+                color={AppColor.white}
+              />
+            )}
+          iconColor={AppColor.white}
+          onPress={isSignupFlow ? () => navigation.goBack() : handleSignout}
         />
-        <Text style={styles.headerTitle}>Food Truck Profile</Text>
+        <Text style={styles.headerTitle}>Select Plan</Text>
         <View style={{ width: 48 }} />
       </View>
 
@@ -409,8 +395,7 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
           pointerEvents={loading ? "none" : "auto"}
         >
           <View style={{ flex: 1 }}>
-            {/* Step Indicator */}
-            <View style={styles.stepContainer}>
+            {!isSignupFlow ? <View style={styles.stepContainer}>
               <View style={styles.stepSubContainer}>
                 <View style={styles.filledCircle}>
                   <FontAwesome6
@@ -436,13 +421,31 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
               <View style={styles.stepSubContainer}>
                 <View style={styles.emptyCircle} />
               </View> */}
-            </View>
+            </View> : null}
 
             {/* Main Form */}
             <View style={styles.content}>
-              {/* Select Plan */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Select Plan</Text>
+              <View style={styles.planIntro}>
+                <Image
+                  source={require("../assets/images/AppLogo.png")}
+                  style={styles.planLogo}
+                  resizeMode="contain"
+                />
+                <View style={styles.reassuranceBanner}>
+                  <Ionicons
+                    name="shield-checkmark-outline"
+                    size={20}
+                    color={AppColor.primary}
+                  />
+                  <Text style={styles.reassuranceText}>
+                    No setup fees. Cancel anytime.
+                  </Text>
+                </View>
+                <Text style={styles.choosePlanTitle}>Choose Your Plan</Text>
+                <Text style={styles.choosePlanSubtitle}>
+                  Select the plan that is right for your business. You can
+                  always upgrade or downgrade later.
+                </Text>
               </View>
 
               <View style={{ flex: 1 }}>
@@ -455,7 +458,24 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
                 />
               </View>
 
-              {isEliteSelected ? (
+              {isSignupFlow ? (
+                <View style={styles.allPlansCard}>
+                  <FontAwesome6
+                    name="bullhorn"
+                    size={22}
+                    color={AppColor.primary}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.allPlansTitle}>All plans include</Text>
+                    <Text style={styles.allPlansText}>
+                      Secure payments, customer support, order management, and
+                      more.
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+
+              {!isSignupFlow && isEliteSelected ? (
                 <View style={styles.includedAccessCard}>
                   <Ionicons
                     name="checkmark-circle"
@@ -474,7 +494,7 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
                 </View>
               ) : null}
 
-              {visibleAddOns?.length ? (
+              {!isSignupFlow && visibleAddOns?.length ? (
                 <View>
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Select Add-Ons</Text>
@@ -537,7 +557,14 @@ const AuthFoodTruckPlansScreen = ({ navigation }) => {
                 {loading ? (
                   <ActivityIndicator color={AppColor.white} />
                 ) : (
-                  <Text style={styles.continueButtonText}>{"Select Plan"}</Text>
+                  <View style={styles.continueButtonContent}>
+                    <Text style={styles.continueButtonText}>Continue</Text>
+                    <FontAwesome6
+                      name="arrow-right"
+                      size={15}
+                      color={AppColor.white}
+                    />
+                  </View>
                 )}
               </TouchableOpacity>
             </View>
@@ -556,7 +583,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: AppColor.primary,
+    backgroundColor: AppColor.header,
     paddingHorizontal: 8,
     borderBottomLeftRadius: 25,
     borderBottomRightRadius: 25,
@@ -593,6 +620,185 @@ const styles = StyleSheet.create({
   },
   line: { width: "10%", height: 2, backgroundColor: AppColor.primary },
   content: { flex: 1 },
+  planIntro: {
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 8,
+  },
+  planLogo: {
+    width: 88,
+    height: 88,
+    marginBottom: 14,
+  },
+  reassuranceBanner: {
+    width: "100%",
+    minHeight: 46,
+    borderRadius: 23,
+    backgroundColor: AppColor.white,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingHorizontal: 18,
+    marginBottom: 22,
+  },
+  reassuranceText: {
+    fontSize: 15,
+    fontFamily: Mulish600,
+    color: AppColor.primary,
+  },
+  choosePlanTitle: {
+    fontSize: 30,
+    fontFamily: Mulish700,
+    color: AppColor.text,
+    textAlign: "center",
+  },
+  choosePlanSubtitle: {
+    maxWidth: 340,
+    fontSize: 15,
+    lineHeight: 22,
+    fontFamily: Mulish400,
+    color: AppColor.textHighlighter,
+    textAlign: "center",
+    marginTop: 8,
+    marginBottom: 10,
+  },
+  planCard: {
+    borderWidth: 1,
+    borderRadius: 14,
+    marginVertical: 8,
+    backgroundColor: AppColor.white,
+    padding: 16,
+    overflow: "hidden",
+  },
+  popularBadge: {
+    alignSelf: "flex-end",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderBottomLeftRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: -16,
+    marginRight: -16,
+    marginBottom: 10,
+  },
+  popularBadgeText: {
+    color: AppColor.white,
+    fontSize: 10,
+    fontFamily: Mulish700,
+  },
+  planHeaderRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  planIdentityRow: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  planIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F9FAFB",
+  },
+  planTitleWrap: { flex: 1 },
+  planName: {
+    fontSize: 21,
+    fontFamily: Mulish700,
+  },
+  planDescription: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontFamily: Mulish400,
+    color: AppColor.textHighlighter,
+    marginTop: 3,
+  },
+  planRateWrap: { alignItems: "flex-end" },
+  planRate: {
+    fontSize: 25,
+    fontFamily: Mulish700,
+    color: AppColor.text,
+  },
+  planRateLabel: {
+    fontSize: 11,
+    fontFamily: Mulish400,
+    color: AppColor.textHighlighter,
+  },
+  benefitsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 16,
+    rowGap: 10,
+  },
+  benefitRow: {
+    width: "50%",
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingRight: 8,
+    gap: 7,
+  },
+  benefitCheckCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F0F7F2",
+  },
+  benefitText: {
+    flex: 1,
+    color: AppColor.text,
+    fontSize: 12,
+    lineHeight: 18,
+    fontFamily: Mulish600,
+  },
+  selectedPlanRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: AppColor.border,
+    marginTop: 15,
+    paddingTop: 12,
+  },
+  selectedPlanText: {
+    fontSize: 13,
+    fontFamily: Mulish700,
+    color: AppColor.text,
+  },
+  allPlansCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    marginHorizontal: 24,
+    marginTop: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: AppColor.border,
+    borderRadius: 12,
+    backgroundColor: AppColor.white,
+  },
+  allPlansTitle: {
+    color: AppColor.primary,
+    fontSize: 15,
+    fontFamily: Mulish700,
+    marginBottom: 3,
+  },
+  allPlansText: {
+    color: AppColor.textHighlighter,
+    fontSize: 12,
+    lineHeight: 18,
+    fontFamily: Mulish400,
+  },
   section: { marginVertical: 16, paddingHorizontal: 24 },
   sectionTitle: { fontSize: 18, fontFamily: Mulish700, color: AppColor.text },
   sectionSubtitle: {
@@ -730,6 +936,12 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
     fontSize: 16,
     color: AppColor.white,
+  },
+  continueButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
   },
 
   termsContainer: {

@@ -267,8 +267,13 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
     isEmployeesScreen,
   ]);
   const allFoodTruckSummary = useMemo(
-    () => buildAnalyticsSummary(allFoodTruckAnalytics?.employees || []),
-    [allFoodTruckAnalytics, buildAnalyticsSummary]
+    () => ({
+      sales: Number(allFoodTruckAnalytics?.grossSales || 0),
+      orders: Number(allFoodTruckAnalytics?.orders || 0),
+      requests: Number(allFoodTruckAnalytics?.refundsCancels || 0),
+      averageTicket: Number(allFoodTruckAnalytics?.averageTicket || 0),
+    }),
+    [allFoodTruckAnalytics]
   );
 	  useEffect(() => {
 	    if (isEmployeesScreen && dateFilter === "month") {
@@ -336,42 +341,17 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
 	    },
 	    [allFoodTruckSummary, analyticsSummary, isEmployeesScreen]
 	  );
-  const allFoodTruckBreakdown = useMemo(() => {
-    const grouped = (allFoodTruckAnalytics?.employees || []).reduce(
-      (acc, employee) => {
-        const truckName =
-          employee.assigned_truck_unit_name ||
-          employee.assigned_truck_unit?.name ||
-          "Unassigned";
-        const metrics = employee.metrics || {};
-        const existing = acc[truckName] || {
-          label: truckName,
-          sales: 0,
-          orders: 0,
-          requests: 0,
-        };
-        const orders = Number(metrics.orders_processed || 0);
-        const sales = Number(metrics.gross_sales || 0);
-        const requests = Number(metrics.refund_cancel_requests_submitted || 0);
-
-        return {
-          ...acc,
-          [truckName]: {
-            ...existing,
-            sales: existing.sales + sales,
-            orders: existing.orders + orders,
-            requests: existing.requests + requests,
-          },
-        };
-      },
-      {}
-    );
-
-    return Object.values(grouped).map((item) => ({
-      ...item,
-      averageTicket: item.orders ? item.sales / item.orders : 0,
-    }));
-  }, [allFoodTruckAnalytics]);
+  const allFoodTruckBreakdown = useMemo(
+    () =>
+      (allFoodTruckAnalytics?.breakdown || []).map((item) => ({
+        label: item.label,
+        sales: Number(item.grossSales || 0),
+        orders: Number(item.orders || 0),
+        requests: Number(item.refundsCancels || 0),
+        averageTicket: Number(item.averageTicket || 0),
+      })),
+    [allFoodTruckAnalytics]
+  );
   const refundStatusCounts = useMemo(
     () =>
       refundRequests.reduce(
@@ -464,21 +444,25 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
             employeeInternalId: employeeFilter,
             paymentMethod: paymentFilter,
             refundCancelStatus: null,
+            includeEmployeeAnalytics: isEmployeesScreen,
           }),
           getEarningByFoodTruckID_API({
             foodTruck_id: user.foodTruck._id,
             startDate,
             endDate,
             refundCancelStatus: null,
+            includeEmployeeAnalytics: false,
           }),
-          getRefundCancelRequests_API({
-            foodTruckId: user.foodTruck._id,
-            status: requestStatusFilter?.toUpperCase() || null,
-            employeeInternalId: isEmployeesScreen ? employeeFilter : null,
-            locationId: isEmployeesScreen ? locationFilter : null,
-            truckUnitId: truckUnitFilter,
-            limit: 25,
-          }),
+          isEmployeesScreen
+            ? getRefundCancelRequests_API({
+                foodTruckId: user.foodTruck._id,
+                status: requestStatusFilter?.toUpperCase() || null,
+                employeeInternalId: employeeFilter,
+                locationId: locationFilter,
+                truckUnitId: truckUnitFilter,
+                limit: 25,
+              })
+            : Promise.resolve({ data: { requests: [] } }),
         ]);
       const backendEarnings = analyticsResponse?.data?.earningsFulldata || {};
 
@@ -488,9 +472,13 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
         weeklyEarning: Number(backendEarnings.weeklyEarning || 0),
         monthlyEarning: Number(backendEarnings.monthlyEarning || 0),
       });
-      setEmployeeAnalytics(analyticsResponse?.data?.employeeAnalytics || null);
+      setEmployeeAnalytics(
+        isEmployeesScreen
+          ? analyticsResponse?.data?.employeeAnalytics || null
+          : null
+      );
       setAllFoodTruckAnalytics(
-        allFoodTruckResponse?.data?.employeeAnalytics || null
+        allFoodTruckResponse?.data?.salesSummary || null
       );
       setRefundRequests(requestsResponse?.data?.requests || []);
     } catch (error) {
@@ -1018,117 +1006,6 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                 <Pressable style={styles.resetButton} onPress={resetEmployeeFilters}>
                   <Text style={styles.resetButtonText}>Reset Filters</Text>
                 </Pressable>
-
-                {!isEmployeesScreen ? (
-                  <View style={styles.subsectionCard}>
-                    <View style={styles.refundSectionHeader}>
-                      <Text style={styles.subsectionTitle}>Refund Requests</Text>
-                    </View>
-                    <View style={styles.refundFilterBar}>
-                      <View>
-                        <Text style={styles.refundFilterLabel}>Status</Text>
-                        <Text style={styles.refundFilterHint}>
-                          Show requests by review status
-                        </Text>
-                      </View>
-                      <Pressable
-                        style={styles.refundFilterSelect}
-                        onPress={() => setFilterPicker("status")}
-                      >
-                        <Text style={styles.refundFilterSelectText}>
-                          {selectedFilterLabel(
-                            statusOptions,
-                            requestStatusFilter,
-                            "All"
-                          )}
-                        </Text>
-                        <MaterialCommunityIcons
-                          name="chevron-down"
-                          size={18}
-                          color={AppColor.primary}
-                        />
-                      </Pressable>
-                    </View>
-                    <View style={styles.requestStatusRow}>
-                      <Text style={styles.requestStatusText}>
-                        Pending {refundStatusCounts.pending}
-                      </Text>
-                      <Text style={styles.requestStatusText}>
-                        Approved {refundStatusCounts.approved}
-                      </Text>
-                      <Text style={styles.requestStatusText}>
-                        Rejected {refundStatusCounts.rejected}
-                      </Text>
-                      <Text style={styles.requestStatusText}>
-                        All {refundStatusCounts.all}
-                      </Text>
-                    </View>
-                    {refundRequests.length ? (
-                      refundRequests.map((request) => {
-                        const isPending =
-                          String(request.request_status || "").toUpperCase() ===
-                          "PENDING";
-                        return (
-                          <Pressable
-                            key={request.request_id}
-                            style={styles.requestCard}
-                            onPress={() => {
-                              const orderId =
-                                request.order_id?._id || request.order_id;
-                              if (orderId) {
-                                navigation.navigate("orderDetailsScreen", {
-                                  orderId,
-                                });
-                              }
-                            }}
-                          >
-                            <Text style={styles.requestTitle}>
-                              Order #{request.order_id?.orderNumber || request.order_id}
-                            </Text>
-                            <Text style={styles.requestMeta}>
-                              {request.request_type || "Request"} |{" "}
-                              {request.reason_code || "Reason not provided"}
-                            </Text>
-                            <Text style={styles.requestMeta}>
-                              {request.employee_login_id || "Employee"}
-                              {request.employee_notes
-                                ? ` | ${request.employee_notes}`
-                                : ""}
-                            </Text>
-                            {isPending ? (
-                              <View style={styles.reviewActions}>
-                                <Pressable
-                                  style={styles.rejectButton}
-                                  onPress={() =>
-                                    openReviewModal(request, "REJECTED")
-                                  }
-                                >
-                                  <Text style={styles.rejectButtonText}>Reject</Text>
-                                </Pressable>
-                                <Pressable
-                                  style={styles.approveButton}
-                                  onPress={() =>
-                                    openReviewModal(request, "APPROVED")
-                                  }
-                                >
-                                  <Text style={styles.approveButtonText}>Approve</Text>
-                                </Pressable>
-                              </View>
-                            ) : (
-                              <Text style={styles.requestMeta}>
-                                Status: {request.request_status || "Not available"}
-                              </Text>
-                            )}
-                          </Pressable>
-                        );
-                      })
-                    ) : (
-                      <Text style={styles.emptyInlineText}>
-                        No refund or cancel requests found.
-                      </Text>
-                    )}
-                  </View>
-                ) : null}
 
                 {isEmployeesScreen ? (
                   <>

@@ -11,7 +11,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import BootSplash from "react-native-bootsplash";
-import { AppColor } from "./src/utils/theme";
+import { AppColor, vendorTheme } from "./src/utils/theme";
 import GlobalSnackbar from "./src/components/GlobalSnackbar";
 import {
   createAndroidChannel,
@@ -114,6 +114,11 @@ const AuthNavigator = () => (
     <Stack.Screen name="authIntro" component={AuthIntroScreen} />
     <Stack.Screen name="signin" component={SigninScreen} />
     <Stack.Screen name="signup" component={SignupScreen} />
+    <Stack.Screen
+      name="authFoodTruckPlansScreen"
+      component={AuthFoodTruckPlansScreen}
+    />
+    <Stack.Screen name="agreementScreen" component={AgreementScreen} />
     <Stack.Screen name="oneTapSignin" component={OneTapSignInScreen} />
     <Stack.Screen name="otpVerification" component={OtpVerificationScreen} />
     <Stack.Screen name="resetPassword" component={ResetPasswordScreen} />
@@ -179,6 +184,8 @@ const BottomTabNavigator = ({ insets }) => {
         headerShown: false,
         tabBarStyle: {
           height: insets.bottom + 60,
+          backgroundColor: vendorTheme.navigation.background,
+          borderTopColor: vendorTheme.background.secondary,
           // height: Platform.OS === "ios" ? insets.bottom + 60 : 60,
         },
         tabBarLabelStyle: {
@@ -187,8 +194,8 @@ const BottomTabNavigator = ({ insets }) => {
           fontWeight: "500",
           bottom: Dimensions.get("window").width > 768 ? 0 : 5,
         },
-        tabBarActiveTintColor: AppColor.primary,
-        tabBarInactiveTintColor: AppColor.gray,
+        tabBarActiveTintColor: vendorTheme.navigation.active,
+        tabBarInactiveTintColor: vendorTheme.navigation.inactive,
       }}
     >
     <BottomTab.Screen
@@ -199,7 +206,7 @@ const BottomTabNavigator = ({ insets }) => {
         tabBarIcon: ({ focused, color, size }) => (
           <Image
             source={focused ? homeActive : homeInactive}
-            style={{ height: 24, width: 24 }}
+            style={{ height: 24, width: 24, tintColor: color }}
           />
         ),
       }}
@@ -212,7 +219,7 @@ const BottomTabNavigator = ({ insets }) => {
         tabBarIcon: ({ focused, color, size }) => (
           <Image
             source={focused ? orderActive : orderInactive}
-            style={{ height: 24, width: 24 }}
+            style={{ height: 24, width: 24, tintColor: color }}
           />
         ),
       }}
@@ -225,7 +232,7 @@ const BottomTabNavigator = ({ insets }) => {
         tabBarIcon: ({ focused, color, size }) => (
           <Image
             source={focused ? menuActive : menuInactive}
-            style={{ height: 24, width: 24 }}
+            style={{ height: 24, width: 24, tintColor: color }}
           />
         ),
       }}
@@ -248,7 +255,7 @@ const BottomTabNavigator = ({ insets }) => {
         tabBarIcon: ({ focused, color, size }) => (
           <Image
             source={focused ? earningsActive : earningsInactive}
-            style={{ height: 24, width: 24 }}
+            style={{ height: 24, width: 24, tintColor: color }}
           />
         ),
       }}
@@ -273,7 +280,7 @@ const BottomTabNavigator = ({ insets }) => {
         tabBarIcon: ({ focused, color, size }) => (
           <Image
             source={focused ? profileActive : profileInactive}
-            style={{ height: 24, width: 24 }}
+            style={{ height: 24, width: 24, tintColor: color }}
           />
         ),
       }}

@@ -747,7 +747,7 @@ const styles = StyleSheet.create({
 	    flexDirection: "row",
 	    alignItems: "center",
 	    justifyContent: "space-between",
-	    backgroundColor: AppColor.primary,
+	    backgroundColor: AppColor.header,
 	    paddingHorizontal: 8,
 	    paddingBottom: 12,
 	    minHeight: 76,

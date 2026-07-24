@@ -298,7 +298,7 @@ const SignUpScreen = ({ navigation }) => {
           size={24}
           onPress={() => navigation.goBack()}
         />
-        <Text style={styles.headerTitle}>Sign Up</Text>
+        <Text style={styles.headerTitle}>Business Details</Text>
         <View style={{ width: 48 }} />
       </View>
 
@@ -331,8 +331,10 @@ const SignUpScreen = ({ navigation }) => {
             </View>
 
             {/* Sign Up Form */}
-            <Text style={styles.title}>{"Welcome to Round The Corner!"}</Text>
-            <Text style={styles.subtitle}>{"Create new vendor account!"}</Text>
+            <Text style={styles.title}>{"Business Details"}</Text>
+            <Text style={styles.subtitle}>
+              {"Tell us about you and your food truck."}
+            </Text>
 
             <View style={styles.formContainer}>
               {/* First Name */}
@@ -1020,7 +1022,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: AppColor.primary,
+    backgroundColor: AppColor.header,
     paddingHorizontal: 8,
     borderBottomLeftRadius: 25,
     borderBottomRightRadius: 25,

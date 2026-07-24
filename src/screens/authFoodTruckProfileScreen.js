@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -30,7 +29,6 @@ import { RESULTS } from "react-native-permissions";
 import { Dropdown } from "react-native-element-dropdown";
 import FastImage from "@d11/react-native-fast-image";
 import ImagePicker from "react-native-image-crop-picker";
-import DocumentPicker, { types } from "react-native-document-picker";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import usePermission from "../hooks/usePermission";
 import { permission } from "../helpers/permission.helper";
@@ -38,7 +36,6 @@ import { setUser } from "../redux/slices/userSlice";
 import { setSelectedLocations } from "../redux/slices/foodTruckProfileSlice";
 import {
   updateFoodTruckProfile_API,
-  uploadFoodTruckDocument_API,
   uploadImage_API,
 } from "../api/appAPI";
 import MediaPickerDialog from "../components/MediaPickerDialog";
@@ -84,20 +81,6 @@ const dropdownData = [
 ];
 
 const { width } = Dimensions.get("window");
-
-const VENDOR_PROFILE_DOCUMENT_TYPES = [
-  { label: "Sanitation Grade", value: "SANITATION_GRADE" },
-  { label: "Business License/Permit", value: "BUSINESS_LICENSE" },
-  { label: "Certificate of Insurance", value: "COI" },
-  { label: "Liquor License", value: "LIQUOR_LICENSE" },
-  { label: "EIN", value: "EIN" },
-  { label: "W-9", value: "W9" },
-  { label: "Other", value: "OTHER" },
-];
-
-const documentTypeLabel = (value) =>
-  VENDOR_PROFILE_DOCUMENT_TYPES.find((item) => item.value === value)?.label ||
-  "Vendor document";
 
 const validateEinNumber = (text) => {
   const digitsOnly = text.replace(/\D/g, "");
@@ -316,7 +299,6 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
   const [selectedMediaType, setSelectedMediaType] = useState(null);
   const [selectedLogo, setSelectedLogo] = useState(null);
   const [selectedPhotos, setSelectedPhotos] = useState([]);
-  const [selectedDocuments, setSelectedDocuments] = useState([]);
   const [selectedEmpNumberType, setSelectedEmpNumberType] = useState("ein");
   const [selectedEmpNumberText, setSelectedEmpNumberText] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
@@ -486,188 +468,6 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
   const onPhotosRemovePress = (index) => {
     const tempPhotos = selectedPhotos.filter((_, i) => i !== index);
     setSelectedPhotos(tempPhotos);
-  };
-
-  const normalizeDocumentName = (value) =>
-    String(value || "")
-      .trim()
-      .toLowerCase();
-
-  const askReplaceDocument = (fileName) =>
-    new Promise((resolve) => {
-      Alert.alert(
-        "Replace existing file?",
-        `A document named "${fileName}" already exists. Do you want to replace the existing file?`,
-        [
-          { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
-          {
-            text: "Replace",
-            style: "destructive",
-            onPress: () => resolve(true),
-          },
-        ]
-      );
-    });
-
-  const addSelectedDocumentsFromFiles = async (files = [], selectedType) => {
-    const documentType = selectedType?.value || "OTHER";
-    const documentLabel = selectedType?.label || documentTypeLabel(documentType);
-    const existingNames = new Set(
-      (user?.foodTruck?.documents || [])
-        .filter((document) => document?.document_status !== "ARCHIVED")
-        .map((document) => document.title || document.original_name)
-        .map(normalizeDocumentName)
-        .filter(Boolean)
-    );
-    const existingTypes = new Set(
-      (user?.foodTruck?.documents || [])
-        .filter((document) => document?.document_status !== "ARCHIVED")
-        .map((document) => document.document_type_label || document.title)
-        .map(normalizeDocumentName)
-        .filter(Boolean)
-    );
-    let nextSelectedDocuments = [...selectedDocuments];
-    const selectedNames = new Set(
-      nextSelectedDocuments
-        .map((document) => document.documentLabel || document.name)
-        .map(normalizeDocumentName)
-        .filter(Boolean)
-    );
-
-    for (const file of files) {
-      const fileName = normalizeDocumentName(file.name);
-      const labelName = normalizeDocumentName(documentLabel);
-      if (!fileName && !labelName) continue;
-
-      if (existingNames.has(fileName) || existingTypes.has(labelName)) {
-        const shouldReplace = await askReplaceDocument(
-          documentLabel || file.name || "Vendor document"
-        );
-        if (!shouldReplace) continue;
-        nextSelectedDocuments = nextSelectedDocuments.filter(
-          (document) =>
-            normalizeDocumentName(document.name) !== fileName &&
-            normalizeDocumentName(document.documentLabel) !== labelName
-        );
-        nextSelectedDocuments.push({
-          ...file,
-          documentType,
-          documentLabel,
-          replaceExisting: true,
-        });
-        continue;
-      }
-
-      if (selectedNames.has(labelName) || selectedNames.has(fileName)) {
-        const shouldReplace = await askReplaceDocument(
-          documentLabel || file.name || "Vendor document"
-        );
-        if (!shouldReplace) continue;
-        nextSelectedDocuments = nextSelectedDocuments.filter(
-          (document) =>
-            normalizeDocumentName(document.name) !== fileName &&
-            normalizeDocumentName(document.documentLabel) !== labelName
-        );
-      } else {
-        selectedNames.add(labelName);
-        selectedNames.add(fileName);
-      }
-
-      nextSelectedDocuments.push({ ...file, documentType, documentLabel });
-    }
-
-    setSelectedDocuments(nextSelectedDocuments);
-  };
-
-  const onPressUploadDocumentFiles = async (selectedType) => {
-    try {
-      const pickedFiles = await DocumentPicker.pick({
-        allowMultiSelection: true,
-        type: [types.pdf, types.images],
-      });
-      await addSelectedDocumentsFromFiles(pickedFiles, selectedType);
-    } catch (error) {
-      if (!DocumentPicker.isCancel(error)) {
-        console.log("document picker error => ", error);
-      }
-    }
-  };
-
-  const onPressUploadDocumentPhotos = async (selectedType) => {
-    try {
-      const permissionStatus = await photosPermissionStatus();
-      if (permissionStatus !== RESULTS.GRANTED) return;
-
-      const images = await ImagePicker.openPicker({
-        multiple: true,
-        cropping: false,
-        mediaType: "photo",
-      });
-      const imageList = Array.isArray(images) ? images : [images];
-      const documents = imageList.map((image, index) => ({
-        mode: "photo",
-        uri: image?.path,
-        name:
-          image?.filename ||
-          image?.path?.split("/").pop() ||
-          `vendor-document-${Date.now()}-${index}.jpg`,
-        type: image?.mime || "image/jpeg",
-      }));
-
-      await addSelectedDocumentsFromFiles(documents, selectedType);
-    } catch (error) {
-      console.log("document photo picker error => ", error);
-    }
-  };
-
-  const onPressUploadDocumentCamera = async (selectedType) => {
-    try {
-      const cameraStatus = await cameraPermissionStatus();
-      if (cameraStatus !== RESULTS.GRANTED) return;
-
-      const image = await ImagePicker.openCamera({
-        cropping: false,
-        mediaType: "photo",
-      });
-      const fallbackName = `vendor-document-${Date.now()}.jpg`;
-      const cameraDocument = {
-        mode: "camera",
-        uri: image?.path,
-        name: image?.filename || image?.path?.split("/").pop() || fallbackName,
-        type: image?.mime || "image/jpeg",
-      };
-
-      await addSelectedDocumentsFromFiles([cameraDocument], selectedType);
-    } catch (error) {
-      console.log("document camera error => ", error);
-    }
-  };
-
-  const showDocumentSourceOptions = (selectedType) => {
-    Alert.alert(`Upload ${selectedType.label}`, "Choose how to add this document.", [
-      { text: "Camera", onPress: () => onPressUploadDocumentCamera(selectedType) },
-      { text: "Photos", onPress: () => onPressUploadDocumentPhotos(selectedType) },
-      { text: "Files", onPress: () => onPressUploadDocumentFiles(selectedType) },
-      { text: "Cancel", style: "cancel" },
-    ]);
-  };
-
-  const onPressUploadDocuments = () => {
-    Alert.alert(
-      "Document Type",
-      "Select the type of document you are uploading.",
-      [
-        ...VENDOR_PROFILE_DOCUMENT_TYPES.map((documentType) => ({
-          text: documentType.label,
-          onPress: () => showDocumentSourceOptions(documentType),
-        })),
-        { text: "Cancel", style: "cancel" },
-      ]
-    );
-  };
-
-  const onDocumentsRemovePress = (index) => {
-    setSelectedDocuments((prev) => prev.filter((_, i) => i !== index));
   };
 
   const createSocialMediaPayload = () => {
@@ -896,35 +696,7 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
         foodTruckId: user?.foodTruck?._id,
       });
       if (response?.success && response?.data) {
-        let updatedFoodTruck = response.data.foodtruck;
-        for (const document of selectedDocuments) {
-          const formData = new FormData();
-          formData.append("file", {
-            uri: document.uri,
-            name: document.name || "vendor-document",
-            type: document.type || "application/octet-stream",
-          });
-          formData.append(
-            "title",
-            document.documentLabel || document.name || "Vendor document"
-          );
-          formData.append("document_type", document.documentType || "OTHER");
-          if (document.replaceExisting) {
-            formData.append("replace_existing", "true");
-          }
-
-          try {
-            const documentResponse = await uploadFoodTruckDocument_API({
-              foodtruck_id: user?.foodTruck?._id,
-              payload: formData,
-            });
-            if (documentResponse?.success && documentResponse?.data?.foodtruck) {
-              updatedFoodTruck = documentResponse.data.foodtruck;
-            }
-          } catch (error) {
-            console.log("document upload error => ", error);
-          }
-        }
+        const updatedFoodTruck = response.data.foodtruck;
         console.log("response => ", response);
         dispatch(setSelectedLocations(updatedFoodTruck.locations));
         console.log("USER => ", {
@@ -1180,83 +952,6 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
                   >
                     {errors.photos}
                   </HelperText>
-                )}
-              </View>
-
-              {/* Optional Documents Upload */}
-              <View style={styles.section}>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 8,
-                  }}
-                >
-                  <View style={{ flex: 1, paddingRight: 12 }}>
-                    <Text style={styles.label}>Permits & Licenses</Text>
-                    <Text style={styles.optionalText}>
-                      Optional. Upload permits, licenses, insurance, or other
-                      documents.
-                    </Text>
-                  </View>
-                  {selectedDocuments?.length > 0 && (
-                    <TouchableOpacity
-                      hitSlop={5}
-                      activeOpacity={0.7}
-                      onPress={onPressUploadDocuments}
-                    >
-                      <AntDesign
-                        name="plussquareo"
-                        size={20}
-                        color={AppColor.primary}
-                      />
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                {selectedDocuments.length === 0 ? (
-                  <TouchableOpacity
-                    style={styles.photoUploadContainer}
-                    onPress={onPressUploadDocuments}
-                  >
-                    <FontAwesome6
-                      name="file-arrow-up"
-                      color={AppColor.black}
-                      size={20}
-                    />
-                    <Text style={styles.uploadButtonText}>Upload Documents</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <View style={{ gap: 10, marginTop: 10 }}>
-                    {selectedDocuments.map((document, index) => (
-                      <View
-                        key={`${document.uri}-${index}`}
-                        style={styles.documentRow}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.documentName} numberOfLines={1}>
-                            {document.documentLabel || "Vendor document"}
-                          </Text>
-                          <Text style={styles.documentMeta} numberOfLines={1}>
-                            {document.name || document.type || "Document"}
-                          </Text>
-                        </View>
-                        <TouchableOpacity
-                          hitSlop={5}
-                          onPress={() => onDocumentsRemovePress(index)}
-                          activeOpacity={0.7}
-                        >
-                          <FontAwesome6
-                            name="minus"
-                            size={14}
-                            color={AppColor.white}
-                            style={styles.documentRemove}
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
                 )}
               </View>
 
@@ -1630,7 +1325,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: AppColor.primary,
+    backgroundColor: AppColor.header,
     paddingHorizontal: 8,
     borderBottomLeftRadius: 25,
     borderBottomRightRadius: 25,
@@ -1684,13 +1379,6 @@ const styles = StyleSheet.create({
     fontFamily: Mulish400,
     color: AppColor.black,
   },
-  optionalText: {
-    fontSize: 13,
-    fontFamily: Mulish400,
-    color: AppColor.textHighlighter,
-    marginTop: 4,
-  },
-
   // Image [Logo, Photos]
   logoContainer: {
     flexDirection: "row",
@@ -1737,35 +1425,6 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 5,
   },
-  documentRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: AppColor.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  documentName: {
-    fontSize: 15,
-    fontFamily: Mulish700,
-    color: AppColor.text,
-  },
-  documentMeta: {
-    fontSize: 12,
-    fontFamily: Mulish400,
-    color: AppColor.textHighlighter,
-    marginTop: 2,
-  },
-  documentRemove: {
-    backgroundColor: AppColor.primary,
-    borderRadius: 10,
-    height: 20,
-    width: 20,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-
   // EIN Number
   paperInputLabel: {
     fontFamily: Mulish400,

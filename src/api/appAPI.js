@@ -1106,6 +1106,7 @@ export const getEarningByFoodTruckID_API = async ({
   employeeInternalId = null,
   paymentMethod = null,
   refundCancelStatus = null,
+  includeEmployeeAnalytics = true,
 }) => {
   try {
     let URL = GET_EARNINGS;
@@ -1134,6 +1135,9 @@ export const getEarningByFoodTruckID_API = async ({
     if (refundCancelStatus) {
       queryParams.push(`refundCancelStatus=${refundCancelStatus}`);
     }
+    queryParams.push(
+      `includeEmployeeAnalytics=${includeEmployeeAnalytics ? "true" : "false"}`
+    );
 
     URL += `?${queryParams.join("&")}`;
 

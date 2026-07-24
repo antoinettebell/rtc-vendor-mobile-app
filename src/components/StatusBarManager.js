@@ -1,6 +1,7 @@
 import React, { useCallback } from "react";
 import { Platform, StatusBar } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { vendorTheme } from "../utils/theme";
 
 const StatusBarManager = ({
   backgroundColor = null,
@@ -8,7 +9,10 @@ const StatusBarManager = ({
   translucent = false,
 }) => {
   const resolvedBackgroundColor =
-    backgroundColor || (barStyle === "light-content" ? "#FC7B03" : "#FFFFFF");
+    backgroundColor ||
+    (barStyle === "light-content"
+      ? vendorTheme.background.primary
+      : vendorTheme.background.card);
 
   useFocusEffect(
     useCallback(() => {

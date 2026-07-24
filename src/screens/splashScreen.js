@@ -20,22 +20,36 @@ const SplashScreen = () => {
   const { isSignedIn, isOnboarded, isUnderReview } = useSelector(
     (state) => state.authReducer
   );
+  const { selectedPlan, selectedSignupAddOns } = useSelector(
+    (state) => state.userReducer
+  );
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      navigation.replace(
-        isSignedIn
-          ? "bottomRoot"
-          : !isOnboarded // fresh app flow
-            ? "authIntro"
-            : isUnderReview // food truck profile submitted but skipped last screen then show only last screen
-              ? "authUnderReviewNoteScreen"
-              : "authFoodTruckPlansScreen"
-      );
+      if (isSignedIn) {
+        navigation.replace("bottomRoot");
+      } else if (!isOnboarded) {
+        navigation.replace("authIntro");
+      } else if (isUnderReview) {
+        navigation.replace("authUnderReviewNoteScreen");
+      } else if (selectedPlan) {
+        navigation.replace("authFoodTruckProfileScreen", {
+          addOns: selectedSignupAddOns,
+        });
+      } else {
+        navigation.replace("authFoodTruckPlansScreen");
+      }
     }, 1500);
 
     return () => clearTimeout(timeout);
-  }, [navigation]);
+  }, [
+    isOnboarded,
+    isSignedIn,
+    isUnderReview,
+    navigation,
+    selectedPlan,
+    selectedSignupAddOns,
+  ]);
 
   useEffect(() => {
     const hideSplash = async () => {

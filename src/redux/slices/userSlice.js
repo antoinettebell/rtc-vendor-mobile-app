@@ -4,6 +4,7 @@ const initialState = {
   user: null,
   authToken: null,
   selectedPlan: null,
+  selectedSignupAddOns: [],
   profileStatus: null,
   bankStatus: false,
 };
@@ -32,6 +33,9 @@ const userSlice = createSlice({
     setSelectedPlan: (state, { payload }) => {
       state.selectedPlan = payload;
     },
+    setSelectedSignupAddOns: (state, { payload }) => {
+      state.selectedSignupAddOns = payload || [];
+    },
     setProfileStatus: (state, { payload }) => {
       state.profileStatus = payload;
     },
@@ -51,6 +55,7 @@ export const {
   updateFoodTruckKey,
   setAuthToken,
   setSelectedPlan,
+  setSelectedSignupAddOns,
   setProfileStatus,
   setBankStatus,
   clearUserSlice,
