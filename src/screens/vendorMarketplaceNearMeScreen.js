@@ -2,7 +2,10 @@ import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   RefreshControl,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -13,8 +16,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import StatusBarManager from "../components/StatusBarManager";
 import AppImage from "../components/AppImage";
-import { AppColor } from "../utils/theme";
-import { getMarketplaceOpenEvents_API } from "../api/appAPI";
+import { AppColor, Mulish400, Mulish700 } from "../utils/theme";
+import {
+  getMarketplaceNotificationSummary_API,
+  getMarketplaceOpenEvents_API,
+} from "../api/appAPI";
 import {
   CUISINE_OPTIONS,
   EVENT_TYPES,
@@ -62,6 +68,8 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
   const [cityState, setCityState] = useState("");
   const [eventType, setEventType] = useState("");
   const [cuisine, setCuisine] = useState("");
+  const [notificationsVisible, setNotificationsVisible] = useState(false);
+  const [marketplaceNotifications, setMarketplaceNotifications] = useState([]);
 
   const loadEvents = async () => {
     setLoading(true);
@@ -82,9 +90,24 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
     }
   };
 
+  const loadNotifications = async () => {
+    try {
+      const response = await getMarketplaceNotificationSummary_API();
+      if (response?.success) {
+        setMarketplaceNotifications(
+          response.data?.marketplaceNotificationList || [],
+        );
+      }
+    } catch (error) {
+      console.log("Marketplace notification summary error", error);
+      setMarketplaceNotifications([]);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       loadEvents();
+      loadNotifications();
     }, []),
   );
 
@@ -106,8 +129,32 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadEvents();
+    await Promise.all([loadEvents(), loadNotifications()]);
     setRefreshing(false);
+  };
+
+  const openNotificationRow = (item) => {
+    setNotificationsVisible(false);
+
+    if (item.type === "MARKETPLACE_MESSAGE") {
+      navigation.navigate("vendorMarketplaceMessagesScreen", {
+        eventId: item.event_id,
+      });
+      return;
+    }
+
+    if (
+      item.type === "MARKETPLACE_BID" ||
+      item.type === "MARKETPLACE_APPLICATION" ||
+      item.type === "MARKETPLACE_EVENT_CLOSED"
+    ) {
+      navigation.navigate("vendorMarketplaceEventDetailsScreen", {
+        eventId: item.event_id,
+      });
+      return;
+    }
+
+    navigation.navigate("vendorMarketplaceScreen");
   };
 
   const openEventDetails = (item) =>
@@ -199,9 +246,19 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
         right={
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() => navigation.navigate("VendorMyBidsScreen")}
+            style={localStyles.headerBellButton}
+            onPress={() => setNotificationsVisible(true)}
           >
-            <MaterialIcons name="receipt-long" size={24} color={AppColor.primary} />
+            <MaterialIcons name="notifications" size={26} color={AppColor.primary} />
+            {marketplaceNotifications.length ? (
+              <View style={localStyles.notificationBadge}>
+                <Text style={localStyles.notificationBadgeText}>
+                  {marketplaceNotifications.length > 99
+                    ? "99+"
+                    : marketplaceNotifications.length}
+                </Text>
+              </View>
+            ) : null}
           </TouchableOpacity>
         }
       />
@@ -313,8 +370,123 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
           }
         />
       )}
+      <Modal
+        animationType="fade"
+        transparent
+        visible={notificationsVisible}
+        onRequestClose={() => setNotificationsVisible(false)}
+      >
+        <View style={localStyles.notificationOverlay}>
+          <View style={localStyles.notificationCard}>
+            <View style={localStyles.notificationHeader}>
+              <Text style={localStyles.notificationTitle}>Notifications</Text>
+              <TouchableOpacity onPress={() => setNotificationsVisible(false)}>
+                <MaterialIcons name="close" size={22} color={AppColor.black} />
+              </TouchableOpacity>
+            </View>
+            {marketplaceNotifications.length ? (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {marketplaceNotifications.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={localStyles.notificationRow}
+                    onPress={() => openNotificationRow(item)}
+                  >
+                    <Text style={localStyles.notificationRowTitle}>
+                      {item.title}
+                    </Text>
+                    <Text style={localStyles.notificationRowMeta}>
+                      {item.event_name || item.subtitle}
+                    </Text>
+                    {item.event_name && item.subtitle ? (
+                      <Text style={localStyles.notificationRowMeta}>
+                        {item.subtitle}
+                      </Text>
+                    ) : null}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : (
+              <Text style={localStyles.notificationEmpty}>
+                No notifications right now.
+              </Text>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
+
+const localStyles = StyleSheet.create({
+  headerBellButton: {
+    padding: 4,
+  },
+  notificationBadge: {
+    alignItems: "center",
+    backgroundColor: "#DC2626",
+    borderRadius: 10,
+    height: 18,
+    justifyContent: "center",
+    minWidth: 18,
+    paddingHorizontal: 4,
+    position: "absolute",
+    right: -3,
+    top: -2,
+  },
+  notificationBadgeText: {
+    color: AppColor.white,
+    fontFamily: Mulish700,
+    fontSize: 10,
+  },
+  notificationOverlay: {
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.35)",
+    flex: 1,
+    justifyContent: "center",
+    padding: 16,
+  },
+  notificationCard: {
+    backgroundColor: AppColor.white,
+    borderRadius: 8,
+    maxHeight: "80%",
+    padding: 16,
+    width: "100%",
+  },
+  notificationHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  notificationTitle: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 18,
+  },
+  notificationRow: {
+    borderTopColor: AppColor.border,
+    borderTopWidth: 1,
+    paddingVertical: 12,
+  },
+  notificationRowTitle: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 14,
+  },
+  notificationRowMeta: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 12,
+    marginTop: 3,
+  },
+  notificationEmpty: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 14,
+    paddingVertical: 18,
+    textAlign: "center",
+  },
+});
 
 export default VendorMarketplaceNearMeScreen;

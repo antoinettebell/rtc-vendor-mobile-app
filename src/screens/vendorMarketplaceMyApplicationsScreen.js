@@ -181,6 +181,7 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
     const status = item.application_status || "DRAFT";
     const editable = isEditableApplication(item);
     const eventId = item.event_id || event?.event_id;
+    const unreadMessageCount = Number(item.unread_message_count || 0);
     const openApplication = () => {
       if (editable) {
         navigation.navigate("VendorApplicationScreen", {
@@ -264,6 +265,31 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
             <Text style={[styles.secondaryButtonText, { marginLeft: 8 }]}>
               Messages
             </Text>
+            {unreadMessageCount > 0 ? (
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginLeft: 8,
+                  paddingHorizontal: 8,
+                  paddingVertical: 3,
+                  borderRadius: 999,
+                  backgroundColor: AppColor.primary,
+                }}
+              >
+                <MaterialIcons name="notifications" size={14} color="#FFFFFF" />
+                <Text
+                  style={{
+                    marginLeft: 4,
+                    color: "#FFFFFF",
+                    fontSize: 12,
+                    fontWeight: "700",
+                  }}
+                >
+                  {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
+                </Text>
+              </View>
+            ) : null}
           </TouchableOpacity>
         ) : null}
         {canWithdrawApplication(item) ? (

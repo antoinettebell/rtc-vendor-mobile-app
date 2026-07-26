@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 import { Dropdown } from "react-native-element-dropdown";
 import StatusBarManager from "../components/StatusBarManager";
+import StatePickerModal from "../components/StatePickerModal";
 import usePermission from "../hooks/usePermission";
 import { permission } from "../helpers/permission.helper";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
@@ -790,12 +791,10 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                 />
               </View>
               <View style={styles.halfField}>
-                <Text style={styles.label}>State</Text>
-                <TextInput
+                <StatePickerModal
+                  label="State"
                   value={form.address_state}
-                  onChangeText={(text) => setFormValue("address_state", text)}
-                  autoCapitalize="characters"
-                  style={styles.input}
+                  onChange={(value) => setFormValue("address_state", value)}
                 />
               </View>
             </View>
@@ -1170,19 +1169,34 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 	                      />
                     </View>
                     <View style={styles.halfField}>
-                      <Text style={styles.label}>State</Text>
-                      <TextInput
-                        value={getEmployeeProfileDraftValue(employee, "address_state")}
-                        onChangeText={(text) =>
-                          setEmployeeProfileDraft(employee._id, "address_state", text)
-                        }
-	                        autoCapitalize="characters"
-	                        editable={isEmployeeEditing(employee)}
-	                        style={[
-	                          styles.input,
-	                          !isEmployeeEditing(employee) && styles.readOnlyInput,
-	                        ]}
-	                      />
+                      {isEmployeeEditing(employee) ? (
+                        <StatePickerModal
+                          label="State"
+                          value={getEmployeeProfileDraftValue(
+                            employee,
+                            "address_state"
+                          )}
+                          onChange={(value) =>
+                            setEmployeeProfileDraft(
+                              employee._id,
+                              "address_state",
+                              value
+                            )
+                          }
+                        />
+                      ) : (
+                        <>
+                          <Text style={styles.label}>State</Text>
+                          <TextInput
+                            value={getEmployeeProfileDraftValue(
+                              employee,
+                              "address_state"
+                            )}
+                            editable={false}
+                            style={[styles.input, styles.readOnlyInput]}
+                          />
+                        </>
+                      )}
                     </View>
                   </View>
 	                  <View style={styles.row}>

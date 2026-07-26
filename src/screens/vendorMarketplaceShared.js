@@ -210,6 +210,10 @@ export const getVerifiedComplianceRequirementFiles = (
   compliance,
   requiredLabels = [],
 ) => {
+  const isExcludedLabel = (label) =>
+    ["ein", "w9", "w-9", "w_9", "form w9", "form w-9", "tax id", "tax_id"].includes(
+      String(label || "").trim().toLowerCase(),
+    );
   const requiredSet = new Set(
     (requiredLabels || [])
       .map((label) => normalizeMarketplaceRequirementLabel(label))
@@ -234,6 +238,7 @@ export const getVerifiedComplianceRequirementFiles = (
 
       if (
         !label ||
+        isExcludedLabel(label) ||
         (requiredSet.size && !requiredSet.has(label)) ||
         requirement?.status !== "verified" ||
         !document?.file_url ||
@@ -260,9 +265,17 @@ export const getVerifiedComplianceRequirementFiles = (
 
 export const getMarketplaceRequirementLabels = (event = {}) => {
   const labels = [];
+  const isExcludedLabel = (label) =>
+    ["ein", "w9", "w-9", "w_9", "form w9", "form w-9", "tax id", "tax_id"].includes(
+      String(label || "").trim().toLowerCase(),
+    );
   const addLabel = (label) => {
     const normalizedLabel = normalizeMarketplaceRequirementLabel(label);
-    if (normalizedLabel && !labels.includes(normalizedLabel)) {
+    if (
+      normalizedLabel &&
+      !isExcludedLabel(normalizedLabel) &&
+      !labels.includes(normalizedLabel)
+    ) {
       labels.push(normalizedLabel);
     }
   };

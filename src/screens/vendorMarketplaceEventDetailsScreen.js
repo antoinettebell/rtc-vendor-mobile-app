@@ -1,7 +1,10 @@
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
+  Modal,
   ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -34,6 +37,8 @@ import {
   styles,
 } from "./vendorMarketplaceShared";
 
+const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
+
 const DetailRow = ({ label, value }) => (
   <View style={{ marginTop: 12 }}>
     <Text style={styles.label}>{label}</Text>
@@ -44,6 +49,11 @@ const DetailRow = ({ label, value }) => (
 const boolText = (value) => (value ? "Yes" : "No");
 
 const idText = (value) => String(value || "");
+
+const getEventImageObjectUrl = (image) =>
+  typeof image === "string"
+    ? image
+    : image?.image_url || image?.file_url || image?.url || "";
 
 const isEditableDraftStatus = (value) =>
   ["DRAFT", "PENDING_SIGNATURE"].includes(
@@ -99,6 +109,8 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
     requirements: true,
     needs: true,
   });
+  const [previewImageUrl, setPreviewImageUrl] = useState("");
+  const [previewZoom, setPreviewZoom] = useState(1);
 
   const loadQuestions = async () => {
     if (!eventId) return;
@@ -134,7 +146,7 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
     }, [eventId]),
   );
 
-  const images = event?.images || [];
+  const images = Array.isArray(event?.images) ? event.images : [];
   const primaryImageUrl = getEventImageUrl(event);
   const vendorPays = isVendorPaysToAttendEvent(event);
   const isClosed =
@@ -186,6 +198,111 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
     } finally {
       setPrimaryActionLoading(false);
     }
+  };
+
+  const openImagePreview = (imageUrl) => {
+    if (!imageUrl) return;
+    setPreviewZoom(1);
+    setPreviewImageUrl(imageUrl);
+  };
+
+  const closeImagePreview = () => {
+    setPreviewImageUrl("");
+    setPreviewZoom(1);
+  };
+
+  const adjustPreviewZoom = (delta) => {
+    setPreviewZoom((current) =>
+      Math.min(3, Math.max(1, Number((current + delta).toFixed(2))))
+    );
+  };
+
+  const renderImagePreviewModal = () => {
+    const previewHeight = Math.max(
+      360,
+      screenHeight - Math.max(insets.top, 0) - Math.max(insets.bottom, 0) - 170
+    );
+
+    return (
+      <Modal
+        transparent
+        animationType="fade"
+        visible={!!previewImageUrl}
+        onRequestClose={closeImagePreview}
+      >
+        <View style={localStyles.imagePreviewOverlay}>
+          <View
+            style={[
+              localStyles.imagePreviewHeader,
+              { paddingTop: Math.max(insets.top, 16) },
+            ]}
+          >
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={localStyles.imagePreviewIconButton}
+              onPress={closeImagePreview}
+            >
+              <MaterialIcons name="close" size={24} color={AppColor.white} />
+            </TouchableOpacity>
+            <View style={localStyles.imagePreviewActions}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={localStyles.imagePreviewIconButton}
+                onPress={() => adjustPreviewZoom(-0.25)}
+                disabled={previewZoom <= 1}
+              >
+                <MaterialIcons
+                  name="zoom-out"
+                  size={24}
+                  color={
+                    previewZoom <= 1
+                      ? "rgba(255,255,255,0.35)"
+                      : AppColor.white
+                  }
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={localStyles.imagePreviewIconButton}
+                onPress={() => adjustPreviewZoom(0.25)}
+                disabled={previewZoom >= 3}
+              >
+                <MaterialIcons
+                  name="zoom-in"
+                  size={24}
+                  color={
+                    previewZoom >= 3
+                      ? "rgba(255,255,255,0.35)"
+                      : AppColor.white
+                  }
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <ScrollView
+            horizontal
+            style={localStyles.imagePreviewScroll}
+            contentContainerStyle={localStyles.imagePreviewHorizontalContent}
+          >
+            <ScrollView contentContainerStyle={localStyles.imagePreviewScrollContent}>
+              <AppImage
+                uri={previewImageUrl}
+                resizeMode="contain"
+                containerStyle={[
+                  localStyles.imagePreviewImageContainer,
+                  {
+                    width: screenWidth * previewZoom,
+                    height: previewHeight * previewZoom,
+                  },
+                ]}
+                imageStyle={localStyles.imagePreviewImage}
+              />
+            </ScrollView>
+          </ScrollView>
+        </View>
+      </Modal>
+    );
   };
 
   const renderMessagesEntry = () => {
@@ -276,10 +393,16 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
         <ScrollView contentContainerStyle={styles.body}>
           {renderMessagesEntry()}
 
-          <AppImage
-            uri={primaryImageUrl}
-            containerStyle={styles.heroImage}
-          />
+          <TouchableOpacity
+            activeOpacity={0.85}
+            disabled={!primaryImageUrl}
+            onPress={() => openImagePreview(primaryImageUrl)}
+          >
+            <AppImage
+              uri={primaryImageUrl}
+              containerStyle={styles.heroImage}
+            />
+          </TouchableOpacity>
           <View style={styles.card}>
             <View style={styles.rowBetween}>
               <Text style={[styles.title, { flex: 1, paddingRight: 8 }]}>
@@ -300,18 +423,26 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
               showsHorizontalScrollIndicator={false}
               style={{ marginBottom: 14 }}
             >
-              {images.map((image) => (
-                <AppImage
-                  key={image.image_id || image.image_url}
-                  uri={image.image_url}
-                  containerStyle={{
-                    height: 140,
-                    width: 210,
-                    borderRadius: 10,
-                    marginRight: 12,
-                  }}
-                />
-              ))}
+              {images.map((image) => {
+                const imageUrl = getEventImageObjectUrl(image);
+                return (
+                  <TouchableOpacity
+                    key={image.image_id || imageUrl}
+                    activeOpacity={0.85}
+                    onPress={() => openImagePreview(imageUrl)}
+                  >
+                    <AppImage
+                      uri={imageUrl}
+                      containerStyle={{
+                        height: 140,
+                        width: 210,
+                        borderRadius: 10,
+                        marginRight: 12,
+                      }}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           ) : null}
 
@@ -477,8 +608,56 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
 
         </ScrollView>
       )}
+      {renderImagePreviewModal()}
     </View>
   );
 };
+
+const localStyles = StyleSheet.create({
+  imagePreviewOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.94)",
+  },
+  imagePreviewHeader: {
+    minHeight: 64,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  imagePreviewActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  imagePreviewIconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.14)",
+  },
+  imagePreviewScroll: {
+    flex: 1,
+  },
+  imagePreviewHorizontalContent: {
+    flexGrow: 1,
+    alignItems: "center",
+  },
+  imagePreviewScrollContent: {
+    flexGrow: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imagePreviewImageContainer: {
+    backgroundColor: "transparent",
+    borderRadius: 0,
+  },
+  imagePreviewImage: {
+    width: "100%",
+    height: "100%",
+  },
+});
 
 export default VendorMarketplaceEventDetailsScreen;

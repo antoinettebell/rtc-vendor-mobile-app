@@ -53,6 +53,89 @@ const ReadOnlyRow = ({ label, value }) => (
 const boolText = (value) =>
   value === true ? "Yes" : value === false ? "No" : "Not answered";
 
+const PRE_AWARD_EDIT_STATUSES = ["SUBMITTED", "UNDER_REVIEW"];
+
+const hasPendingApplicationUploads = (menuPdf, foodPhotos) =>
+  !!menuPdf || foodPhotos.length > 0;
+
+const isAlreadySubmittedError = (error) =>
+  String(error?.message || error || "")
+    .toLowerCase()
+    .includes("already submitted");
+
+const getPickedImageName = (image, fallbackPrefix = "photo") => {
+  const pathName = image?.path?.split("/").pop();
+  const sourceName =
+    image?.filename || pathName || `${fallbackPrefix}-${Date.now()}`;
+  return sourceName.replace(/\.(heic|heif)$/i, ".jpg");
+};
+
+const buildPickedImageFile = (image, fallbackPrefix = "photo") => ({
+  uri: image?.path,
+  name: getPickedImageName(image, fallbackPrefix),
+  type:
+    image?.mime === "image/heic" || image?.mime === "image/heif"
+      ? "image/jpeg"
+      : image?.mime || "image/jpeg",
+  size: image?.size,
+});
+
+const buildSavedAttachment = ({
+  attachmentType,
+  fileUrl,
+  fileKey = null,
+  originalName,
+}) => ({
+  attachment_id: fileKey || fileUrl,
+  attachment_type: attachmentType,
+  file_url: fileUrl,
+  file_key: fileKey,
+  original_name: originalName,
+});
+
+const getInitialApplicationAttachments = (application, attachmentType) =>
+  Array.isArray(application?.attachments)
+    ? application.attachments.filter(
+        (item) => item.attachment_type === attachmentType,
+      )
+    : [];
+
+const getInitialApplicationMenuFiles = (application) => {
+  const files = getInitialApplicationAttachments(
+    application,
+    "APPLICATION_MENU_PDF",
+  );
+  if (!files.length && application?.menu_pdf_url) {
+    return [
+      buildSavedAttachment({
+        attachmentType: "APPLICATION_MENU_PDF",
+        fileUrl: application.menu_pdf_url,
+        fileKey: application.menu_pdf_key,
+        originalName: "Saved menu",
+      }),
+    ];
+  }
+  return files;
+};
+
+const getInitialApplicationImageFiles = (application) => {
+  const files = getInitialApplicationAttachments(
+    application,
+    "APPLICATION_IMAGE",
+  );
+  if (!files.length && Array.isArray(application?.image_urls)) {
+    return application.image_urls.map((url, index) =>
+      buildSavedAttachment({
+        attachmentType: "APPLICATION_IMAGE",
+        fileUrl: url,
+        fileKey: application.image_keys?.[index],
+        originalName: `Saved food photo ${index + 1}`,
+      }),
+    );
+  }
+  return files;
+};
+
 const FormField = ({ label, children, full = false }) => (
   <View style={[styles.formGridField, full && styles.formGridFieldFull]}>
     <Text style={styles.fieldLabel}>{label}</Text>
@@ -120,21 +203,25 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
   const [savedApplication, setSavedApplication] = useState(
     initialApplication,
   );
+  const initialApplicationStatus = String(
+    initialApplication?.application_status || "",
+  ).toUpperCase();
   const isRevisionMode = isApplicationRevisionRequested(initialApplication);
+  const isPreAwardEditMode =
+    PRE_AWARD_EDIT_STATUSES.includes(initialApplicationStatus) &&
+    !isRevisionMode;
+  const submittedApplicationStatus =
+    initialApplicationStatus === "UNDER_REVIEW" ? "UNDER_REVIEW" : "SUBMITTED";
   const [requirementFiles, setRequirementFiles] = useState(
     route?.params?.application?.attachments?.filter(
       (item) => item.attachment_type === "REQUIREMENT_DOCUMENT",
     ) || [],
   );
-  const [uploadedMenuFiles, setUploadedMenuFiles] = useState(
-    route?.params?.application?.attachments?.filter(
-      (item) => item.attachment_type === "APPLICATION_MENU_PDF",
-    ) || [],
+  const [uploadedMenuFiles, setUploadedMenuFiles] = useState(() =>
+    getInitialApplicationMenuFiles(route?.params?.application),
   );
-  const [uploadedFoodPhotoFiles, setUploadedFoodPhotoFiles] = useState(
-    route?.params?.application?.attachments?.filter(
-      (item) => item.attachment_type === "APPLICATION_IMAGE",
-    ) || [],
+  const [uploadedFoodPhotoFiles, setUploadedFoodPhotoFiles] = useState(() =>
+    getInitialApplicationImageFiles(route?.params?.application),
   );
   const [selectedRequirementLabel, setSelectedRequirementLabel] = useState(
     "",
@@ -143,6 +230,7 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
   const [foodPhotos, setFoodPhotos] = useState([]);
   const pendingAgreementRef = useRef(null);
   const isLeavingRef = useRef(false);
+  const savedApplicationRef = useRef(initialApplication);
   const initialDraftRef = useRef(initialDraft);
   const { checkAndRequestPermission: photosPermissionStatus } = usePermission(
     permission.photos
@@ -286,7 +374,7 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
         : false,
     liquor_license_confirmed: uploadedRequirementLabels.has("Liquor License"),
     nda_required: true,
-    nda_acknowledged: applicationStatus === "SUBMITTED",
+    nda_acknowledged: applicationStatus !== "DRAFT",
     application_status: applicationStatus,
   });
 
@@ -319,7 +407,10 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
       payload: buildApplicationPayload(applicationStatus),
     });
     if (response?.success) {
-      setSavedApplication(response.data?.marketplaceApplication || null);
+      const marketplaceApplication =
+        response.data?.marketplaceApplication || null;
+      setSavedApplication(marketplaceApplication);
+      savedApplicationRef.current = marketplaceApplication;
       initialDraftRef.current = {
         businessName,
         contactName,
@@ -329,7 +420,7 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
         menuDescription,
         notes,
       };
-      return response.data?.marketplaceApplication || null;
+      return marketplaceApplication;
     }
     return null;
   };
@@ -433,6 +524,20 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
     }
   };
 
+  const uploadPendingApplicationFiles = async () => {
+    if (!hasPendingApplicationUploads(menuPdf, foodPhotos)) return;
+
+    const applicationId =
+      savedApplicationRef.current?.application_id ||
+      savedApplication?.application_id;
+
+    if (!applicationId) {
+      throw new Error("Unable to upload files before submitting.");
+    }
+
+    await uploadApplicationFiles(applicationId);
+  };
+
   async function saveApplicationDraftWithFiles({ notify = true } = {}) {
     if (submitting) return null;
     setSubmitting(true);
@@ -454,18 +559,24 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
   }
 
   const finalizeApplicationSubmission = async () => {
+    await uploadPendingApplicationFiles();
+
     const response = await submitMarketplaceApplication_API({
       event_id: eventId,
-      payload: buildApplicationPayload("SUBMITTED"),
+      payload: buildApplicationPayload(submittedApplicationStatus),
     });
 
     if (response?.success) {
-      const applicationId =
-        response.data?.marketplaceApplication?.application_id;
-      if (applicationId) {
-        await uploadApplicationFiles(applicationId);
-      }
-      Alert.alert("Application Submitted", "Your application has been submitted.", [
+      const marketplaceApplication =
+        response.data?.marketplaceApplication || savedApplicationRef.current;
+      setSavedApplication(marketplaceApplication);
+      savedApplicationRef.current = marketplaceApplication;
+      Alert.alert(
+        isPreAwardEditMode ? "Application Updated" : "Application Submitted",
+        isPreAwardEditMode
+          ? "Your application has been updated."
+          : "Your application has been submitted.",
+        [
         {
           text: "OK",
             onPress: () => {
@@ -476,7 +587,8 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
               });
             },
           },
-        ]);
+        ],
+      );
     }
   };
 
@@ -514,7 +626,18 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
       );
     } catch (error) {
       pendingAgreementRef.current = null;
-      Alert.alert("Signing Error", error?.message || "Please try again.");
+      if (isAlreadySubmittedError(error)) {
+        Alert.alert(
+          "Application Already Submitted",
+          error?.message || "Your application is already on file for this event.",
+        );
+        return;
+      }
+
+      Alert.alert(
+        "Application Not Submitted",
+        error?.message || "Please try again.",
+      );
     }
   };
 
@@ -533,6 +656,11 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
 
     setSubmitting(true);
     try {
+      if (isRevisionMode || isPreAwardEditMode) {
+        await finalizeApplicationSubmission();
+        return;
+      }
+
       const draft = await saveApplicationDraft("PENDING_SIGNATURE");
       if (!draft?.application_id) {
         throw new Error("Unable to save application draft before signing.");
@@ -572,6 +700,14 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
       }
       await Linking.openURL(signingResponse.data.signing_url);
     } catch (error) {
+      if (isAlreadySubmittedError(error)) {
+        Alert.alert(
+          "Application Already Submitted",
+          error?.message || "Your application is already on file for this event.",
+        );
+        return;
+      }
+
       Alert.alert(
         "Application Not Submitted",
         error?.message || "Please try again.",
@@ -618,13 +754,11 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
       ) {
         return;
       }
-      const image = await ImagePicker.openPicker({ mediaType: "photo" });
-      setSelectedMenuFile({
-        uri: image?.path,
-        name: image?.filename || image?.path?.split("/").pop() || "menu.jpg",
-        type: image?.mime || "image/jpeg",
-        size: image?.size,
+      const image = await ImagePicker.openPicker({
+        mediaType: "photo",
+        forceJpg: true,
       });
+      setSelectedMenuFile(buildPickedImageFile(image, "menu"));
     } catch (error) {
       if (error?.code !== "E_PICKER_CANCELLED") {
         Alert.alert("Photo Not Selected", error?.message || "Please try again.");
@@ -639,13 +773,9 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
       const image = await ImagePicker.openCamera({
         cropping: false,
         mediaType: "photo",
+        forceJpg: true,
       });
-      setSelectedMenuFile({
-        uri: image?.path,
-        name: image?.filename || image?.path?.split("/").pop() || "menu.jpg",
-        type: image?.mime || "image/jpeg",
-        size: image?.size,
-      });
+      setSelectedMenuFile(buildPickedImageFile(image, "menu"));
     } catch (error) {
       if (error?.code !== "E_PICKER_CANCELLED") {
         Alert.alert("Photo Not Taken", error?.message || "Please try again.");
@@ -713,15 +843,13 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
       ) {
         return;
       }
-      const image = await ImagePicker.openPicker({ mediaType: "photo" });
-      await uploadSelectedRequirementFile({
-        uri: image?.path,
-        name:
-          image?.filename ||
-          image?.path?.split("/").pop() ||
-          `${selectedRequirementLabel}.jpg`,
-        type: image?.mime || "image/jpeg",
+      const image = await ImagePicker.openPicker({
+        mediaType: "photo",
+        forceJpg: true,
       });
+      await uploadSelectedRequirementFile(
+        buildPickedImageFile(image, selectedRequirementLabel),
+      );
     } catch (error) {
       if (error?.code !== "E_PICKER_CANCELLED") {
         Alert.alert("Photo Not Selected", error?.message || "Please try again.");
@@ -736,15 +864,11 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
       const image = await ImagePicker.openCamera({
         cropping: false,
         mediaType: "photo",
+        forceJpg: true,
       });
-      await uploadSelectedRequirementFile({
-        uri: image?.path,
-        name:
-          image?.filename ||
-          image?.path?.split("/").pop() ||
-          `${selectedRequirementLabel}.jpg`,
-        type: image?.mime || "image/jpeg",
-      });
+      await uploadSelectedRequirementFile(
+        buildPickedImageFile(image, selectedRequirementLabel),
+      );
     } catch (error) {
       if (error?.code !== "E_PICKER_CANCELLED") {
         Alert.alert("Photo Not Taken", error?.message || "Please try again.");
@@ -797,22 +921,11 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
       const images = await ImagePicker.openPicker({
         multiple: true,
         mediaType: "photo",
+        forceJpg: true,
       });
       setFoodPhotos((prev) => [
         ...prev,
-        ...images.map((image) =>
-          Platform.OS === "ios"
-            ? {
-                uri: image?.sourceURL || image?.path,
-                name: image?.filename || `${Date.now()}.jpg`,
-                type: image.mime,
-              }
-            : {
-                uri: image?.path,
-                name: `${image?.path?.split("/").pop()}`,
-                type: image.mime,
-              },
-        ),
+        ...images.map((image) => buildPickedImageFile(image, "food-photo")),
       ]);
     } catch (error) {
       if (error?.code !== "E_PICKER_CANCELLED") {

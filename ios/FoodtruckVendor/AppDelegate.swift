@@ -9,7 +9,7 @@ import Firebase
 @main
 class AppDelegate: RCTAppDelegate {
   override func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-    GMSServices.provideAPIKey("AIzaSyCdjHeKOYBUcpocHw5-NsdfMy2-dHkBoFY")
+    GMSServices.provideAPIKey("AIzaSyAlopZi4IG0IPl083xL20FGxlZZ_m8lslc")
     
     FirebaseApp.configure()
     

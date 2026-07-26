@@ -734,6 +734,18 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
     }, [selectedCuisine, selectedLocations])
   );
 
+  const handleBackPress = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "bottomRoot" }],
+    });
+  };
+
   return (
     <View style={styles.container}>
       <StatusBarManager barStyle="light-content" />
@@ -744,7 +756,7 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
           icon="arrow-left"
           iconColor={AppColor.white}
           size={24}
-          onPress={() => navigation.goBack()}
+          onPress={handleBackPress}
         />
         <Text style={styles.headerTitle}>Food Truck Profile</Text>
         <View style={{ width: 48 }} />

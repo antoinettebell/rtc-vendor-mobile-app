@@ -45,11 +45,9 @@ export const getDisabledStatuses = (currentStatus) => {
       disabledStatuses.push(
         orderStatusStrings.cancel,
         orderStatusStrings.placed,
-        orderStatusStrings.rejected,
         orderStatusStrings.ready_for_pickup,
         orderStatusStrings.driver_picked_up,
-        orderStatusStrings.delivered,
-        orderStatusStrings.completed
+        orderStatusStrings.delivered
       );
       break;
     case orderStatusStrings.rejected:
@@ -58,18 +56,15 @@ export const getDisabledStatuses = (currentStatus) => {
       disabledStatuses.push(
         orderStatusStrings.cancel,
         orderStatusStrings.placed,
-        orderStatusStrings.rejected,
         orderStatusStrings.accepted,
         orderStatusStrings.driver_picked_up,
-        orderStatusStrings.delivered,
-        orderStatusStrings.completed
+        orderStatusStrings.delivered
       );
       break;
     case orderStatusStrings.ready_for_pickup:
       disabledStatuses.push(
         orderStatusStrings.cancel,
         orderStatusStrings.placed,
-        orderStatusStrings.rejected,
         orderStatusStrings.accepted,
         orderStatusStrings.preparing
       );
@@ -239,14 +234,14 @@ const toMoneyNumber = (value) => {
 
 export const getVendorOrderSubtotal = (order) =>
   toMoneyNumber(
-    order?.totalAfterDiscount ??
-      order?.subTotal ??
+    order?.subTotal ??
       order?.subtotal ??
+      order?.totalAfterDiscount ??
       0
   );
 
 export const getVendorTipAmount = (order) =>
-  toMoneyNumber(order?.tipsAmount ?? 0);
+  toMoneyNumber(order?.tipsAmount ?? order?.foodTruckTip ?? order?.vendorTip ?? 0);
 
 export const getVendorOrderTotal = (order) =>
   toMoneyNumber(getVendorOrderSubtotal(order) + getVendorTipAmount(order));

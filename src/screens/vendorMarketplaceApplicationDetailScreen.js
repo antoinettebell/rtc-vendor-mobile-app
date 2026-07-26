@@ -24,6 +24,8 @@ const DetailRow = ({ label, value }) => (
 
 const boolText = (value) => (value ? "Yes" : "No");
 
+const PRE_AWARD_EDIT_STATUSES = ["SUBMITTED", "UNDER_REVIEW"];
+
 const attachmentLabel = (type) => {
   switch (type) {
     case "APPLICATION_MENU_PDF":
@@ -56,6 +58,10 @@ const VendorMarketplaceApplicationDetailScreen = ({ navigation, route }) => {
   const status = application.application_status || "DRAFT";
   const canPay = status === "ACCEPTED" || status === "PAYMENT_DUE";
   const canRevise = isApplicationRevisionRequested(application);
+  const canEditBeforeAward = PRE_AWARD_EDIT_STATUSES.includes(
+    String(status).toUpperCase(),
+  );
+  const showEditButton = canRevise || canEditBeforeAward;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -64,7 +70,7 @@ const VendorMarketplaceApplicationDetailScreen = ({ navigation, route }) => {
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.card}>
           <Text style={styles.title}>{event?.event_name || "Application"}</Text>
-          {canRevise ? (
+          {showEditButton ? (
             <TouchableOpacity
               activeOpacity={0.7}
               style={[styles.button, { marginTop: 14 }]}
@@ -76,7 +82,9 @@ const VendorMarketplaceApplicationDetailScreen = ({ navigation, route }) => {
                 })
               }
             >
-              <Text style={styles.buttonText}>Revise Application</Text>
+              <Text style={styles.buttonText}>
+                {canRevise ? "Revise Application" : "Edit Application"}
+              </Text>
             </TouchableOpacity>
           ) : null}
           <DetailRow label="Event Type" value={event?.event_type} />
