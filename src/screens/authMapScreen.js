@@ -20,7 +20,7 @@ import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { promptForEnableLocationIfNeeded } from "react-native-android-location-enabler";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import Geolocation from "@react-native-community/geolocation";
-import Config from "react-native-config";
+import Config from "../config/runtimeConfig";
 import usePermission from "../hooks/usePermission";
 import { permission } from "../helpers/permission.helper";
 import Ionicons from "react-native-vector-icons/Ionicons";

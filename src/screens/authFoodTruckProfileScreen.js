@@ -707,7 +707,7 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
         if (exitAfterSave) {
           navigation.reset({
             index: 0,
-            routes: [{ name: "bottomRoot" }],
+            routes: [{ name: "homeScreen" }],
           });
         } else {
           navigation.navigate("authSetBusinessHrsScreen");
@@ -746,25 +746,13 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
     }, [selectedCuisine, selectedLocations])
   );
 
-  const handleBackPress = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "bottomRoot" }],
-    });
-  };
-
   return (
     <View style={styles.container}>
       <StatusBarManager barStyle="light-content" />
 
       {/* Header Container */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <IconButton
-          icon="arrow-left"
-          iconColor={AppColor.white}
-          size={24}
-          onPress={handleBackPress}
-        />
+        <View style={{ width: 48 }} />
         <Text style={styles.headerTitle}>Food Truck Profile</Text>
         <View style={{ width: 48 }} />
       </View>

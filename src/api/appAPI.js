@@ -1,4 +1,4 @@
-import Config from "react-native-config";
+import Config from "../config/runtimeConfig";
 import apiClient from "./apiClient";
 import {
   ADD_BANK_DETAIL,

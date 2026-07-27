@@ -1,16 +1,11 @@
 import React, { useEffect } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AppColor } from "../utils/theme";
+import { AppColor, Mulish400, Mulish700 } from "../utils/theme";
 import { useNavigation } from "@react-navigation/native";
 import BootSplash from "react-native-bootsplash";
 import { useSelector } from "react-redux";
-import FastImage from "@d11/react-native-fast-image";
 import StatusBarManager from "../components/StatusBarManager";
-
-import SplashTop1Svg from "../assets/images/splashTop1.svg";
-import SplashTop2Svg from "../assets/images/splashTop2.svg";
-import SplashTop3Svg from "../assets/images/splashTop3.svg";
 
 const SplashScreen = () => {
   const insets = useSafeAreaInsets();
@@ -59,28 +54,22 @@ const SplashScreen = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top / 2 }]}>
-      <StatusBarManager />
+      <StatusBarManager barStyle="light-content" />
 
-      {/* Top 3 SVGs */}
-      <View style={styles.topSvgsContainer}>
-        <SplashTop3Svg style={styles.topSvg} />
-        <SplashTop2Svg style={styles.topSvg} />
-        <SplashTop1Svg style={styles.topSvg} />
-      </View>
-
-      {/* Middle Image and Text */}
       <View style={styles.middleContainer}>
-        <FastImage
-          source={require("../assets/images/AppLogo.png")}
-          style={styles.middleImage}
-          resizeMode="contain"
-        />
-        <Text style={styles.title}>Round the Corner</Text>
-        <Text style={styles.subtitle}>
-          Find & Savor the Best Food Trucks{"\n"}Near You!
-        </Text>
+        <View style={styles.logoCard}>
+          <Image
+            source={require("../assets/images/AppLogo.png")}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
+          <View style={styles.enterpriseRibbon}>
+            <Text style={styles.enterpriseRibbonText}>ENTERPRISE SYSTEM</Text>
+          </View>
+        </View>
+        <Text style={styles.title}>{"Round Da' Corner ERP"}</Text>
+        <Text style={styles.subtitle}>Enterprise System</Text>
       </View>
-
     </View>
   );
 };
@@ -90,17 +79,7 @@ export default SplashScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColor.white,
-  },
-  topSvgsContainer: {
-    flexDirection: "row", // Horizontal layout
-    alignItems: "center",
-    justifyContent: "center",
-    // marginTop: 20,
-    // gap: 10,
-  },
-  topSvg: {
-    // marginHorizontal: 5,
+    backgroundColor: AppColor.header,
   },
   middleContainer: {
     flex: 1,
@@ -108,21 +87,46 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 20,
   },
-  middleImage: {
-    width: 220,
-    height: 220,
-    marginBottom: 12,
+  logoCard: {
+    alignItems: "center",
+    backgroundColor: AppColor.white,
+    borderRadius: 22,
+    height: 190,
+    justifyContent: "center",
+    marginBottom: 34,
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    width: 190,
+  },
+  logoImage: {
+    height: 130,
+    width: 150,
+  },
+  enterpriseRibbon: {
+    alignItems: "center",
+    backgroundColor: AppColor.primary,
+    borderRadius: 3,
+    marginTop: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  enterpriseRibbonText: {
+    color: AppColor.white,
+    fontFamily: Mulish700,
+    fontSize: 11,
+    letterSpacing: 0.8,
   },
   title: {
-    fontSize: 19.73,
-    fontWeight: "bold",
-    color: AppColor.text,
+    color: AppColor.white,
+    fontFamily: Mulish700,
+    fontSize: 28,
     textAlign: "center",
   },
   subtitle: {
-    fontSize: 11.28,
-    color: AppColor.gray,
+    color: AppColor.primary,
+    fontFamily: Mulish400,
+    fontSize: 16,
+    marginTop: 6,
     textAlign: "center",
-    marginTop: 5,
   },
 });
