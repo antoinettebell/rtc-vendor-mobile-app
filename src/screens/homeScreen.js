@@ -11,6 +11,7 @@ import {
   ActivityIndicator as NativeIndicator,
   Modal,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useDispatch, useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
@@ -22,6 +23,7 @@ import CustomBanner from "../components/CustomBanner";
 import {
   getBankDetail_API,
   getEarningForHomeByFoodTruckID_API,
+  getMarketplaceEventQuestions_API,
   getMarketplaceNotificationSummary_API,
   getOrderList_API,
   getUserDetail_API,
@@ -76,11 +78,29 @@ const QuickStatsComponent = ({ title, subTitle, icon, onPress }) => (
   </Pressable>
 );
 
+const getMarketplaceNotificationId = (item = {}) =>
+  item.id ||
+  [
+    item.type || "marketplace",
+    item.event_id || "",
+    item.question_id || "",
+    item.bid_id || "",
+    item.application_id || "",
+    item.status || "",
+  ].join("-");
+
+const getNotificationStorageKey = (userId) =>
+  `vendorHomeAcknowledgedNotifications:${userId || "anonymous"}`;
+
 const HomeScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
   const { user, profileStatus, bankStatus } = useSelector(
     (state) => state.userReducer
+  );
+  const notificationStorageKey = useMemo(
+    () => getNotificationStorageKey(user?._id),
+    [user?._id],
   );
 
   const HEADER_HEIGHT = 60;
@@ -94,6 +114,10 @@ const HomeScreen = ({ navigation }) => {
   const [newOrderLoading, setNewOrderLoading] = useState(false);
   const [newOrderData, setNewOrderData] = useState(null);
   const [marketplaceNotifications, setMarketplaceNotifications] = useState([]);
+  const [
+    acknowledgedMarketplaceNotificationIds,
+    setAcknowledgedMarketplaceNotificationIds,
+  ] = useState([]);
   const [earningData, setEarningData] = useState(null);
   const [orderRejectBtnLoading, setOrderRejectBtnLoading] = useState(false);
   const [orderAcceptBtnLoading, setOrderAcceptBtnLoading] = useState(false);
@@ -123,12 +147,22 @@ const HomeScreen = ({ navigation }) => {
       })),
       ...marketplaceNotifications.map((item) => ({
         ...item,
-        id: item.id || `${item.type}-${item.event_id || item.question_id}`,
+        id: getMarketplaceNotificationId(item),
       })),
     ],
     [marketplaceNotifications, pendingNotificationOrders],
   );
-  const notificationCount = notificationRows.length;
+  const notificationCount = useMemo(() => {
+    const acknowledgedIds = new Set(acknowledgedMarketplaceNotificationIds);
+    const marketplaceUnreadCount = marketplaceNotifications.filter(
+      (item) => !acknowledgedIds.has(getMarketplaceNotificationId(item)),
+    ).length;
+    return pendingNotificationOrders.length + marketplaceUnreadCount;
+  }, [
+    acknowledgedMarketplaceNotificationIds,
+    marketplaceNotifications,
+    pendingNotificationOrders.length,
+  ]);
 
   const isOn = useSharedValue(false);
   const isEmployeeSession =
@@ -617,6 +651,94 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAcknowledgedNotifications = async () => {
+      try {
+        const savedValue = await AsyncStorage.getItem(notificationStorageKey);
+        const savedIds = savedValue ? JSON.parse(savedValue) : [];
+        if (isMounted) {
+          setAcknowledgedMarketplaceNotificationIds(
+            Array.isArray(savedIds) ? savedIds : [],
+          );
+        }
+      } catch (error) {
+        console.log("Marketplace notification storage error => ", error);
+        if (isMounted) {
+          setAcknowledgedMarketplaceNotificationIds([]);
+        }
+      }
+    };
+
+    loadAcknowledgedNotifications();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [notificationStorageKey]);
+
+  const acknowledgeHomeNotifications = async () => {
+    if (pendingNotificationOrders.length) {
+      pendingNotificationOrders.forEach(() =>
+        dispatch(clearCurrentNotificationOrder()),
+      );
+    }
+
+    if (!marketplaceNotifications.length) {
+      return;
+    }
+
+    const notificationIds = marketplaceNotifications.map((item) =>
+      getMarketplaceNotificationId(item),
+    );
+    const nextAcknowledgedIds = [
+      ...new Set([
+        ...acknowledgedMarketplaceNotificationIds,
+        ...notificationIds,
+      ]),
+    ].slice(-200);
+    setAcknowledgedMarketplaceNotificationIds(nextAcknowledgedIds);
+
+    try {
+      await AsyncStorage.setItem(
+        notificationStorageKey,
+        JSON.stringify(nextAcknowledgedIds),
+      );
+    } catch (error) {
+      console.log("Marketplace notification storage error => ", error);
+    }
+
+    const messageEventIds = [
+      ...new Set(
+        marketplaceNotifications
+          .filter((item) => item.type === "MARKETPLACE_MESSAGE")
+          .map((item) => item.event_id)
+          .filter(Boolean),
+      ),
+    ];
+
+    if (!messageEventIds.length) {
+      return;
+    }
+
+    try {
+      await Promise.all(
+        messageEventIds.map((eventId) =>
+          getMarketplaceEventQuestions_API(eventId, { markRead: true }),
+        ),
+      );
+      getMarketplaceNotificationsFromAPI();
+    } catch (error) {
+      console.log("Marketplace notification acknowledge error => ", error);
+    }
+  };
+
+  const openNotifications = () => {
+    setNotificationsVisible(true);
+    acknowledgeHomeNotifications();
+  };
+
   const openNotificationRow = (item) => {
     setNotificationsVisible(false);
 
@@ -758,7 +880,7 @@ const HomeScreen = ({ navigation }) => {
         <TouchableOpacity
           activeOpacity={0.7}
           style={styles.headerRightContainer}
-          onPress={() => setNotificationsVisible(true)}
+          onPress={openNotifications}
         >
           <MaterialCommunityIcons
             name="bell-circle"

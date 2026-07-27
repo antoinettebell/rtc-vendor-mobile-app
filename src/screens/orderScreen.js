@@ -73,6 +73,12 @@ const ACTIVE_ORDER_STATUSES = [
   orderStatusStrings.driver_picked_up,
 ];
 
+const getOrderUpdateErrorMessage = (error) =>
+  error?.message ||
+  error?.error?.message ||
+  error?.data?.message ||
+  "Unable to update order status.";
+
 const OrderScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -531,7 +537,7 @@ const OrderScreen = ({ navigation }) => {
       dispatch(
         showSnackbar({
           type: "error",
-          message: "Something went wrong!",
+          message: getOrderUpdateErrorMessage(error),
         })
       );
     } finally {
@@ -587,7 +593,7 @@ const OrderScreen = ({ navigation }) => {
               dispatch(
                 showSnackbar({
                   type: "error",
-                  message: "Something went wrong!",
+                  message: getOrderUpdateErrorMessage(error),
                 })
               );
             } finally {
@@ -626,9 +632,21 @@ const OrderScreen = ({ navigation }) => {
       console.log("response => ", response);
       if (response?.success && response?.data) {
         await getOrderDataFromAPI(1, false);
+        dispatch(
+          showSnackbar({
+            type: "success",
+            message: "Order status updated successfully",
+          })
+        );
       }
     } catch (error) {
       console.log("error => ", error);
+      dispatch(
+        showSnackbar({
+          type: "error",
+          message: getOrderUpdateErrorMessage(error),
+        })
+      );
     } finally {
     }
   };

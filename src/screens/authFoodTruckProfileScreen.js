@@ -82,6 +82,9 @@ const dropdownData = [
 
 const { width } = Dimensions.get("window");
 
+const getStableItemKey = (item, prefix, index) =>
+  `${prefix}-${index ?? "item"}-${item?._id || item?.id || item?.uri || item?.value || item?.label || item?.name || item?.title || "unknown"}`;
+
 const validateEinNumber = (text) => {
   const digitsOnly = text.replace(/\D/g, "");
   return digitsOnly.length === 9;
@@ -198,6 +201,7 @@ const MediaLinksComponent = ({
           selectedTextStyle={{ fontFamily: Mulish400 }}
           renderItem={(item) => (
             <Pressable
+              key={getStableItemKey(item, "media-option")}
               disabled={!item.disable} // for dropdown condition works opposite
               style={{
                 flexDirection: "row",
@@ -914,7 +918,9 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
                       data={selectedPhotos}
                       extraData={selectedPhotos}
                       horizontal
-                      keyExtractor={(item) => item.uri}
+                      keyExtractor={(item, index) =>
+                        getStableItemKey(item, "photo", index)
+                      }
                       showsHorizontalScrollIndicator={false}
                       contentContainerStyle={{ marginTop: 10 }}
                       renderItem={({ item, index }) => (
@@ -1020,6 +1026,7 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
                       selectedTextStyle={{ fontFamily: Mulish400 }}
                       renderItem={(item) => (
                         <View
+                          key={getStableItemKey(item, "emp-number-option")}
                           style={{
                             paddingVertical: 10,
                             paddingHorizontal: 16,
@@ -1216,8 +1223,11 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
                     size={18}
                   />
                 </TouchableOpacity>
-                {selectedCuisine?.map((item) => (
-                  <View key={item._id} style={styles.dropdown}>
+                {selectedCuisine?.map((item, index) => (
+                  <View
+                    key={getStableItemKey(item, "cuisine", index)}
+                    style={styles.dropdown}
+                  >
                     <Ionicons
                       name="fast-food-outline"
                       size={18}
@@ -1262,8 +1272,11 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
                     size={18}
                   />
                 </TouchableOpacity>
-                {selectedLocations?.map((item) => (
-                  <View key={item._id} style={styles.dropdown}>
+                {selectedLocations?.map((item, index) => (
+                  <View
+                    key={getStableItemKey(item, "location", index)}
+                    style={styles.dropdown}
+                  >
                     <Ionicons
                       name="location-outline"
                       size={18}

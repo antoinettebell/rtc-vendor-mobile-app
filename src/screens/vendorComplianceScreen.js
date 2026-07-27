@@ -15,9 +15,11 @@ import ImagePicker from "react-native-image-crop-picker";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { RESULTS } from "react-native-permissions";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { Dropdown } from "react-native-element-dropdown";
 import { useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
+  getVendorFoodTruckList_API,
   getVendorComplianceSummary_API,
   submitVendorComplianceForOcr_API,
   uploadVendorComplianceDocument_API,
@@ -84,6 +86,15 @@ const getSanitationGradeDisplay = (document = {}) =>
       ? "Pending OCR/Admin verification"
       : "Upload document, then Save & Run OCR";
 
+const normalizeGradeInput = (value = "") =>
+  String(value).trim().toUpperCase().replace(/[^ABCDF]/g, "").slice(0, 1);
+
+const getFoodTruckOptionKey = (foodTruck = {}) =>
+  String(foodTruck?._id || foodTruck?.id || "");
+
+const getFoodTruckOptionLabel = (foodTruck = {}, index = 0) =>
+  foodTruck?.name || foodTruck?.business_name || `Food Truck ${index + 1}`;
+
 const getOcrStatusText = (document = {}) => {
   if (!document?.ocr_status) return "";
   const status = formatLabel(document.ocr_status);
@@ -132,17 +143,71 @@ const getExpiringDocumentStatus = (requirement = {}) => {
 const VendorComplianceScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { user } = useSelector((state) => state.userReducer);
-  const foodTruckId = user?.foodTruck?._id;
+  const defaultFoodTruckId = user?.foodTruck?._id;
+  const [selectedFoodTruckId, setSelectedFoodTruckId] = useState(
+    defaultFoodTruckId || null
+  );
+  const foodTruckId = selectedFoodTruckId || defaultFoodTruckId;
+  const [foodTruckOptions, setFoodTruckOptions] = useState([]);
+  const [loadingFoodTrucks, setLoadingFoodTrucks] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uploadingType, setUploadingType] = useState(null);
   const [submittingOcr, setSubmittingOcr] = useState(false);
   const [summary, setSummary] = useState(null);
   const [expirationDates, setExpirationDates] = useState({});
+  const [manualSanitationGrades, setManualSanitationGrades] = useState({});
+  const [sanitationRevisionTypes, setSanitationRevisionTypes] = useState({});
+  const [sanitationGradeEditTypes, setSanitationGradeEditTypes] = useState({});
   const [expandedDocuments, setExpandedDocuments] = useState({});
   const [datePickerRequirement, setDatePickerRequirement] = useState(null);
   const { checkAndRequestPermission: cameraPermissionStatus } = usePermission(
     permission.camera
   );
+
+  const loadFoodTruckOptions = useCallback(async () => {
+    if (!defaultFoodTruckId) return;
+    setLoadingFoodTrucks(true);
+    try {
+      const response = await getVendorFoodTruckList_API({
+        page: 1,
+        limit: 100,
+      });
+      const apiList =
+        response?.data?.foodtruckList ||
+        response?.data?.foodTruckList ||
+        response?.foodtruckList ||
+        response?.foodTruckList ||
+        [];
+      const fallbackList = user?.foodTruck ? [user.foodTruck] : [];
+      const optionMap = new Map();
+      [...apiList, ...fallbackList].forEach((foodTruck, index) => {
+        const value = getFoodTruckOptionKey(foodTruck);
+        if (!value || optionMap.has(value)) return;
+        optionMap.set(value, {
+          label: getFoodTruckOptionLabel(foodTruck, index),
+          value,
+        });
+      });
+      const nextOptions = Array.from(optionMap.values());
+      setFoodTruckOptions(nextOptions);
+      if (!selectedFoodTruckId && nextOptions[0]?.value) {
+        setSelectedFoodTruckId(nextOptions[0].value);
+      }
+    } catch (error) {
+      setFoodTruckOptions(
+        user?.foodTruck
+          ? [
+              {
+                label: getFoodTruckOptionLabel(user.foodTruck),
+                value: defaultFoodTruckId,
+              },
+            ]
+          : []
+      );
+    } finally {
+      setLoadingFoodTrucks(false);
+    }
+  }, [defaultFoodTruckId, selectedFoodTruckId, user?.foodTruck]);
 
   const loadCompliance = useCallback(async () => {
     if (!foodTruckId) return;
@@ -163,6 +228,30 @@ const VendorComplianceScreen = ({ navigation }) => {
     loadCompliance();
   }, [loadCompliance]);
 
+  useEffect(() => {
+    loadFoodTruckOptions();
+  }, [loadFoodTruckOptions]);
+
+  useEffect(() => {
+    setExpirationDates({});
+    setManualSanitationGrades({});
+    setSanitationRevisionTypes({});
+    setSanitationGradeEditTypes({});
+    setExpandedDocuments({});
+  }, [foodTruckId]);
+
+  useEffect(() => {
+    const nextGrades = {};
+    (summary?.requirements || []).forEach((requirement) => {
+      if (requirement.type !== "HEALTH_PERMIT") return;
+      const grade = getSanitationGradeFromDocument(requirement.document);
+      if (grade) {
+        nextGrades[requirement.type] = String(grade).toUpperCase();
+      }
+    });
+    setManualSanitationGrades((current) => ({ ...nextGrades, ...current }));
+  }, [summary]);
+
   const uploadComplianceFile = async (requirement, file) => {
     const selectedExpirationDate = expirationDates[requirement.type];
     if (EXPIRING_DOCUMENT_TYPES.has(requirement.type) && !selectedExpirationDate) {
@@ -178,6 +267,14 @@ const VendorComplianceScreen = ({ navigation }) => {
     payload.append("title", requirement.label);
     if (selectedExpirationDate) {
       payload.append("expiration_date", formatDateForPayload(selectedExpirationDate));
+    }
+    if (requirement.type === "HEALTH_PERMIT") {
+      const sanitationGrade = normalizeGradeInput(
+        manualSanitationGrades[requirement.type]
+      );
+      if (sanitationGrade) {
+        payload.append("sanitation_grade", sanitationGrade);
+      }
     }
     payload.append("file", {
       uri: file.uri,
@@ -272,6 +369,23 @@ const VendorComplianceScreen = ({ navigation }) => {
     ]);
   };
 
+  const startSanitationRevision = (requirement) => {
+    setSanitationRevisionTypes((current) => ({
+      ...current,
+      [requirement.type]: true,
+    }));
+    setSanitationGradeEditTypes((current) => ({
+      ...current,
+      [requirement.type]: true,
+    }));
+    setManualSanitationGrades((current) => ({
+      ...current,
+      [requirement.type]:
+        current[requirement.type] ||
+        String(getSanitationGradeFromDocument(requirement.document) || "").toUpperCase(),
+    }));
+  };
+
   const openExpirationDatePicker = (requirement) => {
     setDatePickerRequirement(requirement);
   };
@@ -360,6 +474,47 @@ const VendorComplianceScreen = ({ navigation }) => {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.foodTruckSelectCard}>
+            <Text style={styles.foodTruckSelectLabel}>Food Truck</Text>
+            <Dropdown
+              data={foodTruckOptions}
+              labelField="label"
+              valueField="value"
+              value={foodTruckId}
+              disable={loadingFoodTrucks || foodTruckOptions.length <= 1}
+              onChange={(item) => {
+                if (item?.value && item.value !== foodTruckId) {
+                  setSelectedFoodTruckId(item.value);
+                }
+              }}
+              placeholder={
+                loadingFoodTrucks ? "Loading food trucks..." : "Select food truck"
+              }
+              style={[
+                styles.foodTruckDropdown,
+                (loadingFoodTrucks || foodTruckOptions.length <= 1) &&
+                  styles.disabledDropdown,
+              ]}
+              placeholderStyle={styles.foodTruckDropdownText}
+              selectedTextStyle={styles.foodTruckDropdownText}
+              itemTextStyle={styles.foodTruckDropdownItemText}
+              renderRightIcon={() =>
+                loadingFoodTrucks ? (
+                  <ActivityIndicator size="small" color={AppColor.primary} />
+                ) : (
+                  <Ionicons
+                    name="chevron-down"
+                    size={18}
+                    color={AppColor.subText}
+                  />
+                )
+              }
+            />
+            <Text style={styles.foodTruckSelectHelp}>
+              Sanitation grades are saved per food truck and only appear to customers when provided and verified.
+            </Text>
+          </View>
+
           <View style={[styles.scorePanel, { borderColor: scoreColor }]}>
             <View style={[styles.scoreBadge, { backgroundColor: scoreColor }]}>
               <Text style={styles.scoreValue}>{summary?.score || 0}</Text>
@@ -388,6 +543,14 @@ const VendorComplianceScreen = ({ navigation }) => {
 	            const selectedExpirationDate = expirationDates[requirement.type];
 	            const isExpanded =
 	              expandedDocuments[requirement.type] ?? !document;
+            const isHealthPermit = requirement.type === "HEALTH_PERMIT";
+            const isSanitationRevision =
+              isHealthPermit && !!sanitationRevisionTypes[requirement.type];
+            const isSanitationGradeEditing =
+              isHealthPermit && !!sanitationGradeEditTypes[requirement.type];
+            const sanitationGradeValue =
+              manualSanitationGrades[requirement.type] ||
+              getSanitationGradeDisplay(document);
 
 	            return (
 	              <View key={requirement.type} style={styles.documentCard}>
@@ -426,7 +589,7 @@ const VendorComplianceScreen = ({ navigation }) => {
 	                    <Text style={styles.documentMeta}>
 	                      Expires {formatDate(document?.expiration_date)}
 	                  </Text>
-	                  {requirement.type === "HEALTH_PERMIT" &&
+	                  {isHealthPermit &&
 	                  getSanitationGradeFromDocument(document) ? (
 	                    <Text style={styles.documentMeta}>
 	                      Grade {String(getSanitationGradeFromDocument(document)).toUpperCase()}
@@ -465,19 +628,47 @@ const VendorComplianceScreen = ({ navigation }) => {
 		                        </Text>
 		                      </View>
 		                    ) : null}
-		                    {requirement.type === "HEALTH_PERMIT" ? (
+		                    {isHealthPermit ? (
 		                      <View style={styles.expirationInputGroup}>
-		                        <Text style={styles.expirationInputLabel}>
-		                          Sanitation Grade on document
-		                        </Text>
+		                        <View style={styles.gradeLabelRow}>
+		                          <Text style={styles.expirationInputLabel}>
+		                            Sanitation Grade on document
+		                          </Text>
+                              {isSanitationRevision ? (
+                                <TouchableOpacity
+                                  activeOpacity={0.7}
+                                  onPress={() =>
+                                    setSanitationGradeEditTypes((current) => ({
+                                      ...current,
+                                      [requirement.type]:
+                                        !current[requirement.type],
+                                    }))
+                                  }
+                                  style={styles.editGradeButton}
+                                >
+                                  <Text style={styles.editGradeButtonText}>
+                                    {isSanitationGradeEditing ? "Done" : "Edit"}
+                                  </Text>
+                                </TouchableOpacity>
+                              ) : null}
+                            </View>
 		                        <TextInput
-		                          value={getSanitationGradeDisplay(document)}
-		                          editable={false}
+		                          value={sanitationGradeValue}
+		                          editable={isSanitationGradeEditing}
+                              onChangeText={(value) =>
+                                setManualSanitationGrades((current) => ({
+                                  ...current,
+                                  [requirement.type]: normalizeGradeInput(value),
+                                }))
+                              }
 		                          autoCapitalize="characters"
-		                          style={[styles.gradeInput, styles.readOnlyInput]}
+		                          style={[
+                                styles.gradeInput,
+                                !isSanitationGradeEditing && styles.readOnlyInput,
+                              ]}
 		                        />
 		                        <Text style={styles.expirationHelpText}>
-		                          OCR reads this after Save & Run OCR. If OCR cannot read it, admin must verify it before it appears to customers.
+		                          OCR reads this after Save & Run OCR. If OCR cannot read it, admin must verify it before it appears to customers. To revise, tap Edit and replace the document.
 		                        </Text>
 		                      </View>
 		                    ) : null}
@@ -517,7 +708,13 @@ const VendorComplianceScreen = ({ navigation }) => {
 	                    ) : null}
 	                    <TouchableOpacity
 	                      disabled={isUploading}
-	                      onPress={() => pickAndUpload(requirement)}
+	                      onPress={() => {
+                          if (document && isHealthPermit && !isSanitationRevision) {
+                            startSanitationRevision(requirement);
+                            return;
+                          }
+                          pickAndUpload(requirement);
+                        }}
 	                      style={styles.uploadButton}
 	                    >
 	                      {isUploading ? (
@@ -526,8 +723,10 @@ const VendorComplianceScreen = ({ navigation }) => {
 	                        <>
 	                          <Ionicons name="cloud-upload-outline" size={18} color={AppColor.white} />
 	                          <Text style={styles.uploadButtonText}>
-	                            {document && requirement.type === "HEALTH_PERMIT"
+	                            {document && isHealthPermit && !isSanitationRevision
                                 ? "Revise Grade / Replace Document"
+                                : document && isHealthPermit
+                                  ? "Replace Document"
                                 : document
                                   ? "Replace Document"
                                   : "Upload Document"}
@@ -602,6 +801,48 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     paddingBottom: 32,
+  },
+  foodTruckSelectCard: {
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
+    borderRadius: 8,
+    padding: 14,
+    marginBottom: 12,
+    backgroundColor: AppColor.white,
+  },
+  foodTruckSelectLabel: {
+    fontFamily: Mulish700,
+    fontSize: 14,
+    color: AppColor.black,
+    marginBottom: 8,
+  },
+  foodTruckDropdown: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    backgroundColor: "#FAFAFA",
+  },
+  disabledDropdown: {
+    opacity: 0.75,
+  },
+  foodTruckDropdownText: {
+    fontFamily: Mulish600,
+    fontSize: 13,
+    color: AppColor.black,
+  },
+  foodTruckDropdownItemText: {
+    fontFamily: Mulish400,
+    fontSize: 13,
+    color: AppColor.black,
+  },
+  foodTruckSelectHelp: {
+    fontFamily: Mulish400,
+    fontSize: 11,
+    color: AppColor.subText,
+    lineHeight: 16,
+    marginTop: 8,
   },
   scorePanel: {
     flexDirection: "row",
@@ -717,6 +958,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: AppColor.black,
     marginBottom: 6,
+  },
+  gradeLabelRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  editGradeButton: {
+    borderColor: AppColor.primary,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  editGradeButtonText: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
+    fontSize: 12,
   },
   expirationDateButton: {
     minHeight: 42,

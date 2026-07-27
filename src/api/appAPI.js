@@ -624,6 +624,23 @@ export const getFoodtruckDetail_API = async (foodtruck_id) => {
   }
 };
 
+export const getVendorFoodTruckList_API = async (params = {}) => {
+  try {
+    const queryParams = [
+      `page=${params.page || 1}`,
+      `limit=${params.limit || 100}`,
+    ];
+    if (params.search) {
+      queryParams.push(`search=${encodeURIComponent(params.search)}`);
+    }
+    const URL = `${GET_FOODTRUCK_DETAILS}?${queryParams.join("&")}`;
+    const response = await apiClient.get(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
 /**
  * Update food truck profile
  * @param {Object} params - Request parameters
