@@ -563,7 +563,7 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
     return { socialMedia };
   };
 
-  const handleContinueBtnPress = async () => {
+  const saveFoodTruckProfile = async ({ exitAfterSave = false } = {}) => {
     // Validate all required fields
     const newErrors = {
       logo: selectedLogo ? "" : "Logo is required",
@@ -704,8 +704,15 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
           foodTruck: updatedFoodTruck,
         });
         dispatch(setUser({ ...user, foodTruck: updatedFoodTruck }));
-        navigation.navigate("authSetBusinessHrsScreen");
-        // navigation.navigate("authAvailabilityScreen");
+        if (exitAfterSave) {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "bottomRoot" }],
+          });
+        } else {
+          navigation.navigate("authSetBusinessHrsScreen");
+          // navigation.navigate("authAvailabilityScreen");
+        }
       }
     } catch (error) {
       console.error("error => ", error);
@@ -713,6 +720,11 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
       setLoading(false);
     }
   };
+
+  const handleContinueBtnPress = () => saveFoodTruckProfile();
+
+  const handleSaveExitPress = () =>
+    saveFoodTruckProfile({ exitAfterSave: true });
 
   useFocusEffect(
     useCallback(() => {
@@ -735,11 +747,6 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
   );
 
   const handleBackPress = () => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-      return;
-    }
-
     navigation.reset({
       index: 0,
       routes: [{ name: "bottomRoot" }],
@@ -1297,11 +1304,20 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
       <View
         style={{
           paddingBottom: insets.bottom,
+          paddingTop: 12,
           borderTopWidth: 1,
           borderColor: AppColor.border,
           backgroundColor: AppColor.white,
         }}
       >
+        <TouchableOpacity
+          onPress={handleSaveExitPress}
+          activeOpacity={0.7}
+          style={styles.saveExitButton}
+          disabled={loading}
+        >
+          <Text style={styles.saveExitButtonText}>Save & Exit</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           onPress={handleContinueBtnPress}
           activeOpacity={0.7}
@@ -1538,6 +1554,21 @@ const styles = StyleSheet.create({
   },
 
   // Continue Button
+  saveExitButton: {
+    height: 48,
+    borderColor: AppColor.primary,
+    borderRadius: 5,
+    borderWidth: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: AppColor.white,
+    marginHorizontal: 24,
+  },
+  saveExitButtonText: {
+    fontFamily: Mulish700,
+    fontSize: 16,
+    color: AppColor.primary,
+  },
   continueButton: {
     height: 48,
     borderRadius: 5,

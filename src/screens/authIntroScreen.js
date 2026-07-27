@@ -17,8 +17,8 @@ import Animated, {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
+import IntroLandingArtwork from "../components/IntroLandingArtwork";
 
-import Screen1Svg from "../assets/images/intro1.svg";
 import Screen2Svg from "../assets/images/intro2.svg";
 import Screen3Svg from "../assets/images/intro3.svg";
 import { useSelector } from "react-redux";
@@ -27,7 +27,7 @@ const { width, height } = Dimensions.get("window");
 
 const slides = [
   {
-    Svg: Screen1Svg,
+    Svg: IntroLandingArtwork,
     title: "Welcome to ",
     subTitle1: "Round the Corner",
     subTitle2: " – Grow Your Food Truck Business",
