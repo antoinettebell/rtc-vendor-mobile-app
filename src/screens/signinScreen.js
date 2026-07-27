@@ -8,6 +8,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 import {
   TextInput,
@@ -17,14 +18,11 @@ import {
   Portal,
   Snackbar,
 } from "react-native-paper";
-import { useNavigation } from "@react-navigation/native";
 import {
   AppColor,
   Mulish700,
   Mulish400,
-  Mulish500,
   Mulish600,
-  Mulish900,
 } from "../utils/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { emailRegex, passwordRegex } from "../utils/constants";
@@ -46,6 +44,8 @@ import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
 
 const SignInScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isWideLayout = width >= 760;
   const dispatch = useDispatch();
 
   const [email, setEmail] = useState("");
@@ -298,390 +298,551 @@ const SignInScreen = ({ navigation, route }) => {
   }, [route]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBarManager barStyle="light-content" />
-
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <IconButton
-          icon="arrow-left"
-          iconColor={AppColor.white}
-          size={24}
-          onPress={() => navigation.goBack()}
-        />
-        <Text style={styles.headerTitle}>{"Sign In"}</Text>
-        <View style={{ width: 48 }} />
-      </View>
-
-      {/* Content */}
       <KeyboardAvoidingView
-        enabled={Platform.OS === "ios"}
-        behavior="padding"
-        style={{
-          flex: 1,
-          marginBottom: -insets.bottom,
-        }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.keyboardView}
       >
         <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            paddingBottom: insets.bottom + 20,
-          }}
-          bounces={false}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: Math.max(insets.bottom, 20) },
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.content}>
-            {/* Logo */}
-            <View style={styles.logoContainer}>
+          <View style={[styles.shell, isWideLayout && styles.shellWide]}>
+            <View
+              style={[
+                styles.brandPanel,
+                isWideLayout
+                  ? styles.brandPanelWide
+                  : styles.brandPanelCompact,
+              ]}
+            >
+              <IconButton
+                accessibilityLabel="Go back"
+                icon="arrow-left"
+                iconColor={AppColor.white}
+                size={24}
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
+              />
               <Image
                 source={require("../assets/images/AppLogo.png")}
-                style={{ height: 104, width: 104 }}
+                resizeMode="contain"
+                style={[
+                  styles.brandLogo,
+                  isWideLayout && styles.brandLogoWide,
+                ]}
               />
+              <Text style={styles.brandInitials}>RDC</Text>
+              <Text style={styles.brandName}>— Round Da’ Corner ERP —</Text>
+              <View style={styles.brandDivider} />
+              <Text style={styles.portalLabel}>VENDOR / EMPLOYEE</Text>
+              <View style={styles.brandTaglineRow}>
+                <IconButton
+                  icon="shield-check-outline"
+                  iconColor="#3B82F6"
+                  size={22}
+                  style={styles.taglineIcon}
+                />
+                <Text style={styles.brandTagline}>
+                  Secure. Reliable. Built for Growth.
+                </Text>
+              </View>
             </View>
 
-            {/* Sign In Form */}
-            <Text style={styles.title}>{"Sign In"}</Text>
-            <Text style={styles.subtitle}>{"Sign in your account"}</Text>
-            <View style={styles.modeSelector}>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={[
-                  styles.modeButton,
-                  loginMode === "OWNER" && styles.modeButtonActive,
-                ]}
-                onPress={() => handleModeChange("OWNER")}
-              >
-                <Text
-                  style={[
-                    styles.modeButtonText,
-                    loginMode === "OWNER" && styles.modeButtonTextActive,
-                  ]}
-                >
-                  Vendor / Owner Login
+            <View
+              style={[
+                styles.formPanel,
+                isWideLayout && styles.formPanelWide,
+              ]}
+            >
+              <View style={styles.formInner}>
+                <IconButton
+                  accessibilityLabel="Secure sign in"
+                  icon="shield-lock-outline"
+                  iconColor="#246BFD"
+                  size={38}
+                  style={styles.securityIcon}
+                />
+                <Text style={styles.title}>Welcome Back</Text>
+                <Text style={styles.subtitle}>
+                  Sign in to your Round Da’ Corner ERP account
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={[
-                  styles.modeButton,
-                  loginMode === "EMPLOYEE" && styles.modeButtonActive,
-                ]}
-                onPress={() => handleModeChange("EMPLOYEE")}
-              >
-                <Text
-                  style={[
-                    styles.modeButtonText,
-                    loginMode === "EMPLOYEE" && styles.modeButtonTextActive,
-                  ]}
+
+                <View
+                  accessibilityRole="tablist"
+                  style={styles.modeSelector}
                 >
-                  Employee Login
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.formContainer}>
-              {loginMode === "OWNER" ? (
-                <>
-              {/* Email Container */}
-              <Text style={styles.inputLabel}>{"Email"}</Text>
-              <TextInput
-                dense
-                value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  if (validateEmail(text)) {
-                    setEmailError("");
-                  }
-                }}
-                style={styles.input}
-                contentStyle={styles.inputText}
-                placeholder=""
-                placeholderTextColor={AppColor.placeholderTextColor}
-                mode="outlined"
-                error={!!emailError}
-                outlineColor={AppColor.border}
-                activeOutlineColor={AppColor.primary}
-                outlineStyle={{ borderRadius: 8 }}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                textContentType="username"
-                theme={{ colors: { onSurfaceVariant: "#777" } }}
-              />
-              {!!emailError && (
-                <HelperText
-                  type="error"
-                  visible={!!emailError}
-                  style={styles.helper}
-                >
-                  {emailError}
-                </HelperText>
-              )}
-
-              {/* Password Container */}
-              <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                {"Password"}
-              </Text>
-              <TextInput
-                dense
-                value={password}
-                onChangeText={(text) => {
-                  setPassword(text);
-                  if (validatePassword(text)) {
-                    setPasswordError("");
-                  }
-                }}
-                style={styles.input}
-                contentStyle={styles.inputText}
-                placeholder=""
-                placeholderTextColor={AppColor.placeholderTextColor}
-                mode="outlined"
-                autoCapitalize="none"
-                error={!!passwordError}
-                secureTextEntry={!passwordVisible}
-                outlineColor={AppColor.border}
-                activeOutlineColor={AppColor.primary}
-                outlineStyle={{ borderRadius: 8 }}
-                right={
-                  <TextInput.Icon
-                    icon={passwordVisible ? "eye-off" : "eye"}
-                    onPress={togglePasswordVisibility}
-                    color={AppColor.textHighlighter}
-                    forceTextInputFocus={false}
-                  />
-                }
-                textContentType="password"
-                theme={{ colors: { onSurfaceVariant: "#777" } }}
-              />
-              {!!passwordError && (
-                <HelperText
-                  type="error"
-                  visible={!!passwordError}
-                  style={styles.helper}
-                >
-                  {passwordError}
-                </HelperText>
-              )}
-
-              {/* Forget PWD Btn */}
-              <TouchableOpacity
-                style={styles.forgotPassword}
-                onPress={handleForgetPWD}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.forgotPasswordText}>
-                  {"Forgot Password?"}
-                </Text>
-              </TouchableOpacity>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.inputLabel}>{"Vendor Access Code"}</Text>
-                  <TextInput
-                    dense
-                    value={vendorAccessCode}
-                    onChangeText={(text) => {
-                      setVendorAccessCode(text);
-                      if (text.trim().length === 6) {
-                        setVendorAccessCodeError("");
-                      }
-                    }}
-                    style={styles.input}
-                    contentStyle={styles.inputText}
-                    mode="outlined"
-                    error={!!vendorAccessCodeError}
-                    outlineColor={AppColor.border}
-                    activeOutlineColor={AppColor.primary}
-                    outlineStyle={{ borderRadius: 8 }}
-                    autoCapitalize="characters"
-                    maxLength={6}
-                    theme={{ colors: { onSurfaceVariant: "#777" } }}
-                  />
-                  {!!vendorAccessCodeError && (
-                    <HelperText
-                      type="error"
-                      visible={!!vendorAccessCodeError}
-                      style={styles.helper}
-                    >
-                      {vendorAccessCodeError}
-                    </HelperText>
-                  )}
-
-                  <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                    {"Employee Login ID"}
-                  </Text>
-                  <TextInput
-                    dense
-                    value={employeeLoginId}
-                    onChangeText={(text) => {
-                      setEmployeeLoginId(text);
-                      if (text.trim()) {
-                        setEmployeeLoginIdError("");
-                      }
-                    }}
-                    style={styles.input}
-                    contentStyle={styles.inputText}
-                    mode="outlined"
-                    autoCapitalize="none"
-                    error={!!employeeLoginIdError}
-                    outlineColor={AppColor.border}
-                    activeOutlineColor={AppColor.primary}
-                    outlineStyle={{ borderRadius: 8 }}
-                    textContentType="username"
-                    theme={{ colors: { onSurfaceVariant: "#777" } }}
-                  />
-                  {!!employeeLoginIdError && (
-                    <HelperText
-                      type="error"
-                      visible={!!employeeLoginIdError}
-                      style={styles.helper}
-                    >
-                      {employeeLoginIdError}
-                    </HelperText>
-                  )}
-
-                  <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                    {"PIN"}
-                  </Text>
-                  <TextInput
-                    dense
-                    value={pin}
-                    onChangeText={(text) => {
-                      setPin(text);
-                      if (text.trim()) {
-                        setPinError("");
-                      }
-                    }}
-                    style={styles.input}
-                    contentStyle={styles.inputText}
-                    mode="outlined"
-                    autoCapitalize="none"
-                    error={!!pinError}
-                    secureTextEntry={!pinVisible}
-                    outlineColor={AppColor.border}
-                    activeOutlineColor={AppColor.primary}
-                    outlineStyle={{ borderRadius: 8 }}
-                    right={
-                      <TextInput.Icon
-                        icon={pinVisible ? "eye-off" : "eye"}
-                        onPress={togglePinVisibility}
-                        color={AppColor.textHighlighter}
-                        forceTextInputFocus={false}
-                      />
-                    }
-                    keyboardType="number-pad"
-                    textContentType="oneTimeCode"
-                    theme={{ colors: { onSurfaceVariant: "#777" } }}
-                  />
-                  {!!pinError && (
-                    <HelperText
-                      type="error"
-                      visible={!!pinError}
-                      style={styles.helper}
-                    >
-                      {pinError}
-                    </HelperText>
-                  )}
-                </>
-              )}
-
-              {/* Signin Btn */}
-              <TouchableOpacity
-                onPress={() =>
-                  loginMode === "OWNER"
-                    ? handleSignIn(email, password)
-                    : handleEmployeeSignIn()
-                }
-                activeOpacity={0.7}
-                style={styles.signInButton}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color={AppColor.white} />
-                ) : (
-                  <Text style={styles.buttonLabel}>{"Sign In"}</Text>
-                )}
-              </TouchableOpacity>
-
-              {/* SignUp Btn */}
-              {loginMode === "OWNER" && (
-                <View style={styles.signUpContainer}>
-                  <Text style={styles.signUpText}>{"Don't have account?"} </Text>
                   <TouchableOpacity
-                    onPress={() => navigation.navigate("signup")}
-                    activeOpacity={0.7}
+                    accessibilityRole="tab"
+                    accessibilityState={{
+                      selected: loginMode === "OWNER",
+                    }}
+                    activeOpacity={0.8}
+                    style={[
+                      styles.modeButton,
+                      loginMode === "OWNER" && styles.modeButtonActive,
+                    ]}
+                    onPress={() => handleModeChange("OWNER")}
                   >
-                    <Text style={styles.signUpLink}>{"Sign Up"}</Text>
+                    <Text
+                      style={[
+                        styles.modeButtonText,
+                        loginMode === "OWNER" && styles.modeButtonTextActive,
+                      ]}
+                    >
+                      Vendor / Owner Login
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    accessibilityRole="tab"
+                    accessibilityState={{
+                      selected: loginMode === "EMPLOYEE",
+                    }}
+                    activeOpacity={0.8}
+                    style={[
+                      styles.modeButton,
+                      loginMode === "EMPLOYEE" && styles.modeButtonActive,
+                    ]}
+                    onPress={() => handleModeChange("EMPLOYEE")}
+                  >
+                    <Text
+                      style={[
+                        styles.modeButtonText,
+                        loginMode === "EMPLOYEE" && styles.modeButtonTextActive,
+                      ]}
+                    >
+                      Employee Login
+                    </Text>
                   </TouchableOpacity>
                 </View>
-              )}
+
+                <View style={styles.formContainer}>
+                  {loginMode === "OWNER" ? (
+                    <>
+                      <Text style={styles.inputLabel}>Email Address</Text>
+                      <TextInput
+                        dense
+                        value={email}
+                        onChangeText={(text) => {
+                          setEmail(text);
+                          if (validateEmail(text)) {
+                            setEmailError("");
+                          }
+                        }}
+                        style={styles.input}
+                        contentStyle={styles.inputText}
+                        placeholder="Enter your email"
+                        placeholderTextColor={AppColor.placeholderTextColor}
+                        mode="outlined"
+                        error={!!emailError}
+                        outlineColor={AppColor.border}
+                        activeOutlineColor="#246BFD"
+                        outlineStyle={styles.inputOutline}
+                        autoCapitalize="none"
+                        autoComplete="email"
+                        keyboardType="email-address"
+                        textContentType="username"
+                        theme={{ colors: { onSurfaceVariant: "#777" } }}
+                      />
+                      {!!emailError && (
+                        <HelperText
+                          type="error"
+                          visible={!!emailError}
+                          style={styles.helper}
+                        >
+                          {emailError}
+                        </HelperText>
+                      )}
+
+                      <Text style={styles.spacedInputLabel}>Password</Text>
+                      <TextInput
+                        dense
+                        value={password}
+                        onChangeText={(text) => {
+                          setPassword(text);
+                          if (validatePassword(text)) {
+                            setPasswordError("");
+                          }
+                        }}
+                        style={styles.input}
+                        contentStyle={styles.inputText}
+                        placeholder="Enter your password"
+                        placeholderTextColor={AppColor.placeholderTextColor}
+                        mode="outlined"
+                        autoCapitalize="none"
+                        autoComplete="password"
+                        error={!!passwordError}
+                        secureTextEntry={!passwordVisible}
+                        outlineColor={AppColor.border}
+                        activeOutlineColor="#246BFD"
+                        outlineStyle={styles.inputOutline}
+                        right={
+                          <TextInput.Icon
+                            icon={passwordVisible ? "eye-off" : "eye"}
+                            onPress={togglePasswordVisibility}
+                            color={AppColor.textHighlighter}
+                            forceTextInputFocus={false}
+                          />
+                        }
+                        textContentType="password"
+                        theme={{ colors: { onSurfaceVariant: "#777" } }}
+                      />
+                      {!!passwordError && (
+                        <HelperText
+                          type="error"
+                          visible={!!passwordError}
+                          style={styles.helper}
+                        >
+                          {passwordError}
+                        </HelperText>
+                      )}
+
+                      <TouchableOpacity
+                        accessibilityRole="button"
+                        style={styles.forgotPassword}
+                        onPress={handleForgetPWD}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.forgotPasswordText}>
+                          Forgot your password?
+                        </Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.inputLabel}>Vendor Access Code</Text>
+                      <TextInput
+                        dense
+                        value={vendorAccessCode}
+                        onChangeText={(text) => {
+                          setVendorAccessCode(text);
+                          if (text.trim().length === 6) {
+                            setVendorAccessCodeError("");
+                          }
+                        }}
+                        style={styles.input}
+                        contentStyle={styles.inputText}
+                        placeholder="Enter the 6-character code"
+                        placeholderTextColor={AppColor.placeholderTextColor}
+                        mode="outlined"
+                        error={!!vendorAccessCodeError}
+                        outlineColor={AppColor.border}
+                        activeOutlineColor="#246BFD"
+                        outlineStyle={styles.inputOutline}
+                        autoCapitalize="characters"
+                        maxLength={6}
+                        theme={{ colors: { onSurfaceVariant: "#777" } }}
+                      />
+                      {!!vendorAccessCodeError && (
+                        <HelperText
+                          type="error"
+                          visible={!!vendorAccessCodeError}
+                          style={styles.helper}
+                        >
+                          {vendorAccessCodeError}
+                        </HelperText>
+                      )}
+
+                      <Text style={styles.spacedInputLabel}>
+                        Employee Login ID
+                      </Text>
+                      <TextInput
+                        dense
+                        value={employeeLoginId}
+                        onChangeText={(text) => {
+                          setEmployeeLoginId(text);
+                          if (text.trim()) {
+                            setEmployeeLoginIdError("");
+                          }
+                        }}
+                        style={styles.input}
+                        contentStyle={styles.inputText}
+                        placeholder="Enter your employee login ID"
+                        placeholderTextColor={AppColor.placeholderTextColor}
+                        mode="outlined"
+                        autoCapitalize="none"
+                        error={!!employeeLoginIdError}
+                        outlineColor={AppColor.border}
+                        activeOutlineColor="#246BFD"
+                        outlineStyle={styles.inputOutline}
+                        textContentType="username"
+                        theme={{ colors: { onSurfaceVariant: "#777" } }}
+                      />
+                      {!!employeeLoginIdError && (
+                        <HelperText
+                          type="error"
+                          visible={!!employeeLoginIdError}
+                          style={styles.helper}
+                        >
+                          {employeeLoginIdError}
+                        </HelperText>
+                      )}
+
+                      <Text style={styles.spacedInputLabel}>PIN</Text>
+                      <TextInput
+                        dense
+                        value={pin}
+                        onChangeText={(text) => {
+                          setPin(text);
+                          if (text.trim()) {
+                            setPinError("");
+                          }
+                        }}
+                        style={styles.input}
+                        contentStyle={styles.inputText}
+                        placeholder="Enter your PIN"
+                        placeholderTextColor={AppColor.placeholderTextColor}
+                        mode="outlined"
+                        autoCapitalize="none"
+                        error={!!pinError}
+                        secureTextEntry={!pinVisible}
+                        outlineColor={AppColor.border}
+                        activeOutlineColor="#246BFD"
+                        outlineStyle={styles.inputOutline}
+                        right={
+                          <TextInput.Icon
+                            icon={pinVisible ? "eye-off" : "eye"}
+                            onPress={togglePinVisibility}
+                            color={AppColor.textHighlighter}
+                            forceTextInputFocus={false}
+                          />
+                        }
+                        keyboardType="number-pad"
+                        textContentType="oneTimeCode"
+                        theme={{ colors: { onSurfaceVariant: "#777" } }}
+                      />
+                      {!!pinError && (
+                        <HelperText
+                          type="error"
+                          visible={!!pinError}
+                          style={styles.helper}
+                        >
+                          {pinError}
+                        </HelperText>
+                      )}
+                    </>
+                  )}
+
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    onPress={() =>
+                      loginMode === "OWNER"
+                        ? handleSignIn(email, password)
+                        : handleEmployeeSignIn()
+                    }
+                    activeOpacity={0.7}
+                    style={[
+                      styles.signInButton,
+                      loading && styles.disabledButton,
+                    ]}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <ActivityIndicator color={AppColor.white} />
+                    ) : (
+                      <>
+                        <Text style={styles.buttonLabel}>Sign In</Text>
+                        <Text style={styles.buttonArrow}>→</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+
+                  {loginMode === "OWNER" && (
+                    <View style={styles.signUpContainer}>
+                      <Text style={styles.signUpText}>
+                        {"Don't have an account? "}
+                      </Text>
+                      <TouchableOpacity
+                        accessibilityRole="button"
+                        onPress={() => navigation.navigate("signup")}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.signUpLink}>Sign Up</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+
+                <Text style={styles.copyright}>
+                  © 2025 Round Da’ Corner ERP. All rights reserved.
+                </Text>
+              </View>
             </View>
           </View>
-          <Portal>
-            <Snackbar
-              visible={snackbar.visible}
-              onDismiss={() => setSnackbar({ ...snackbar, visible: false })}
-              duration={4000}
-              style={{
-                backgroundColor:
-                  snackbar.type === "success"
-                    ? AppColor.snackbarSuccess
-                    : snackbar.type === "error"
-                      ? AppColor.snackbarError
-                      : AppColor.snackbarDefault,
-              }}
-            >
-              {snackbar.message}
-            </Snackbar>
-          </Portal>
         </ScrollView>
       </KeyboardAvoidingView>
+      <Portal>
+        <Snackbar
+          visible={snackbar.visible}
+          onDismiss={() => setSnackbar({ ...snackbar, visible: false })}
+          duration={4000}
+          style={{
+            backgroundColor:
+              snackbar.type === "success"
+                ? AppColor.snackbarSuccess
+                : snackbar.type === "error"
+                  ? AppColor.snackbarError
+                  : AppColor.snackbarDefault,
+          }}
+        >
+          {snackbar.message}
+        </Snackbar>
+      </Portal>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: "#061E49",
     flex: 1,
-    backgroundColor: AppColor.white,
   },
-  header: {
+  keyboardView: {
+    backgroundColor: "#F3F6FA",
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+  },
+  shell: {
+    alignSelf: "center",
+    borderRadius: 24,
+    maxWidth: 1120,
+    overflow: "hidden",
+    width: "100%",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#071A3D",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.12,
+        shadowRadius: 20,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  shellWide: {
     flexDirection: "row",
+    minHeight: 760,
+  },
+  brandPanel: {
     alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: AppColor.header,
-    paddingHorizontal: 8,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
-  },
-  headerTitle: {
-    color: AppColor.white,
-    fontSize: 20,
-    fontFamily: Mulish700,
-  },
-  content: {
-    flex: 1,
+    backgroundColor: "#061E49",
+    justifyContent: "center",
     paddingHorizontal: 24,
+    position: "relative",
   },
-  logoContainer: {
-    alignItems: "flex-start",
-    marginTop: 30,
-    marginBottom: 20,
+  brandPanelCompact: {
+    minHeight: 300,
+    paddingBottom: 24,
+    paddingTop: 42,
+  },
+  brandPanelWide: {
+    flex: 0.43,
+    minHeight: 760,
+    paddingHorizontal: 40,
+  },
+  backButton: {
+    left: 4,
+    position: "absolute",
+    top: 4,
+  },
+  brandLogo: {
+    height: 96,
+    width: 160,
+  },
+  brandLogoWide: {
+    height: 168,
+    width: 248,
+  },
+  brandInitials: {
+    color: AppColor.white,
+    fontFamily: Mulish700,
+    fontSize: 50,
+    letterSpacing: 5,
+    lineHeight: 58,
+    marginTop: -2,
+  },
+  brandName: {
+    color: AppColor.white,
+    fontFamily: Mulish600,
+    fontSize: 16,
+    textAlign: "center",
+  },
+  brandDivider: {
+    backgroundColor: "#3B82F6",
+    height: 1,
+    marginBottom: 14,
+    marginTop: 16,
+    opacity: 0.9,
+    width: "76%",
+  },
+  portalLabel: {
+    color: "#67A4FF",
+    fontFamily: Mulish600,
+    fontSize: 13,
+    letterSpacing: 4,
+    textAlign: "center",
+  },
+  brandTaglineRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    marginTop: 24,
+  },
+  taglineIcon: {
+    margin: 0,
+  },
+  brandTagline: {
+    color: AppColor.white,
+    fontFamily: Mulish600,
+    fontSize: 13,
+    marginLeft: 4,
+  },
+  formPanel: {
+    backgroundColor: AppColor.white,
+    paddingHorizontal: 22,
+    paddingVertical: 30,
+  },
+  formPanelWide: {
+    flex: 0.57,
+    justifyContent: "center",
+    paddingHorizontal: 56,
+    paddingVertical: 48,
+  },
+  formInner: {
+    alignSelf: "center",
+    maxWidth: 560,
+    width: "100%",
+  },
+  securityIcon: {
+    alignSelf: "center",
+    margin: 0,
+    marginBottom: 4,
   },
   title: {
-    fontFamily: Mulish700,
-    fontSize: 24,
     color: AppColor.text,
-    marginBottom: 8,
+    fontFamily: Mulish700,
+    fontSize: 30,
+    textAlign: "center",
   },
   subtitle: {
+    color: AppColor.textHighlighter,
     fontFamily: Mulish400,
     fontSize: 14,
-    color: AppColor.textHighlighter,
-    marginBottom: 14,
+    marginBottom: 22,
+    marginTop: 8,
+    textAlign: "center",
   },
   modeSelector: {
-    backgroundColor: AppColor.lightGray || "#F5F5F5",
+    backgroundColor: "#F1F3F6",
     borderRadius: 8,
     flexDirection: "row",
     marginBottom: 24,
@@ -692,14 +853,14 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     flex: 1,
     justifyContent: "center",
-    minHeight: 42,
+    minHeight: 46,
     paddingHorizontal: 8,
   },
   modeButtonActive: {
-    backgroundColor: AppColor.primary,
+    backgroundColor: "#092A63",
   },
   modeButtonText: {
-    color: AppColor.textHighlighter,
+    color: AppColor.text,
     fontFamily: Mulish600,
     fontSize: 13,
     textAlign: "center",
@@ -708,78 +869,104 @@ const styles = StyleSheet.create({
     color: AppColor.white,
   },
   formContainer: {
-    flex: 1,
+    width: "100%",
   },
   inputLabel: {
-    fontFamily: Mulish400,
-    fontSize: 15,
     color: AppColor.text,
-    marginBottom: 8,
+    fontFamily: Mulish700,
+    fontSize: 14,
+    marginBottom: 7,
+  },
+  spacedInputLabel: {
+    color: AppColor.text,
+    fontFamily: Mulish700,
+    fontSize: 14,
+    marginBottom: 7,
+    marginTop: 16,
   },
   input: {
     backgroundColor: AppColor.white,
+    minHeight: 54,
+  },
+  inputOutline: {
+    borderRadius: 8,
   },
   inputText: {
     fontFamily: Mulish400,
     fontSize: 15,
   },
   helper: {
-    marginBottom: 8,
+    fontFamily: Mulish400,
+    marginBottom: 2,
     paddingLeft: 0,
     paddingTop: 0,
-    fontFamily: Mulish400,
   },
   forgotPassword: {
     alignSelf: "flex-end",
+    marginBottom: 22,
     marginTop: 8,
-    marginBottom: 24,
   },
   forgotPasswordText: {
+    color: "#155EEF",
     fontFamily: Mulish400,
     fontSize: 14,
-    color: AppColor.textHighlighter,
   },
   signInButton: {
-    height: 48,
-    borderRadius: 5,
-    justifyContent: "center",
     alignItems: "center",
-    backgroundColor: AppColor.primary,
-    marginBottom: 20,
+    backgroundColor: "#092A63",
+    borderRadius: 8,
+    flexDirection: "row",
+    height: 54,
+    justifyContent: "center",
+    marginBottom: 18,
+    marginTop: 24,
     ...Platform.select({
       ios: {
-        shadowColor: AppColor.black,
-        shadowOffset: {
-          width: 0,
-          height: 2,
-        },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
+        shadowColor: "#071A3D",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
       },
       android: {
         elevation: 4,
       },
     }),
   },
+  disabledButton: {
+    opacity: 0.65,
+  },
+  buttonLabel: {
+    color: AppColor.white,
+    fontFamily: Mulish700,
+    fontSize: 16,
+  },
+  buttonArrow: {
+    color: AppColor.white,
+    fontFamily: Mulish400,
+    fontSize: 22,
+    marginLeft: 14,
+  },
   signUpContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginBottom: 24,
+    marginBottom: 8,
   },
   signUpText: {
     color: AppColor.textHighlighter,
-    fontSize: 14,
     fontFamily: Mulish400,
+    fontSize: 14,
   },
   signUpLink: {
-    color: AppColor.text,
+    color: "#155EEF",
+    fontFamily: Mulish700,
     fontSize: 14,
-    fontFamily: Mulish700,
   },
-  buttonLabel: {
-    fontFamily: Mulish700,
-    fontSize: 16,
-    color: AppColor.white,
+  copyright: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 12,
+    marginTop: 26,
+    textAlign: "center",
   },
 });
 
