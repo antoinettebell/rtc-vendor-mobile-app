@@ -20,6 +20,10 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
 import { getAddOnsPlans_API, getPlansData_API } from "../api/appAPI";
 import {
+  isRemovedSubscriptionBenefit,
+  normalizeSubscriptionBenefit,
+} from "../helpers/subscriptionBenefits.helper";
+import {
   clearUserSlice,
   setSelectedPlan,
   setSelectedSignupAddOns,
@@ -161,8 +165,7 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
   };
 
   const getBenefitLabel = (plan, benefit) => {
-    const benefitText = String(benefit || "");
-    return benefitText.replace(/\s*\(coming soon\)$/i, "");
+    return normalizeSubscriptionBenefit(benefit);
   };
 
   const isUnavailableBenefit = (benefit) =>
@@ -172,6 +175,10 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
     const planSlug = String(plan?.slug || "").toUpperCase();
     const benefitText = String(benefit || "");
     const isPlatinumOrElite = ["SUB_PLATINUM", "SUB_ELITE"].includes(planSlug);
+
+    if (isRemovedSubscriptionBenefit(benefitText)) {
+      return true;
+    }
 
     if (
       isPlatinumOrElite &&
