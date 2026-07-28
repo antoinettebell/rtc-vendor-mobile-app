@@ -38,6 +38,9 @@ import { useSelector } from "react-redux";
 import StatePickerModal from "../components/StatePickerModal";
 import { usStates } from "../utils/usStates";
 
+const SMS_CONSENT_MESSAGE =
+  "I agree to receive automated transactional text messages from Round the Corner, including order confirmations, ready-for-pickup alerts, delivery updates, account updates, and order completion notices at the mobile number provided. Consent is not a condition of purchase. Message and data rates may apply. Message frequency varies. Reply HELP for help and STOP to cancel. View our ";
+
 const SignUpScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
 
@@ -901,11 +904,19 @@ const SignUpScreen = ({ navigation }) => {
               </View>
 
               {/* sms consent checkbox */}
-              <View style={styles.termsContainer}>
+              <Text style={styles.smsConsentTitle}>
+                SMS Text Message Consent *
+              </Text>
+              <View style={[styles.termsContainer, styles.smsConsentContainer]}>
                 <TouchableOpacity
                   activeOpacity={0.7}
-                  onPress={() => setAgreedToMessages(!agreedToMessages)}
+                  onPress={() =>
+                    setAgreedToMessages((currentValue) => !currentValue)
+                  }
                   style={styles.iconBox}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: agreedToMessages }}
+                  accessibilityLabel="Agree to receive transactional text messages"
                 >
                   <Ionicons
                     name={agreedToMessages ? "checkbox" : "square-outline"}
@@ -915,9 +926,7 @@ const SignUpScreen = ({ navigation }) => {
                 </TouchableOpacity>
 
                 <Text style={styles.termsText}>
-                  {
-                    "I agree to receive automated transactional text messages from Round the Corner, including order confirmations, ready-for-pickup alerts, delivery updates, account updates, and order completion notices at the mobile number provided. Consent is not a condition of purchase. Message and data rates may apply. Message frequency varies. Reply HELP for help and STOP to cancel. View our "
-                  }
+                  {SMS_CONSENT_MESSAGE}
                   <Text
                     style={styles.linkText}
                     onPress={() => navigation.navigate("termsOfService")}
@@ -1131,6 +1140,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: AppColor.text,
     fontFamily: Mulish400,
+  },
+  smsConsentTitle: {
+    color: AppColor.text,
+    fontFamily: Mulish700,
+    fontSize: 15,
+    marginTop: 20,
+  },
+  smsConsentContainer: {
+    alignItems: "flex-start",
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 8,
+    padding: 12,
   },
   linkText: {
     color: AppColor.primary,
