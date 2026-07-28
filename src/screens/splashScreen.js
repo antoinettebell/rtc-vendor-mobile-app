@@ -22,7 +22,7 @@ const SplashScreen = () => {
       if (isSignedIn) {
         navigation.replace("bottomRoot");
       } else if (!isOnboarded) {
-        navigation.replace("authIntro");
+        navigation.replace("signin");
       } else if (isUnderReview) {
         navigation.replace("authUnderReviewNoteScreen");
       } else if (selectedPlan) {
