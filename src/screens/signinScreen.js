@@ -307,6 +307,7 @@ const SignInScreen = ({ navigation, route }) => {
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
+            !isWideLayout && styles.scrollContentCompact,
             { paddingBottom: Math.max(insets.bottom, 20) },
           ]}
           showsVerticalScrollIndicator={false}
@@ -337,26 +338,43 @@ const SignInScreen = ({ navigation, route }) => {
                   isWideLayout && styles.brandLogoWide,
                 ]}
               />
-              <Text style={styles.brandInitials}>RDC</Text>
-              <Text style={styles.brandName}>— Round Da’ Corner ERP —</Text>
+              <Text
+                style={[
+                  styles.brandInitials,
+                  isWideLayout && styles.brandInitialsWide,
+                ]}
+              >
+                RDC
+              </Text>
+              <Text
+                style={[
+                  styles.brandName,
+                  isWideLayout && styles.brandNameWide,
+                ]}
+              >
+                — Round Da’ Corner ERP —
+              </Text>
               <View style={styles.brandDivider} />
               <Text style={styles.portalLabel}>VENDOR / EMPLOYEE</Text>
-              <View style={styles.brandTaglineRow}>
-                <IconButton
-                  icon="shield-check-outline"
-                  iconColor="#3B82F6"
-                  size={22}
-                  style={styles.taglineIcon}
-                />
-                <Text style={styles.brandTagline}>
-                  Secure. Reliable. Built for Growth.
-                </Text>
-              </View>
+              {isWideLayout && (
+                <View style={styles.brandTaglineRow}>
+                  <IconButton
+                    icon="shield-check-outline"
+                    iconColor="#3B82F6"
+                    size={22}
+                    style={styles.taglineIcon}
+                  />
+                  <Text style={styles.brandTagline}>
+                    Secure. Reliable. Built for Growth.
+                  </Text>
+                </View>
+              )}
             </View>
 
             <View
               style={[
                 styles.formPanel,
+                !isWideLayout && styles.formPanelCompact,
                 isWideLayout && styles.formPanelWide,
               ]}
             >
@@ -365,7 +383,7 @@ const SignInScreen = ({ navigation, route }) => {
                   accessibilityLabel="Secure sign in"
                   icon="shield-lock-outline"
                   iconColor="#246BFD"
-                  size={38}
+                  size={isWideLayout ? 38 : 28}
                   style={styles.securityIcon}
                 />
                 <Text style={styles.title}>Welcome Back</Text>
@@ -711,6 +729,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingTop: 14,
   },
+  scrollContentCompact: {
+    paddingHorizontal: 8,
+    paddingTop: 8,
+  },
   shell: {
     alignSelf: "center",
     borderRadius: 24,
@@ -741,9 +763,9 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   brandPanelCompact: {
-    minHeight: 300,
-    paddingBottom: 24,
-    paddingTop: 42,
+    minHeight: 154,
+    paddingBottom: 12,
+    paddingTop: 16,
   },
   brandPanelWide: {
     flex: 0.43,
@@ -756,8 +778,8 @@ const styles = StyleSheet.create({
     top: 4,
   },
   brandLogo: {
-    height: 96,
-    width: 160,
+    height: 54,
+    width: 108,
   },
   brandLogoWide: {
     height: 168,
@@ -766,30 +788,38 @@ const styles = StyleSheet.create({
   brandInitials: {
     color: AppColor.white,
     fontFamily: Mulish700,
+    fontSize: 32,
+    letterSpacing: 4,
+    lineHeight: 36,
+    marginTop: -2,
+  },
+  brandInitialsWide: {
     fontSize: 50,
     letterSpacing: 5,
     lineHeight: 58,
-    marginTop: -2,
   },
   brandName: {
     color: AppColor.white,
     fontFamily: Mulish600,
-    fontSize: 16,
+    fontSize: 13,
     textAlign: "center",
+  },
+  brandNameWide: {
+    fontSize: 16,
   },
   brandDivider: {
     backgroundColor: "#3B82F6",
     height: 1,
-    marginBottom: 14,
-    marginTop: 16,
+    marginBottom: 7,
+    marginTop: 7,
     opacity: 0.9,
     width: "76%",
   },
   portalLabel: {
     color: "#67A4FF",
     fontFamily: Mulish600,
-    fontSize: 13,
-    letterSpacing: 4,
+    fontSize: 11,
+    letterSpacing: 3,
     textAlign: "center",
   },
   brandTaglineRow: {
@@ -811,6 +841,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 30,
   },
+  formPanelCompact: {
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
   formPanelWide: {
     flex: 0.57,
     justifyContent: "center",
@@ -830,22 +864,22 @@ const styles = StyleSheet.create({
   title: {
     color: AppColor.text,
     fontFamily: Mulish700,
-    fontSize: 30,
+    fontSize: 26,
     textAlign: "center",
   },
   subtitle: {
     color: AppColor.textHighlighter,
     fontFamily: Mulish400,
     fontSize: 14,
-    marginBottom: 22,
-    marginTop: 8,
+    marginBottom: 12,
+    marginTop: 5,
     textAlign: "center",
   },
   modeSelector: {
     backgroundColor: "#F1F3F6",
     borderRadius: 8,
     flexDirection: "row",
-    marginBottom: 24,
+    marginBottom: 14,
     padding: 4,
   },
   modeButton: {
@@ -853,7 +887,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     flex: 1,
     justifyContent: "center",
-    minHeight: 46,
+    minHeight: 40,
     paddingHorizontal: 8,
   },
   modeButtonActive: {
@@ -882,11 +916,11 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
     fontSize: 14,
     marginBottom: 7,
-    marginTop: 16,
+    marginTop: 10,
   },
   input: {
     backgroundColor: AppColor.white,
-    minHeight: 54,
+    minHeight: 48,
   },
   inputOutline: {
     borderRadius: 8,
@@ -903,8 +937,8 @@ const styles = StyleSheet.create({
   },
   forgotPassword: {
     alignSelf: "flex-end",
-    marginBottom: 22,
-    marginTop: 8,
+    marginBottom: 12,
+    marginTop: 6,
   },
   forgotPasswordText: {
     color: "#155EEF",
@@ -916,10 +950,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#092A63",
     borderRadius: 8,
     flexDirection: "row",
-    height: 54,
+    height: 48,
     justifyContent: "center",
-    marginBottom: 18,
-    marginTop: 24,
+    marginBottom: 12,
+    marginTop: 14,
     ...Platform.select({
       ios: {
         shadowColor: "#071A3D",
@@ -965,7 +999,7 @@ const styles = StyleSheet.create({
     color: AppColor.textHighlighter,
     fontFamily: Mulish400,
     fontSize: 12,
-    marginTop: 26,
+    marginTop: 14,
     textAlign: "center",
   },
 });
