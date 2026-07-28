@@ -247,6 +247,52 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
     }
   };
 
+  const payWithCash = () => {
+    if (!payment || paymentLoading) return;
+    Alert.alert(
+      "Confirm Cash Payment",
+      `Confirm cash payment of ${formatMoney(payment.total_amount || 0)}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Confirm",
+          onPress: async () => {
+            setPaymentLoading("cash");
+            try {
+              const response = await checkoutMarketplacePayment_API({
+                payment_id: payment.payment_id,
+                payload: { payment_method: "CASH" },
+              });
+              if (response?.success) {
+                setPayment(response.data?.marketplacePayment);
+                Alert.alert(
+                  "Payment Successful",
+                  successMessage || "Final event cash payment is confirmed.",
+                  [
+                    {
+                      text: "OK",
+                      onPress: () =>
+                        returnScreen
+                          ? navigation.replace(returnScreen)
+                          : navigation.goBack(),
+                    },
+                  ],
+                );
+              }
+            } catch (error) {
+              Alert.alert(
+                "Cash Payment Failed",
+                error?.message || "Please try again.",
+              );
+            } finally {
+              setPaymentLoading(null);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBarManager />
@@ -259,13 +305,36 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
           <Text style={styles.meta}>
             Amount due: {formatMoney(payment?.total_amount || 0)}
           </Text>
+          {isFinalEventPayment ? (
+            <>
+              <Text style={styles.meta}>
+                Original awarded amount: {formatMoney(
+                  payment?.original_award_amount ?? payment?.base_amount ?? 0,
+                )}
+              </Text>
+              <Text style={styles.meta}>
+                Increase / Additional Fees: {formatMoney(
+                  payment?.additional_amount || 0,
+                )}
+              </Text>
+              <Text style={styles.meta}>
+                Discount / Decrease: -{formatMoney(
+                  payment?.discount_amount || 0,
+                )}
+              </Text>
+              <Text style={styles.meta}>
+                Tip: {formatMoney(payment?.tip_amount || 0)}
+              </Text>
+            </>
+          ) : null}
           <Text style={styles.meta}>
             Type: {payment?.payment_type?.replaceAll("_", " ") || "Vendor Event Fee"}
           </Text>
           <Text style={styles.meta}>Status: {payment?.payment_status || "PENDING"}</Text>
           <Text style={styles.meta}>
-            Use Apple Pay or Google Pay to complete this marketplace payment, or
-            call RTC for help.
+            {isFinalEventPayment
+              ? "Use Tap to Pay or Cash to complete this final event payment."
+              : "Use Apple Pay or Google Pay to complete this marketplace payment, or call RTC for help."}
           </Text>
         </View>
 
@@ -284,6 +353,21 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
                   {paymentLoading === "tapToPay"
                     ? "Processing..."
                     : `Tap to Pay ${formatMoney(payment?.total_amount || 0)}`}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {isFinalEventPayment ? (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[styles.secondaryButton, { marginTop: 12 }]}
+                disabled={!!paymentLoading}
+                onPress={payWithCash}
+              >
+                <Text style={styles.secondaryButtonText}>
+                  {paymentLoading === "cash"
+                    ? "Processing..."
+                    : `Cash ${formatMoney(payment?.total_amount || 0)}`}
                 </Text>
               </TouchableOpacity>
             ) : null}
@@ -312,16 +396,18 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
               </TouchableOpacity>
             ) : null}
 
-            <TouchableOpacity
-              activeOpacity={0.7}
-              style={[styles.secondaryButton, { marginTop: 12 }]}
-              onPress={callRtc}
-              disabled={!!paymentLoading}
-            >
-              <Text style={styles.secondaryButtonText}>
-                Call RTC to Complete Payment
-              </Text>
-            </TouchableOpacity>
+            {!isFinalEventPayment ? (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[styles.secondaryButton, { marginTop: 12 }]}
+                onPress={callRtc}
+                disabled={!!paymentLoading}
+              >
+                <Text style={styles.secondaryButtonText}>
+                  Call RTC to Complete Payment
+                </Text>
+              </TouchableOpacity>
+            ) : null}
           </>
         ) : null}
 
