@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -10,6 +10,7 @@ import {
 import { useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import { useFocusEffect } from "@react-navigation/native";
 import StatusBarManager from "../components/StatusBarManager";
 import { getVendorComplianceSummary_API } from "../api/appAPI";
 import { AppColor } from "../utils/theme";
@@ -148,33 +149,58 @@ const VendorMarketplaceScreen = ({ navigation }) => {
     compliance &&
     (Number(compliance.score || 0) < 100 || compliance.eligible === false);
 
-  useEffect(() => {
-    const loadCompliance = async () => {
-      if (!hasAccess || !foodTruck?._id) {
-        setCompliance(null);
-        return;
-      }
+  const loadCompliance = useCallback(async () => {
+    if (!hasAccess || !foodTruck?._id) {
+      setCompliance(null);
+      return;
+    }
 
-      setCheckingCompliance(true);
-      try {
-        const response = await getVendorComplianceSummary_API({
-          foodtruck_id: foodTruck._id,
-        });
-        setCompliance(response?.data?.compliance || null);
-      } catch (error) {
-        console.log("Marketplace compliance check error", error);
-      } finally {
-        setCheckingCompliance(false);
-      }
-    };
-
-    loadCompliance();
+    setCheckingCompliance(true);
+    try {
+      const response = await getVendorComplianceSummary_API({
+        foodtruck_id: foodTruck._id,
+      });
+      setCompliance(response?.data?.compliance || null);
+    } catch (error) {
+      console.log("Marketplace compliance check error", error);
+    } finally {
+      setCheckingCompliance(false);
+    }
   }, [foodTruck?._id, hasAccess]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCompliance();
+    }, [loadCompliance]),
+  );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBarManager />
-      <MarketplaceHeader title="Marketplace" navigation={navigation} />
+      <MarketplaceHeader
+        title="Marketplace"
+        navigation={navigation}
+        right={
+          hasAccess ? (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              disabled={checkingCompliance}
+              onPress={loadCompliance}
+              style={localStyles.refreshButton}
+              accessibilityRole="button"
+              accessibilityLabel="Refresh marketplace requirements"
+            >
+              <MaterialIcons
+                name="refresh"
+                size={25}
+                color={
+                  checkingCompliance ? AppColor.gray : AppColor.primary
+                }
+              />
+            </TouchableOpacity>
+          ) : null
+        }
+      />
       {checkingCompliance ? (
         <View style={localStyles.loadingWrap}>
           <ActivityIndicator size="large" color={AppColor.primary} />
@@ -198,6 +224,14 @@ const VendorMarketplaceScreen = ({ navigation }) => {
             onPress={() => navigation.navigate("vendorComplianceScreen")}
           >
             <Text style={styles.buttonText}>OK</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            disabled={checkingCompliance}
+            style={[styles.secondaryButton, localStyles.refreshComplianceButton]}
+            onPress={loadCompliance}
+          >
+            <Text style={styles.secondaryButtonText}>Refresh Requirements</Text>
           </TouchableOpacity>
         </ScrollView>
       ) : hasAccess ? (
@@ -266,6 +300,15 @@ const localStyles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+  },
+  refreshButton: {
+    alignItems: "center",
+    height: 44,
+    justifyContent: "center",
+    width: 44,
+  },
+  refreshComplianceButton: {
+    marginTop: 12,
   },
 });
 
