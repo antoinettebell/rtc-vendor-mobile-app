@@ -1033,7 +1033,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                       icon="pencil"
                       iconColor={AppColor.primary}
                       size={22}
-                      style={styles.trashButton}
+                      style={styles.actionIconButton}
                       onPress={() => openEmployeeEditor(employee)}
                       accessibilityLabel={`Edit ${employee.first_name} ${employee.last_name}`}
                     />
@@ -1048,7 +1048,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                       }
                       iconColor={AppColor.textHighlighter}
                       size={22}
-                      style={styles.trashButton}
+                      style={styles.actionIconButton}
                       onPress={() => toggleEmployeeDetails(employee)}
                       accessibilityLabel={`Manage ${employee.first_name} ${employee.last_name}`}
                     />
@@ -1064,7 +1064,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                       icon="trash-can-outline"
                       iconColor={AppColor.red}
                       size={22}
-                      style={styles.trashButton}
+                      style={styles.actionIconButton}
                       onPress={() => deleteEmployee(employee)}
                       accessibilityLabel={`Delete ${employee.first_name} ${employee.last_name}`}
                     />
@@ -1798,11 +1798,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   employeeHeader: {
-    flexDirection: "row",
+    flexDirection: "column",
     alignItems: "flex-start",
     gap: 12,
   },
-  employeeSummary: { flex: 1 },
+  employeeSummary: { width: "100%" },
   employeeName: {
     color: AppColor.text,
     fontFamily: Mulish700,
@@ -1828,21 +1828,29 @@ const styles = StyleSheet.create({
   employeeActions: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 2,
+    gap: 8,
+    justifyContent: "flex-end",
+    width: "100%",
   },
   archivePill: {
+    alignItems: "center",
     borderColor: AppColor.border,
     borderRadius: 8,
     borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 40,
     paddingHorizontal: 10,
-    paddingVertical: 6,
   },
   archiveText: {
     color: AppColor.textHighlighter,
     fontFamily: Mulish700,
     fontSize: 12,
   },
-  trashButton: { margin: -8 },
+  actionIconButton: {
+    height: 40,
+    margin: 0,
+    width: 40,
+  },
   submenu: {
     borderTopWidth: 1,
     borderColor: AppColor.border,
