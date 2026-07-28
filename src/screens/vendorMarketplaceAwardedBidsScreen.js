@@ -75,6 +75,12 @@ const getApplicationDisplayStatus = (application) => {
 };
 
 const getBidPayoutStatus = (bid, event) => {
+  if (bid?.final_payment_status === "PAID") {
+    return "Paid to Vendor";
+  }
+  if (["PENDING", "FAILED"].includes(bid?.final_payment_status)) {
+    return "Awaiting Coordinator Payment";
+  }
   const explicitStatus =
     bid?.payout_status ||
     bid?.vendor_payout_status ||
