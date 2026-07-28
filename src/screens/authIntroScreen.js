@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useSelector } from "react-redux";
 import StatusBarManager from "../components/StatusBarManager";
 import IntroLandingArtwork from "../components/IntroLandingArtwork";
 import { AppColor, BrandColor, Mulish400, Mulish700 } from "../utils/theme";
@@ -46,14 +45,9 @@ const featureItems = [
 
 const AuthIntroScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const { allSigninUsers } = useSelector((state) => state.userInfoReducer);
 
   const handleSigninPress = () => {
-    if (allSigninUsers?.length > 0) {
-      navigation.navigate("oneTapSignin");
-    } else {
-      navigation.navigate("signin");
-    }
+    navigation.navigate("signin");
   };
 
   const handleSignupPress = () => {
