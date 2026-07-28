@@ -195,8 +195,8 @@ const MenuScreen = ({ navigation }) => {
   const checkBankStatusAndOpenModel = () => {
     if (!bankStatus) {
       Alert.alert(
-        "Bank Details Required",
-        "Please update your bank details to continue.",
+        "Payment Details Required",
+        "We'd love to make sure you get paid on time. Please add your Cash App, Zelle, PayPal, Venmo, Direct Deposit, ACH, Check, E-check, or Wire payment details.",
         [
           {
             text: "Cancel",

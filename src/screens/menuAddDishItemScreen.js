@@ -1561,6 +1561,9 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                                 }}
                               />
                             </View>
+                            <Text style={styles.optionChargeHelpText}>
+                              Use toggle button to charge extra for flavors/toppings
+                            </Text>
 
                             {hasFlavors ? (
                               <View style={{ marginTop: 12, gap: 12 }}>
@@ -1718,6 +1721,9 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 	                              }}
 	                            />
 	                          </View>
+	                          <Text style={styles.optionChargeHelpText}>
+	                            Use toggle button to charge extra for flavors/toppings
+	                          </Text>
 
 	                          {hasToppings ? (
 	                            <View style={{ marginTop: 12, gap: 12 }}>
@@ -3020,7 +3026,15 @@ const styles = StyleSheet.create({
   },
   flavorPickerRow: {
     flexDirection: "row",
+    alignItems: "flex-end",
     gap: 12,
+  },
+  optionChargeHelpText: {
+    marginTop: 4,
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 12,
+    lineHeight: 17,
   },
   optionCostRow: {
     flexDirection: "row",

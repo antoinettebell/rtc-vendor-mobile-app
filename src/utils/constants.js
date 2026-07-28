@@ -112,10 +112,14 @@ export const bankAccountTypeList = [
 ];
 
 export const bankPaymentMethodList = [
+  { label: "Cash App", type: "CASHAPP" },
+  { label: "Zelle", type: "ZELLE" },
+  { label: "PayPal", type: "PAYPAL" },
+  { label: "Venmo", type: "VENMO" },
+  { label: "Direct Deposit", type: "DIRECT_DEPOSIT" },
   { label: "ACH", type: "ACH" },
   { label: "CHECK", type: "CHECK" },
   { label: "ECHECK", type: "ECHECK" },
-  { label: "PAYPAL", type: "PAYPAL" },
   { label: "WIRE", type: "WIRE" },
 ];
 

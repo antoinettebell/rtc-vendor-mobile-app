@@ -21,6 +21,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Dropdown } from "react-native-element-dropdown";
 import { AppColor, Mulish400, Mulish700 } from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
+import StatePickerModal from "../components/StatePickerModal";
+import { getStateCode } from "../utils/usStates";
 import {
   bankAccountTypeList,
   bankPaymentMethodList,
@@ -263,7 +265,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
     setAddressLine1(data?.bankAddressLine1 || "");
     setAddressLine2(data?.bankAddressLine2 || "");
     setCity(data?.bankCity || "");
-    setState(data?.bankState || "");
+    setState(getStateCode(data?.bankState || ""));
     setPostalCode(data?.bankPostal || "");
   };
 
@@ -880,30 +882,17 @@ const EditBankDetailScreen = ({ navigation, route }) => {
 
                   {/* State */}
                   <View style={styles.section}>
-                    <Text style={styles.inputLabel}>{"State"}</Text>
-                    <TextInput
-                      dense
+                    <StatePickerModal
+                      label="State"
                       value={state}
-                      onChangeText={(text) => {
-                        setState(text);
-                        if (!validateState(text)) {
-                          setErrors((prev) => ({
-                            ...prev,
-                            state: "",
-                          }));
-                        }
-                      }}
-                      style={styles.inputStyle}
-                      contentStyle={styles.inputText}
-                      placeholder="Enter State"
-                      placeholderTextColor={AppColor.placeholderTextColor}
-                      mode="outlined"
                       error={!!errors.state}
-                      outlineColor={AppColor.border}
-                      activeOutlineColor={AppColor.primary}
-                      outlineStyle={{ borderRadius: 8 }}
-                      autoCapitalize="sentences"
-                      theme={{ colors: { onSurfaceVariant: "#777" } }}
+                      onChange={(value) => {
+                        setState(value);
+                        setErrors((prev) => ({
+                          ...prev,
+                          state: "",
+                        }));
+                      }}
                     />
                     {!!errors.state && (
                       <HelperText

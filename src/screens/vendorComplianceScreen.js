@@ -4,7 +4,6 @@ import {
 	  Alert,
 	  Linking,
 	  ScrollView,
-	  TextInput,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -44,6 +43,9 @@ const EXPIRING_DOCUMENT_TYPES = new Set([
   "CERTIFICATE_OF_INSURANCE",
   "LIQUOR_LICENSE",
 ]);
+const SANITATION_GRADE_OPTIONS = ["A", "B", "C", "D", "F"].map(
+  (grade) => ({ label: grade, value: grade })
+);
 
 const formatLabel = (value = "") =>
   String(value)
@@ -78,13 +80,6 @@ const getSanitationGradeFromDocument = (document = {}) => {
     ""
   );
 };
-
-const getSanitationGradeDisplay = (document = {}) =>
-  getSanitationGradeFromDocument(document)
-    ? String(getSanitationGradeFromDocument(document)).toUpperCase()
-    : document
-      ? "Pending OCR/Admin verification"
-      : "Upload document, then Save & Run OCR";
 
 const normalizeGradeInput = (value = "") =>
   String(value).trim().toUpperCase().replace(/[^ABCDF]/g, "").slice(0, 1);
@@ -156,8 +151,8 @@ const VendorComplianceScreen = ({ navigation }) => {
   const [summary, setSummary] = useState(null);
   const [expirationDates, setExpirationDates] = useState({});
   const [manualSanitationGrades, setManualSanitationGrades] = useState({});
-  const [sanitationRevisionTypes, setSanitationRevisionTypes] = useState({});
-  const [sanitationGradeEditTypes, setSanitationGradeEditTypes] = useState({});
+  const [documentRevisionTypes, setDocumentRevisionTypes] = useState({});
+  const [uploadedRevisionTypes, setUploadedRevisionTypes] = useState({});
   const [expandedDocuments, setExpandedDocuments] = useState({});
   const [datePickerRequirement, setDatePickerRequirement] = useState(null);
   const { checkAndRequestPermission: cameraPermissionStatus } = usePermission(
@@ -235,8 +230,8 @@ const VendorComplianceScreen = ({ navigation }) => {
   useEffect(() => {
     setExpirationDates({});
     setManualSanitationGrades({});
-    setSanitationRevisionTypes({});
-    setSanitationGradeEditTypes({});
+    setDocumentRevisionTypes({});
+    setUploadedRevisionTypes({});
     setExpandedDocuments({});
   }, [foodTruckId]);
 
@@ -262,6 +257,17 @@ const VendorComplianceScreen = ({ navigation }) => {
       return;
     }
 
+    const sanitationGrade = normalizeGradeInput(
+      manualSanitationGrades[requirement.type]
+    );
+    if (requirement.type === "HEALTH_PERMIT" && !sanitationGrade) {
+      Alert.alert(
+        "Sanitation Grade Required",
+        "Select the sanitation grade shown on the document before uploading."
+      );
+      return;
+    }
+
     const payload = new FormData();
     payload.append("document_type", requirement.type);
     payload.append("title", requirement.label);
@@ -269,12 +275,7 @@ const VendorComplianceScreen = ({ navigation }) => {
       payload.append("expiration_date", formatDateForPayload(selectedExpirationDate));
     }
     if (requirement.type === "HEALTH_PERMIT") {
-      const sanitationGrade = normalizeGradeInput(
-        manualSanitationGrades[requirement.type]
-      );
-      if (sanitationGrade) {
-        payload.append("sanitation_grade", sanitationGrade);
-      }
+      payload.append("sanitation_grade", sanitationGrade);
     }
     payload.append("file", {
       uri: file.uri,
@@ -288,6 +289,14 @@ const VendorComplianceScreen = ({ navigation }) => {
       payload,
     });
     await loadCompliance();
+    setDocumentRevisionTypes((current) => ({
+      ...current,
+      [requirement.type]: true,
+    }));
+    setUploadedRevisionTypes((current) => ({
+      ...current,
+      [requirement.type]: true,
+    }));
   };
 
   const pickFileAndUpload = async (requirement) => {
@@ -369,20 +378,48 @@ const VendorComplianceScreen = ({ navigation }) => {
     ]);
   };
 
-  const startSanitationRevision = (requirement) => {
-    setSanitationRevisionTypes((current) => ({
+  const startDocumentRevision = (requirement) => {
+    setDocumentRevisionTypes((current) => ({
       ...current,
       [requirement.type]: true,
     }));
-    setSanitationGradeEditTypes((current) => ({
+    setUploadedRevisionTypes((current) => ({
       ...current,
-      [requirement.type]: true,
+      [requirement.type]: false,
     }));
+    if (requirement.document?.expiration_date) {
+      setExpirationDates((current) => ({
+        ...current,
+        [requirement.type]: new Date(requirement.document.expiration_date),
+      }));
+    }
     setManualSanitationGrades((current) => ({
       ...current,
       [requirement.type]:
         current[requirement.type] ||
         String(getSanitationGradeFromDocument(requirement.document) || "").toUpperCase(),
+    }));
+  };
+
+  const cancelDocumentRevision = (requirement) => {
+    setDocumentRevisionTypes((current) => ({
+      ...current,
+      [requirement.type]: false,
+    }));
+    setUploadedRevisionTypes((current) => ({
+      ...current,
+      [requirement.type]: false,
+    }));
+    setExpirationDates((current) => {
+      const next = { ...current };
+      delete next[requirement.type];
+      return next;
+    });
+    setManualSanitationGrades((current) => ({
+      ...current,
+      [requirement.type]: String(
+        getSanitationGradeFromDocument(requirement.document) || ""
+      ).toUpperCase(),
     }));
   };
 
@@ -399,6 +436,18 @@ const VendorComplianceScreen = ({ navigation }) => {
 
   const submitForOcr = async () => {
     if (!foodTruckId) return;
+    const replacementAwaitingUpload = requirements.find(
+      (requirement) =>
+        documentRevisionTypes[requirement.type] &&
+        !uploadedRevisionTypes[requirement.type]
+    );
+    if (replacementAwaitingUpload) {
+      Alert.alert(
+        "Replacement Document Required",
+        `Upload the replacement ${replacementAwaitingUpload.label} before saving.`
+      );
+      return;
+    }
     setSubmittingOcr(true);
     try {
       const response = await submitVendorComplianceForOcr_API({
@@ -410,6 +459,10 @@ const VendorComplianceScreen = ({ navigation }) => {
         "Your documents were saved and submitted for OCR review."
       );
       await loadCompliance();
+      setDocumentRevisionTypes({});
+      setUploadedRevisionTypes({});
+      setExpirationDates({});
+      setManualSanitationGrades({});
     } catch (error) {
       Alert.alert(
         "Compliance",
@@ -431,7 +484,7 @@ const VendorComplianceScreen = ({ navigation }) => {
   };
 
   const openDocument = (document) => {
-    const url = document?.file_url;
+    const url = document?.access_url || document?.file_url;
     if (!url) return;
     Linking.openURL(url).catch(() => {
       Alert.alert("Document", "Unable to open this document.");
@@ -541,16 +594,17 @@ const VendorComplianceScreen = ({ navigation }) => {
               requirement.type
             );
 	            const selectedExpirationDate = expirationDates[requirement.type];
-	            const isExpanded =
-	              expandedDocuments[requirement.type] ?? !document;
+            const isExpanded =
+              expandedDocuments[requirement.type] ?? !document;
             const isHealthPermit = requirement.type === "HEALTH_PERMIT";
-            const isSanitationRevision =
-              isHealthPermit && !!sanitationRevisionTypes[requirement.type];
-            const isSanitationGradeEditing =
-              isHealthPermit && !!sanitationGradeEditTypes[requirement.type];
-            const sanitationGradeValue =
+            const isDocumentRevision =
+              !!documentRevisionTypes[requirement.type];
+            const areDocumentFieldsEditable =
+              !document || isDocumentRevision;
+            const sanitationGradeValue = normalizeGradeInput(
               manualSanitationGrades[requirement.type] ||
-              getSanitationGradeDisplay(document);
+                getSanitationGradeFromDocument(document)
+            );
 
 	            return (
 	              <View key={requirement.type} style={styles.documentCard}>
@@ -597,13 +651,46 @@ const VendorComplianceScreen = ({ navigation }) => {
 	                  ) : null}
 		                  {requiresExpirationDate ? (
 		                      <View style={styles.expirationInputGroup}>
-		                        <Text style={styles.expirationInputLabel}>
-		                          Expiration date on document *
-		                        </Text>
+		                        <View style={styles.fieldLabelRow}>
+		                          <Text style={styles.expirationInputLabel}>
+		                            Expiration date on document *
+		                          </Text>
+                              {document ? (
+                                <TouchableOpacity
+                                  activeOpacity={0.7}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={
+                                    isDocumentRevision
+                                      ? `Cancel ${requirement.label} replacement`
+                                      : `Replace ${requirement.label} to edit expiration date`
+                                  }
+                                  onPress={() =>
+                                    isDocumentRevision
+                                      ? cancelDocumentRevision(requirement)
+                                      : startDocumentRevision(requirement)
+                                  }
+                                  style={styles.editDocumentFieldButton}
+                                >
+                                  <Ionicons
+                                    name={
+                                      isDocumentRevision
+                                        ? "close-outline"
+                                        : "pencil-outline"
+                                    }
+                                    size={18}
+                                    color={AppColor.primary}
+                                  />
+                                </TouchableOpacity>
+                              ) : null}
+                            </View>
 	                        <TouchableOpacity
 	                          activeOpacity={0.7}
+	                          disabled={!areDocumentFieldsEditable}
 	                          onPress={() => openExpirationDatePicker(requirement)}
-	                          style={styles.expirationDateButton}
+	                          style={[
+                              styles.expirationDateButton,
+                              !areDocumentFieldsEditable && styles.readOnlyInput,
+                            ]}
 	                        >
 	                          <Text
 	                            style={[
@@ -630,45 +717,76 @@ const VendorComplianceScreen = ({ navigation }) => {
 		                    ) : null}
 		                    {isHealthPermit ? (
 		                      <View style={styles.expirationInputGroup}>
-		                        <View style={styles.gradeLabelRow}>
+		                        <View style={styles.fieldLabelRow}>
 		                          <Text style={styles.expirationInputLabel}>
-		                            Sanitation Grade on document
+		                            Sanitation Grade on document *
 		                          </Text>
-                              {isSanitationRevision ? (
+                              {document ? (
                                 <TouchableOpacity
                                   activeOpacity={0.7}
-                                  onPress={() =>
-                                    setSanitationGradeEditTypes((current) => ({
-                                      ...current,
-                                      [requirement.type]:
-                                        !current[requirement.type],
-                                    }))
+                                  accessibilityRole="button"
+                                  accessibilityLabel={
+                                    isDocumentRevision
+                                      ? "Cancel sanitation grade replacement"
+                                      : "Replace sanitation document to edit grade"
                                   }
-                                  style={styles.editGradeButton}
+                                  onPress={() =>
+                                    isDocumentRevision
+                                      ? cancelDocumentRevision(requirement)
+                                      : startDocumentRevision(requirement)
+                                  }
+                                  style={styles.editDocumentFieldButton}
                                 >
-                                  <Text style={styles.editGradeButtonText}>
-                                    {isSanitationGradeEditing ? "Done" : "Edit"}
-                                  </Text>
+                                  <Ionicons
+                                    name={
+                                      isDocumentRevision
+                                        ? "close-outline"
+                                        : "pencil-outline"
+                                    }
+                                    size={18}
+                                    color={AppColor.primary}
+                                  />
                                 </TouchableOpacity>
                               ) : null}
                             </View>
-		                        <TextInput
-		                          value={sanitationGradeValue}
-		                          editable={isSanitationGradeEditing}
-                              onChangeText={(value) =>
+		                        <Dropdown
+                              data={SANITATION_GRADE_OPTIONS}
+                              labelField="label"
+                              valueField="value"
+		                          value={sanitationGradeValue || null}
+                              disable={!areDocumentFieldsEditable}
+                              onChange={(item) =>
                                 setManualSanitationGrades((current) => ({
                                   ...current,
-                                  [requirement.type]: normalizeGradeInput(value),
+                                  [requirement.type]: item?.value || "",
                                 }))
                               }
-		                          autoCapitalize="characters"
+		                          placeholder={
+                                document && !sanitationGradeValue
+                                  ? "Pending OCR/Admin verification"
+                                  : "Select grade A, B, C, D, or F"
+                              }
 		                          style={[
-                                styles.gradeInput,
-                                !isSanitationGradeEditing && styles.readOnlyInput,
+                                styles.gradeDropdown,
+                                !areDocumentFieldsEditable && styles.readOnlyInput,
                               ]}
+		                          selectedTextStyle={styles.gradeDropdownText}
+                              placeholderStyle={styles.gradeDropdownPlaceholder}
+                              itemTextStyle={styles.gradeDropdownText}
+                              renderRightIcon={() => (
+                                <Ionicons
+                                  name="chevron-down"
+                                  size={18}
+                                  color={
+                                    areDocumentFieldsEditable
+                                      ? AppColor.primary
+                                      : AppColor.subText
+                                  }
+                                />
+                              )}
 		                        />
 		                        <Text style={styles.expirationHelpText}>
-		                          OCR reads this after Save & Run OCR. If OCR cannot read it, admin must verify it before it appears to customers. To revise, tap Edit and replace the document.
+		                          Select the grade printed on the document. Save & Run OCR locks the grade and checks the uploaded document. To revise it later, replace the document.
 		                        </Text>
 		                      </View>
 		                    ) : null}
@@ -709,8 +827,8 @@ const VendorComplianceScreen = ({ navigation }) => {
 	                    <TouchableOpacity
 	                      disabled={isUploading}
 	                      onPress={() => {
-                          if (document && isHealthPermit && !isSanitationRevision) {
-                            startSanitationRevision(requirement);
+                          if (document && !isDocumentRevision) {
+                            startDocumentRevision(requirement);
                             return;
                           }
                           pickAndUpload(requirement);
@@ -721,14 +839,20 @@ const VendorComplianceScreen = ({ navigation }) => {
 	                        <ActivityIndicator size="small" color={AppColor.white} />
 	                      ) : (
 	                        <>
-	                          <Ionicons name="cloud-upload-outline" size={18} color={AppColor.white} />
+	                          <Ionicons
+                                name={
+                                  document && !isDocumentRevision
+                                    ? "pencil-outline"
+                                    : "cloud-upload-outline"
+                                }
+                                size={18}
+                                color={AppColor.white}
+                              />
 	                          <Text style={styles.uploadButtonText}>
-	                            {document && isHealthPermit && !isSanitationRevision
-                                ? "Revise Grade / Replace Document"
-                                : document && isHealthPermit
-                                  ? "Replace Document"
-                                : document
-                                  ? "Replace Document"
+	                            {document
+                                  ? isDocumentRevision
+                                    ? "Upload Replacement"
+                                    : "Replace Document"
                                   : "Upload Document"}
 	                          </Text>
 	                        </>
@@ -957,25 +1081,21 @@ const styles = StyleSheet.create({
     fontFamily: Mulish600,
     fontSize: 12,
     color: AppColor.black,
-    marginBottom: 6,
   },
-  gradeLabelRow: {
+  fieldLabelRow: {
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 6,
   },
-  editGradeButton: {
+  editDocumentFieldButton: {
+    alignItems: "center",
     borderColor: AppColor.primary,
-    borderRadius: 8,
+    borderRadius: 16,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-  },
-  editGradeButtonText: {
-    color: AppColor.primary,
-    fontFamily: Mulish700,
-    fontSize: 12,
+    height: 32,
+    justifyContent: "center",
+    width: 32,
   },
   expirationDateButton: {
     minHeight: 42,
@@ -996,16 +1116,23 @@ const styles = StyleSheet.create({
   expirationDatePlaceholder: {
     color: AppColor.subText,
   },
-  gradeInput: {
+  gradeDropdown: {
     minHeight: 42,
     borderWidth: 1,
     borderColor: "#E5E5EA",
     borderRadius: 8,
     paddingHorizontal: 12,
+    backgroundColor: "#FAFAFA",
+  },
+  gradeDropdownText: {
     fontFamily: Mulish600,
     fontSize: 13,
     color: AppColor.black,
-    backgroundColor: "#FAFAFA",
+  },
+  gradeDropdownPlaceholder: {
+    fontFamily: Mulish400,
+    fontSize: 13,
+    color: AppColor.subText,
   },
   readOnlyInput: {
     color: AppColor.subText,

@@ -10,12 +10,14 @@ import {
 } from "react-native";
 import AntDesign from "react-native-vector-icons/AntDesign";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
-import { getStateLabel, usStates } from "../utils/usStates";
+import { getStateCode, usStates } from "../utils/usStates";
 
 const StatePickerModal = ({
+  allowClear = false,
   error,
   label = "State *",
   onChange,
+  placeholder = "Select State",
   value,
 }) => {
   const [visible, setVisible] = React.useState(false);
@@ -39,7 +41,7 @@ const StatePickerModal = ({
             !value && { color: AppColor.placeholderTextColor },
           ]}
         >
-          {value ? getStateLabel(value) : "Select State"}
+          {value ? getStateCode(value) : placeholder}
         </Text>
         <AntDesign
           name="caretdown"
@@ -66,8 +68,12 @@ const StatePickerModal = ({
             </TouchableOpacity>
           </View>
           <FlatList
-            data={usStates}
-            keyExtractor={(item) => item.value}
+            data={
+              allowClear
+                ? [{ label: "All States", value: "" }, ...usStates]
+                : usStates
+            }
+            keyExtractor={(item) => item.value || "ALL_STATES"}
             renderItem={({ item }) => (
               <TouchableOpacity
                 activeOpacity={0.7}

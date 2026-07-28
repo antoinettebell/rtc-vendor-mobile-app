@@ -30,7 +30,7 @@ import { getUserDetail_API, updateUserDetail_API } from "../api/appAPI";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
 import { setUser, updateUser } from "../redux/slices/userSlice";
 import StatePickerModal from "../components/StatePickerModal";
-import { usStates } from "../utils/usStates";
+import { getStateCode, usStates } from "../utils/usStates";
 
 const validateMailingAddressLine1 = (value) => {
   if (!value.trim()) return "Address Line 1 is required";
@@ -167,7 +167,7 @@ const EditMailingAddressScreen = ({ navigation, route }) => {
     setMailingAddressLine1(data?.addressLine1 || "");
     setMailingAddressLine2(data?.addressLine2 || "");
     setMailingCity(data?.addressCity || "");
-    setMailingState(data?.addressState || "");
+    setMailingState(getStateCode(data?.addressState || ""));
     setMailingCountry(data?.addressCountry || "");
     setMailingPostalCode(data?.addressPostal || "");
   };

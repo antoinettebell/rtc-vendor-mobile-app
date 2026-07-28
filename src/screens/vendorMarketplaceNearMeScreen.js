@@ -16,7 +16,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import StatusBarManager from "../components/StatusBarManager";
 import AppImage from "../components/AppImage";
+import StatePickerModal from "../components/StatePickerModal";
 import { AppColor, Mulish400, Mulish700 } from "../utils/theme";
+import { getStateCode } from "../utils/usStates";
 import {
   getMarketplaceNotificationSummary_API,
   getMarketplaceOpenEvents_API,
@@ -65,7 +67,8 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [locked, setLocked] = useState(false);
-  const [cityState, setCityState] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
   const [eventType, setEventType] = useState("");
   const [cuisine, setCuisine] = useState("");
   const [notificationsVisible, setNotificationsVisible] = useState(false);
@@ -112,20 +115,23 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
   );
 
   const filteredEvents = useMemo(() => {
-    const locationFilter = cityState.trim().toLowerCase();
+    const cityFilter = city.trim().toLowerCase();
+    const stateFilter = getStateCode(state);
     const cuisineFilter = cuisine.trim().toLowerCase();
 
     return events.filter((event) => {
-      const location = getEventLocation(event).toLowerCase();
+      const eventCity = String(event?.event_city || "").trim().toLowerCase();
+      const eventState = getStateCode(event?.event_state || "");
       const eventCuisine = listText(event.cuisine_preferences).toLowerCase();
 
       return (
-        (!locationFilter || location.includes(locationFilter)) &&
+        (!cityFilter || eventCity.includes(cityFilter)) &&
+        (!stateFilter || eventState === stateFilter) &&
         (!eventType || event.event_type === eventType) &&
         (!cuisineFilter || eventCuisine.includes(cuisineFilter))
       );
     });
-  }, [cityState, cuisine, eventType, events]);
+  }, [city, cuisine, eventType, events, state]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -283,14 +289,23 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
           }
           ListHeaderComponent={
             <View style={styles.card}>
-              <Text style={styles.label}>City or State</Text>
+              <Text style={styles.label}>City</Text>
               <TextInput
-                value={cityState}
-                onChangeText={setCityState}
-                placeholder="Filter by city/state"
+                value={city}
+                onChangeText={setCity}
+                placeholder="Filter by city"
                 placeholderTextColor={AppColor.placeholderTextColor}
                 style={styles.input}
               />
+              <View style={{ marginTop: 14 }}>
+                <StatePickerModal
+                  allowClear
+                  label="State"
+                  placeholder="All States"
+                  value={state}
+                  onChange={setState}
+                />
+              </View>
               <Text style={styles.label}>Event Type</Text>
               <View style={styles.chipWrap}>
                 {["All", ...EVENT_TYPES].map((type) => {

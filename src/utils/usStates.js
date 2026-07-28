@@ -61,3 +61,14 @@ export const getStateLabel = (value) => {
     )?.label || value
   );
 };
+
+export const getStateCode = (value) => {
+  const normalizedValue = String(value || "").trim().toUpperCase();
+  return (
+    usStates.find(
+      (state) =>
+        state.value === normalizedValue ||
+        state.label.toUpperCase() === normalizedValue
+    )?.value || normalizedValue
+  );
+};
