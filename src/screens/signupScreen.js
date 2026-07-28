@@ -59,7 +59,6 @@ const SignUpScreen = ({ navigation }) => {
   const [mailingCountry, setMailingCountry] = useState("US");
   const [mailingPostalCode, setMailingPostalCode] = useState("");
   const [countryPickerType, setCountryPickerType] = useState(null);
-  const [offGrid, setOffGrid] = useState(true);
   const [agreed, setAgreed] = useState(true);
   const [agreedToMessages, setAgreedToMessages] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -255,7 +254,6 @@ const SignUpScreen = ({ navigation }) => {
       addressState: mailingState,
       addressCountry: mailingCountry,
       addressPostal: mailingPostalCode,
-      subscribedForOffGrid: offGrid,
     };
 
     if (mailingAddressLine2.trim().length > 0) {
@@ -899,27 +897,6 @@ const SignUpScreen = ({ navigation }) => {
                   >
                     {"Privacy Policy."}
                   </Text>
-                </Text>
-              </View>
-
-              {/* offgrid checkbox */}
-              <View style={styles.termsContainer}>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => setOffGrid(!offGrid)}
-                  style={styles.iconBox}
-                >
-                  <Ionicons
-                    name={offGrid ? "checkbox" : "square-outline"}
-                    size={22}
-                    color={AppColor.primary}
-                  />
-                </TouchableOpacity>
-
-                <Text style={styles.termsText}>
-                  {
-                    "Would you like to join our nonprofit Underground of Wisdom Lane, an off-the-grid communication system?"
-                  }
                 </Text>
               </View>
 

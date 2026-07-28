@@ -23,7 +23,12 @@ import Octicons from "react-native-vector-icons/Octicons";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { resendOTP_API, verifyOTP_API } from "../api/authAPI";
 import { useDispatch } from "react-redux";
-import { onOnBoard, onSignOut } from "../redux/slices/authSlice";
+import {
+  onOnBoard,
+  onSignOut,
+  onUnderReview,
+  setVendorOnboardingStep,
+} from "../redux/slices/authSlice";
 import {
   clearUserSlice,
   setAuthToken,
@@ -335,6 +340,8 @@ const OtpVerificationScreen = ({ route }) => {
             onPress={() => {
               setModalVisible(false);
               dispatch(onOnBoard(true));
+              dispatch(onUnderReview(true));
+              dispatch(setVendorOnboardingStep("AWAITING_APPROVAL"));
             }}
           >
             <Text style={styles.backToLoginText}>{"Next"}</Text>

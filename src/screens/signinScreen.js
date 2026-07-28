@@ -27,9 +27,14 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { emailRegex, passwordRegex } from "../utils/constants";
 import { employeeLogin_API, login_API } from "../api/authAPI";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setAuthToken, setUser } from "../redux/slices/userSlice";
-import { onOnBoard, onSignin } from "../redux/slices/authSlice";
+import {
+  onOnBoard,
+  onSignin,
+  onUnderReview,
+  setVendorOnboardingStep,
+} from "../redux/slices/authSlice";
 import StatusBarManager from "../components/StatusBarManager";
 import {
   setSelectedCuisine,
@@ -47,6 +52,9 @@ const SignInScreen = ({ navigation, route }) => {
   const { width } = useWindowDimensions();
   const isWideLayout = width >= 760;
   const dispatch = useDispatch();
+  const { vendorOnboardingStep } = useSelector(
+    (state) => state.authReducer
+  );
 
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -141,6 +149,20 @@ const SignInScreen = ({ navigation, route }) => {
             })
           );
 
+          const requestStatus = String(
+            response?.data?.user?.requestStatus || "PENDING"
+          ).toUpperCase();
+
+          if (requestStatus !== "APPROVED") {
+            dispatch(onSignin(false));
+            dispatch(onOnBoard(true));
+            dispatch(onUnderReview(true));
+            dispatch(setVendorOnboardingStep("AWAITING_APPROVAL"));
+            return;
+          }
+
+          dispatch(onUnderReview(false));
+
           if (response?.data?.user?.foodTruck?.completed) {
             dispatch(
               setSelectedCuisine(response.data.user.foodTruck.cuisine || [])
@@ -168,6 +190,15 @@ const SignInScreen = ({ navigation, route }) => {
             }, 1500);
           } else {
             dispatch(onOnBoard(true));
+            dispatch(
+              setVendorOnboardingStep(
+                ["COMPLIANCE", "PROFILE", "PAYMENT"].includes(
+                  vendorOnboardingStep
+                )
+                  ? vendorOnboardingStep
+                  : "COMPLIANCE"
+              )
+            );
           }
         }
       } catch (error) {
@@ -322,14 +353,6 @@ const SignInScreen = ({ navigation, route }) => {
                   : styles.brandPanelCompact,
               ]}
             >
-              <IconButton
-                accessibilityLabel="Go back"
-                icon="arrow-left"
-                iconColor={AppColor.white}
-                size={24}
-                style={styles.backButton}
-                onPress={() => navigation.goBack()}
-              />
               <Image
                 source={require("../assets/images/AppLogo.png")}
                 resizeMode="contain"
@@ -677,7 +700,11 @@ const SignInScreen = ({ navigation, route }) => {
                       </Text>
                       <TouchableOpacity
                         accessibilityRole="button"
-                        onPress={() => navigation.navigate("signup")}
+                        onPress={() =>
+                          navigation.navigate("authFoodTruckPlansScreen", {
+                            signupFlow: true,
+                          })
+                        }
                         activeOpacity={0.7}
                       >
                         <Text style={styles.signUpLink}>Sign Up</Text>

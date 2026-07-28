@@ -364,19 +364,29 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
-        <IconButton
-          icon={isSignupFlow ? "arrow-left" : (props) => (
+        {isSignupFlow ? (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => navigation.goBack()}
+            style={styles.cancelButton}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        ) : (
+          <IconButton
+            icon={(props) => (
               <Octicons
                 name="sign-out"
                 size={props.size}
                 color={AppColor.white}
               />
             )}
-          iconColor={AppColor.white}
-          onPress={isSignupFlow ? () => navigation.goBack() : handleSignout}
-        />
+            iconColor={AppColor.white}
+            onPress={handleSignout}
+          />
+        )}
         <Text style={styles.headerTitle}>Select Plan</Text>
-        <View style={{ width: 48 }} />
+        <View style={{ width: isSignupFlow ? 64 : 48 }} />
       </View>
 
       {/* Content */}
@@ -558,7 +568,9 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
                   <ActivityIndicator color={AppColor.white} />
                 ) : (
                   <View style={styles.continueButtonContent}>
-                    <Text style={styles.continueButtonText}>Continue</Text>
+                    <Text style={styles.continueButtonText}>
+                      {isSignupFlow ? "Next" : "Continue"}
+                    </Text>
                     <FontAwesome6
                       name="arrow-right"
                       size={15}
@@ -592,6 +604,17 @@ const styles = StyleSheet.create({
     color: AppColor.white,
     fontSize: 20,
     fontFamily: Mulish700,
+  },
+  cancelButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 48,
+    width: 64,
+  },
+  cancelButtonText: {
+    color: AppColor.white,
+    fontFamily: Mulish600,
+    fontSize: 15,
   },
   stepContainer: {
     flexDirection: "row",

@@ -4,6 +4,8 @@ const initialState = {
   isSignedIn: false,
   isOnboarded: false,
   isUnderReview: false,
+  vendorOnboardingStep: null,
+  postSignInRoute: null,
 };
 
 const authSlice = createSlice({
@@ -19,10 +21,22 @@ const authSlice = createSlice({
     onUnderReview: (state, { payload }) => {
       state.isUnderReview = payload;
     },
+    setVendorOnboardingStep: (state, { payload }) => {
+      state.vendorOnboardingStep = payload;
+    },
+    setPostSignInRoute: (state, { payload }) => {
+      state.postSignInRoute = payload;
+    },
     onSignOut: () => initialState,
   },
 });
 
-export const { onSignin, onOnBoard, onUnderReview, onSignOut } =
-  authSlice.actions;
+export const {
+  onSignin,
+  onOnBoard,
+  onUnderReview,
+  setVendorOnboardingStep,
+  setPostSignInRoute,
+  onSignOut,
+} = authSlice.actions;
 export default authSlice.reducer;

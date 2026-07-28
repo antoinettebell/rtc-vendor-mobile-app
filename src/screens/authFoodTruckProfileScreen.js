@@ -44,6 +44,10 @@ import { useFocusEffect } from "@react-navigation/native";
 import { formatEIN, formatSSN } from "../helpers/profile.helper";
 import { empNumberList } from "../utils/constants";
 import AppImage from "../components/AppImage";
+import {
+  onOnBoard,
+  setVendorOnboardingStep,
+} from "../redux/slices/authSlice";
 
 const dropdownData = [
   {
@@ -258,6 +262,7 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
     (state) => state.foodTruckProfileReducer
   );
   const { user, selectedPlan } = useSelector((state) => state.userReducer);
+  const isOnboardingFlow = route?.params?.onboardingFlow === true;
 
   const { checkAndRequestPermission: photosPermissionStatus } = usePermission(
     permission.photos
@@ -709,9 +714,25 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
         });
         dispatch(setUser({ ...user, foodTruck: updatedFoodTruck }));
         if (exitAfterSave) {
+          if (isOnboardingFlow) {
+            dispatch(setVendorOnboardingStep("PROFILE"));
+            dispatch(onOnBoard(false));
+          } else {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "homeScreen" }],
+            });
+          }
+        } else if (isOnboardingFlow) {
+          dispatch(setVendorOnboardingStep("PAYMENT"));
           navigation.reset({
             index: 0,
-            routes: [{ name: "homeScreen" }],
+            routes: [
+              {
+                name: "authFoodTruckBankDetailScreen",
+                params: { onboardingFlow: true },
+              },
+            ],
           });
         } else {
           navigation.navigate("authSetBusinessHrsScreen");
@@ -1328,7 +1349,9 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
           {loading ? (
             <ActivityIndicator color={AppColor.white} />
           ) : (
-            <Text style={styles.continueButtonText}>Continue</Text>
+            <Text style={styles.continueButtonText}>
+              {isOnboardingFlow ? "Next: Payment Details" : "Continue"}
+            </Text>
           )}
         </TouchableOpacity>
       </View>

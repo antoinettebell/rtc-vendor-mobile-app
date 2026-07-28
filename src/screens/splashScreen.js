@@ -4,13 +4,21 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppColor, Mulish400, Mulish700 } from "../utils/theme";
 import { useNavigation } from "@react-navigation/native";
 import BootSplash from "react-native-bootsplash";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { setPostSignInRoute } from "../redux/slices/authSlice";
 import StatusBarManager from "../components/StatusBarManager";
 
 const SplashScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const { isSignedIn, isOnboarded, isUnderReview } = useSelector(
+  const dispatch = useDispatch();
+  const {
+    isSignedIn,
+    isOnboarded,
+    isUnderReview,
+    vendorOnboardingStep,
+    postSignInRoute,
+  } = useSelector(
     (state) => state.authReducer
   );
   const { selectedPlan, selectedSignupAddOns } = useSelector(
@@ -20,11 +28,32 @@ const SplashScreen = () => {
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (isSignedIn) {
-        navigation.replace("bottomRoot");
+        navigation.replace(
+          "bottomRoot",
+          postSignInRoute ? { screen: postSignInRoute } : undefined
+        );
+        if (postSignInRoute) {
+          dispatch(setPostSignInRoute(null));
+        }
       } else if (!isOnboarded) {
         navigation.replace("signin");
       } else if (isUnderReview) {
         navigation.replace("authUnderReviewNoteScreen");
+      } else if (vendorOnboardingStep === "COMPLIANCE") {
+        navigation.replace("vendorComplianceScreen", {
+          onboardingFlow: true,
+        });
+      } else if (vendorOnboardingStep === "PROFILE") {
+        navigation.replace("authFoodTruckProfileScreen", {
+          addOns: selectedSignupAddOns,
+          onboardingFlow: true,
+        });
+      } else if (vendorOnboardingStep === "PAYMENT") {
+        navigation.replace("authFoodTruckBankDetailScreen", {
+          onboardingFlow: true,
+        });
+      } else if (vendorOnboardingStep === "MENU") {
+        navigation.replace("authMenuSetupPromptScreen");
       } else if (selectedPlan) {
         navigation.replace("authFoodTruckProfileScreen", {
           addOns: selectedSignupAddOns,
@@ -39,6 +68,9 @@ const SplashScreen = () => {
     isOnboarded,
     isSignedIn,
     isUnderReview,
+    vendorOnboardingStep,
+    postSignInRoute,
+    dispatch,
     navigation,
     selectedPlan,
     selectedSignupAddOns,

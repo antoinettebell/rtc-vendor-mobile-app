@@ -88,6 +88,7 @@ import VendorMarketplaceApplicationScreen from "./src/screens/vendorMarketplaceA
 import VendorMarketplaceApplicationDetailScreen from "./src/screens/vendorMarketplaceApplicationDetailScreen";
 import VendorFeeCheckoutScreen from "./src/screens/vendorFeeCheckoutScreen";
 import VendorComplianceScreen from "./src/screens/vendorComplianceScreen";
+import AuthMenuSetupPromptScreen from "./src/screens/authMenuSetupPromptScreen";
 
 const Stack = createNativeStackNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -167,6 +168,14 @@ const FinalSignupStepsNavigator = () => (
     <Stack.Screen
       name="authUnderReviewNoteScreen"
       component={AuthUnderReviewNoteScreen}
+    />
+    <Stack.Screen
+      name="vendorComplianceScreen"
+      component={VendorComplianceScreen}
+    />
+    <Stack.Screen
+      name="authMenuSetupPromptScreen"
+      component={AuthMenuSetupPromptScreen}
     />
     <Stack.Screen name="agreementScreen" component={AgreementScreen} />
   </Stack.Navigator>

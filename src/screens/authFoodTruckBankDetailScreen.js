@@ -15,7 +15,7 @@ import {
   IconButton,
   TextInput,
 } from "react-native-paper";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import { Dropdown } from "react-native-element-dropdown";
@@ -28,7 +28,11 @@ import {
   emailRegex,
 } from "../utils/constants";
 import { addBankDetail_API, registerComplete_API } from "../api/appAPI";
-import { onUnderReview } from "../redux/slices/authSlice";
+import {
+  onUnderReview,
+  setVendorOnboardingStep,
+} from "../redux/slices/authSlice";
+import { setBankStatus, setProfileStatus } from "../redux/slices/userSlice";
 
 const validateAccountHolderName = (text) => {
   if (!text.trim()) return "Account holder name is required";
@@ -85,6 +89,10 @@ const validatePaymentMethod = (text) => {
 const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
+  const { selectedSignupAddOns } = useSelector(
+    (state) => state.userReducer
+  );
+  const isOnboardingFlow = route?.params?.onboardingFlow === true;
 
   const [loading, setLoading] = useState(false);
   const [accountHolderName, setAccountHolderName] = useState("");
@@ -156,11 +164,21 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
         const response1 = await registerComplete_API();
         console.log("response1 => ", response1);
         if (response1?.success) {
-          dispatch(onUnderReview(true));
-          navigation.reset({
-            index: 0,
-            routes: [{ name: "authUnderReviewNoteScreen" }],
-          });
+          if (isOnboardingFlow) {
+            dispatch(setBankStatus(true));
+            dispatch(setProfileStatus("APPROVED"));
+            dispatch(setVendorOnboardingStep("MENU"));
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "authMenuSetupPromptScreen" }],
+            });
+          } else {
+            dispatch(onUnderReview(true));
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "authUnderReviewNoteScreen" }],
+            });
+          }
         }
       }
     } catch (error) {
@@ -180,7 +198,25 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
           icon="arrow-left"
           iconColor={AppColor.white}
           size={24}
-          onPress={() => navigation.goBack()}
+          onPress={() => {
+            if (isOnboardingFlow) {
+              dispatch(setVendorOnboardingStep("PROFILE"));
+              navigation.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: "authFoodTruckProfileScreen",
+                    params: {
+                      onboardingFlow: true,
+                      addOns: selectedSignupAddOns,
+                    },
+                  },
+                ],
+              });
+              return;
+            }
+            navigation.goBack();
+          }}
         />
         <Text style={styles.headerTitle}>Bank Detail</Text>
         <View style={{ width: 48 }} />
@@ -647,7 +683,9 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
           {loading ? (
             <ActivityIndicator color={AppColor.white} />
           ) : (
-            <Text style={styles.continueButtonText}>Continue</Text>
+            <Text style={styles.continueButtonText}>
+              {isOnboardingFlow ? "Save Payment Details" : "Continue"}
+            </Text>
           )}
         </TouchableOpacity>
       </View>

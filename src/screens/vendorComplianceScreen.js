@@ -15,7 +15,7 @@ import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { RESULTS } from "react-native-permissions";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { Dropdown } from "react-native-element-dropdown";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   getVendorFoodTruckList_API,
@@ -27,6 +27,10 @@ import StatusBarManager from "../components/StatusBarManager";
 import usePermission from "../hooks/usePermission";
 import { permission } from "../helpers/permission.helper";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
+import {
+  onOnBoard,
+  setVendorOnboardingStep,
+} from "../redux/slices/authSlice";
 
 const SCORE_FALLBACK = {
   red: "#D93025",
@@ -135,9 +139,18 @@ const getExpiringDocumentStatus = (requirement = {}) => {
   };
 };
 
-const VendorComplianceScreen = ({ navigation }) => {
+const VendorComplianceScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
-  const { user } = useSelector((state) => state.userReducer);
+  const dispatch = useDispatch();
+  const { user, selectedSignupAddOns } = useSelector(
+    (state) => state.userReducer
+  );
+  const { vendorOnboardingStep } = useSelector(
+    (state) => state.authReducer
+  );
+  const isOnboardingFlow =
+    route?.params?.onboardingFlow === true ||
+    vendorOnboardingStep === "COMPLIANCE";
   const defaultFoodTruckId = user?.foodTruck?._id;
   const [selectedFoodTruckId, setSelectedFoodTruckId] = useState(
     defaultFoodTruckId || null
@@ -496,6 +509,9 @@ const VendorComplianceScreen = ({ navigation }) => {
 	    SCORE_FALLBACK[summary?.score_color] ||
 	    AppColor.primary;
 	  const requirements = summary?.requirements || [];
+	  const missingOnboardingDocuments = requirements.filter(
+	    (requirement) => requirement.required && !requirement.document
+	  );
 	  const supportPhone = summary?.support_phone_number || "(800) 410-7053";
 	  const supportPhoneDigits = String(supportPhone).replace(/\D/g, "");
 	  const callSupport = () => {
@@ -504,6 +520,40 @@ const VendorComplianceScreen = ({ navigation }) => {
 	      Alert.alert("Support", `Please call ${supportPhone}.`);
 	    });
 	  };
+
+  const handleBack = () => {
+    if (isOnboardingFlow) {
+      dispatch(onOnBoard(false));
+      return;
+    }
+    navigation.goBack();
+  };
+
+  const continueToProfile = () => {
+    if (missingOnboardingDocuments.length > 0) {
+      Alert.alert(
+        "Complete Required Documents",
+        `Please upload ${missingOnboardingDocuments
+          .map((requirement) => requirement.label)
+          .join(", ")} before continuing.`
+      );
+      return;
+    }
+
+    dispatch(setVendorOnboardingStep("PROFILE"));
+    navigation.reset({
+      index: 0,
+      routes: [
+        {
+          name: "authFoodTruckProfileScreen",
+          params: {
+            onboardingFlow: true,
+            addOns: selectedSignupAddOns,
+          },
+        },
+      ],
+    });
+  };
 
   return (
     <View style={styles.container}>
@@ -514,7 +564,7 @@ const VendorComplianceScreen = ({ navigation }) => {
           { paddingTop: insets.top + 12, minHeight: insets.top + 72 },
         ]}
       >
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Ionicons name="chevron-back" size={26} color={AppColor.black} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Compliance</Text>
@@ -878,6 +928,21 @@ const VendorComplianceScreen = ({ navigation }) => {
 	              </>
 	            )}
 	          </TouchableOpacity>
+	          {isOnboardingFlow ? (
+	            <TouchableOpacity
+	              onPress={continueToProfile}
+	              style={styles.onboardingContinueButton}
+	            >
+	              <Text style={styles.onboardingContinueButtonText}>
+	                Next: Complete Profile
+	              </Text>
+	              <Ionicons
+	                name="arrow-forward"
+	                size={18}
+	                color={AppColor.white}
+	              />
+	            </TouchableOpacity>
+	          ) : null}
 	          <DateTimePickerModal
             isVisible={!!datePickerRequirement}
             mode="date"
@@ -1236,6 +1301,21 @@ const styles = StyleSheet.create({
 	  disabledButton: {
 	    opacity: 0.7,
 	  },
+  onboardingContinueButton: {
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: AppColor.primary,
+    marginBottom: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  onboardingContinueButtonText: {
+    fontFamily: Mulish700,
+    fontSize: 15,
+    color: AppColor.white,
+  },
   historyRow: {
     borderBottomWidth: 1,
     borderBottomColor: "#E5E5EA",

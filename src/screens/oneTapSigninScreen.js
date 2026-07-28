@@ -156,7 +156,11 @@ const OneTapSignInScreen = ({ navigation }) => {
 
         {/* New account btn */}
         <TouchableOpacity
-          onPress={() => navigation.navigate("signup")}
+          onPress={() =>
+            navigation.navigate("authFoodTruckPlansScreen", {
+              signupFlow: true,
+            })
+          }
           activeOpacity={0.7}
           style={styles.newAccountBtn}
         >
