@@ -92,6 +92,8 @@ export const MARKETPLACE_APPLICATION_WITHDRAW = (application_id) =>
 export const MARKETPLACE_APPLICATION = (application_id) =>
   `/marketplace/applications/${application_id}`;
 export const MARKETPLACE_AWARDED_BIDS = "/marketplace/bids/awarded";
+export const MARKETPLACE_FINAL_EVENT_PAYMENT = (event_id) =>
+  `/marketplace/events/${event_id}/final-payment`;
 export const MARKETPLACE_PAYMENT_BY_ID = (payment_id) =>
   `/marketplace/payments/${payment_id}`;
 export const MARKETPLACE_PAYMENT_CALL = (payment_id) =>
