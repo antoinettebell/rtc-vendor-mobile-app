@@ -258,3 +258,177 @@ const ResetPasswordScreen = ({ route }) => {
 
               {/* Reset Button */}
               <TouchableOpacity
+                style={styles.resetButton}
+                activeOpacity={0.7}
+                onPress={handleResetPassword}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color={AppColor.white} />
+                ) : (
+                  <Text style={styles.buttonLabel}>Reset Password</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+          <Portal>
+            <Snackbar
+              visible={snackbar.visible}
+              onDismiss={() => setSnackbar({ ...snackbar, visible: false })}
+              duration={4000}
+              style={{
+                backgroundColor:
+                  snackbar.type === "success"
+                    ? AppColor.snackbarSuccess
+                    : snackbar.type === "error"
+                      ? AppColor.snackbarError
+                      : AppColor.snackbarDefault,
+              }}
+            >
+              {snackbar.message}
+            </Snackbar>
+          </Portal>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: AppColor.white,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: AppColor.header,
+    paddingHorizontal: 8,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+  },
+  headerTitle: {
+    color: AppColor.white,
+    fontSize: 20,
+    fontFamily: Mulish700,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+  logoContainer: {
+    alignItems: "flex-start",
+    marginTop: 30,
+    marginBottom: 20,
+  },
+  title: {
+    fontFamily: Mulish700,
+    fontSize: 24,
+    color: AppColor.text,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontFamily: Mulish400,
+    fontSize: 14,
+    color: AppColor.textHighlighter,
+    marginBottom: 50,
+  },
+  formContainer: {
+    flex: 1,
+  },
+  inputLabel: {
+    fontFamily: Mulish400,
+    fontSize: 15,
+    color: AppColor.text,
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: AppColor.white,
+  },
+  inputText: {
+    fontFamily: Mulish400,
+    fontSize: 15,
+  },
+  resetButton: {
+    height: 48,
+    borderRadius: 5,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: AppColor.primary,
+    marginTop: 30,
+    marginBottom: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: AppColor.black,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  buttonLabel: {
+    fontFamily: Mulish700,
+    fontSize: 16,
+    color: AppColor.white,
+  },
+  helper: {
+    marginBottom: 8,
+    paddingLeft: 0,
+    paddingTop: 0,
+    fontFamily: Mulish400,
+  },
+
+  //   Modal
+  modalContainer: {
+    backgroundColor: AppColor.white,
+    marginHorizontal: "10%",
+    paddingVertical: 36,
+    paddingHorizontal: 33,
+    borderRadius: 24,
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontFamily: Mulish700,
+    fontSize: 22,
+    color: AppColor.text,
+    marginVertical: 10,
+  },
+  modalSubtitle: {
+    fontFamily: Mulish400,
+    fontSize: 16,
+    color: AppColor.textHighlighter,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  backToLoginButton: {
+    width: "100%",
+    height: 48,
+    borderRadius: 5,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: AppColor.primary,
+    marginTop: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: AppColor.black,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  backToLoginText: {
+    color: AppColor.white,
+    fontFamily: Mulish700,
+    fontSize: 16,
+  },
+});
+
+export default ResetPasswordScreen;
