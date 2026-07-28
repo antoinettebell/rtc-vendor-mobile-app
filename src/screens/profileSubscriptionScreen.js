@@ -37,6 +37,10 @@ import {
   updateFoodTruckKey,
 } from "../redux/slices/userSlice";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
+import {
+  isRemovedSubscriptionBenefit,
+  normalizeSubscriptionBenefit,
+} from "../helpers/subscriptionBenefits.helper";
 
 const EVENT_MARKETPLACE_PATTERN = /event|booking|marketplace/i;
 
@@ -268,8 +272,7 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
   };
 
   const getBenefitLabel = (plan, benefit) => {
-    const benefitText = String(benefit || "");
-    return benefitText.replace(/\s*\(coming soon\)$/i, "");
+    return normalizeSubscriptionBenefit(benefit);
   };
 
   const isUnavailableBenefit = (benefit) =>
@@ -384,6 +387,7 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
         {isExpanded && (
           <View style={{ marginTop: 8 }}>
             {item.details
+              .filter((benefit) => !isRemovedSubscriptionBenefit(benefit))
               .map((benefit, idx) => {
               const unavailable = isUnavailableBenefit(benefit);
               return (
