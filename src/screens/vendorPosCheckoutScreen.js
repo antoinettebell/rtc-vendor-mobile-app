@@ -311,12 +311,21 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
   ]);
 
   const createOrder = async (paymentFields) => {
-    const response = await placePosOrder_API({
+    const orderPayload = {
       ...basePayload,
       ...paymentFields,
       taxAmount,
       tax: taxAmount,
-    });
+    };
+
+    if (__DEV__) {
+      console.log(
+        "Vendor POS Order Payload:",
+        JSON.stringify(orderPayload, null, 2),
+      );
+    }
+
+    const response = await placePosOrder_API(orderPayload);
 
     if (!response?.success || !response?.data?.order) {
       throw new Error(response?.message || "Could not create order.");
