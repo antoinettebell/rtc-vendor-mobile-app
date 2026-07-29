@@ -33,7 +33,6 @@ import {
   updatePosItemProperty,
 } from "../redux/slices/posOrderSlice";
 import {
-  endEmployeeSession_API,
   getEmployeeOrders_API,
   getAllFoodItem_API,
   getEmployeeDashboard_API,
@@ -43,6 +42,7 @@ import {
 } from "../api/appAPI";
 import { printOrderTickets } from "../helpers/print.helper";
 import { getVendorOrderTotal } from "../helpers/order.helper";
+import { getNestedSelectionError } from "../helpers/menuSelection.helper";
 import { foodTypeStrings, orderStatusStrings } from "../utils/constants";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 
@@ -402,10 +402,6 @@ const EmployeePosBoardScreen = ({ navigation }) => {
   }, [categories, selectedCategory]);
 
   const handleSignOut = async () => {
-    try {
-      await endEmployeeSession_API();
-    } catch (error) {}
-
     dispatch(clearPosOrder());
     dispatch(clearUserSlice());
     dispatch(clearFoodTruckProfileSlice());
@@ -563,6 +559,18 @@ const EmployeePosBoardScreen = ({ navigation }) => {
         })
       );
       openOptions(invalidItem);
+      return;
+    }
+
+    const invalidNestedItem = order.items.find((item) =>
+      getNestedSelectionError(item)
+    );
+    if (invalidNestedItem) {
+      Alert.alert(
+        "Required selection",
+        getNestedSelectionError(invalidNestedItem),
+      );
+      openOptions(invalidNestedItem);
       return;
     }
 
