@@ -752,6 +752,46 @@ const SignUpScreen = ({ navigation }) => {
                 </HelperText>
               )}
 
+              {/* Required transactional SMS consent */}
+              <Text style={styles.smsConsentTitle}>
+                SMS Text Message Consent *
+              </Text>
+              <View style={[styles.termsContainer, styles.smsConsentContainer]}>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    setAgreedToMessages((currentValue) => !currentValue)
+                  }
+                  style={styles.iconBox}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: agreedToMessages }}
+                  accessibilityLabel="Agree to receive transactional text messages"
+                >
+                  <Ionicons
+                    name={agreedToMessages ? "checkbox" : "square-outline"}
+                    size={22}
+                    color={AppColor.primary}
+                  />
+                </TouchableOpacity>
+
+                <Text style={styles.termsText}>
+                  {SMS_CONSENT_MESSAGE}
+                  <Text
+                    style={styles.linkText}
+                    onPress={() => navigation.navigate("termsOfService")}
+                  >
+                    {"Terms of Service"}
+                  </Text>
+                  {" and "}
+                  <Text
+                    style={styles.linkText}
+                    onPress={() => navigation.navigate("privacyPolicy")}
+                  >
+                    {"Privacy Policy"}
+                  </Text>
+                </Text>
+              </View>
+
               {/* Email */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
                 {"Email ID *"}
@@ -899,46 +939,6 @@ const SignUpScreen = ({ navigation }) => {
                     onPress={() => navigation.navigate("privacyPolicy")}
                   >
                     {"Privacy Policy."}
-                  </Text>
-                </Text>
-              </View>
-
-              {/* sms consent checkbox */}
-              <Text style={styles.smsConsentTitle}>
-                SMS Text Message Consent *
-              </Text>
-              <View style={[styles.termsContainer, styles.smsConsentContainer]}>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() =>
-                    setAgreedToMessages((currentValue) => !currentValue)
-                  }
-                  style={styles.iconBox}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: agreedToMessages }}
-                  accessibilityLabel="Agree to receive transactional text messages"
-                >
-                  <Ionicons
-                    name={agreedToMessages ? "checkbox" : "square-outline"}
-                    size={22}
-                    color={AppColor.primary}
-                  />
-                </TouchableOpacity>
-
-                <Text style={styles.termsText}>
-                  {SMS_CONSENT_MESSAGE}
-                  <Text
-                    style={styles.linkText}
-                    onPress={() => navigation.navigate("termsOfService")}
-                  >
-                    {"Terms of Service"}
-                  </Text>
-                  {" and "}
-                  <Text
-                    style={styles.linkText}
-                    onPress={() => navigation.navigate("privacyPolicy")}
-                  >
-                    {"Privacy Policy"}
                   </Text>
                 </Text>
               </View>
