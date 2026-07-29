@@ -42,7 +42,10 @@ import {
 } from "../api/appAPI";
 import { printOrderTickets } from "../helpers/print.helper";
 import { getVendorOrderTotal } from "../helpers/order.helper";
-import { getNestedSelectionError } from "../helpers/menuSelection.helper";
+import {
+  getNestedSelectionError,
+  mergeMenuItemWithSavedSelections,
+} from "../helpers/menuSelection.helper";
 import { foodTypeStrings, orderStatusStrings } from "../utils/constants";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 
@@ -448,8 +451,8 @@ const EmployeePosBoardScreen = ({ navigation }) => {
   };
 
   const openOptions = (item) => {
-    const existing = cartItemById[item._id] || item;
-    setSelectedItem(existing ? { ...item, ...existing } : item);
+    const existing = cartItemById[item._id];
+    setSelectedItem(mergeMenuItemWithSavedSelections(item, existing));
     setCustomizationInput(existing?.customizationInput || "");
     setSelectedFlavors(existing?.selectedFlavors || []);
     setSelectedToppings(existing?.selectedToppings || []);

@@ -27,7 +27,10 @@ import {
   updatePosItemProperty,
 } from "../redux/slices/posOrderSlice";
 import { foodTypeStrings } from "../utils/constants";
-import { getNestedSelectionError } from "../helpers/menuSelection.helper";
+import {
+  getNestedSelectionError,
+  mergeMenuItemWithSavedSelections,
+} from "../helpers/menuSelection.helper";
 
 const getOptions = (item, type) => {
   const optionsKey = `${type}Options`;
@@ -189,7 +192,7 @@ const VendorPosMenuScreen = ({ navigation }) => {
 
   const openOptions = (item) => {
     const existing = cartItemById[item._id];
-    setSelectedItem(existing ? { ...item, ...existing } : item);
+    setSelectedItem(mergeMenuItemWithSavedSelections(item, existing));
     setCustomizationInput(existing?.customizationInput || "");
     setSelectedFlavors(existing?.selectedFlavors || []);
     setSelectedToppings(existing?.selectedToppings || []);
