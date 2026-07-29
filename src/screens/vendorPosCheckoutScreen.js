@@ -98,6 +98,45 @@ const buildComboItemPayload = (subItem, fallbackQty = 1) => {
   return payload;
 };
 
+const getComboItemId = (item) =>
+  item?.comboMenuItemId ||
+  item?.menuItem?._id ||
+  (typeof item?.menuItem === "string" ? item.menuItem : null) ||
+  item?.itemId?._id ||
+  (typeof item?.itemId === "string" ? item.itemId : null) ||
+  item?._id ||
+  null;
+
+const buildConfiguredComboPayloads = ({
+  configuredItems,
+  selectedItems,
+  fallbackQty,
+}) =>
+  (Array.isArray(configuredItems) ? configuredItems : [])
+    .map((configuredItem) => {
+      const configuredChild =
+        configuredItem?.menuItem || configuredItem?.itemId || configuredItem;
+      const configuredId = getComboItemId(configuredItem);
+      const selectedItem = (Array.isArray(selectedItems) ? selectedItems : []).find(
+        (candidate) => String(getComboItemId(candidate)) === String(configuredId),
+      );
+
+      if (!selectedItem || !configuredId) {
+        return null;
+      }
+
+      return buildComboItemPayload(
+        {
+          ...configuredChild,
+          ...selectedItem,
+          comboMenuItemId: configuredId,
+          qty: configuredItem?.qty || selectedItem?.qty || fallbackQty,
+        },
+        fallbackQty,
+      );
+    })
+    .filter(Boolean);
+
 const TIP_OPTIONS = [
   { label: "10%", value: "10" },
   { label: "15%", value: "15" },
@@ -210,9 +249,11 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
           item.selectedSubItems &&
           item.selectedSubItems.length > 0
         ) {
-          itemPayload.comboItems = item.selectedSubItems
-            .map((subItem) => buildComboItemPayload(subItem, item.quantity))
-            .filter(Boolean);
+          itemPayload.comboItems = buildConfiguredComboPayloads({
+            configuredItems: item.subItem,
+            selectedItems: item.selectedSubItems,
+            fallbackQty: item.quantity,
+          });
         }
 
         return itemPayload;
