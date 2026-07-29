@@ -27,6 +27,7 @@ import {
   updatePosItemProperty,
 } from "../redux/slices/posOrderSlice";
 import { foodTypeStrings } from "../utils/constants";
+import { getNestedSelectionError } from "../helpers/menuSelection.helper";
 
 const getOptions = (item, type) => {
   const optionsKey = `${type}Options`;
@@ -283,6 +284,17 @@ const VendorPosMenuScreen = ({ navigation }) => {
       return;
     }
 
+    const invalidNestedItem = order.items.find((item) =>
+      getNestedSelectionError(item)
+    );
+    if (invalidNestedItem) {
+      Alert.alert(
+        "Required selection",
+        getNestedSelectionError(invalidNestedItem),
+      );
+      openOptions(invalidNestedItem);
+      return;
+    }
     const currentLocation = isEmployeeSession
       ? user?.assignedLocation
       : foodTruck?.locations?.find(
@@ -346,7 +358,7 @@ const VendorPosMenuScreen = ({ navigation }) => {
   const renderItem = ({ item }) => {
     const cartItem = cartItemById[item._id];
     const quantity = cartItem?.quantity || 0;
-    const hasOptions = item.hasFlavors || item.hasToppings || item.allowCustomize;
+    const hasOptions = menuItemRequiresOptions(item);
 
     return (
       <View style={styles.menuItem}>
