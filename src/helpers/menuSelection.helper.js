@@ -2,6 +2,32 @@ import { normalizeMenuOptions } from "./discount.helper";
 
 const COMBO_ITEM_TYPE = "COMBO";
 
+const SAVED_SELECTION_FIELDS = [
+  "quantity",
+  "customizationInput",
+  "selectedFlavors",
+  "selectedToppings",
+  "selectedComboSides",
+  "selectedSubItems",
+  "selectedDiscountFlavors",
+  "selectedDiscountToppings",
+  "selectedDiscountComboSides",
+  "selectedDiscountSubItems",
+  "selectedDiscountCustomizationInput",
+];
+
+export const mergeMenuItemWithSavedSelections = (menuItem, savedItem) => {
+  if (!savedItem) return menuItem;
+
+  return SAVED_SELECTION_FIELDS.reduce(
+    (merged, field) =>
+      savedItem[field] === undefined
+        ? merged
+        : { ...merged, [field]: savedItem[field] },
+    { ...menuItem }
+  );
+};
+
 const getMenuItemId = (item) =>
   item?.menuItem?._id ||
   (item?.menuItem && typeof item.menuItem !== "object" ? item.menuItem : "") ||
