@@ -460,14 +460,26 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
     }
   }, [route.params?.tapToPayToken]);
 
-  const summary = cashOrder || {
-    subTotal: order.subtotal,
-    discount: 0,
-    taxAmount,
-    tipsAmount: tipAmount,
-    paymentProcessingFee: 0,
-    total: order.subtotal + taxAmount + tipAmount,
-  };
+  const summary = cashOrder
+    ? {
+        ...cashOrder,
+        tipsAmount: tipAmount,
+        total: toMoneyNumber(
+          Number(cashOrder.total || 0) -
+            Number(cashOrder.tipsAmount || 0) +
+            tipAmount
+        ),
+      }
+    : {
+        subTotal: toMoneyNumber(order.subtotal),
+        discount: 0,
+        taxAmount: toMoneyNumber(taxAmount),
+        tipsAmount: tipAmount,
+        paymentProcessingFee: 0,
+        total: toMoneyNumber(
+          Number(order.subtotal || 0) + Number(taxAmount || 0) + tipAmount
+        ),
+      };
   const tapFeeFromValidation = Number(tapOrder?.paymentProcessingFee || 0);
   const tapFeeBase = toMoneyNumber(
     Number(tapOrder?.totalAfterDiscount ?? summary.subTotal ?? order.subtotal) +
