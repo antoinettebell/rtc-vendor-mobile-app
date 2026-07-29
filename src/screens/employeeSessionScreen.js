@@ -20,7 +20,6 @@ import { clearUserSlice } from "../redux/slices/userSlice";
 import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlice";
 import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlice";
 import {
-  endEmployeeSession_API,
   getEmployeeDashboard_API,
   getEmployeeOrders_API,
   getRefundCancelRequests_API,
@@ -222,10 +221,6 @@ const EmployeeSessionScreen = ({ navigation }) => {
   );
 
   const handleSignOut = async () => {
-    try {
-      await endEmployeeSession_API();
-    } catch (error) {}
-
     dispatch(clearUserSlice());
     dispatch(clearFoodTruckProfileSlice());
     dispatch(clearPushNotificationRedux());
