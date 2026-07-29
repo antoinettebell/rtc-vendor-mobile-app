@@ -2,6 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
+  Linking,
+  Platform,
   ScrollView,
   StyleSheet,
   Switch,
@@ -11,11 +14,16 @@ import {
   View,
 } from "react-native";
 import { IconButton } from "react-native-paper";
+import ImagePicker from "react-native-image-crop-picker";
+import { RESULTS } from "react-native-permissions";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 import { Dropdown } from "react-native-element-dropdown";
 import StatusBarManager from "../components/StatusBarManager";
+import StatePickerModal from "../components/StatePickerModal";
+import usePermission from "../hooks/usePermission";
+import { permission } from "../helpers/permission.helper";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 import {
   archiveVendorEmployee_API,
@@ -25,12 +33,21 @@ import {
   getVendorEmployees_API,
   resetVendorEmployeePin_API,
   updateVendorEmployee_API,
+  uploadImage_API,
 } from "../api/appAPI";
 
 const initialForm = {
   first_name: "",
   last_name: "",
   zip_code: "",
+  phone_number: "",
+  address_line1: "",
+  address_city: "",
+  address_state: "",
+  employee_id_photo_url: "",
+  employee_tax_identifier_type: "SSN",
+  employee_tax_identifier: "",
+  employee_rate: "",
   assigned_location_id: "",
   assigned_truck_unit_id: "",
   pin: "",
@@ -46,9 +63,41 @@ const getGeneratedLoginPreview = ({ first_name, last_name, zip_code }) => {
 
 const normalizePin = (value) => value.replace(/\D/g, "").slice(0, 4);
 const isFourDigitPin = (value) => /^\d{4}$/.test(value);
+const normalizeRateInput = (value) =>
+  value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+const formatEmployeeRate = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? `$${parsed.toFixed(2)}` : "Not set";
+};
+const employeeProfileFields = [
+  "first_name",
+  "last_name",
+  "zip_code",
+  "phone_number",
+  "address_line1",
+  "address_city",
+  "address_state",
+  "employee_id_photo_url",
+];
+const normalizePhoneForDial = (value) => String(value || "").replace(/[^\d+]/g, "");
+const formatEmployeeAddress = (employee) =>
+  [
+    employee?.address_line1,
+    [employee?.address_city, employee?.address_state]
+      .filter(Boolean)
+      .join(", "),
+  ]
+    .filter(Boolean)
+    .join("\n");
+const getEmployeeIdPhotoUrl = (employee, draft = {}) =>
+  draft.employee_id_photo_url || employee?.employee_id_photo_url || "";
 const SHIFT_HISTORY_FILTERS = [
+  { label: "Day", value: "day" },
   { label: "Week", value: "week" },
-  { label: "Month", value: "month" },
+];
+const TAX_ID_OPTIONS = [
+  { label: "SSN", value: "SSN" },
+  { label: "EIN", value: "EIN" },
 ];
 
 const formatShiftDateTime = (value) => {
@@ -68,9 +117,16 @@ const formatShiftDateTime = (value) => {
     minute: "2-digit",
   });
 };
+const formatShiftHours = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? `${parsed.toFixed(2)} hrs` : "Pending";
+};
 
 const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
+  const { checkAndRequestPermission: cameraPermissionStatus } = usePermission(
+    permission.camera
+  );
   const user = useSelector((state) => state.userReducer.user);
   const foodTruck = user?.foodTruck;
   const initialMode = route?.params?.mode === "create" ? "create" : "manage";
@@ -86,10 +142,14 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const [managementMode, setManagementMode] = useState(initialMode);
   const [employeeLocationDrafts, setEmployeeLocationDrafts] = useState({});
   const [employeeTruckDrafts, setEmployeeTruckDrafts] = useState({});
+  const [employeeRateDrafts, setEmployeeRateDrafts] = useState({});
+  const [employeeProfileDrafts, setEmployeeProfileDrafts] = useState({});
+  const [editingEmployeeId, setEditingEmployeeId] = useState(null);
   const [activeTab, setActiveTab] = useState("current");
   const [shiftHistoryRange, setShiftHistoryRange] = useState("week");
   const [shiftHistoryByEmployee, setShiftHistoryByEmployee] = useState({});
   const [shiftHistoryLoadingId, setShiftHistoryLoadingId] = useState(null);
+  const [employeeIdUploading, setEmployeeIdUploading] = useState(false);
   const isManageMode = managementMode === "manage";
 
   const locationOptions = useMemo(
@@ -130,6 +190,17 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
     foodTruck?.name ||
     "Truck 1";
 
+	  const buildEmployeeProfileDraft = (employee) =>
+	    ({
+	      ...employeeProfileFields.reduce((draft, field) => {
+	      draft[field] = employee?.[field] ? String(employee[field]) : "";
+	      return draft;
+	      }, {}),
+	      employee_tax_identifier_type:
+	        employee?.employee_tax_identifier_type || "SSN",
+	      employee_tax_identifier: "",
+	    });
+
   const setFormValue = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -150,6 +221,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
           );
           if (matchedEmployee) {
             setExpandedEmployeeId(matchedEmployee._id);
+            setEditingEmployeeId(null);
             setEmployeeLocationDrafts((current) => ({
               ...current,
               [matchedEmployee._id]: matchedEmployee.assigned_location_id,
@@ -158,6 +230,18 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
               ...current,
               [matchedEmployee._id]:
                 matchedEmployee.assigned_truck_unit_id || "",
+            }));
+            setEmployeeRateDrafts((current) => ({
+              ...current,
+              [matchedEmployee._id]:
+                matchedEmployee.employee_rate !== null &&
+                matchedEmployee.employee_rate !== undefined
+                  ? String(matchedEmployee.employee_rate)
+                  : "",
+            }));
+            setEmployeeProfileDrafts((current) => ({
+              ...current,
+              [matchedEmployee._id]: buildEmployeeProfileDraft(matchedEmployee),
             }));
             setManagementMode("manage");
           }
@@ -234,16 +318,22 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
         employee_id: employee._id,
         payload,
       });
+      return true;
     } catch (error) {
       setEmployees(previousEmployees);
       Alert.alert("Update failed", error?.message || "Please try again.");
+      return false;
     }
   };
 
   const toggleEmployeeDetails = (employee) => {
+    const willCollapse = expandedEmployeeId === employee._id;
     setExpandedEmployeeId((current) =>
       current === employee._id ? null : employee._id
     );
+    if (willCollapse) {
+      setEditingEmployeeId(null);
+    }
     setEmployeeLocationDrafts((current) => ({
       ...current,
       [employee._id]: current[employee._id] || employee.assigned_location_id,
@@ -252,6 +342,46 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
       ...current,
       [employee._id]:
         current[employee._id] || employee.assigned_truck_unit_id || "",
+    }));
+    setEmployeeRateDrafts((current) => ({
+      ...current,
+      [employee._id]:
+        current[employee._id] ||
+        (employee.employee_rate !== null && employee.employee_rate !== undefined
+          ? String(employee.employee_rate)
+          : ""),
+    }));
+    setEmployeeProfileDrafts((current) => ({
+      ...current,
+      [employee._id]: current[employee._id] || buildEmployeeProfileDraft(employee),
+    }));
+  };
+
+  const openEmployeeEditor = (employee) => {
+    setActiveTab("current");
+    setManagementMode("manage");
+    setExpandedEmployeeId(employee._id);
+    setEditingEmployeeId(employee._id);
+    setEmployeeLocationDrafts((current) => ({
+      ...current,
+      [employee._id]: current[employee._id] || employee.assigned_location_id,
+    }));
+    setEmployeeTruckDrafts((current) => ({
+      ...current,
+      [employee._id]:
+        current[employee._id] || employee.assigned_truck_unit_id || "",
+    }));
+    setEmployeeRateDrafts((current) => ({
+      ...current,
+      [employee._id]:
+        current[employee._id] ||
+        (employee.employee_rate !== null && employee.employee_rate !== undefined
+          ? String(employee.employee_rate)
+          : ""),
+    }));
+    setEmployeeProfileDrafts((current) => ({
+      ...current,
+      [employee._id]: current[employee._id] || buildEmployeeProfileDraft(employee),
     }));
   };
 
@@ -297,6 +427,141 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
     }));
   };
 
+  const setEmployeeRateDraft = (employeeId, rate) => {
+    setEmployeeRateDrafts((current) => ({
+      ...current,
+      [employeeId]: normalizeRateInput(rate),
+    }));
+  };
+
+  const setEmployeeProfileDraft = (employeeId, field, value) => {
+    setEmployeeProfileDrafts((current) => ({
+      ...current,
+      [employeeId]: {
+        ...(current[employeeId] || {}),
+        [field]: value,
+      },
+    }));
+  };
+
+  const getEmployeeProfileDraftValue = (employee, field) =>
+    employeeProfileDrafts[employee._id]?.[field] ?? String(employee?.[field] || "");
+
+  const isEmployeeEditing = (employee) => editingEmployeeId === employee?._id;
+
+  const saveEmployeeProfile = async (employee) => {
+    const draft = employeeProfileDrafts[employee._id] || buildEmployeeProfileDraft(employee);
+
+    if (!draft.first_name?.trim() || !draft.last_name?.trim()) {
+      Alert.alert("Name required", "Enter the employee's first and last name.");
+      return;
+    }
+
+    if (!draft.zip_code?.trim()) {
+      Alert.alert("Zip code required", "Enter the employee's zip code.");
+      return;
+    }
+
+	    const saved = await updateEmployee(
+	      employee,
+	      {
+	        ...employeeProfileFields.reduce((payload, field) => {
+	        payload[field] = draft[field]?.trim() || "";
+	        return payload;
+	        }, {}),
+	        employee_tax_identifier_type:
+	          draft.employee_tax_identifier_type || employee.employee_tax_identifier_type || "SSN",
+	        ...(draft.employee_tax_identifier?.trim()
+	          ? { employee_tax_identifier: draft.employee_tax_identifier.trim() }
+	          : {}),
+	      }
+		    );
+	    if (saved) {
+	      setEditingEmployeeId(null);
+	    }
+		  };
+
+  const callEmployee = async (phoneNumber) => {
+    const dialNumber = normalizePhoneForDial(phoneNumber);
+    if (!dialNumber) {
+      Alert.alert("Phone number missing", "Add a phone number for this employee first.");
+      return;
+    }
+
+    const url = `tel:${dialNumber}`;
+    const canOpen = await Linking.canOpenURL(url);
+    if (canOpen) {
+      await Linking.openURL(url);
+    } else {
+      Alert.alert("Call unavailable", "This device cannot place phone calls.");
+    }
+  };
+
+  const uploadEmployeeIdPhoto = async (employee = null) => {
+    try {
+      const cameraStatus = await cameraPermissionStatus();
+      if (cameraStatus !== RESULTS.GRANTED) return;
+
+      setEmployeeIdUploading(true);
+      setTimeout(
+        async () => {
+          try {
+            const image = await ImagePicker.openCamera({
+              cropping: false,
+              mediaType: "photo",
+            });
+            const file = {
+              uri: image?.path,
+              name: image?.path?.split("/").pop() || `employee-id-${Date.now()}.jpg`,
+              type: image?.mime || "image/jpeg",
+            };
+            const formData = new FormData();
+            formData.append("file", file);
+            const response = await uploadImage_API(formData);
+            const uploadedUrl = response?.data?.file;
+
+            if (!response?.success || !uploadedUrl) {
+              Alert.alert("Upload failed", "Could not save the employee ID photo.");
+              return;
+            }
+
+            if (employee?._id) {
+              setEmployeeProfileDraft(employee._id, "employee_id_photo_url", uploadedUrl);
+              await updateEmployee(employee, { employee_id_photo_url: uploadedUrl });
+            } else {
+              setFormValue("employee_id_photo_url", uploadedUrl);
+            }
+          } catch (error) {
+            console.log("employee ID camera error => ", error);
+          } finally {
+            setEmployeeIdUploading(false);
+          }
+        },
+        Platform.OS === "ios" ? 600 : 0
+      );
+    } catch (error) {
+      setEmployeeIdUploading(false);
+      Alert.alert("Camera unavailable", error?.message || "Please try again.");
+    }
+  };
+
+  const saveEmployeeRate = async (employee) => {
+    const draftRate = employeeRateDrafts[employee._id] ?? "";
+    const normalizedRate = draftRate === "" ? null : Number(draftRate);
+
+    if (draftRate !== "" && !Number.isFinite(normalizedRate)) {
+      Alert.alert("Rate invalid", "Enter a valid employee rate.");
+      return;
+    }
+
+    const saved = await updateEmployee(employee, {
+      employee_rate: normalizedRate,
+    });
+    if (saved) {
+      setEditingEmployeeId(null);
+    }
+  };
+
   const assignEmployeeLocation = async (employee) => {
     const assignedLocationId = employeeLocationDrafts[employee._id];
     const assignedTruckUnitId = employeeTruckDrafts[employee._id] || "";
@@ -319,11 +584,14 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
       return;
     }
 
-    await updateEmployee(employee, {
+    const saved = await updateEmployee(employee, {
       assigned_location_id: assignedLocationId,
       assigned_truck_unit_id: assignedTruckUnitId || null,
       is_working: false,
     });
+    if (saved) {
+      setEditingEmployeeId(null);
+    }
   };
 
   const resetEmployeePin = async (employee) => {
@@ -347,19 +615,19 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 
   const archiveEmployee = (employee) => {
     Alert.alert(
-      "Archive employee?",
+      "Terminate employee?",
       `${employee.first_name} ${employee.last_name} will be removed from active employee lists but historical activity will stay saved.`,
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Archive",
+          text: "Terminate",
           style: "destructive",
           onPress: async () => {
             try {
               await archiveVendorEmployee_API(employee._id);
               fetchEmployees();
             } catch (error) {
-              Alert.alert("Archive failed", error?.message || "Please try again.");
+              Alert.alert("Terminate failed", error?.message || "Please try again.");
             }
           },
         },
@@ -370,7 +638,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const deleteEmployee = (employee) => {
     Alert.alert(
       "Delete employee?",
-      `${employee.first_name} ${employee.last_name} will be permanently deleted if they do not have activity history. Use Archive for employees with orders, sessions, or requests.`,
+      `${employee.first_name} ${employee.last_name} will be permanently deleted if they do not have activity history. Use Terminate for employees with orders, sessions, or requests.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -384,7 +652,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
               Alert.alert(
                 "Delete failed",
                 error?.message ||
-                  "Employee cannot be deleted due to prior sales activity. Please Disable Login Access then Archive the Employee."
+                  "Employee cannot be deleted due to prior sales activity. Please Disable Login Access then Terminate the Employee."
               );
             }
           },
@@ -472,13 +740,120 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
               </View>
             </View>
 
-            <Text style={styles.label}>Zip Code</Text>
+            <View style={styles.row}>
+              <View style={styles.halfField}>
+                <Text style={styles.label}>Zip Code</Text>
+                <TextInput
+                  value={form.zip_code}
+                  onChangeText={(text) => setFormValue("zip_code", text)}
+                  keyboardType="number-pad"
+                  style={styles.input}
+                />
+              </View>
+              <View style={styles.halfField}>
+                <Text style={styles.label}>Employee Rate</Text>
+                <TextInput
+                  value={form.employee_rate}
+                  onChangeText={(text) =>
+                    setFormValue("employee_rate", normalizeRateInput(text))
+                  }
+                  keyboardType="decimal-pad"
+                  placeholder="0.00"
+                  style={styles.input}
+                />
+              </View>
+            </View>
+
+            <Text style={styles.label}>Phone Number</Text>
             <TextInput
-              value={form.zip_code}
-              onChangeText={(text) => setFormValue("zip_code", text)}
-              keyboardType="number-pad"
+              value={form.phone_number}
+              onChangeText={(text) => setFormValue("phone_number", text)}
+              keyboardType="phone-pad"
+              placeholder="Employee phone"
               style={styles.input}
             />
+
+            <Text style={styles.label}>Address</Text>
+            <TextInput
+              value={form.address_line1}
+              onChangeText={(text) => setFormValue("address_line1", text)}
+              placeholder="Street address"
+              style={styles.input}
+            />
+
+            <View style={styles.row}>
+              <View style={styles.halfField}>
+                <Text style={styles.label}>City</Text>
+                <TextInput
+                  value={form.address_city}
+                  onChangeText={(text) => setFormValue("address_city", text)}
+                  style={styles.input}
+                />
+              </View>
+              <View style={styles.halfField}>
+                <StatePickerModal
+                  label="State"
+                  value={form.address_state}
+                  onChange={(value) => setFormValue("address_state", value)}
+                />
+              </View>
+            </View>
+
+	            <View style={styles.row}>
+	              <View style={styles.halfField}>
+	                <Text style={styles.label}>Tax ID Type</Text>
+	                <Dropdown
+	                  data={TAX_ID_OPTIONS}
+	                  labelField="label"
+	                  valueField="value"
+	                  value={form.employee_tax_identifier_type}
+	                  onChange={(item) =>
+	                    setFormValue("employee_tax_identifier_type", item.value)
+	                  }
+	                  style={styles.dropdown}
+	                  placeholderStyle={styles.dropdownText}
+	                  selectedTextStyle={styles.dropdownText}
+	                  itemTextStyle={styles.dropdownText}
+	                />
+	              </View>
+	              <View style={styles.halfField}>
+	                <Text style={styles.label}>Employee EIN/SSN</Text>
+	                <TextInput
+	                  value={form.employee_tax_identifier}
+	                  onChangeText={(text) =>
+	                    setFormValue(
+	                      "employee_tax_identifier",
+	                      text.replace(/\D/g, "").slice(0, 9)
+	                    )
+	                  }
+	                  keyboardType="number-pad"
+	                  placeholder="9 digits"
+	                  secureTextEntry
+	                  style={styles.input}
+	                />
+	              </View>
+	            </View>
+
+	            <View style={styles.idUploadCard}>
+              <View style={styles.idUploadCopy}>
+                <Text style={styles.toggleLabel}>Employee ID</Text>
+                <Text style={styles.employeeMeta}>
+                  {form.employee_id_photo_url ? "ID scanned" : "Optional"}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => uploadEmployeeIdPhoto()}
+                disabled={employeeIdUploading}
+                style={[
+                  styles.idUploadButton,
+                  employeeIdUploading && styles.disabledButton,
+                ]}
+              >
+                <Text style={styles.idUploadButtonText}>
+                  {employeeIdUploading ? "Scanning..." : "Scan ID"}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             <Text style={styles.label}>Assigned Location</Text>
             <Dropdown
@@ -587,38 +962,62 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                 activeTab === "archived" && styles.tabTextActive,
               ]}
             >
-              Archived Employees
+              Terminated Employees
             </Text>
           </TouchableOpacity>
         </View>
 
         <Text style={styles.sectionTitle}>
-          {activeTab === "archived" ? "Archived Employees" : "Current Employees"}
+          {activeTab === "archived" ? "Terminated Employees" : "Current Employees"}
         </Text>
         {loading ? (
           <ActivityIndicator color={AppColor.primary} style={{ marginTop: 24 }} />
         ) : employees.length === 0 ? (
           <Text style={styles.emptyText}>
             {activeTab === "archived"
-              ? "No archived employees."
+              ? "No terminated employees."
               : "No current employees."}
           </Text>
         ) : (
           employees.map((employee) => (
             <View key={employee._id} style={styles.employeeCard}>
               <View style={styles.employeeHeader}>
-                <TouchableOpacity
-                  onPress={() => toggleEmployeeDetails(employee)}
-                  style={styles.employeeSummary}
-                >
+	                <TouchableOpacity
+	                  onPress={() => toggleEmployeeDetails(employee)}
+	                  style={styles.employeeSummary}
+	                >
                   <Text style={styles.employeeName}>
                     {employee.first_name} {employee.last_name}
                   </Text>
-                  <Text style={styles.employeeMeta}>
-                    {employee.role} - {employee.zip_code}
+	                  <Text style={styles.employeeMeta}>
+	                    {employee.role} - {employee.zip_code}
+	                  </Text>
+	                  <Text style={styles.employeeMeta}>
+	                    Rate: {formatEmployeeRate(employee.employee_rate)}
+	                  </Text>
+                  <Text style={styles.employeeHoursSummary}>
+                    Today: {formatShiftHours(employee.shift_summary?.today?.gross_hours_worked)} with breaks /{" "}
+                    {formatShiftHours(employee.shift_summary?.today?.net_hours_worked)} without
                   </Text>
-                  <Text style={styles.employeeMeta}>
-                    Assigned: {getLocationLabel(employee.assigned_location_id)}
+                  <Text style={styles.employeeHoursSummary}>
+                    This Week: {formatShiftHours(employee.shift_summary?.week?.gross_hours_worked)} with breaks /{" "}
+                    {formatShiftHours(employee.shift_summary?.week?.net_hours_worked)} without
+                  </Text>
+                  {employee.phone_number ? (
+                    <Text
+                      onPress={() => callEmployee(employee.phone_number)}
+                      style={[styles.employeeMeta, styles.phoneLink]}
+                    >
+                      Phone: {employee.phone_number}
+                    </Text>
+                  ) : null}
+                  {formatEmployeeAddress(employee) ? (
+                    <Text style={styles.employeeMeta}>
+                      {formatEmployeeAddress(employee)}
+                    </Text>
+                  ) : null}
+	                  <Text style={styles.employeeMeta}>
+	                    Assigned: {getLocationLabel(employee.assigned_location_id)}
                   </Text>
                   <Text style={styles.employeeMeta}>
                     Truck:{" "}
@@ -658,7 +1057,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 	                      onPress={() => archiveEmployee(employee)}
 	                      style={styles.archivePill}
 	                    >
-	                      <Text style={styles.archiveText}>Archive</Text>
+	                      <Text style={styles.archiveText}>Terminate</Text>
 	                    </TouchableOpacity>
                     ) : null}
                     <IconButton
@@ -671,18 +1070,297 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                     />
                     </>
                   ) : null}
-                  </View>
+                </View>
               </View>
               {isManageMode &&
                 activeTab === "current" &&
                 expandedEmployeeId === employee._id ? (
-                <View style={styles.submenu}>
+	                  <View style={styles.submenu}>
+	                  <Text style={styles.submenuTitle}>
+	                    Employee Profile {isEmployeeEditing(employee) ? "(Editing)" : ""}
+	                  </Text>
+	                  <View style={styles.row}>
+                    <View style={styles.halfField}>
+                      <Text style={styles.label}>First Name</Text>
+                      <TextInput
+                        value={getEmployeeProfileDraftValue(employee, "first_name")}
+	                        onChangeText={(text) =>
+	                          setEmployeeProfileDraft(employee._id, "first_name", text)
+	                        }
+	                        editable={isEmployeeEditing(employee)}
+	                        style={[
+	                          styles.input,
+	                          !isEmployeeEditing(employee) && styles.readOnlyInput,
+	                        ]}
+	                      />
+                    </View>
+                    <View style={styles.halfField}>
+                      <Text style={styles.label}>Last Name</Text>
+                      <TextInput
+                        value={getEmployeeProfileDraftValue(employee, "last_name")}
+	                        onChangeText={(text) =>
+	                          setEmployeeProfileDraft(employee._id, "last_name", text)
+	                        }
+	                        editable={isEmployeeEditing(employee)}
+	                        style={[
+	                          styles.input,
+	                          !isEmployeeEditing(employee) && styles.readOnlyInput,
+	                        ]}
+	                      />
+                    </View>
+                  </View>
+                  <View style={styles.row}>
+                    <View style={styles.halfField}>
+                      <Text style={styles.label}>Phone Number</Text>
+                      <TextInput
+                        value={getEmployeeProfileDraftValue(employee, "phone_number")}
+	                        onChangeText={(text) =>
+	                          setEmployeeProfileDraft(employee._id, "phone_number", text)
+	                        }
+	                        keyboardType="phone-pad"
+	                        editable={isEmployeeEditing(employee)}
+	                        style={[
+	                          styles.input,
+	                          !isEmployeeEditing(employee) && styles.readOnlyInput,
+	                        ]}
+	                      />
+                    </View>
+                    <View style={styles.halfField}>
+                      <Text style={styles.label}>Zip Code</Text>
+                      <TextInput
+                        value={getEmployeeProfileDraftValue(employee, "zip_code")}
+	                        onChangeText={(text) =>
+	                          setEmployeeProfileDraft(employee._id, "zip_code", text)
+	                        }
+	                        keyboardType="number-pad"
+	                        editable={isEmployeeEditing(employee)}
+	                        style={[
+	                          styles.input,
+	                          !isEmployeeEditing(employee) && styles.readOnlyInput,
+	                        ]}
+	                      />
+                    </View>
+                  </View>
+                  <Text style={styles.label}>Address</Text>
+                  <TextInput
+                    value={getEmployeeProfileDraftValue(employee, "address_line1")}
+	                    onChangeText={(text) =>
+	                      setEmployeeProfileDraft(employee._id, "address_line1", text)
+	                    }
+	                    editable={isEmployeeEditing(employee)}
+	                    style={[
+	                      styles.input,
+	                      !isEmployeeEditing(employee) && styles.readOnlyInput,
+	                    ]}
+	                  />
+                  <View style={styles.row}>
+                    <View style={styles.halfField}>
+                      <Text style={styles.label}>City</Text>
+                      <TextInput
+                        value={getEmployeeProfileDraftValue(employee, "address_city")}
+	                        onChangeText={(text) =>
+	                          setEmployeeProfileDraft(employee._id, "address_city", text)
+	                        }
+	                        editable={isEmployeeEditing(employee)}
+	                        style={[
+	                          styles.input,
+	                          !isEmployeeEditing(employee) && styles.readOnlyInput,
+	                        ]}
+	                      />
+                    </View>
+                    <View style={styles.halfField}>
+                      {isEmployeeEditing(employee) ? (
+                        <StatePickerModal
+                          label="State"
+                          value={getEmployeeProfileDraftValue(
+                            employee,
+                            "address_state"
+                          )}
+                          onChange={(value) =>
+                            setEmployeeProfileDraft(
+                              employee._id,
+                              "address_state",
+                              value
+                            )
+                          }
+                        />
+                      ) : (
+                        <>
+                          <Text style={styles.label}>State</Text>
+                          <TextInput
+                            value={getEmployeeProfileDraftValue(
+                              employee,
+                              "address_state"
+                            )}
+                            editable={false}
+                            style={[styles.input, styles.readOnlyInput]}
+                          />
+                        </>
+                      )}
+                    </View>
+                  </View>
+	                  <View style={styles.row}>
+	                    <View style={styles.halfField}>
+	                      <Text style={styles.label}>Tax ID Type</Text>
+	                      <Dropdown
+	                        data={TAX_ID_OPTIONS}
+	                        labelField="label"
+	                        valueField="value"
+	                        value={getEmployeeProfileDraftValue(
+	                          employee,
+	                          "employee_tax_identifier_type"
+	                        )}
+		                        onChange={(item) =>
+		                          setEmployeeProfileDraft(
+		                            employee._id,
+		                            "employee_tax_identifier_type",
+		                            item.value
+		                          )
+		                        }
+		                        disable={!isEmployeeEditing(employee)}
+		                        style={[
+		                          styles.dropdown,
+		                          !isEmployeeEditing(employee) && styles.readOnlyInput,
+		                        ]}
+		                        placeholderStyle={styles.dropdownText}
+		                        selectedTextStyle={styles.dropdownText}
+		                        itemTextStyle={styles.dropdownText}
+	                      />
+	                    </View>
+	                    <View style={styles.halfField}>
+	                      <Text style={styles.label}>Employee EIN/SSN</Text>
+	                      <TextInput
+	                        value={getEmployeeProfileDraftValue(
+	                          employee,
+	                          "employee_tax_identifier"
+	                        )}
+	                        onChangeText={(text) =>
+	                          setEmployeeProfileDraft(
+	                            employee._id,
+	                            "employee_tax_identifier",
+	                            text.replace(/\D/g, "").slice(0, 9)
+	                          )
+	                        }
+	                        keyboardType="number-pad"
+		                        placeholder={
+		                          employee.employee_tax_identifier_masked ||
+		                          "9 digits"
+		                        }
+		                        secureTextEntry
+		                        editable={isEmployeeEditing(employee)}
+		                        style={[
+		                          styles.input,
+		                          !isEmployeeEditing(employee) && styles.readOnlyInput,
+		                        ]}
+		                      />
+	                    </View>
+	                  </View>
+	                  {employee.employee_tax_identifier_masked ? (
+	                    <Text style={styles.helperText}>
+	                      Saved tax ID: {employee.employee_tax_identifier_masked}
+	                    </Text>
+	                  ) : null}
+                  <View style={styles.idUploadCard}>
+                    <View style={styles.idUploadCopy}>
+                      <Text style={styles.toggleLabel}>Employee ID</Text>
+                      <Text style={styles.employeeMeta}>
+                        {getEmployeeProfileDraftValue(
+                          employee,
+                          "employee_id_photo_url"
+                        )
+                          ? "ID scanned"
+                          : "Optional"}
+                      </Text>
+                    </View>
+	                    <TouchableOpacity
+	                      onPress={() => uploadEmployeeIdPhoto(employee)}
+	                      disabled={employeeIdUploading || !isEmployeeEditing(employee)}
+	                      style={[
+	                        styles.idUploadButton,
+	                        (employeeIdUploading || !isEmployeeEditing(employee)) &&
+	                          styles.disabledButton,
+	                      ]}
+	                    >
+                      <Text style={styles.idUploadButtonText}>
+                        {employeeIdUploading ? "Scanning..." : "Scan ID"}
+                      </Text>
+                    </TouchableOpacity>
+                    {getEmployeeIdPhotoUrl(
+                      employee,
+                      employeeProfileDrafts[employee._id]
+                    ) ? (
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        style={styles.idPreviewRow}
+                        onPress={() =>
+                          Linking.openURL(
+                            getEmployeeIdPhotoUrl(
+                              employee,
+                              employeeProfileDrafts[employee._id]
+                            )
+                          )
+                        }
+                      >
+                        <Image
+                          source={{
+                            uri: getEmployeeIdPhotoUrl(
+                              employee,
+                              employeeProfileDrafts[employee._id]
+                            ),
+                          }}
+                          style={styles.idPreviewImage}
+                        />
+                        <Text style={styles.idPreviewText}>View saved ID</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+	                  {isEmployeeEditing(employee) ? (
+	                    <TouchableOpacity
+	                      onPress={() => saveEmployeeProfile(employee)}
+	                      style={styles.secondaryButton}
+	                    >
+	                      <Text style={styles.secondaryButtonText}>Save Profile</Text>
+	                    </TouchableOpacity>
+	                  ) : null}
+
+                  <View style={styles.subsectionDivider} />
                   <Text style={styles.submenuTitle}>Truck Assignment</Text>
-                  <Text style={styles.helperText}>
-                    Moving an employee to another truck or location sets them off
-                    duty and ends any active session.
-                  </Text>
-                  <Text style={styles.label}>Assigned Truck</Text>
+	                  <Text style={styles.helperText}>
+	                    Moving an employee to another truck or location sets them off
+	                    duty and ends any active session.
+	                  </Text>
+	                  <Text style={styles.label}>Employee Rate</Text>
+	                  <View style={styles.rateEditRow}>
+	                    <TextInput
+	                      value={
+	                        employeeRateDrafts[employee._id] ??
+	                        (employee.employee_rate !== null &&
+	                        employee.employee_rate !== undefined
+	                          ? String(employee.employee_rate)
+	                          : "")
+	                      }
+		                      onChangeText={(text) =>
+		                        setEmployeeRateDraft(employee._id, text)
+		                      }
+		                      keyboardType="decimal-pad"
+		                      placeholder="0.00"
+		                      editable={isEmployeeEditing(employee)}
+		                      style={[
+		                        styles.input,
+		                        styles.rateInput,
+		                        !isEmployeeEditing(employee) && styles.readOnlyInput,
+		                      ]}
+		                    />
+		                    {isEmployeeEditing(employee) ? (
+		                      <TouchableOpacity
+		                        onPress={() => saveEmployeeRate(employee)}
+		                        style={styles.rateSaveButton}
+		                      >
+		                        <Text style={styles.rateSaveButtonText}>Save Rate</Text>
+		                      </TouchableOpacity>
+		                    ) : null}
+	                  </View>
+	                  <Text style={styles.label}>Assigned Truck</Text>
                   <Dropdown
                     data={truckOptions}
                     labelField="label"
@@ -692,14 +1370,18 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                       employee.assigned_truck_unit_id ||
                       ""
                     }
-                    onChange={(item) =>
-                      setEmployeeTruckDraft(employee._id, item.value)
-                    }
-                    placeholder="Select truck"
-                    style={styles.dropdown}
-                    selectedTextStyle={styles.dropdownText}
-                    placeholderStyle={styles.placeholderText}
-                    itemTextStyle={styles.dropdownText}
+	                    onChange={(item) =>
+	                      setEmployeeTruckDraft(employee._id, item.value)
+	                    }
+	                    placeholder="Select truck"
+	                    disable={!isEmployeeEditing(employee)}
+	                    style={[
+	                      styles.dropdown,
+	                      !isEmployeeEditing(employee) && styles.readOnlyInput,
+	                    ]}
+	                    selectedTextStyle={styles.dropdownText}
+	                    placeholderStyle={styles.placeholderText}
+	                    itemTextStyle={styles.dropdownText}
                   />
                   <Text style={styles.label}>Assigned Location</Text>
                   <Dropdown
@@ -710,21 +1392,27 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                       employeeLocationDrafts[employee._id] ||
                       employee.assigned_location_id
                     }
-                    onChange={(item) =>
-                      setEmployeeLocationDraft(employee._id, item.value)
-                    }
-                    placeholder="Select location"
-                    style={styles.dropdown}
-                    selectedTextStyle={styles.dropdownText}
-                    placeholderStyle={styles.placeholderText}
-                    itemTextStyle={styles.dropdownText}
-                  />
-                  <TouchableOpacity
-                    onPress={() => assignEmployeeLocation(employee)}
-                    style={styles.secondaryButton}
-                  >
-                    <Text style={styles.secondaryButtonText}>Save Assignment</Text>
-                  </TouchableOpacity>
+	                    onChange={(item) =>
+	                      setEmployeeLocationDraft(employee._id, item.value)
+	                    }
+	                    placeholder="Select location"
+	                    disable={!isEmployeeEditing(employee)}
+	                    style={[
+	                      styles.dropdown,
+	                      !isEmployeeEditing(employee) && styles.readOnlyInput,
+	                    ]}
+	                    selectedTextStyle={styles.dropdownText}
+	                    placeholderStyle={styles.placeholderText}
+	                    itemTextStyle={styles.dropdownText}
+	                  />
+	                  {isEmployeeEditing(employee) ? (
+	                    <TouchableOpacity
+	                      onPress={() => assignEmployeeLocation(employee)}
+	                      style={styles.secondaryButton}
+	                    >
+	                      <Text style={styles.secondaryButtonText}>Save Assignment</Text>
+	                    </TouchableOpacity>
+	                  ) : null}
                 </View>
               ) : null}
 
@@ -858,18 +1546,39 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                         key={session.employee_session_id || session._id}
                         style={styles.shiftHistoryItem}
                       >
-                        <View>
-                          <Text style={styles.shiftHistoryLabel}>Start</Text>
-                          <Text style={styles.shiftHistoryValue}>
-                            {formatShiftDateTime(session.started_at)}
-                          </Text>
+                        <View style={styles.shiftHistoryRow}>
+                          <View>
+                            <Text style={styles.shiftHistoryLabel}>Start</Text>
+                            <Text style={styles.shiftHistoryValue}>
+                              {formatShiftDateTime(session.started_at)}
+                            </Text>
+                          </View>
+                          <View style={styles.shiftHistoryEnd}>
+                            <Text style={styles.shiftHistoryLabel}>End</Text>
+                            <Text style={styles.shiftHistoryValue}>
+                              {session.ended_at
+                                ? formatShiftDateTime(session.ended_at)
+                                : "Active"}
+                            </Text>
+                          </View>
                         </View>
-                        <View style={styles.shiftHistoryEnd}>
-                          <Text style={styles.shiftHistoryLabel}>End</Text>
-                          <Text style={styles.shiftHistoryValue}>
-                            {session.ended_at
-                              ? formatShiftDateTime(session.ended_at)
-                              : "Active"}
+                        <View style={styles.shiftTotalsRow}>
+                          <View>
+                            <Text style={styles.shiftHistoryLabel}>With Breaks</Text>
+                            <Text style={styles.shiftHistoryValue}>
+                              {formatShiftHours(session.gross_hours_worked)}
+                            </Text>
+                          </View>
+                          <View style={styles.shiftHistoryEnd}>
+                            <Text style={styles.shiftHistoryLabel}>Without Breaks</Text>
+                            <Text style={styles.shiftHistoryValue}>
+                              {formatShiftHours(session.net_hours_worked)}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.shiftTotalsRow}>
+                          <Text style={styles.employeeMeta}>
+                            Breaks: {session.total_break_minutes || 0} min
                           </Text>
                         </View>
                       </View>
@@ -974,7 +1683,7 @@ const styles = StyleSheet.create({
     color: AppColor.primary,
     fontFamily: Mulish700,
   },
-  row: { flexDirection: "row", gap: 10 },
+  row: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   halfField: { flex: 1 },
   label: {
     fontSize: 13,
@@ -991,7 +1700,9 @@ const styles = StyleSheet.create({
     color: AppColor.text,
     fontFamily: Mulish400,
     paddingHorizontal: 12,
-    minHeight: 46,
+    paddingVertical: 11,
+    minHeight: 48,
+    textAlignVertical: "center",
   },
   readOnlyInput: {
     borderWidth: 1,
@@ -1001,7 +1712,30 @@ const styles = StyleSheet.create({
     color: AppColor.text,
     fontFamily: Mulish600,
     paddingHorizontal: 12,
-    minHeight: 46,
+    paddingVertical: 11,
+    minHeight: 48,
+    textAlignVertical: "center",
+  },
+  rateEditRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  rateInput: {
+    flex: 1,
+  },
+  rateSaveButton: {
+    minHeight: 48,
+    borderRadius: 8,
+    backgroundColor: AppColor.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 14,
+  },
+  rateSaveButtonText: {
+    color: AppColor.white,
+    fontFamily: Mulish700,
+    fontSize: 13,
   },
   helperText: {
     color: AppColor.textHighlighter,
@@ -1013,7 +1747,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: AppColor.border,
     borderRadius: 8,
-    minHeight: 46,
+    minHeight: 48,
     paddingHorizontal: 12,
     backgroundColor: AppColor.white,
   },
@@ -1080,6 +1814,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
+  employeeHoursSummary: {
+    color: AppColor.black,
+    fontFamily: Mulish600,
+    fontSize: 12,
+    marginTop: 3,
+  },
+  phoneLink: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
+    textDecorationLine: "underline",
+  },
   employeeActions: {
     alignItems: "center",
     flexDirection: "row",
@@ -1117,6 +1862,12 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
     fontSize: 14,
   },
+  subsectionDivider: {
+    borderTopWidth: 1,
+    borderColor: AppColor.border,
+    marginTop: 14,
+    paddingTop: 12,
+  },
   toggleRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1141,6 +1892,58 @@ const styles = StyleSheet.create({
     color: AppColor.primary,
     fontFamily: Mulish700,
     fontSize: 14,
+  },
+  idUploadCard: {
+    alignItems: "center",
+    backgroundColor: "#F9FAFB",
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    justifyContent: "space-between",
+    marginTop: 12,
+    padding: 12,
+  },
+  idUploadCopy: {
+    flex: 1,
+  },
+  idUploadButton: {
+    alignItems: "center",
+    backgroundColor: AppColor.primary,
+    borderRadius: 8,
+    justifyContent: "center",
+    minHeight: 40,
+    paddingHorizontal: 14,
+  },
+  idUploadButtonText: {
+    color: AppColor.white,
+    fontFamily: Mulish700,
+    fontSize: 13,
+  },
+  idPreviewRow: {
+    alignItems: "center",
+    backgroundColor: AppColor.white,
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 10,
+    padding: 8,
+    width: "100%",
+  },
+  idPreviewImage: {
+    backgroundColor: "#E5E7EB",
+    borderRadius: 6,
+    height: 44,
+    width: 44,
+  },
+  idPreviewText: {
+    color: AppColor.primary,
+    flex: 1,
+    fontFamily: Mulish700,
+    fontSize: 13,
   },
   resetBox: {
     borderTopWidth: 1,
@@ -1188,10 +1991,22 @@ const styles = StyleSheet.create({
     borderColor: AppColor.border,
     borderRadius: 8,
     borderWidth: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
     marginTop: 10,
     padding: 12,
+  },
+  shiftHistoryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  shiftTotalsRow: {
+    borderTopWidth: 1,
+    borderColor: AppColor.border,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 10,
+    paddingTop: 10,
   },
   shiftHistoryEnd: {
     alignItems: "flex-end",
