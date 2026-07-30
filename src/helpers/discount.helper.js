@@ -147,7 +147,40 @@ export const getDiscountSourceItem = (item) => {
     return safeItem;
   }
 
-  return differentItemReward || safeItem;
+  if (!differentItemReward) {
+    return safeItem;
+  }
+
+  const nestedReward =
+    (differentItemReward?.menuItem &&
+    typeof differentItemReward.menuItem === "object"
+      ? differentItemReward.menuItem
+      : null) ||
+    (differentItemReward?.itemId && typeof differentItemReward.itemId === "object"
+      ? differentItemReward.itemId
+      : null) ||
+    {};
+
+  return {
+    ...nestedReward,
+    ...differentItemReward,
+    flavorOptions:
+      differentItemReward?.flavorOptions?.length > 0
+        ? differentItemReward.flavorOptions
+        : nestedReward?.flavorOptions,
+    toppingOptions:
+      differentItemReward?.toppingOptions?.length > 0
+        ? differentItemReward.toppingOptions
+        : nestedReward?.toppingOptions,
+    flavors:
+      differentItemReward?.flavors?.length > 0
+        ? differentItemReward.flavors
+        : nestedReward?.flavors,
+    toppings:
+      differentItemReward?.toppings?.length > 0
+        ? differentItemReward.toppings
+        : nestedReward?.toppings,
+  };
 };
 
 export const calculateItemTotalWithDiscount = (item) => {
