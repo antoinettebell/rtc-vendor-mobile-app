@@ -88,14 +88,37 @@ export const calculateNestedSelectedOptionCost = (selectedItems = []) =>
   (Array.isArray(selectedItems) ? selectedItems : []).reduce(
     (sum, selectedItem) => {
       const quantity = Math.max(1, Number(selectedItem?.qty) || 1);
-      const optionSourceItem =
+      const nestedOptionSource =
         (selectedItem?.menuItem && typeof selectedItem.menuItem === "object"
           ? selectedItem.menuItem
           : null) ||
         (selectedItem?.itemId && typeof selectedItem.itemId === "object"
           ? selectedItem.itemId
           : null) ||
-        selectedItem;
+        {};
+      // API/menu selections are not guaranteed to use one shape. Preserve
+      // populated option definitions from the nested item while allowing the
+      // configured/selected child fields to fill or override them.
+      const optionSourceItem = {
+        ...nestedOptionSource,
+        ...selectedItem,
+        flavorOptions:
+          selectedItem?.flavorOptions?.length > 0
+            ? selectedItem.flavorOptions
+            : nestedOptionSource?.flavorOptions,
+        toppingOptions:
+          selectedItem?.toppingOptions?.length > 0
+            ? selectedItem.toppingOptions
+            : nestedOptionSource?.toppingOptions,
+        flavors:
+          selectedItem?.flavors?.length > 0
+            ? selectedItem.flavors
+            : nestedOptionSource?.flavors,
+        toppings:
+          selectedItem?.toppings?.length > 0
+            ? selectedItem.toppings
+            : nestedOptionSource?.toppings,
+      };
       const directOptionCost = calculateSelectedOptionCost(
         selectedItem,
         "selectedFlavors",

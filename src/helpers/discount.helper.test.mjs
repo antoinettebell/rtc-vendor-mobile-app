@@ -37,6 +37,47 @@ assert.equal(
   4.26
 );
 
+const liveShapeLoadedFries = {
+  menuItem: {
+    _id: "fries-id",
+    name: "Fries",
+    // Some populated responses keep only legacy names on the nested object.
+    toppings: ["Jalapeno", "Chili and Cheese", "Bacon Bits"],
+  },
+  comboMenuItemId: "fries-id",
+  toppingOptions: loadedFries.menuItem.toppingOptions,
+  selectedToppings: ["Jalapeno", "Chili and Cheese", "Bacon Bits"],
+};
+
+assert.equal(
+  calculateItemTotalWithDiscount({
+    price: 0.01,
+    quantity: 1,
+    selectedToppings: ["Fried Egg"],
+    toppingOptions: burger.itemId.toppingOptions,
+    selectedSubItems: [liveShapeLoadedFries],
+  }),
+  4.26
+);
+
+assert.equal(
+  calculateItemTotalWithDiscount({
+    price: 0.01,
+    quantity: 1,
+    discountType: "BOGO",
+    discountRules: { buyQty: 1, getQty: 1, discount: 1, repeatable: true },
+    selectedToppings: ["Jalapeno"],
+    toppingOptions: loadedFries.menuItem.toppingOptions,
+    bogoItems: [{
+      ...loadedFries.menuItem,
+      price: 0.01,
+      isSameItem: false,
+    }],
+    selectedDiscountToppings: ["Jalapeno", "Chili and Cheese"],
+  }),
+  3.01
+);
+
 const tenPercentTip =
   calculateItemTotalWithDiscount({
     price: 10,
