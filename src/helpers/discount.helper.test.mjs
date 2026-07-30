@@ -78,6 +78,33 @@ assert.equal(
   3.01
 );
 
+const nestedBogoReward = {
+  itemId: {
+    _id: "fries-id",
+    name: "Fries",
+    price: 0.01,
+    toppingOptions: loadedFries.menuItem.toppingOptions,
+  },
+  qty: 1,
+  isSameItem: false,
+};
+
+assert.equal(
+  calculateItemTotalWithDiscount({
+    price: 0.01,
+    quantity: 1,
+    discountType: "BOGO",
+    discountRules: { buyQty: 1, getQty: 1, discount: 1, repeatable: true },
+    selectedToppings: ["Jalapeno"],
+    toppingOptions: loadedFries.menuItem.toppingOptions,
+    bogoItems: [nestedBogoReward],
+    selectedDiscountToppings: ["Bacon Bits", "Chili and Cheese"],
+  }),
+  3.26
+);
+
+assert.equal(Math.round((3.53 + 3.26) * 100) / 100, 6.79);
+
 const tenPercentTip =
   calculateItemTotalWithDiscount({
     price: 10,
