@@ -274,12 +274,15 @@ const EmployeePosBoardScreen = ({ navigation }) => {
   const [selectedDiscountToppings, setSelectedDiscountToppings] = useState([]);
   const [selectedSubItems, setSelectedSubItems] = useState([]);
   const [guestPhone, setGuestPhone] = useState("");
+  const [returningToCheckout, setReturningToCheckout] = useState(false);
   const [requestModalOrder, setRequestModalOrder] = useState(null);
   const [requestType, setRequestType] = useState("REFUND");
   const [reasonCode, setReasonCode] = useState(REQUEST_REASONS[0]);
   const [employeeNotes, setEmployeeNotes] = useState("");
   const [requestSubmitting, setRequestSubmitting] = useState(false);
   const itemDetailsActionSheetRef = useRef(null);
+  const guestPhoneInputRef = useRef(null);
+  const boardScrollRef = useRef(null);
 
   const foodTruck = user?.foodTruck;
   const assignedLocation = user?.assignedLocation;
@@ -402,6 +405,12 @@ const EmployeePosBoardScreen = ({ navigation }) => {
       setSelectedCategory("All");
     }
   }, [categories, selectedCategory]);
+
+  useEffect(() => {
+    if (order.items.length === 0) {
+      setReturningToCheckout(false);
+    }
+  }, [order.items.length]);
 
   const handleSignOut = async () => {
     dispatch(clearPosOrder());
@@ -583,13 +592,41 @@ const EmployeePosBoardScreen = ({ navigation }) => {
       );
       return;
     }
-    navigation.navigate("vendorPosCheckoutScreen", {
-      foodTruck,
-      location: assignedLocation,
-      truckUnit: assignedTruckUnit,
-      guestPhone: guestPhone.trim(),
-      returnScreen: "employeeSessionScreen",
-    });
+    const continueToCheckout = () => {
+      setReturningToCheckout(false);
+      navigation.navigate("vendorPosCheckoutScreen", {
+        foodTruck,
+        location: assignedLocation,
+        truckUnit: assignedTruckUnit,
+        guestPhone: guestPhone.trim(),
+        returnScreen: "employeeSessionScreen",
+      });
+    };
+
+    if (returningToCheckout && guestPhone.trim()) {
+      continueToCheckout();
+      return;
+    }
+
+    Alert.alert(
+      "Customer phone number",
+      "Did you remember to add the customer phone number?",
+      [
+        {
+          text: "No",
+          style: "cancel",
+          onPress: () => {
+            setReturningToCheckout(true);
+            boardScrollRef.current?.scrollTo({ y: 0, animated: true });
+            setTimeout(() => guestPhoneInputRef.current?.focus(), 200);
+          },
+        },
+        {
+          text: "Yes",
+          onPress: continueToCheckout,
+        },
+      ],
+    );
   };
 
   const handleRemoveItem = (menuItem) => {
@@ -1202,6 +1239,7 @@ const EmployeePosBoardScreen = ({ navigation }) => {
       </View>
 
       <ScrollView
+        ref={boardScrollRef}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={refreshBoard} />
         }
@@ -1210,6 +1248,7 @@ const EmployeePosBoardScreen = ({ navigation }) => {
         <View style={styles.guestBox}>
           <Text style={styles.sectionTitle}>Walk-up customer</Text>
           <TextInput
+            ref={guestPhoneInputRef}
             style={styles.phoneInput}
             value={guestPhone}
             onChangeText={setGuestPhone}
@@ -1293,7 +1332,9 @@ const EmployeePosBoardScreen = ({ navigation }) => {
               disabled={!isWorking || order.items.length === 0}
               onPress={goToCheckout}
             >
-              <Text style={styles.payButtonText}>Check Out</Text>
+              <Text style={styles.payButtonText}>
+                {returningToCheckout ? "Finish Previous Order" : "Check Out"}
+              </Text>
             </TouchableOpacity>
             {order.items.length > 0 ? (
               <TouchableOpacity

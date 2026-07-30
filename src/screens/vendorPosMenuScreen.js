@@ -122,7 +122,9 @@ const VendorPosMenuScreen = ({ navigation }) => {
   const [selectedFlavors, setSelectedFlavors] = useState([]);
   const [selectedToppings, setSelectedToppings] = useState([]);
   const [guestPhone, setGuestPhone] = useState("");
+  const [returningToCheckout, setReturningToCheckout] = useState(false);
   const itemDetailsActionSheetRef = useRef(null);
+  const guestPhoneInputRef = useRef(null);
 
   const foodTruckId = user?.foodTruck?._id;
   const isEmployeeSession =
@@ -154,6 +156,12 @@ const VendorPosMenuScreen = ({ navigation }) => {
       setSelectedCategory("All");
     }
   }, [categories, selectedCategory]);
+
+  useEffect(() => {
+    if (order.items.length === 0) {
+      setReturningToCheckout(false);
+    }
+  }, [order.items.length]);
 
   const loadData = useCallback(async () => {
     if (!foodTruckId) {
@@ -359,12 +367,39 @@ const VendorPosMenuScreen = ({ navigation }) => {
       return;
     }
 
-    navigation.navigate("vendorPosCheckoutScreen", {
-      foodTruck,
-      location: currentLocation,
-      truckUnit: currentTruckUnit,
-      guestPhone: guestPhone.trim(),
-    });
+    const continueToCheckout = () => {
+      setReturningToCheckout(false);
+      navigation.navigate("vendorPosCheckoutScreen", {
+        foodTruck,
+        location: currentLocation,
+        truckUnit: currentTruckUnit,
+        guestPhone: guestPhone.trim(),
+      });
+    };
+
+    if (returningToCheckout && guestPhone.trim()) {
+      continueToCheckout();
+      return;
+    }
+
+    Alert.alert(
+      "Customer phone number",
+      "Did you remember to add the customer phone number?",
+      [
+        {
+          text: "No",
+          style: "cancel",
+          onPress: () => {
+            setReturningToCheckout(true);
+            setTimeout(() => guestPhoneInputRef.current?.focus(), 100);
+          },
+        },
+        {
+          text: "Yes",
+          onPress: continueToCheckout,
+        },
+      ],
+    );
   };
 
   const handleRemoveItem = (menuItem) => {
@@ -454,6 +489,7 @@ const VendorPosMenuScreen = ({ navigation }) => {
           <View style={styles.guestBox}>
             <Text style={styles.sectionTitle}>Walk-up customer</Text>
             <TextInput
+              ref={guestPhoneInputRef}
               style={styles.phoneInput}
               value={guestPhone}
               onChangeText={setGuestPhone}
@@ -520,7 +556,9 @@ const VendorPosMenuScreen = ({ navigation }) => {
                   <Text style={styles.clearButtonText}>Clear</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.checkoutButton} onPress={goToCheckout}>
-                  <Text style={styles.checkoutButtonText}>Checkout</Text>
+                  <Text style={styles.checkoutButtonText}>
+                    {returningToCheckout ? "Finish Previous Order" : "Checkout"}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
