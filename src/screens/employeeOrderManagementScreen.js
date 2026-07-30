@@ -3,9 +3,13 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   RefreshControl,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -408,7 +412,14 @@ const EmployeeOrderManagementScreen = ({ navigation, route }) => {
         visible={!!requestModalOrder}
         onRequestClose={() => setRequestModalOrder(null)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalOverlay}
+        >
+          <ScrollView
+            contentContainerStyle={styles.modalScrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Refund/Cancel Request</Text>
             <Text style={styles.modalMeta}>
@@ -475,7 +486,10 @@ const EmployeeOrderManagementScreen = ({ navigation, route }) => {
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalSecondary}
-                onPress={() => setRequestModalOrder(null)}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setRequestModalOrder(null);
+                }}
               >
                 <Text style={styles.modalSecondaryText}>Close</Text>
               </TouchableOpacity>
@@ -490,7 +504,8 @@ const EmployeeOrderManagementScreen = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
 
       <View style={styles.header}>
@@ -751,6 +766,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     padding: 16,
+  },
+  modalScrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    width: "100%",
   },
   modalCard: {
     backgroundColor: AppColor.white,

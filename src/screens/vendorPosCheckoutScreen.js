@@ -142,7 +142,8 @@ const TIP_OPTIONS = [
   { label: "10%", value: "10" },
   { label: "15%", value: "15" },
   { label: "20%", value: "20" },
-  { label: "Custom", value: "custom" },
+  { label: "$1", value: "fixed-1" },
+  { label: "Custom $", value: "custom" },
 ];
 
 const TAP_TO_PAY_PROCESSING_FEE_RATE = 0.035;
@@ -177,7 +178,14 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
       return toMoneyNumber(customTipInput);
     }
 
-    return toMoneyNumber((order.subtotal * Number(selectedTipOption)) / 100);
+    if (selectedTipOption.startsWith("fixed-")) {
+      return toMoneyNumber(selectedTipOption.replace("fixed-", ""));
+    }
+
+    const percentageTip = toMoneyNumber(
+      (order.subtotal * Number(selectedTipOption)) / 100,
+    );
+    return order.subtotal > 0 && percentageTip === 0 ? 0.01 : percentageTip;
   }, [customTipInput, order.subtotal, selectedTipOption]);
 
   const basePayload = useMemo(() => {
