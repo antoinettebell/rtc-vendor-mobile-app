@@ -84,6 +84,33 @@ export const calculateSelectedOptionCost = (
   );
 };
 
+export const calculateNestedSelectedOptionCost = (selectedItems = []) =>
+  (Array.isArray(selectedItems) ? selectedItems : []).reduce(
+    (sum, selectedItem) => {
+      const quantity = Math.max(1, Number(selectedItem?.qty) || 1);
+      const optionSourceItem =
+        (selectedItem?.menuItem && typeof selectedItem.menuItem === "object"
+          ? selectedItem.menuItem
+          : null) ||
+        (selectedItem?.itemId && typeof selectedItem.itemId === "object"
+          ? selectedItem.itemId
+          : null) ||
+        selectedItem;
+      const directOptionCost = calculateSelectedOptionCost(
+        selectedItem,
+        "selectedFlavors",
+        "selectedToppings",
+        optionSourceItem
+      );
+      const nestedOptionCost = calculateNestedSelectedOptionCost(
+        selectedItem?.selectedSubItems
+      );
+
+      return sum + (directOptionCost + nestedOptionCost) * quantity;
+    },
+    0
+  );
+
 export const getDiscountSourceItem = (item) => {
   const safeItem = item || {};
   const bogoItems = Array.isArray(safeItem.bogoItems) ? safeItem.bogoItems : [];
@@ -102,7 +129,13 @@ export const getDiscountSourceItem = (item) => {
 
 export const calculateItemTotalWithDiscount = (item) => {
   const { price, quantity, discountType, discountRules } = item;
-  const unitPrice = (Number(price) || 0) + calculateSelectedOptionCost(item);
+  const comboOptionCost = calculateNestedSelectedOptionCost(
+    item?.selectedSubItems
+  );
+  const unitPrice =
+    (Number(price) || 0) +
+    calculateSelectedOptionCost(item) +
+    comboOptionCost;
   let total = unitPrice * quantity;
   const discountSourceItem = getDiscountSourceItem(item);
 
@@ -115,7 +148,7 @@ export const calculateItemTotalWithDiscount = (item) => {
       "selectedDiscountFlavors",
       "selectedDiscountToppings",
       discountSourceItem
-    );
+    ) + calculateNestedSelectedOptionCost(item?.selectedDiscountSubItems);
 
     const rewardTotal = rewardQty * (basePrice + rewardOptionsCost);
     const discountAmount = rewardQty * basePrice * discountVal;
@@ -127,7 +160,7 @@ export const calculateItemTotalWithDiscount = (item) => {
       "selectedDiscountFlavors",
       "selectedDiscountToppings",
       discountSourceItem
-    );
+    ) + calculateNestedSelectedOptionCost(item?.selectedDiscountSubItems);
     total = unitPrice * quantity + rewardOptionsCost * quantity;
   } else if (discountType === "BOGOHO") {
     const basePrice = Number(price) || 0;
@@ -136,7 +169,7 @@ export const calculateItemTotalWithDiscount = (item) => {
       "selectedDiscountFlavors",
       "selectedDiscountToppings",
       discountSourceItem
-    );
+    ) + calculateNestedSelectedOptionCost(item?.selectedDiscountSubItems);
     total =
       item.bogoHoPrice != null
         ? item.bogoHoPrice * quantity + rewardOptionsCost * quantity

@@ -37,7 +37,15 @@ const getMenuItemId = (item) =>
   item?._id ||
   "";
 
-const getChildItem = (item) => item?.menuItem || item?.itemId || item;
+const getChildItem = (item) =>
+  (item?.menuItem && typeof item.menuItem === "object"
+    ? item.menuItem
+    : null) ||
+  (item?.itemId && typeof item.itemId === "object" ? item.itemId : null) ||
+  (item?.comboMenuItemId && typeof item.comboMenuItemId === "object"
+    ? item.comboMenuItemId
+    : null) ||
+  item;
 
 const getSelectionLimit = (configuredLimit, optionCount) => {
   const numericLimit = Number(configuredLimit);

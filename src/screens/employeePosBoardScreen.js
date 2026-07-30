@@ -1218,35 +1218,6 @@ const EmployeePosBoardScreen = ({ navigation }) => {
             placeholder="Optional phone number"
             placeholderTextColor={AppColor.gray}
           />
-          <View style={styles.quickCartBar}>
-            <View>
-              <Text style={styles.quickCartLabel}>Cart total</Text>
-              <Text style={styles.quickCartValue}>
-                {formatMoney(order.subtotal)}
-              </Text>
-            </View>
-            <View style={styles.quickCartActions}>
-              <TouchableOpacity
-                style={[
-                  styles.payButton,
-                  (!isWorking || order.items.length === 0) &&
-                    styles.disabledButton,
-                ]}
-                disabled={!isWorking || order.items.length === 0}
-                onPress={goToCheckout}
-              >
-                <Text style={styles.payButtonText}>Cash</Text>
-              </TouchableOpacity>
-              {order.items.length > 0 ? (
-                <TouchableOpacity
-                  style={styles.secondaryButton}
-                  onPress={() => dispatch(clearPosOrder())}
-                >
-                  <Text style={styles.secondaryButtonText}>Clear</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          </View>
         </View>
 
         <View style={styles.section}>
@@ -1310,24 +1281,30 @@ const EmployeePosBoardScreen = ({ navigation }) => {
             ))
           )}
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Subtotal</Text>
+            <Text style={styles.totalLabel}>Cart total</Text>
             <Text style={styles.totalValue}>{formatMoney(order.subtotal)}</Text>
           </View>
-          {canTapToPay ? (
-            <View style={styles.paymentActions}>
+          <View style={styles.paymentActions}>
+            <TouchableOpacity
+              style={[
+                styles.payButton,
+                (!isWorking || order.items.length === 0) &&
+                  styles.disabledButton,
+              ]}
+              disabled={!isWorking || order.items.length === 0}
+              onPress={goToCheckout}
+            >
+              <Text style={styles.payButtonText}>Check Out</Text>
+            </TouchableOpacity>
+            {order.items.length > 0 ? (
               <TouchableOpacity
-                style={[
-                  styles.payButton,
-                  (!isWorking || order.items.length === 0) &&
-                    styles.disabledButton,
-                ]}
-                disabled={!isWorking || order.items.length === 0}
-                onPress={goToCheckout}
+                style={styles.secondaryButton}
+                onPress={() => dispatch(clearPosOrder())}
               >
-                <Text style={styles.payButtonText}>Tap to Pay</Text>
+                <Text style={styles.secondaryButtonText}>Clear</Text>
               </TouchableOpacity>
-            </View>
-          ) : null}
+            ) : null}
+          </View>
         </View>
 
         <View style={styles.section}>

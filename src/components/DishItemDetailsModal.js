@@ -156,10 +156,22 @@ const getMenuItemId = (item) =>
   (item?.menuItem && typeof item.menuItem !== "object" ? item.menuItem : "") ||
   item?.itemId?._id ||
   (item?.itemId && typeof item.itemId !== "object" ? item.itemId : "") ||
+  item?.comboMenuItemId?._id ||
+  (item?.comboMenuItemId && typeof item.comboMenuItemId !== "object"
+    ? item.comboMenuItemId
+    : "") ||
   item?._id ||
   "";
 
-const getComboChildItem = (item) => item?.menuItem || item?.itemId || item;
+const getComboChildItem = (item) =>
+  (item?.menuItem && typeof item.menuItem === "object"
+    ? item.menuItem
+    : null) ||
+  (item?.itemId && typeof item.itemId === "object" ? item.itemId : null) ||
+  (item?.comboMenuItemId && typeof item.comboMenuItemId === "object"
+    ? item.comboMenuItemId
+    : null) ||
+  item;
 
 const getDiscountRequirementSource = (item) => {
   const bogoItems = Array.isArray(item?.bogoItems) ? item.bogoItems : [];
