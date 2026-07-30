@@ -680,7 +680,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
             <Text style={[styles.paymentButtonText, styles.cashPaymentButtonText]}>
               {paymentLoading === "cash"
                 ? "Completing..."
-                : `Cash $${toAmount(summary.total)}`}
+                : `Check Out $${toAmount(summary.total)}`}
             </Text>
             <Text style={[styles.paymentButtonSubText, styles.cashPaymentButtonSubText]}>
               No payment processing fee or gateway call

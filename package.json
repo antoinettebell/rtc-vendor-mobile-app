@@ -11,7 +11,8 @@
     "eas-build-pre-install": "node scripts/write-eas-env.js",
     "postinstall": "patch-package",
     "ios:entitlements:production": "node scripts/set-ios-entitlements.js production",
-    "ios:entitlements:tap-to-pay": "node scripts/set-ios-entitlements.js tapToPay"
+    "ios:entitlements:tap-to-pay": "node scripts/set-ios-entitlements.js tapToPay",
+    "test:discounts": "node src/helpers/discount.helper.test.mjs"
   },
   "dependencies": {
     "@d11/react-native-fast-image": "8.11.1",
