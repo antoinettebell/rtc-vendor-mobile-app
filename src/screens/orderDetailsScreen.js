@@ -66,7 +66,9 @@ const isCompletedRefundWindowExpired = (order) => {
 };
 
 const getDisplayOrderStatus = (order) =>
-  order?.refundStatus === "PENDING"
+  order?.paymentStatus === "REFUNDED"
+    ? "Refunded"
+    : order?.refundStatus === "PENDING"
     ? "Refund Pending"
     : orderCurrentStatusNames[order?.orderStatus];
 

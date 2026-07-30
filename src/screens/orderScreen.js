@@ -36,7 +36,9 @@ import { printOrderTickets } from "../helpers/print.helper";
 import AppImage from "../components/AppImage";
 
 const getDisplayOrderStatus = (order) =>
-  order?.refundStatus === "PENDING"
+  order?.paymentStatus === "REFUNDED"
+    ? "Refunded"
+    : order?.refundStatus === "PENDING"
     ? "Refund Pending"
     : orderCurrentStatusNames[order?.orderStatus];
 
@@ -609,6 +611,7 @@ const OrderScreen = ({ navigation }) => {
         page,
         limit: 20,
         advance,
+        orderView: "active",
         status: advance
           ? "PLACED, ACCEPTED, PREPARING, READY_FOR_PICKUP, DRIVER_PICKED_UP"
           : "PLACED, ACCEPTED, PREPARING, READY_FOR_PICKUP, DRIVER_PICKED_UP",
