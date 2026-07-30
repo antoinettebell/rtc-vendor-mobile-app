@@ -101,6 +101,12 @@ const menuItemRequiresOptions = (item) =>
     hasDiscountOptions(item)
   );
 
+const getItemCategory = (item) =>
+  item?.category?.name ||
+  item?.categoryId?.name ||
+  item?.categoryId?.categoriesId?.name ||
+  "Other";
+
 const VendorPosMenuScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -110,6 +116,7 @@ const VendorPosMenuScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [foodTruck, setFoodTruck] = useState(user?.foodTruck || null);
   const [items, setItems] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedItem, setSelectedItem] = useState(null);
   const [customizationInput, setCustomizationInput] = useState("");
   const [selectedFlavors, setSelectedFlavors] = useState([]);
@@ -127,6 +134,26 @@ const VendorPosMenuScreen = ({ navigation }) => {
       return acc;
     }, {});
   }, [order.items]);
+
+  const categories = useMemo(
+    () => ["All", ...Array.from(new Set(items.map(getItemCategory)))],
+    [items]
+  );
+  const visibleItems = useMemo(
+    () =>
+      items.filter(
+        (item) =>
+          selectedCategory === "All" ||
+          getItemCategory(item) === selectedCategory
+      ),
+    [items, selectedCategory]
+  );
+
+  useEffect(() => {
+    if (!categories.includes(selectedCategory)) {
+      setSelectedCategory("All");
+    }
+  }, [categories, selectedCategory]);
 
   const loadData = useCallback(async () => {
     if (!foodTruckId) {
@@ -431,8 +458,37 @@ const VendorPosMenuScreen = ({ navigation }) => {
             />
           </View>
 
+          <View style={styles.categoryContainer}>
+            <Text style={styles.categoryLabel}>Categories</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+            >
+              {categories.map((category) => (
+                <TouchableOpacity
+                  key={category}
+                  style={[
+                    styles.categoryChip,
+                    selectedCategory === category && styles.categoryChipActive,
+                  ]}
+                  onPress={() => setSelectedCategory(category)}
+                >
+                  <Text
+                    style={[
+                      styles.categoryChipText,
+                      selectedCategory === category &&
+                        styles.categoryChipTextActive,
+                    ]}
+                  >
+                    {category}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
           <FlatList
-            data={items}
+            data={visibleItems}
             keyExtractor={(item) => item._id}
             renderItem={renderItem}
             contentContainerStyle={styles.listContent}
@@ -623,6 +679,36 @@ const styles = StyleSheet.create({
   },
   loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
   guestBox: { padding: 16, borderBottomWidth: 1, borderBottomColor: AppColor.border },
+  categoryContainer: {
+    borderBottomColor: AppColor.border,
+    borderBottomWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  categoryLabel: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 15,
+    marginBottom: 8,
+  },
+  categoryChip: {
+    borderColor: AppColor.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    marginRight: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  categoryChipActive: {
+    backgroundColor: AppColor.primary,
+    borderColor: AppColor.primary,
+  },
+  categoryChipText: {
+    color: AppColor.black,
+    fontFamily: Mulish600,
+    fontSize: 13,
+  },
+  categoryChipTextActive: { color: AppColor.white },
   sectionTitle: { fontFamily: Mulish700, fontSize: 16, marginBottom: 8 },
   phoneInput: {
     borderWidth: 1,

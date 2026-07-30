@@ -302,12 +302,12 @@ const EmployeePosBoardScreen = ({ navigation }) => {
   }, [navigation]);
 
   const categories = useMemo(() => {
-    return Array.from(new Set(items.map(getItemCategory)));
+    return ["All", ...Array.from(new Set(items.map(getItemCategory)))];
   }, [items]);
 
   const visibleItems = useMemo(
     () =>
-      (!selectedCategory
+      (selectedCategory === "All"
         ? items
         : items.filter((item) => getItemCategory(item) === selectedCategory)
       ).filter((item) => item.available !== false),
@@ -398,9 +398,8 @@ const EmployeePosBoardScreen = ({ navigation }) => {
   }, [canUsePos, handleBack]);
 
   useEffect(() => {
-    if (!categories.length) return;
-    if (!selectedCategory || !categories.includes(selectedCategory)) {
-      setSelectedCategory(categories[0]);
+    if (!categories.includes(selectedCategory)) {
+      setSelectedCategory("All");
     }
   }, [categories, selectedCategory]);
 

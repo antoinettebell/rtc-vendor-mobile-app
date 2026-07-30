@@ -1427,7 +1427,7 @@ const DishItemDetailsModal = ({
             {hasFlavorChoices && (
               <View style={styles.actionSheetSection}>
                 <Text style={styles.sectionTitle}>
-                  {`Choose Plain or up to ${flavorsMaxCount} Flavor${
+                  {`${selectedMenuItem?.name || "Item"}: choose Plain or up to ${flavorsMaxCount} Flavor${
                     flavorsMaxCount === 1 ? "" : "s"
                   }:`}
                 </Text>
@@ -1469,7 +1469,7 @@ const DishItemDetailsModal = ({
             {hasToppingChoices && (
               <View style={styles.actionSheetSection}>
                 <Text style={styles.sectionTitle}>
-                  {`Choose Plain or up to ${toppingsMaxCount} Topping${
+                  {`${selectedMenuItem?.name || "Item"}: choose Plain or up to ${toppingsMaxCount} Topping${
                     toppingsMaxCount === 1 ? "" : "s"
                   }:`}
                 </Text>
