@@ -1013,6 +1013,7 @@ export const getOrderList_API = async ({
   limit = 20,
   status = null,
   advance = undefined,
+  orderView = null,
 } = {}) => {
   try {
     let URL = `${GET_ORDER_LIST}`;
@@ -1026,6 +1027,9 @@ export const getOrderList_API = async ({
     }
     if (advance !== undefined) {
       queryParams.push(`advance=${advance}`);
+    }
+    if (orderView) {
+      queryParams.push(`orderView=${orderView}`);
     }
 
     URL += `?${queryParams.join("&")}`;

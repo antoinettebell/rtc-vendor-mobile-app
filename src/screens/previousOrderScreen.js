@@ -39,6 +39,11 @@ const ORDER_PERIOD_FILTERS = [
 
 const PAST_ORDER_STATUSES = "DELIVERED, COMPLETED";
 
+const getDisplayOrderStatus = (order) =>
+  order?.paymentStatus === "REFUNDED"
+    ? "Refunded"
+    : orderCurrentStatusNames[order?.orderStatus];
+
 const PreviousOrderScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -97,7 +102,7 @@ const PreviousOrderScreen = ({ navigation }) => {
             {"Order Status"}
           </Text>
           <Text style={styles.menuAnchorText}>
-            {orderCurrentStatusNames[item?.orderStatus]}
+            {getDisplayOrderStatus(item)}
           </Text>
         </View>
         {/* Order ID and Location */}
@@ -212,6 +217,7 @@ const PreviousOrderScreen = ({ navigation }) => {
         page,
         limit: 100,
         status: PAST_ORDER_STATUSES,
+        orderView: "past",
       };
       const response = await getOrderList_API(reqPayload);
       console.log("reponse => ", response);
