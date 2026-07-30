@@ -90,6 +90,8 @@ const POST_PICKUP_STATUSES = [
 const TEN_MINUTES_MS = 10 * 60 * 1000;
 const SHIFT_ENDED_MESSAGE =
   "Your shift has ended. Please see your manager to be clocked back in.";
+const SHIFT_NOT_STARTED_MESSAGE =
+  "You are not currently clocked in. Please start your shift to continue.";
 
 const isCashPayment = (order) =>
   ["CASH", "COD"].includes(
@@ -159,6 +161,8 @@ const EmployeeSessionScreen = ({ navigation }) => {
   const capabilities = user?.employeeCapabilities || {};
   const canTapToPay = false;
   const isShiftActive = !!dashboard?.shift?.is_active;
+  const hasEndedCurrentOperationalDayShift =
+    !!dashboard?.shift?.ended_at && !isShiftActive;
   const locationIsOpen =
     (assignedTruckUnit?.open_locations || []).some(
       (location) =>
@@ -230,12 +234,17 @@ const EmployeeSessionScreen = ({ navigation }) => {
   const runShiftProtectedAction = useCallback(
     (action) => {
       if (!isShiftActive) {
-        Alert.alert("Shift ended", SHIFT_ENDED_MESSAGE);
+        Alert.alert(
+          hasEndedCurrentOperationalDayShift ? "Shift ended" : "Shift not started",
+          hasEndedCurrentOperationalDayShift
+            ? SHIFT_ENDED_MESSAGE
+            : SHIFT_NOT_STARTED_MESSAGE,
+        );
         return;
       }
       action();
     },
-    [isShiftActive],
+    [hasEndedCurrentOperationalDayShift, isShiftActive],
   );
 
   useFocusEffect(
