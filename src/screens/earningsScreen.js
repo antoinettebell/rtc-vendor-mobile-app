@@ -499,25 +499,26 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
     }
   };
 
-  const runVendorEmployeeShiftAction = async (employee, action) => {
+  const runVendorEmployeeShiftAction = async (employee, action, reason = null) => {
     const employeeId = employee?.employee_id || employee?._id;
     if (!employeeId) {
       Alert.alert("Employee unavailable", "Could not identify this employee.");
       return;
     }
 
-    const isReopen = action === "REOPEN";
+    const isReopen = action === "OVERRIDE_START";
     setEmployeeShiftActionLoading(`${employeeId}:${action}`);
     try {
       await vendorEmployeeShiftAction_API({
         employee_id: employeeId,
         action,
+        reason,
       });
       await onRefresh({ isInitialLoad: false });
       Alert.alert(
         "Shift updated",
         isReopen
-          ? "The employee has been clocked back in."
+          ? "The employee has been clocked back in with a new override shift."
           : "The employee shift has been ended.",
       );
     } catch (error) {
@@ -531,17 +532,38 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
   };
 
   const confirmVendorEmployeeShiftAction = (employee, action) => {
-    const isReopen = action === "REOPEN";
+    const isReopen = action === "OVERRIDE_START";
+    if (isReopen) {
+      const name = employee?.employee_name || "Employee";
+      const endedAt = formatShiftDateTime(employee?.shift?.ended_at) || "Unknown";
+      Alert.prompt(
+        "Override Clock-In",
+        `${name}\nMost recent clock-out: ${endedAt}\n\nEnter the override reason.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Override Clock-In",
+            onPress: (reason) => {
+              if (!reason?.trim()) {
+                Alert.alert("Reason required", "Enter an override reason.");
+                return;
+              }
+              runVendorEmployeeShiftAction(employee, action, reason.trim());
+            },
+          },
+        ],
+        "plain-text",
+      );
+      return;
+    }
     Alert.alert(
-      isReopen ? "Clock employee back in?" : "End employee shift?",
-      isReopen
-        ? "This will delete the current clock-out time and mark the shift active again."
-        : "This will record the employee clock-out time now.",
+      "End employee shift?",
+      "This records the clock-out time and immediately blocks employee access.",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: isReopen ? "Clock In" : "End Shift",
-          style: isReopen ? "default" : "destructive",
+          text: "End Shift",
+          style: "destructive",
           onPress: () => runVendorEmployeeShiftAction(employee, action),
         },
       ],
@@ -1116,9 +1138,9 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                         const employeeId = employee.employee_id || employee._id;
                         const canEndEmployeeShift = !!employee.shift?.is_active;
                         const canReopenEmployeeShift =
-                          !employee.shift?.is_active && !!employee.shift?.ended_at;
+                          !!employee.shift?.can_override_clock_in;
                         const shiftActionKey = canReopenEmployeeShift
-                          ? `${employeeId}:REOPEN`
+                          ? `${employeeId}:OVERRIDE_START`
                           : `${employeeId}:END`;
                         const isShiftActionLoading =
                           employeeShiftActionLoading === shiftActionKey;
@@ -1201,7 +1223,7 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                                   onPress={() =>
                                     confirmVendorEmployeeShiftAction(
                                       employee,
-                                      canReopenEmployeeShift ? "REOPEN" : "END",
+                                      canReopenEmployeeShift ? "OVERRIDE_START" : "END",
                                     )
                                   }
                                 >
@@ -1215,7 +1237,7 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                                     {isShiftActionLoading
                                       ? "Updating..."
 	                                      : canReopenEmployeeShift
-	                                        ? "Clock Back In"
+	                                        ? "Override Clock-In"
 	                                        : "End Shift"}
 	                                  </Text>
 	                                </Pressable>

@@ -1234,11 +1234,11 @@ export const getVendorEmployeeShiftHistory_API = async ({
   }
 };
 
-export const vendorEmployeeShiftAction_API = async ({ employee_id, action }) => {
+export const vendorEmployeeShiftAction_API = async ({ employee_id, action, reason = null }) => {
   try {
     const response = await apiClient.post(
       VENDOR_EMPLOYEE_SESSION_ACTION(employee_id),
-      { action },
+      { action, reason },
       { skipToken: false },
     );
     return response?.data;
