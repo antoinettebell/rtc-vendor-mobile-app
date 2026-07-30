@@ -190,6 +190,8 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
   const [reviewLoading, setReviewLoading] = useState(false);
   const [employeeShiftActionLoading, setEmployeeShiftActionLoading] =
     useState(null);
+  const [overrideEmployee, setOverrideEmployee] = useState(null);
+  const [overrideReason, setOverrideReason] = useState("");
   const [filterPicker, setFilterPicker] = useState(null);
 
   const canTapToPay = false;
@@ -210,9 +212,7 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
     }
     return employees;
   }, [employeeStatusFilter, employees]);
-  const visibleEmployees = statusFilteredEmployees.filter(
-    (employee) => employee.is_working
-  );
+  const visibleEmployees = statusFilteredEmployees;
 
   const paymentFilters = useMemo(
     () =>
@@ -515,6 +515,10 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
         reason,
       });
       await onRefresh({ isInitialLoad: false });
+      if (isReopen) {
+        setOverrideEmployee(null);
+        setOverrideReason("");
+      }
       Alert.alert(
         "Shift updated",
         isReopen
@@ -534,26 +538,8 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
   const confirmVendorEmployeeShiftAction = (employee, action) => {
     const isReopen = action === "OVERRIDE_START";
     if (isReopen) {
-      const name = employee?.employee_name || "Employee";
-      const endedAt = formatShiftDateTime(employee?.shift?.ended_at) || "Unknown";
-      Alert.prompt(
-        "Override Clock-In",
-        `${name}\nMost recent clock-out: ${endedAt}\n\nEnter the override reason.`,
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Override Clock-In",
-            onPress: (reason) => {
-              if (!reason?.trim()) {
-                Alert.alert("Reason required", "Enter an override reason.");
-                return;
-              }
-              runVendorEmployeeShiftAction(employee, action, reason.trim());
-            },
-          },
-        ],
-        "plain-text",
-      );
+      setOverrideEmployee(employee);
+      setOverrideReason("");
       return;
     }
     Alert.alert(
@@ -685,6 +671,74 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
               >
                 <Text style={styles.modalPrimaryText}>
                   {reviewLoading ? "Saving..." : reviewStatus}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        animationType="fade"
+        transparent
+        visible={!!overrideEmployee}
+        onRequestClose={() => {
+          if (!employeeShiftActionLoading) {
+            setOverrideEmployee(null);
+            setOverrideReason("");
+          }
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Override Clock-In</Text>
+            <Text style={styles.modalMeta}>
+              {overrideEmployee?.employee_name || "Employee"}
+            </Text>
+            <Text style={styles.modalMeta}>
+              Most recent clock-out:{" "}
+              {formatShiftDateTime(overrideEmployee?.shift?.ended_at) ||
+                "Not available"}
+            </Text>
+            <Text style={styles.modalLabel}>Override reason</Text>
+            <TextInput
+              multiline
+              value={overrideReason}
+              onChangeText={setOverrideReason}
+              placeholder="Required"
+              placeholderTextColor={AppColor.textHighlighter}
+              style={styles.notesInput}
+            />
+            <View style={styles.modalActions}>
+              <Pressable
+                style={styles.modalSecondary}
+                disabled={!!employeeShiftActionLoading}
+                onPress={() => {
+                  setOverrideEmployee(null);
+                  setOverrideReason("");
+                }}
+              >
+                <Text style={styles.modalSecondaryText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={styles.modalPrimary}
+                disabled={!!employeeShiftActionLoading}
+                onPress={() => {
+                  const reason = overrideReason.trim();
+                  if (!reason) {
+                    Alert.alert("Reason required", "Enter an override reason.");
+                    return;
+                  }
+                  runVendorEmployeeShiftAction(
+                    overrideEmployee,
+                    "OVERRIDE_START",
+                    reason,
+                  );
+                }}
+              >
+                <Text style={styles.modalPrimaryText}>
+                  {employeeShiftActionLoading
+                    ? "Clocking In..."
+                    : "Override Clock-In"}
                 </Text>
               </Pressable>
             </View>
@@ -1255,12 +1309,12 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                         />
                         <Text style={styles.emptyActivityTitle}>
                           {employees.length
-                            ? "No employees currently working"
+                            ? "No employees match these filters"
                             : "No activity found"}
                         </Text>
                         <Text style={styles.emptyActivityText}>
                           {employees.length
-                            ? "No active employee sessions right now."
+                            ? "Try changing the employee status filter."
                             : "Try changing the filters or selecting a wider date range."}
                         </Text>
                       </View>
