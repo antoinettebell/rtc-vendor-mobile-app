@@ -87,6 +87,8 @@ const POST_PICKUP_STATUSES = [
   orderStatusStrings.completed,
 ];
 const TEN_MINUTES_MS = 10 * 60 * 1000;
+const SHIFT_ENDED_MESSAGE =
+  "Your shift has ended. Please see your manager to be clocked back in.";
 
 const isCashPayment = (order) =>
   ["CASH", "COD"].includes(
@@ -155,6 +157,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
   const assignedTruckUnit = dashboard?.assignedTruckUnit || user?.assignedTruckUnit;
   const capabilities = user?.employeeCapabilities || {};
   const canTapToPay = !!capabilities.tapToPay;
+  const isShiftActive = !!dashboard?.shift?.is_active;
   const locationIsOpen =
     (assignedTruckUnit?.open_locations || []).some(
       (location) =>
@@ -196,14 +199,23 @@ const EmployeeSessionScreen = ({ navigation }) => {
   const loadDashboard = useCallback(async () => {
     const response = await getEmployeeDashboard_API();
     if (response?.success && response?.data?.dashboard) {
-      setDashboard(response.data.dashboard);
+      const nextDashboard = response.data.dashboard;
+      setDashboard(nextDashboard);
+      return nextDashboard;
     }
+    return null;
   }, []);
 
   const refreshDashboard = useCallback(async () => {
     setLoading(true);
     try {
-      await Promise.all([loadDashboard(), loadOrders(), loadRequests()]);
+      const nextDashboard = await loadDashboard();
+      if (nextDashboard?.shift?.is_active) {
+        await Promise.all([loadOrders(), loadRequests()]);
+      } else {
+        setOrders([]);
+        setRequests([]);
+      }
     } catch (error) {
       Alert.alert(
         "Dashboard unavailable",
@@ -213,6 +225,17 @@ const EmployeeSessionScreen = ({ navigation }) => {
       setLoading(false);
     }
   }, [loadDashboard, loadOrders, loadRequests]);
+
+  const runShiftProtectedAction = useCallback(
+    (action) => {
+      if (!isShiftActive) {
+        Alert.alert("Shift ended", SHIFT_ENDED_MESSAGE);
+        return;
+      }
+      action();
+    },
+    [isShiftActive],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -649,8 +672,15 @@ const EmployeeSessionScreen = ({ navigation }) => {
                 </View>
                 <TouchableOpacity
                   activeOpacity={0.8}
-                  style={styles.takeoutButton}
-                  onPress={() => navigation.navigate("employeePosBoardScreen")}
+                  style={[
+                    styles.takeoutButton,
+                    !isShiftActive && styles.disabledButton,
+                  ]}
+                  onPress={() =>
+                    runShiftProtectedAction(() =>
+                      navigation.navigate("employeePosBoardScreen"),
+                    )
+                  }
                 >
                   <Text style={styles.takeoutButtonText}>Take-Out Order</Text>
                 </TouchableOpacity>
@@ -681,11 +711,16 @@ const EmployeeSessionScreen = ({ navigation }) => {
                   return (
                     <TouchableOpacity
                       key={bucket.value}
-                      style={styles.bucketCard}
+                      style={[
+                        styles.bucketCard,
+                        !isShiftActive && styles.disabledButton,
+                      ]}
                       onPress={() =>
-                        navigation.navigate("employeeOrderManagementScreen", {
-                          bucket: bucket.value,
-                        })
+                        runShiftProtectedAction(() =>
+                          navigation.navigate("employeeOrderManagementScreen", {
+                            bucket: bucket.value,
+                          }),
+                        )
                       }
                     >
                       <Text style={styles.bucketCount}>
@@ -707,11 +742,16 @@ const EmployeeSessionScreen = ({ navigation }) => {
                   return (
                     <TouchableOpacity
                       key={bucket.value}
-                      style={styles.bucketCard}
+                      style={[
+                        styles.bucketCard,
+                        !isShiftActive && styles.disabledButton,
+                      ]}
                       onPress={() =>
-                        navigation.navigate("employeeRefundRequestsScreen", {
-                          bucket: bucket.value,
-                        })
+                        runShiftProtectedAction(() =>
+                          navigation.navigate("employeeRefundRequestsScreen", {
+                            bucket: bucket.value,
+                          }),
+                        )
                       }
                     >
                       <Text style={styles.bucketCount}>
