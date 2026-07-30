@@ -60,6 +60,15 @@ const EmployeeShiftScreen = ({ navigation }) => {
   const assignedLocation = dashboard?.assignedLocation || user?.assignedLocation;
   const assignedTruckUnit =
     dashboard?.assignedTruckUnit || user?.assignedTruckUnit || null;
+  const employeeProfile = dashboard?.employee || user || {};
+  const employeeAddress = [
+    employeeProfile.address_line1,
+    employeeProfile.address_city,
+    employeeProfile.address_state,
+    employeeProfile.zip_code,
+  ]
+    .filter(Boolean)
+    .join(", ");
   const shift = dashboard?.shift || {};
   const isOnDuty =
     dashboard?.employee?.is_working !== undefined
@@ -260,6 +269,46 @@ const EmployeeShiftScreen = ({ navigation }) => {
                 {isOnDuty ? "Working" : "Off duty"}
               </Text>
             </View>
+          </View>
+        </View>
+
+        <View style={styles.panel}>
+          <Text style={styles.panelTitle}>Employee Profile</Text>
+          <Text style={styles.caption}>Read only — contact your manager for changes</Text>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Name</Text>
+            <Text style={styles.detailValue}>
+              {employeeProfile.name ||
+                [user?.first_name, user?.last_name].filter(Boolean).join(" ") ||
+                "Not available"}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Employee ID</Text>
+            <Text style={styles.detailValue}>
+              {employeeProfile.employee_login_id || "Not available"}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Phone</Text>
+            <Text style={styles.detailValue}>
+              {employeeProfile.phone_number || "Not available"}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Address</Text>
+            <Text style={styles.detailValue}>
+              {employeeAddress || "Not available"}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Hourly rate</Text>
+            <Text style={styles.detailValue}>
+              {employeeProfile.employee_rate === null ||
+              employeeProfile.employee_rate === undefined
+                ? "Not available"
+                : `$${Number(employeeProfile.employee_rate).toFixed(2)}`}
+            </Text>
           </View>
         </View>
 

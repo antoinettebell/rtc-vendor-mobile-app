@@ -3,9 +3,13 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   RefreshControl,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -92,6 +96,8 @@ const SHIFT_ENDED_MESSAGE =
   "Your shift has ended. Please see your manager to be clocked back in.";
 const SHIFT_NOT_STARTED_MESSAGE =
   "You are not currently clocked in. Please start your shift to continue.";
+const SHIFT_ON_BREAK_MESSAGE =
+  "Your shift is paused for break. Please resume your shift to log back in.";
 
 const isCashPayment = (order) =>
   ["CASH", "COD"].includes(
@@ -161,6 +167,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
   const capabilities = user?.employeeCapabilities || {};
   const canTapToPay = false;
   const isShiftActive = !!dashboard?.shift?.is_active;
+  const isOnBreak = dashboard?.shift?.shift_status === "ON_BREAK";
   const hasEndedCurrentOperationalDayShift =
     !!dashboard?.shift?.ended_at && !isShiftActive;
   const locationIsOpen =
@@ -215,7 +222,10 @@ const EmployeeSessionScreen = ({ navigation }) => {
     setLoading(true);
     try {
       const nextDashboard = await loadDashboard();
-      if (nextDashboard?.shift?.is_active) {
+      if (
+        nextDashboard?.shift?.is_active &&
+        nextDashboard?.shift?.shift_status !== "ON_BREAK"
+      ) {
         await Promise.all([loadOrders(), loadRequests()]);
       } else {
         setOrders([]);
@@ -233,7 +243,11 @@ const EmployeeSessionScreen = ({ navigation }) => {
 
   const runShiftProtectedAction = useCallback(
     (action) => {
-      if (!isShiftActive) {
+      if (!isShiftActive || isOnBreak) {
+        if (isOnBreak) {
+          Alert.alert("Shift paused", SHIFT_ON_BREAK_MESSAGE);
+          return;
+        }
         Alert.alert(
           hasEndedCurrentOperationalDayShift ? "Shift ended" : "Shift not started",
           hasEndedCurrentOperationalDayShift
@@ -244,7 +258,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
       }
       action();
     },
-    [hasEndedCurrentOperationalDayShift, isShiftActive],
+    [hasEndedCurrentOperationalDayShift, isOnBreak, isShiftActive],
   );
 
   useFocusEffect(
@@ -552,7 +566,14 @@ const EmployeeSessionScreen = ({ navigation }) => {
         visible={!!requestModalOrder}
         onRequestClose={() => setRequestModalOrder(null)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalOverlay}
+        >
+          <ScrollView
+            contentContainerStyle={styles.modalScrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Refund/Cancel Request</Text>
             <Text style={styles.modalMeta}>
@@ -623,7 +644,10 @@ const EmployeeSessionScreen = ({ navigation }) => {
 	            <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalSecondary}
-                onPress={() => setRequestModalOrder(null)}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setRequestModalOrder(null);
+                }}
               >
                 <Text style={styles.modalSecondaryText}>Close</Text>
               </TouchableOpacity>
@@ -638,7 +662,8 @@ const EmployeeSessionScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
       <View style={styles.header}>
         <View>
@@ -688,7 +713,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
                   activeOpacity={0.8}
                   style={[
                     styles.takeoutButton,
-                    !isShiftActive && styles.disabledButton,
+                    (!isShiftActive || isOnBreak) && styles.disabledButton,
                   ]}
                   onPress={() =>
                     runShiftProtectedAction(() =>
@@ -727,7 +752,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
                       key={bucket.value}
                       style={[
                         styles.bucketCard,
-                        !isShiftActive && styles.disabledButton,
+                        (!isShiftActive || isOnBreak) && styles.disabledButton,
                       ]}
                       onPress={() =>
                         runShiftProtectedAction(() =>
@@ -758,7 +783,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
                       key={bucket.value}
                       style={[
                         styles.bucketCard,
-                        !isShiftActive && styles.disabledButton,
+                        (!isShiftActive || isOnBreak) && styles.disabledButton,
                       ]}
                       onPress={() =>
                         runShiftProtectedAction(() =>
@@ -1228,6 +1253,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     padding: 16,
+  },
+  modalScrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    width: "100%",
   },
   modalCard: {
     backgroundColor: AppColor.white,
