@@ -572,7 +572,6 @@ const DishItemDetailsModal = ({
     hasFlavorChoices ||
     hasToppingChoices ||
     hasComboSideChoices ||
-    !!selectedMenuItem?.allowCustomize ||
     configuredComboItems.length > 0;
   const discountRequirementsComplete =
     (!hasDiscountFlavorChoices ||
@@ -595,7 +594,6 @@ const DishItemDetailsModal = ({
     hasDiscountFlavorChoices ||
     hasDiscountToppingChoices ||
     hasDiscountComboSideChoices ||
-    hasDiscountCustomization ||
     configuredDiscountComboItems.length > 0;
 
   const isRequirementExpanded = useCallback(
