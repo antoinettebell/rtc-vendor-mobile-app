@@ -15,6 +15,9 @@ export const calculateRewardQty = (quantity, discountRules) => {
   return eligibleSets * normalizedGetQty;
 };
 
+export const roundCurrency = (value) =>
+  Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+
 export const normalizeMenuOptions = (item, type) => {
   const optionsKey = `${type}Options`;
   const legacyKey = type === "flavor" ? "flavors" : "toppings";
@@ -73,8 +76,24 @@ export const calculateSelectedOptionCost = (
         typeof selectedOption === "string"
           ? selectedOption
           : selectedOption?.name || selectedOption?.label || "";
-      const match = options.find((option) => option.name === selectedName);
-      return sum + (match?.hasCost ? Number(match.cost) || 0 : 0);
+      const normalizedSelectedName = selectedName.trim().toLowerCase();
+      const match = options.find(
+        (option) =>
+          String(option.name || "").trim().toLowerCase() ===
+          normalizedSelectedName
+      );
+      const selectedOptionCost =
+        typeof selectedOption === "object" && selectedOption?.hasCost !== false
+          ? Number(
+              selectedOption?.cost ??
+                selectedOption?.price ??
+                selectedOption?.additionalCost ??
+                selectedOption?.extraCost ??
+                0
+            ) || 0
+          : 0;
+      return sum +
+        (match?.hasCost ? Number(match.cost) || 0 : selectedOptionCost);
     }, 0);
   };
 
@@ -180,6 +199,10 @@ export const getDiscountSourceItem = (item) => {
       differentItemReward?.toppings?.length > 0
         ? differentItemReward.toppings
         : nestedReward?.toppings,
+    subItem:
+      differentItemReward?.subItem?.length > 0
+        ? differentItemReward.subItem
+        : nestedReward?.subItem,
   };
 };
 
@@ -198,7 +221,7 @@ export const calculateItemTotalWithDiscount = (item) => {
   if (discountRules && discountRules.discount > 0) {
     const { discount: discountVal = 0 } = discountRules;
     const rewardQty = calculateRewardQty(quantity, discountRules);
-    const basePrice = Number(price) || 0;
+    const rewardBasePrice = Number(discountSourceItem?.price ?? price) || 0;
     const rewardOptionsCost = calculateSelectedOptionCost(
       item,
       "selectedDiscountFlavors",
@@ -206,8 +229,8 @@ export const calculateItemTotalWithDiscount = (item) => {
       discountSourceItem
     ) + calculateNestedSelectedOptionCost(item?.selectedDiscountSubItems);
 
-    const rewardTotal = rewardQty * (basePrice + rewardOptionsCost);
-    const discountAmount = rewardQty * basePrice * discountVal;
+    const rewardTotal = rewardQty * (rewardBasePrice + rewardOptionsCost);
+    const discountAmount = rewardQty * rewardBasePrice * discountVal;
 
     total = unitPrice * quantity + rewardTotal - discountAmount;
   } else if (discountType === "BOGO") {
@@ -219,7 +242,7 @@ export const calculateItemTotalWithDiscount = (item) => {
     ) + calculateNestedSelectedOptionCost(item?.selectedDiscountSubItems);
     total = unitPrice * quantity + rewardOptionsCost * quantity;
   } else if (discountType === "BOGOHO") {
-    const basePrice = Number(price) || 0;
+    const rewardBasePrice = Number(discountSourceItem?.price ?? price) || 0;
     const rewardOptionsCost = calculateSelectedOptionCost(
       item,
       "selectedDiscountFlavors",
@@ -228,12 +251,13 @@ export const calculateItemTotalWithDiscount = (item) => {
     ) + calculateNestedSelectedOptionCost(item?.selectedDiscountSubItems);
     total =
       item.bogoHoPrice != null
-        ? item.bogoHoPrice * quantity + rewardOptionsCost * quantity
+        ? unitPrice * quantity +
+          (Number(item.bogoHoPrice) + rewardOptionsCost) * quantity
         : unitPrice * quantity +
-          (basePrice * 0.5 + rewardOptionsCost) * quantity;
+          (rewardBasePrice * 0.5 + rewardOptionsCost) * quantity;
   }
 
-  return total;
+  return roundCurrency(total);
 };
 
 export const getRewardItemsDisplay = (item, quantityToUseArg) => {
@@ -273,12 +297,13 @@ export const getRewardItemsDisplay = (item, quantityToUseArg) => {
               ? rewardQty
               : rewardQty * biQtySafe;
           const rewardDisplayPrice =
-            bi.isSameItem &&
-            bi.discountVal != null &&
-            Number.isFinite(Number(bi.price))
+            bi.discountVal != null && Number.isFinite(Number(bi.price))
               ? Number(bi.price)
-              : (Number(bi.isSameItem ? safeItem.price : bi.itemId?.price) ||
-                  0) *
+              : (Number(
+                  bi.isSameItem
+                    ? safeItem.price
+                    : bi.itemId?.price ?? bi.price
+                ) || 0) *
                 (1 - discountVal);
 
           return {

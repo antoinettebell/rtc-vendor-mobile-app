@@ -10,6 +10,27 @@ const helperModuleUrl = `data:text/javascript;base64,${Buffer.from(
 ).toString("base64")}`;
 const { calculateItemTotalWithDiscount } = await import(helperModuleUrl);
 
+assert.equal(
+  calculateItemTotalWithDiscount({
+    price: 0.01,
+    quantity: 1,
+    discountType: "BOGOHO",
+    discountRules: { buyQty: 1, getQty: 1, discount: 0.5, repeatable: true },
+    selectedToppings: ["Paid topping"],
+    bogoItems: [{
+      price: 0.01,
+      isSameItem: true,
+    }],
+    selectedDiscountToppings: ["Reward topping"],
+    // Same-item rewards resolve their modifier definitions from the parent.
+    toppingOptions: [
+      { name: "Paid topping", hasCost: true, cost: 0.25 },
+      { name: "Reward topping", hasCost: true, cost: 0.5 },
+    ],
+  }),
+  0.77
+);
+
 const loadedFries = {
   menuItem: {
     toppingOptions: [
