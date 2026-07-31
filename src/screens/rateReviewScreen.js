@@ -61,7 +61,8 @@ const RateReviewScreen = ({ navigation }) => {
         />
         <View style={{ flex: 1, marginLeft: 16, gap: 5 }}>
           <Text style={styles.userName}>
-            {item?.user?.firstName || ""} {item?.user?.lastName || ""}
+            {[item?.user?.firstName, item?.user?.lastName].filter(Boolean).join(" ") ||
+              "Verified customer"}
           </Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 1 }}>
             {renderStatsStars(item.rate)}
@@ -87,17 +88,25 @@ const RateReviewScreen = ({ navigation }) => {
 
   const renderHeaderComponent = () => {
     if (!reviewStats) return null;
+    const reviewCount = Number(
+      reviewStats.reviewCount ?? reviewStats.totalReviews ?? 0,
+    );
+    const averageRating = Number(
+      reviewStats.averageRating ?? reviewStats.avgRate,
+    );
+    const hasReviews = reviewCount > 0 && Number.isFinite(averageRating);
 
     return (
       <View style={styles.statsContainer}>
         <View style={{ flex: 0.6 }}>
           <Text style={styles.statsTitle}>
-            {"★ "}
-            <Text style={{ color: AppColor.black }}>{reviewStats.avgRate}</Text>
+            {hasReviews ? `★ ${averageRating.toFixed(1)}` : "New vendor"}
           </Text>
           <Text style={styles.totalReviews}>
-            {reviewStats.totalReviews}
-            <Text style={{ color: AppColor.gray }}>{`\nReviews`}</Text>
+            {reviewCount}
+            <Text style={{ color: AppColor.gray }}>
+              {`\n${reviewCount === 1 ? "Review" : "Reviews"}`}
+            </Text>
           </Text>
         </View>
         <View
