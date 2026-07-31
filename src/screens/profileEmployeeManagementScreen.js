@@ -27,12 +27,14 @@ import { permission } from "../helpers/permission.helper";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 import {
   archiveVendorEmployee_API,
+  archiveVendorEmployeeShiftHistory_API,
   createVendorEmployee_API,
   deleteVendorEmployee_API,
   getVendorEmployeeShiftHistory_API,
   getVendorEmployees_API,
   resetVendorEmployeePin_API,
   updateVendorEmployee_API,
+  updateVendorEmployeeShiftHistory_API,
   uploadImage_API,
 } from "../api/appAPI";
 
@@ -121,6 +123,13 @@ const formatShiftHours = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? `${parsed.toFixed(2)} hrs` : "Pending";
 };
+const formatTimecardInput = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (part) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+const parseTimecardInput = (value) => new Date(String(value || "").trim().replace(" ", "T"));
 
 const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -149,6 +158,9 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const [shiftHistoryRange, setShiftHistoryRange] = useState("week");
   const [shiftHistoryByEmployee, setShiftHistoryByEmployee] = useState({});
   const [shiftHistoryLoadingId, setShiftHistoryLoadingId] = useState(null);
+  const [shiftHistoryExpanded, setShiftHistoryExpanded] = useState({});
+  const [editingShiftId, setEditingShiftId] = useState(null);
+  const [shiftEditDraft, setShiftEditDraft] = useState(null);
   const [employeeIdUploading, setEmployeeIdUploading] = useState(false);
   const isManageMode = managementMode === "manage";
 
@@ -411,6 +423,90 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const selectShiftHistoryRange = async (employee, range) => {
     setShiftHistoryRange(range);
     await loadShiftHistory(employee, range);
+  };
+
+  const toggleShiftHistory = async (employee) => {
+    const willExpand = !shiftHistoryExpanded[employee._id];
+    setShiftHistoryExpanded((current) => ({
+      ...current,
+      [employee._id]: willExpand,
+    }));
+    if (willExpand && !(shiftHistoryByEmployee[employee._id] || []).length) {
+      await loadShiftHistory(employee);
+    }
+  };
+
+  const beginShiftEdit = (session) => {
+    setEditingShiftId(session.employee_session_id);
+    setShiftEditDraft({
+      started_at: formatTimecardInput(session.started_at),
+      ended_at: formatTimecardInput(session.ended_at),
+      total_break_minutes: String(session.total_break_minutes || 0),
+      reason: "",
+    });
+  };
+
+  const saveShiftEdit = async (employee, session) => {
+    const startedAt = parseTimecardInput(shiftEditDraft?.started_at);
+    const endedAt = parseTimecardInput(shiftEditDraft?.ended_at);
+    if (
+      Number.isNaN(startedAt.getTime()) ||
+      Number.isNaN(endedAt.getTime()) ||
+      !shiftEditDraft?.reason?.trim()
+    ) {
+      Alert.alert("Timecard incomplete", "Enter valid start/end times and an edit reason.");
+      return;
+    }
+    try {
+      await updateVendorEmployeeShiftHistory_API({
+        employee_id: employee._id,
+        session_id: session.employee_session_id,
+        payload: {
+          started_at: startedAt.toISOString(),
+          ended_at: endedAt.toISOString(),
+          total_break_minutes: Number(shiftEditDraft.total_break_minutes || 0),
+          reason: shiftEditDraft.reason.trim(),
+        },
+      });
+      setEditingShiftId(null);
+      setShiftEditDraft(null);
+      await loadShiftHistory(employee);
+      Alert.alert("Timecard updated", "The original values were retained in the audit history.");
+    } catch (error) {
+      Alert.alert("Update failed", error?.message || "Could not update this timecard.");
+    }
+  };
+
+  const archiveShiftHistory = (employee) => {
+    const sessions = (shiftHistoryByEmployee[employee._id] || []).filter(
+      (session) => !session.is_active && session.ended_at,
+    );
+    if (!sessions.length) {
+      Alert.alert("Nothing to archive", "Only completed timecards can be archived.");
+      return;
+    }
+    Alert.alert(
+      "Archive shift history?",
+      "These timecards will remain stored for reporting and audit history, but cannot be edited afterward.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Archive",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await archiveVendorEmployeeShiftHistory_API({
+                employee_id: employee._id,
+                session_ids: sessions.map((session) => session.employee_session_id),
+              });
+              await loadShiftHistory(employee);
+            } catch (error) {
+              Alert.alert("Archive failed", error?.message || "Please try again.");
+            }
+          },
+        },
+      ],
+    );
   };
 
   const setEmployeeLocationDraft = (employeeId, locationId) => {
@@ -1512,8 +1608,17 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                 expandedEmployeeId === employee._id ? (
                 <View style={styles.shiftHistorySection}>
                   <View style={styles.shiftHistoryHeader}>
-                    <Text style={styles.submenuTitle}>Shift History</Text>
-                    <View style={styles.shiftFilterRow}>
+                    <TouchableOpacity
+                      style={styles.shiftHistoryTitleButton}
+                      onPress={() => toggleShiftHistory(employee)}
+                    >
+                      <Text style={styles.submenuTitle}>Shift History</Text>
+                      <IconButton
+                        icon={shiftHistoryExpanded[employee._id] ? "chevron-up" : "chevron-down"}
+                        size={20}
+                      />
+                    </TouchableOpacity>
+                    {shiftHistoryExpanded[employee._id] ? <View style={styles.shiftFilterRow}>
                       {SHIFT_HISTORY_FILTERS.map((filter) => (
                         <TouchableOpacity
                           key={filter.value}
@@ -1535,17 +1640,64 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                           </Text>
                         </TouchableOpacity>
                       ))}
-                    </View>
+                    </View> : null}
                   </View>
 
-                  {shiftHistoryLoadingId === employee._id ? (
+                  {shiftHistoryExpanded[employee._id] && shiftHistoryLoadingId === employee._id ? (
                     <ActivityIndicator color={AppColor.primary} style={{ marginTop: 12 }} />
-                  ) : (shiftHistoryByEmployee[employee._id] || []).length ? (
+                  ) : shiftHistoryExpanded[employee._id] && (shiftHistoryByEmployee[employee._id] || []).length ? (
                     (shiftHistoryByEmployee[employee._id] || []).map((session) => (
                       <View
                         key={session.employee_session_id || session._id}
                         style={styles.shiftHistoryItem}
                       >
+                        <View style={styles.timecardTitleRow}>
+                          <Text style={styles.shiftHistoryValue}>
+                            {session.operational_day_key || "Shift"}
+                          </Text>
+                          {!session.is_active ? (
+                            <TouchableOpacity onPress={() => beginShiftEdit(session)}>
+                              <IconButton icon="pencil" size={18} />
+                            </TouchableOpacity>
+                          ) : null}
+                        </View>
+                        {editingShiftId === session.employee_session_id ? (
+                          <View style={styles.timecardEditor}>
+                            <Text style={styles.label}>Start (YYYY-MM-DD HH:mm)</Text>
+                            <TextInput
+                              style={styles.input}
+                              value={shiftEditDraft?.started_at || ""}
+                              onChangeText={(value) => setShiftEditDraft((draft) => ({ ...draft, started_at: value }))}
+                            />
+                            <Text style={styles.label}>End (YYYY-MM-DD HH:mm)</Text>
+                            <TextInput
+                              style={styles.input}
+                              value={shiftEditDraft?.ended_at || ""}
+                              onChangeText={(value) => setShiftEditDraft((draft) => ({ ...draft, ended_at: value }))}
+                            />
+                            <Text style={styles.label}>Break minutes</Text>
+                            <TextInput
+                              style={styles.input}
+                              keyboardType="number-pad"
+                              value={shiftEditDraft?.total_break_minutes || ""}
+                              onChangeText={(value) => setShiftEditDraft((draft) => ({ ...draft, total_break_minutes: value.replace(/\D/g, "") }))}
+                            />
+                            <Text style={styles.label}>Reason for edit</Text>
+                            <TextInput
+                              style={styles.input}
+                              value={shiftEditDraft?.reason || ""}
+                              onChangeText={(value) => setShiftEditDraft((draft) => ({ ...draft, reason: value }))}
+                            />
+                            <View style={styles.buttonRow}>
+                              <TouchableOpacity style={styles.secondaryButton} onPress={() => setEditingShiftId(null)}>
+                                <Text style={styles.secondaryButtonText}>Cancel</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity style={styles.smallPrimaryButton} onPress={() => saveShiftEdit(employee, session)}>
+                                <Text style={styles.primaryButtonText}>Save Hours</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        ) : <>
                         <View style={styles.shiftHistoryRow}>
                           <View>
                             <Text style={styles.shiftHistoryLabel}>Start</Text>
@@ -1581,13 +1733,22 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                             Breaks: {session.total_break_minutes || 0} min
                           </Text>
                         </View>
+                        </>}
                       </View>
                     ))
-                  ) : (
+                  ) : shiftHistoryExpanded[employee._id] ? (
                     <Text style={styles.emptyHistoryText}>
                       No shift history for this {shiftHistoryRange}.
                     </Text>
-                  )}
+                  ) : null}
+                  {shiftHistoryExpanded[employee._id] && (shiftHistoryByEmployee[employee._id] || []).length ? (
+                    <TouchableOpacity
+                      style={styles.archiveHistoryButton}
+                      onPress={() => archiveShiftHistory(employee)}
+                    >
+                      <Text style={styles.archiveHistoryButtonText}>Archive</Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
               ) : null}
             </View>
@@ -1963,6 +2124,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
   },
+  shiftHistoryTitleButton: {
+    alignItems: "center",
+    flexDirection: "row",
+  },
   shiftFilterRow: {
     flexDirection: "row",
     gap: 6,
@@ -1993,6 +2158,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginTop: 10,
     padding: 12,
+  },
+  timecardTitleRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  timecardEditor: {
+    borderTopColor: AppColor.border,
+    borderTopWidth: 1,
+    marginTop: 6,
+    paddingTop: 4,
+  },
+  archiveHistoryButton: {
+    alignItems: "center",
+    borderColor: AppColor.primary,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 12,
+    padding: 12,
+  },
+  archiveHistoryButtonText: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
   },
   shiftHistoryRow: {
     flexDirection: "row",

@@ -43,6 +43,10 @@ export const RESET_VENDOR_EMPLOYEE_PIN = (employee_id) =>
   `/vendor-employee/${employee_id}/reset-pin`;
 export const VENDOR_EMPLOYEE_SHIFT_HISTORY = (employee_id) =>
   `/vendor-employee/${employee_id}/shift-history`;
+export const VENDOR_EMPLOYEE_SHIFT_HISTORY_ITEM = (employee_id, session_id) =>
+  `/vendor-employee/${employee_id}/shift-history/${session_id}`;
+export const ARCHIVE_VENDOR_EMPLOYEE_SHIFT_HISTORY = (employee_id) =>
+  `/vendor-employee/${employee_id}/shift-history/archive`;
 export const VENDOR_EMPLOYEE_SESSION_ACTION = (employee_id) =>
   `/vendor-employee/${employee_id}/session/action`;
 export const EMPLOYEE_DASHBOARD = "/vendor-employee/dashboard";

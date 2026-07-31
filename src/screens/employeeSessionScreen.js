@@ -266,7 +266,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
     }, [refreshDashboard]),
   );
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
     dispatch(clearUserSlice());
     dispatch(clearFoodTruckProfileSlice());
     dispatch(clearPushNotificationRedux());
@@ -424,6 +424,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
   const renderOrder = ({ item }) => {
     const nextStatus = getNextOrderStatus(item?.orderStatus);
     const nextStatusLabel = getNextOrderStatusLabel(item?.orderStatus);
+    const isRefundPending = item?.refundStatus === "PENDING";
     const canRequestRefundCancel =
       !getOrderRequest(item?._id) && !isCompletedRefundWindowExpired(item);
 
@@ -459,7 +460,9 @@ const EmployeeSessionScreen = ({ navigation }) => {
         <Text style={styles.orderTitle}>
           Order #{item?.orderNumber || item?._id}
         </Text>
-        <Text style={styles.orderStatus}>{item?.orderStatus}</Text>
+        <Text style={styles.orderStatus}>
+          {isRefundPending ? "Refund Pending" : item?.orderStatus}
+        </Text>
       </View>
       <Text style={styles.orderMeta}>
         {(item?.items || []).length} items | $
@@ -494,21 +497,18 @@ const EmployeeSessionScreen = ({ navigation }) => {
           />
           <Text style={styles.secondaryButtonText}>Print</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          activeOpacity={0.8}
-          style={[
-            styles.primarySmallButton,
-            !nextStatus && styles.disabledButton,
-          ]}
-          disabled={!nextStatus || actionLoadingId === item?._id}
-          onPress={() => updateOrderStatus(item, nextStatus)}
-        >
-          <Text style={styles.primarySmallButtonText}>
-            {actionLoadingId === item?._id
-              ? "Updating..."
-              : nextStatusLabel || "Completed"}
-          </Text>
-        </TouchableOpacity>
+        {nextStatus && !isRefundPending ? (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.primarySmallButton}
+            disabled={actionLoadingId === item?._id}
+            onPress={() => updateOrderStatus(item, nextStatus)}
+          >
+            <Text style={styles.primarySmallButtonText}>
+              {actionLoadingId === item?._id ? "Updating..." : nextStatusLabel}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
         <TouchableOpacity
           activeOpacity={0.8}
           style={[
