@@ -61,6 +61,10 @@ import {
 import BogoItemsActionSheet from "../components/BogoItemsActionSheet";
 import ComboItemsActionSheet from "../components/ComboItemsActionSheet";
 import { toTitleCase } from "../utils/textFormat";
+import {
+  filterComboChildCandidates,
+  hasActiveBogoPromotion,
+} from "../helpers/comboPromotion.helper";
 
 const width = Dimensions.get("window").width;
 const flavorCountOptions = Array.from({ length: 15 }, (_, index) => ({
@@ -961,6 +965,13 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 	    if (foodType === foodTypeStrings.combo) {
       if (comboItems.length === 0) {
         newErrors.comboItems = "Please select at least one combo item";
+      } else if (comboItems.some(hasActiveBogoPromotion)) {
+        const promotionalNames = comboItems
+          .filter(hasActiveBogoPromotion)
+          .map((item) => item.name)
+          .filter(Boolean)
+          .join(", ");
+        newErrors.comboItems = `${promotionalNames || "This item"} has an active BOGO/BOGOHO promotion and cannot be included inside a combo`;
       } else {
         newErrors.comboItems = "";
       }
@@ -2835,7 +2846,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
       <ComboItemsActionSheet
         actionSheetRef={comboActionSheetRef}
         selectedMenus={comboItems}
-        menuList={memoizedMenuList}
+        menuList={filterComboChildCandidates(memoizedMenuList)}
         onSelectionChange={handleComboItemsChange}
         onClose={() => console.log("Combo items sheet closed")}
       />
