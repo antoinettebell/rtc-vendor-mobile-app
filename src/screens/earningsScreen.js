@@ -255,10 +255,23 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
     buildAnalyticsSummary,
     isEmployeesScreen,
   ]);
-  const allFoodTruckSummary = useMemo(
-    () => buildAnalyticsSummary(allFoodTruckAnalytics?.employees || []),
-    [allFoodTruckAnalytics, buildAnalyticsSummary]
-  );
+  const allFoodTruckSummary = useMemo(() => {
+    const summary = allFoodTruckAnalytics?.summary;
+    if (summary) {
+      const sales = Number(summary.gross_sales || 0);
+      const orders = Number(summary.orders_processed || 0);
+      const employeeSummary = buildAnalyticsSummary(
+        allFoodTruckAnalytics?.employees || [],
+      );
+      return {
+        sales,
+        orders,
+        requests: employeeSummary.requests,
+        averageTicket: orders ? sales / orders : 0,
+      };
+    }
+    return buildAnalyticsSummary(allFoodTruckAnalytics?.employees || []);
+  }, [allFoodTruckAnalytics, buildAnalyticsSummary]);
   const earningsSummaryRows = useMemo(
     () => [
       {

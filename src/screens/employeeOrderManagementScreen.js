@@ -322,6 +322,7 @@ const EmployeeOrderManagementScreen = ({ navigation, route }) => {
   const renderOrder = ({ item }) => {
     const nextStatus = getNextOrderStatus(item?.orderStatus);
     const nextStatusLabel = getNextOrderStatusLabel(item?.orderStatus);
+    const isRefundPending = item?.refundStatus === "PENDING";
     const canRequestRefundCancel =
       !getOrderRequest(item?._id) && !isCompletedRefundWindowExpired(item);
     const existingRequest = getOrderRequest(item?._id);
@@ -371,21 +372,18 @@ const EmployeeOrderManagementScreen = ({ navigation, route }) => {
             />
             <Text style={styles.secondaryButtonText}>Print</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={[
-              styles.primarySmallButton,
-              !nextStatus && styles.disabledButton,
-            ]}
-            disabled={!nextStatus || actionLoadingId === item?._id}
-            onPress={() => updateOrderStatus(item, nextStatus)}
-          >
-            <Text style={styles.primarySmallButtonText}>
-              {actionLoadingId === item?._id
-                ? "Updating..."
-                : nextStatusLabel || "Completed"}
-            </Text>
-          </TouchableOpacity>
+          {nextStatus && !isRefundPending ? (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.primarySmallButton}
+              disabled={actionLoadingId === item?._id}
+              onPress={() => updateOrderStatus(item, nextStatus)}
+            >
+              <Text style={styles.primarySmallButtonText}>
+                {actionLoadingId === item?._id ? "Updating..." : nextStatusLabel}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity
             activeOpacity={0.8}
             style={[

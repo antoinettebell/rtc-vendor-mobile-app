@@ -831,6 +831,7 @@ const EmployeePosBoardScreen = ({ navigation }) => {
     const nextStatus = getNextEmployeeStatus(item.orderStatus);
     const nextLabel = getNextStatusLabel(item.orderStatus);
     const existingRequest = getOrderRequest(item?._id);
+    const isRefundPending = item?.refundStatus === "PENDING";
     const canRequestRefundCancel =
       !existingRequest && !isCompletedRefundWindowExpired(item);
 
@@ -863,7 +864,7 @@ const EmployeePosBoardScreen = ({ navigation }) => {
             />
             <Text style={styles.secondarySmallText}>Print</Text>
           </TouchableOpacity>
-          {nextStatus ? (
+          {nextStatus && !isRefundPending ? (
             <TouchableOpacity
               style={styles.primarySmall}
               disabled={actionLoadingId === item?._id}

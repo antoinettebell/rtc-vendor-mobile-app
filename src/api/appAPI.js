@@ -78,6 +78,8 @@ import {
   VENDOR_EMPLOYEE_BY_ID,
   VENDOR_EMPLOYEE_SESSION_ACTION,
   VENDOR_EMPLOYEE_SHIFT_HISTORY,
+  VENDOR_EMPLOYEE_SHIFT_HISTORY_ITEM,
+  ARCHIVE_VENDOR_EMPLOYEE_SHIFT_HISTORY,
 } from "./apiEndPoint";
 
 /**
@@ -1230,6 +1232,39 @@ export const getVendorEmployeeShiftHistory_API = async ({
   try {
     const response = await apiClient.get(
       `${VENDOR_EMPLOYEE_SHIFT_HISTORY(employee_id)}?range=${range}`,
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const updateVendorEmployeeShiftHistory_API = async ({
+  employee_id,
+  session_id,
+  payload,
+}) => {
+  try {
+    const response = await apiClient.put(
+      VENDOR_EMPLOYEE_SHIFT_HISTORY_ITEM(employee_id, session_id),
+      payload,
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const archiveVendorEmployeeShiftHistory_API = async ({
+  employee_id,
+  session_ids,
+}) => {
+  try {
+    const response = await apiClient.post(
+      ARCHIVE_VENDOR_EMPLOYEE_SHIFT_HISTORY(employee_id),
+      { session_ids },
       { skipToken: false },
     );
     return response?.data;
