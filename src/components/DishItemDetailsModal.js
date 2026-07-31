@@ -182,7 +182,33 @@ const getDiscountRequirementSource = (item) => {
     return item;
   }
 
-  return differentItemReward ? getComboChildItem(differentItemReward) : null;
+  if (!differentItemReward) return null;
+
+  const nestedReward = getComboChildItem(differentItemReward) || {};
+  return {
+    ...nestedReward,
+    ...differentItemReward,
+    flavorOptions:
+      differentItemReward?.flavorOptions?.length > 0
+        ? differentItemReward.flavorOptions
+        : nestedReward?.flavorOptions,
+    toppingOptions:
+      differentItemReward?.toppingOptions?.length > 0
+        ? differentItemReward.toppingOptions
+        : nestedReward?.toppingOptions,
+    flavors:
+      differentItemReward?.flavors?.length > 0
+        ? differentItemReward.flavors
+        : nestedReward?.flavors,
+    toppings:
+      differentItemReward?.toppings?.length > 0
+        ? differentItemReward.toppings
+        : nestedReward?.toppings,
+    subItem:
+      differentItemReward?.subItem?.length > 0
+        ? differentItemReward.subItem
+        : nestedReward?.subItem,
+  };
 };
 
 const buildRequiredChildSelections = (configuredItems, savedSelections = []) =>
@@ -397,7 +423,10 @@ const DishItemDetailsModal = ({
     );
     setSelectedComboSides(selectedMenuItem?.selectedComboSides || []);
     setSelectedDiscountSubItems(requiredDiscountSubItems);
-    setExpandedRequirementSections({});
+    setExpandedRequirementSections({
+      "primary-item": false,
+      "discount-reward": false,
+    });
     setSplitPlainFlavor(
       (selectedMenuItem?.selectedFlavors || []).some(isPlainOption) &&
         (selectedMenuItem?.selectedFlavors || []).length > 1
@@ -522,6 +551,29 @@ const DishItemDetailsModal = ({
     configuredDiscountComboItems,
     selectedDiscountSubItems
   );
+  const primaryRequirementsComplete =
+    (!hasFlavorChoices ||
+      isOptionSelectionComplete(
+        hasFlavorChoices,
+        selectedFlavors,
+        flavorsMaxCount
+      )) &&
+    (!hasToppingChoices ||
+      isOptionSelectionComplete(
+        hasToppingChoices,
+        selectedToppings,
+        toppingsMaxCount
+      )) &&
+    (!hasComboSideChoices ||
+      selectedComboSides.length === comboSidesRequiredCount) &&
+    hasAllRequiredComboItems &&
+    selectedSubItems.every(isChildSelectionComplete);
+  const hasPrimaryRequirements =
+    hasFlavorChoices ||
+    hasToppingChoices ||
+    hasComboSideChoices ||
+    !!selectedMenuItem?.allowCustomize ||
+    configuredComboItems.length > 0;
   const discountRequirementsComplete =
     (!hasDiscountFlavorChoices ||
       isOptionSelectionComplete(
@@ -1371,8 +1423,17 @@ const DishItemDetailsModal = ({
               );
             })()}
 
+            {hasPrimaryRequirements ? (
+              <RequirementSectionToggle
+                title={`Paid item: choose options for ${selectedMenuItem?.name || "item"}`}
+                complete={primaryRequirementsComplete}
+                expanded={isRequirementExpanded("primary-item")}
+                onPress={() => toggleRequirementSection("primary-item")}
+              />
+            ) : null}
+
             {/* Combo Items */}
-            {selectedMenuItem.subItem?.length > 0 && (
+            {isRequirementExpanded("primary-item") && selectedMenuItem.subItem?.length > 0 && (
               <View style={styles.actionSheetSection}>
                 <Text style={styles.sectionTitle}>Included Combo Items:</Text>
                 {selectedMenuItem.subItem.map((subItem) => {
@@ -1424,7 +1485,7 @@ const DishItemDetailsModal = ({
               </View>
             )}
 
-            {hasFlavorChoices && (
+            {isRequirementExpanded("primary-item") && hasFlavorChoices && (
               <View style={styles.actionSheetSection}>
                 <Text style={styles.sectionTitle}>
                   {`${selectedMenuItem?.name || "Item"}: choose Plain or up to ${flavorsMaxCount} Flavor${
@@ -1466,7 +1527,7 @@ const DishItemDetailsModal = ({
               </View>
             )}
 
-            {hasToppingChoices && (
+            {isRequirementExpanded("primary-item") && hasToppingChoices && (
               <View style={styles.actionSheetSection}>
                 <Text style={styles.sectionTitle}>
                   {`${selectedMenuItem?.name || "Item"}: choose Plain or up to ${toppingsMaxCount} Topping${
@@ -1508,7 +1569,7 @@ const DishItemDetailsModal = ({
               </View>
             )}
 
-            {hasComboSideChoices && (
+            {isRequirementExpanded("primary-item") && hasComboSideChoices && (
               <View style={styles.actionSheetSection}>
                 <Text style={styles.sectionTitle}>
                   {`Choose exactly ${comboSidesRequiredCount} Side${
@@ -1534,7 +1595,7 @@ const DishItemDetailsModal = ({
               </View>
             )}
 
-            {selectedMenuItem?.allowCustomize && (
+            {isRequirementExpanded("primary-item") && selectedMenuItem?.allowCustomize && (
               <View style={styles.actionSheetSection}>
                 <Text style={styles.sectionTitle}>
                   Primary Item Customizations
