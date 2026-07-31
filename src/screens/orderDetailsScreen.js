@@ -405,9 +405,10 @@ const OrderDetailsScreen = ({ navigation, route }) => {
   const canShowRightAction =
     !isWalkUpOrder || nextOrderStatus !== orderStatusStrings.accepted;
   const showOrderActions =
-    !!nextOrderStatus &&
-    !orderIsTerminal &&
-    (canShowLeftAction || canShowRightAction);
+    canRefundPosOrder ||
+    (!!nextOrderStatus &&
+      !orderIsTerminal &&
+      (canShowLeftAction || canShowRightAction));
   const customerName =
     [orderData?.user?.firstName, orderData?.user?.lastName]
       .filter(Boolean)

@@ -785,7 +785,10 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
               return (
                 <Pressable
                   key={`${filterPicker}-${item.label}-${item.value || "all"}`}
-                  style={styles.filterPickerOption}
+                  style={[
+                    styles.filterPickerOption,
+                    selected && styles.filterPickerOptionSelected,
+                  ]}
                   onPress={() => {
 	                    if (filterPicker === "location") {
 	                      setLocationFilter(item.value);
@@ -1780,11 +1783,20 @@ const styles = StyleSheet.create({
   },
   filterPickerOption: {
     alignItems: "center",
+    backgroundColor: "#F7F3EF",
     borderBottomColor: "#EEF0F4",
     borderBottomWidth: 1,
+    borderRadius: 8,
     flexDirection: "row",
     justifyContent: "space-between",
+    marginTop: 6,
     minHeight: 46,
+    paddingHorizontal: 12,
+  },
+  filterPickerOptionSelected: {
+    backgroundColor: AppColor.primary + "18",
+    borderColor: AppColor.primary,
+    borderWidth: 1,
   },
   filterPickerText: {
     color: AppColor.black,
