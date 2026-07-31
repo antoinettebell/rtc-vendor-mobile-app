@@ -49,6 +49,7 @@ import {
 import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlice";
 import AppImage from "../components/AppImage";
 import { updateUserKey } from "../redux/slices/userInfoSlice";
+import { formatVendorRating } from "../helpers/rating.helper";
 
 const ItemComponent = ({ imageUri, label, rightIcon, isRed, onPress }) => (
   <TouchableOpacity
@@ -689,7 +690,7 @@ const ProfileMenuScreen = ({ navigation }) => {
               </View>
               <Text
                 style={styles.ratingText}
-              >{`${user?.foodTruck?.avgRate || 0} (${user?.foodTruck?.totalReviews || 0} reviews)`}</Text>
+              >{formatVendorRating(user?.foodTruck)}</Text>
             </TouchableOpacity>
             <View
               style={{
