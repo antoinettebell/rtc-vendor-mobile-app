@@ -18,7 +18,7 @@ final class RTCTapToPay: NSObject {
     rejecter reject: @escaping RCTPromiseRejectBlock
   ) {
     let amountString = stringValue(options["amount"])
-    let amount = Double(amountString) ?? 0
+    let amount = currencyAmount(from: amountString)
     Task { @MainActor in
       do {
         guard #available(iOS 16.0, *) else {
@@ -30,7 +30,7 @@ final class RTCTapToPay: NSObject {
           ?? nullableStringValue(options["orderId"])
           ?? UUID().uuidString
         let result = try await manager.startSale(
-          amount: Decimal(amount),
+          amount: amount,
           currency: .USD,
           environmentName: stringValue(options["environment"], fallback: "production"),
           reference: reference
@@ -89,5 +89,18 @@ final class RTCTapToPay: NSObject {
     let string = stringValue(value).trimmingCharacters(in: .whitespacesAndNewlines)
 
     return string.isEmpty ? nil : string
+  }
+
+  private func currencyAmount(from value: String) -> Decimal {
+    guard var amount = Decimal(
+      string: value.trimmingCharacters(in: .whitespacesAndNewlines),
+      locale: Locale(identifier: "en_US_POSIX")
+    ) else {
+      return 0
+    }
+
+    var rounded = Decimal()
+    NSDecimalRound(&rounded, &amount, 2, .plain)
+    return rounded
   }
 }
