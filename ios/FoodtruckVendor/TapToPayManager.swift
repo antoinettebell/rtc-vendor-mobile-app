@@ -1,129 +1,137 @@
 import Foundation
+import MposUI
 import ProximityReader
+import UIKit
 
-#if canImport(AcceptanceDevicesSDK)
-import AcceptanceDevicesSDK
-#endif
+@available(iOS 16.0, *)
+@objc final class TapToPayManager: NSObject {
+  private var reader: MposUIReader?
 
-@objc class TapToPayManager: NSObject {
-  private static let sandboxVMID = "abell_dev"
-  private static let sandboxTID = "TEST_TID_01"
-  private static let sandboxSecret = "PROXIMITY_READER_DEMO_SECRET"
-
-  private var isInitialized = false
-  private var currentTeamId: String?
-
-  @objc func initializeTerminal(appleTeamId: String) async throws -> Bool {
-    let trimmedTeamId = appleTeamId.trimmingCharacters(in: .whitespacesAndNewlines)
-
-    guard !trimmedTeamId.isEmpty else {
-      throw NSError(
-        domain: "TapToPayError",
-        code: 400,
-        userInfo: [
-          NSLocalizedDescriptionKey: "Apple Team ID configuration string cannot be empty."
-        ]
-      )
-    }
-
-    currentTeamId = trimmedTeamId
-
-    #if canImport(AcceptanceDevicesSDK)
-    do {
-      let config = TerminalConfiguration(
-        merchantId: Self.sandboxVMID,
-        terminalId: Self.sandboxTID,
-        appleTeamId: trimmedTeamId,
-        sharedSecret: Self.sandboxSecret,
-        environment: .sandbox
-      )
-
-      try await TerminalManager.shared.initialize(with: config)
-      isInitialized = true
-      return true
-    } catch {
-      throw NSError(
-        domain: "CybersourceSDKError",
-        code: 500,
-        userInfo: [NSLocalizedDescriptionKey: error.localizedDescription]
-      )
-    }
-    #else
-    print("[TapToPayManager] AcceptanceDevicesSDK is not present. Local sandbox staging emulation enabled.")
-    isInitialized = true
-    return true
-    #endif
+  private func environment(from value: String) -> MposEnvironment {
+    value.lowercased() == "sandbox" || value.lowercased() == "test" ? .test : .live
   }
 
-  @objc func executePaymentSheet(amount: Double) async throws -> String {
-    guard isInitialized else {
-      throw NSError(
-        domain: "TapToPayError",
-        code: 401,
-        userInfo: [
-          NSLocalizedDescriptionKey: "Terminal engine must be initialized before processing payments."
-        ]
-      )
-    }
+  private func configuredReader() async throws -> MposUIReader {
+    if let reader { return reader }
 
+    let configuration = Configuration(
+      resultConfiguration: .displayIndefinitely,
+      summaryFeatures: [.sendReceiptViaEmail, .refundTransaction, .retryTransaction],
+      signatureCapture: .onScreen,
+      enrollmentConfiguration: .init(
+        serialNumberInputMethod: .deviceList,
+        confirmationScreenOption: .showWithSerialNumber
+      )
+    )
+    let newReader = await mposUIReaderBuilder(configuration: configuration)
+    reader = newReader
+    return newReader
+  }
+
+  private func ensureActivated(_ reader: MposUIReader, environment: MposEnvironment) async throws -> Bool {
+    if case .activated = await reader.activationStatus { return false }
+
+    let activation = await reader.activation()
+    let result = await activation.activateWithOtp(environment: environment, otp: nil)
+    switch result {
+    case .success(_, let isNewDevice):
+      return isNewDevice
+    case .cancelledByUser:
+      throw NSError(domain: "RTCTapToPay", code: 499, userInfo: [
+        NSLocalizedDescriptionKey: "Device activation was cancelled."
+      ])
+    case .invalidOTP(let info):
+      throw NSError(domain: "RTCTapToPay", code: 401, userInfo: [
+        NSLocalizedDescriptionKey: "The activation code was not accepted: \(info)"
+      ])
+    case .error(let info):
+      throw NSError(domain: "RTCTapToPay", code: 500, userInfo: [
+        NSLocalizedDescriptionKey: "Device activation failed: \(info)"
+      ])
+    @unknown default:
+      throw NSError(domain: "RTCTapToPay", code: 500, userInfo: [
+        NSLocalizedDescriptionKey: "Device activation returned an unknown result."
+      ])
+    }
+  }
+
+  @MainActor
+  func startSale(amount: Decimal, currency: Currency, environmentName: String, reference: String) async throws -> [String: Any] {
     guard amount > 0 else {
-      throw NSError(
-        domain: "TapToPayError",
-        code: 400,
-        userInfo: [
-          NSLocalizedDescriptionKey: "Transaction checkout amount must be greater than zero."
-        ]
-      )
+      throw NSError(domain: "RTCTapToPay", code: 400, userInfo: [
+        NSLocalizedDescriptionKey: "Transaction amount must be greater than zero."
+      ])
     }
 
-    guard #available(iOS 15.4, *) else {
-      throw NSError(
-        domain: "AppleHardwareError",
-        code: 403,
-        userInfo: [
-          NSLocalizedDescriptionKey: "Tap to Pay on iPhone requires iOS 15.4 or later."
-        ]
-      )
+    let reader = try await configuredReader()
+    let newlyActivated = try await ensureActivated(
+      reader,
+      environment: environment(from: environmentName)
+    )
+    if #available(iOS 18.0, *),
+       newlyActivated,
+       let viewController = Self.topViewController() {
+      try await showMerchantEducation(from: viewController)
     }
+    let online = try await reader.mposUIOnline()
+    let parameters = ChargeParameters(amount: amount, currency: currency, customIdentifier: reference)
+    let result = await online.startChargeTransaction(with: parameters)
 
-    guard PaymentCardReader.isSupported else {
-      throw NSError(
-        domain: "AppleHardwareError",
-        code: 403,
-        userInfo: [
-          NSLocalizedDescriptionKey: "This physical iOS device does not support Tap to Pay hardware components."
-        ]
-      )
+    switch result {
+    case .success(let transaction):
+      return [
+        "transactionId": transaction.identifier,
+        "provider": "CYBERSOURCE",
+        "environment": environmentName,
+        "reference": reference
+      ]
+    case .offlineSuccess(let transaction):
+      return [
+        "transactionId": transaction.id,
+        "provider": "CYBERSOURCE",
+        "environment": environmentName,
+        "reference": reference,
+        "offline": true
+      ]
+    case .payByLinkFallback:
+      throw NSError(domain: "RTCTapToPay", code: 409, userInfo: [
+        NSLocalizedDescriptionKey: "Tap to Pay was unavailable. Please retry when the iPhone is online."
+      ])
+    case .failure(let error):
+      throw NSError(domain: "RTCTapToPay", code: 502, userInfo: [
+        NSLocalizedDescriptionKey: "Tap to Pay transaction failed: \(error)"
+      ])
+    @unknown default:
+      throw NSError(domain: "RTCTapToPay", code: 500, userInfo: [
+        NSLocalizedDescriptionKey: "Tap to Pay returned an unknown result."
+      ])
     }
+  }
 
-    #if canImport(AcceptanceDevicesSDK)
-    do {
-      let transactionParameters = TransactionParameters(amount: amount, currency: "USD")
-      let paymentResponse = try await TerminalManager.shared.readCard(parameters: transactionParameters)
-      return paymentResponse.transactionToken
-    } catch {
-      throw NSError(
-        domain: "CybersourceTransactionError",
-        code: 502,
-        userInfo: [NSLocalizedDescriptionKey: error.localizedDescription]
-      )
+  @available(iOS 18.0, *)
+  @MainActor
+  func showMerchantEducation(from viewController: UIViewController) async throws {
+    let discovery = ProximityReaderDiscovery()
+    let content = try await discovery.content(for: .payment(.howToTap))
+    try await discovery.presentContent(content, from: viewController)
+  }
+
+  @MainActor
+  static func topViewController(from base: UIViewController? = nil) -> UIViewController? {
+    let root = base ?? UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .flatMap(\.windows)
+      .first(where: \.isKeyWindow)?
+      .rootViewController
+    if let navigation = root as? UINavigationController {
+      return topViewController(from: navigation.visibleViewController)
     }
-    #else
-    print("[TapToPayManager] Simulating physical hardware proximity read loop for amount: $\(amount)...")
-    try await Task.sleep(nanoseconds: 2_000_000_000)
-
-    if amount == 999.0 {
-      throw NSError(
-        domain: "AppleHardwareError",
-        code: 99,
-        userInfo: [
-          NSLocalizedDescriptionKey: "User cancelled the proximity hardware card-read session window interaction."
-        ]
-      )
+    if let tab = root as? UITabBarController {
+      return topViewController(from: tab.selectedViewController)
     }
-
-    print("[TapToPayManager] Simulated NFC chip collection successful.")
-    return "MOCK_TOKEN_SUCCESS_SANDBOX_ABELL_DEV"
-    #endif
+    if let presented = root?.presentedViewController {
+      return topViewController(from: presented)
+    }
+    return root
   }
 }

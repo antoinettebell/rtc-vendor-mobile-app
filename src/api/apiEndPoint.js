@@ -143,6 +143,12 @@ export const CHANGE_MENU_AVAILABILITY = "/menu/change-availability";
 
 // Plans
 export const GET_PLANS_DATA = "/public/plan";
+export const EVENT_VENDOR_PROFILE = "/marketplace/event-vendor/profile";
+export const EVENT_VENDOR_PHOTOS = "/marketplace/event-vendor/photos";
+export const EVENT_VENDOR_LOGO = "/marketplace/event-vendor/logo";
+export const EVENT_VENDOR_EVENTS = "/marketplace/event-vendor/events";
+export const EVENT_VENDOR_APPLICATIONS = "/marketplace/event-vendor/applications/my";
+export const EVENT_VENDOR_APPLY = (eventId) => `/marketplace/event-vendor/events/${eventId}/applications`;
 
 // Diet
 export const GET_DIET_LIST = "/public/diet";

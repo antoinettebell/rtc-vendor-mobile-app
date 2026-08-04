@@ -89,6 +89,10 @@ import VendorMarketplaceApplicationDetailScreen from "./src/screens/vendorMarket
 import VendorFeeCheckoutScreen from "./src/screens/vendorFeeCheckoutScreen";
 import VendorComplianceScreen from "./src/screens/vendorComplianceScreen";
 import AuthMenuSetupPromptScreen from "./src/screens/authMenuSetupPromptScreen";
+import EventVendorProfileScreen from "./src/screens/eventVendorProfileScreen";
+import EventVendorPhotosScreen from "./src/screens/eventVendorPhotosScreen";
+import EventVendorMarketplaceScreen from "./src/screens/eventVendorMarketplaceScreen";
+import EventVendorApplicationScreen from "./src/screens/eventVendorApplicationScreen";
 
 const Stack = createNativeStackNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -136,6 +140,8 @@ const FinalSignupStepsNavigator = () => (
     initialRouteName="splash"
   >
     <Stack.Screen name="splash" component={SplashScreen} />
+    <Stack.Screen name="eventVendorProfileScreen" component={EventVendorProfileScreen} />
+    <Stack.Screen name="eventVendorPhotosScreen" component={EventVendorPhotosScreen} />
     <Stack.Screen
       name="authFoodTruckPlansScreen"
       component={AuthFoodTruckPlansScreen}
@@ -185,6 +191,16 @@ const FinalSignupStepsNavigator = () => (
 const BottomTabNavigator = ({ insets }) => {
   const { user } = useSelector((state) => state.userReducer);
   const showEmployeesTab = canUseEmployeeLogin(user?.foodTruck?.plan);
+  const isEventVendor = user?.vendorSubtype === "EVENT_VENDOR";
+
+  if (isEventVendor) {
+    return (
+      <BottomTab.Navigator screenOptions={{ headerShown: false, tabBarStyle: { height: insets.bottom + 60 } }}>
+        <BottomTab.Screen name="eventVendorMarketplaceScreen" component={EventVendorMarketplaceScreen} options={{ tabBarLabel: "Marketplace", tabBarIcon: ({ color, size }) => <MaterialIcons name="storefront" size={size || 24} color={color} /> }} />
+        <BottomTab.Screen name="eventVendorProfileScreen" component={EventVendorProfileScreen} options={{ tabBarLabel: "Profile", tabBarIcon: ({ color, size }) => <MaterialIcons name="person" size={size || 24} color={color} /> }} />
+      </BottomTab.Navigator>
+    );
+  }
 
   return (
     <BottomTab.Navigator
@@ -305,6 +321,8 @@ const MainAppNavigator = ({ insets }) => (
     initialRouteName="splash"
   >
     <Stack.Screen name="splash" component={SplashScreen} />
+    <Stack.Screen name="eventVendorPhotosScreen" component={EventVendorPhotosScreen} />
+    <Stack.Screen name="eventVendorApplicationScreen" component={EventVendorApplicationScreen} />
     <Stack.Screen name="bottomRoot">
       {() => <BottomTabNavigator insets={insets} />}
     </Stack.Screen>

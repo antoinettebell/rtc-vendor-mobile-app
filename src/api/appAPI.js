@@ -23,6 +23,12 @@ import {
   GET_ORDER_BY_ID,
   GET_ORDER_LIST,
   GET_PLANS_DATA,
+  EVENT_VENDOR_PROFILE,
+  EVENT_VENDOR_PHOTOS,
+  EVENT_VENDOR_LOGO,
+  EVENT_VENDOR_EVENTS,
+  EVENT_VENDOR_APPLICATIONS,
+  EVENT_VENDOR_APPLY,
   GET_TAX_OF_LOCATION,
   PAYMENT_CHECKOUT,
   PLACE_FOOD_ORDER,
@@ -1778,3 +1784,13 @@ export const removeFcmToken_API = async (device_id) => {
     throw error?.response?.data || error;
   }
 };
+
+export const getEventVendorProfile_API = async () => (await apiClient.get(EVENT_VENDOR_PROFILE, { skipToken: false }))?.data;
+export const saveEventVendorProfile_API = async (payload) => (await apiClient.put(EVENT_VENDOR_PROFILE, payload, { skipToken: false }))?.data;
+export const getEventVendorPhotos_API = async () => (await apiClient.get(EVENT_VENDOR_PHOTOS, { skipToken: false }))?.data;
+export const uploadEventVendorPhoto_API = async (payload) => (await apiClient.post(EVENT_VENDOR_PHOTOS, payload, { formData: true, skipToken: false }))?.data;
+export const uploadEventVendorLogo_API = async (payload) => (await apiClient.post(EVENT_VENDOR_LOGO, payload, { formData: true, skipToken: false }))?.data;
+export const removeEventVendorPhoto_API = async (photoId) => (await apiClient.delete(`${EVENT_VENDOR_PHOTOS}/${photoId}`, { skipToken: false }))?.data;
+export const getEventVendorEvents_API = async () => (await apiClient.get(EVENT_VENDOR_EVENTS, { skipToken: false }))?.data;
+export const getEventVendorApplications_API = async () => (await apiClient.get(EVENT_VENDOR_APPLICATIONS, { skipToken: false }))?.data;
+export const submitEventVendorApplication_API = async (eventId, payload) => (await apiClient.post(EVENT_VENDOR_APPLY(eventId), payload, { skipToken: false }))?.data;

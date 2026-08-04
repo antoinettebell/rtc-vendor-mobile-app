@@ -92,3 +92,11 @@ export const startTapToPaySale = async ({
 
   return normalizeTapToPayResult(result);
 };
+
+export const showTapToPayMerchantEducation = async () => {
+  if (!nativeTapToPay?.showMerchantEducation) {
+    throw new Error("Tap to Pay merchant education is unavailable in this build.");
+  }
+
+  return nativeTapToPay.showMerchantEducation();
+};

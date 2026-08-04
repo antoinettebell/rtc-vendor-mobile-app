@@ -24,8 +24,7 @@
 		7C3F0A9E2D9B41D58B2A1C6F /* RTCTapToPay.m in Sources */ = {isa = PBXBuildFile; fileRef = 7C3F0A9D2D9B41D58B2A1C6F /* RTCTapToPay.m */; };
 		7C3F0AA22D9B41D58B2A1C6F /* RTCTapToPay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C3F0AA12D9B41D58B2A1C6F /* RTCTapToPay.swift */; };
 		7C3F0AA42D9B41D58B2A1C6F /* TapToPayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C3F0AA32D9B41D58B2A1C6F /* TapToPayManager.swift */; };
-		7C3F0AA62D9B41D58B2A1C6F /* TapToPayBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 7C3F0AA52D9B41D58B2A1C6F /* TapToPayBridge.m */; };
-		7C3F0AA82D9B41D58B2A1C6F /* TapToPayBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C3F0AA72D9B41D58B2A1C6F /* TapToPayBridge.swift */; };
+		7C3F0AB02D9B41D58B2A1C6F /* MposUI in Frameworks */ = {isa = PBXBuildFile; productRef = 7C3F0AB22D9B41D58B2A1C6F /* MposUI */; };
 		7EA6688B72864ED9AF8BF1AE /* Inter-Light-BETA.otf in Resources */ = {isa = PBXBuildFile; fileRef = C2BA5A4BE34D4A75ACE1D2F6 /* Inter-Light-BETA.otf */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		8DBFD917BC034E009D64535F /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7054D7892E36422A8989DFBB /* Colors.xcassets */; };
@@ -63,8 +62,6 @@
 		7C3F0A9D2D9B41D58B2A1C6F /* RTCTapToPay.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RTCTapToPay.m; path = FoodtruckVendor/RTCTapToPay.m; sourceTree = "<group>"; };
 		7C3F0AA12D9B41D58B2A1C6F /* RTCTapToPay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RTCTapToPay.swift; path = FoodtruckVendor/RTCTapToPay.swift; sourceTree = "<group>"; };
 		7C3F0AA32D9B41D58B2A1C6F /* TapToPayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TapToPayManager.swift; path = FoodtruckVendor/TapToPayManager.swift; sourceTree = "<group>"; };
-		7C3F0AA52D9B41D58B2A1C6F /* TapToPayBridge.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TapToPayBridge.m; path = FoodtruckVendor/TapToPayBridge.m; sourceTree = "<group>"; };
-		7C3F0AA72D9B41D58B2A1C6F /* TapToPayBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TapToPayBridge.swift; path = FoodtruckVendor/TapToPayBridge.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = FoodtruckVendor/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		899C85C7676A4EC78F325C0F /* IMFellEnglish-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "IMFellEnglish-Regular.ttf"; path = "../src/assets/fonts/IMFellEnglish-Regular.ttf"; sourceTree = "<group>"; };
 		95C1DA858A63407A84644FFC /* Inter-Medium.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Medium.otf"; path = "../src/assets/fonts/Inter-Medium.otf"; sourceTree = "<group>"; };
@@ -87,6 +84,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7C3F0AB02D9B41D58B2A1C6F /* MposUI in Frameworks */,
 				69F335125F52FB4C5004F0D3 /* Pods_FoodtruckVendor.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -103,8 +101,6 @@
 				7C3F0A9D2D9B41D58B2A1C6F /* RTCTapToPay.m */,
 				7C3F0AA12D9B41D58B2A1C6F /* RTCTapToPay.swift */,
 				7C3F0AA32D9B41D58B2A1C6F /* TapToPayManager.swift */,
-				7C3F0AA52D9B41D58B2A1C6F /* TapToPayBridge.m */,
-				7C3F0AA72D9B41D58B2A1C6F /* TapToPayBridge.swift */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
@@ -210,6 +206,9 @@
 			dependencies = (
 			);
 			name = FoodtruckVendor;
+			packageProductDependencies = (
+				7C3F0AB22D9B41D58B2A1C6F /* MposUI */,
+			);
 			productName = FoodtruckVendor;
 			productReference = 13B07F961A680F5B00A75B9A /* FoodtruckVendor.app */;
 			productType = "com.apple.product-type.application";
@@ -236,6 +235,9 @@
 				Base,
 			);
 			mainGroup = 83CBB9F61A601CBA00E9B192;
+			packageReferences = (
+				7C3F0AB12D9B41D58B2A1C6F /* XCRemoteSwiftPackageReference "acceptance-devices-ios-sdk" */,
+			);
 			productRefGroup = 83CBBA001A601CBA00E9B192 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -377,8 +379,6 @@
 				7C3F0A9E2D9B41D58B2A1C6F /* RTCTapToPay.m in Sources */,
 				7C3F0AA22D9B41D58B2A1C6F /* RTCTapToPay.swift in Sources */,
 				7C3F0AA42D9B41D58B2A1C6F /* TapToPayManager.swift in Sources */,
-				7C3F0AA62D9B41D58B2A1C6F /* TapToPayBridge.m in Sources */,
-				7C3F0AA82D9B41D58B2A1C6F /* TapToPayBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -398,7 +398,7 @@
 				DEVELOPMENT_TEAM = 5G26GFF98P;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = FoodtruckVendor/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -435,7 +435,7 @@
 				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = 5G26GFF98P;
 				INFOPLIST_FILE = FoodtruckVendor/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -519,7 +519,7 @@
 					"${PODS_CONFIGURATION_BUILD_DIR}/React-graphics/React_graphics.framework/Headers",
 					"${PODS_CONFIGURATION_BUILD_DIR}/React-graphics/React_graphics.framework/Headers/react/renderer/graphics/platform/ios",
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					/usr/lib/swift,
 					"$(inherited)",
@@ -603,7 +603,7 @@
 					"${PODS_CONFIGURATION_BUILD_DIR}/React-graphics/React_graphics.framework/Headers",
 					"${PODS_CONFIGURATION_BUILD_DIR}/React-graphics/React_graphics.framework/Headers/react/renderer/graphics/platform/ios",
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					/usr/lib/swift,
 					"$(inherited)",
@@ -655,6 +655,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		7C3F0AB12D9B41D58B2A1C6F /* XCRemoteSwiftPackageReference "acceptance-devices-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/visa/acceptance-devices-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.7.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		7C3F0AB22D9B41D58B2A1C6F /* MposUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7C3F0AB12D9B41D58B2A1C6F /* XCRemoteSwiftPackageReference "acceptance-devices-ios-sdk" */;
+			productName = MposUI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 83CBB9F71A601CBA00E9B192 /* Project object */;
 }

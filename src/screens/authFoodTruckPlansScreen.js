@@ -54,6 +54,11 @@ const isElitePlan = (plan) => {
   );
 };
 
+const isFoodVendorPlan = (plan) =>
+  ["SUB_BASIC", "SUB_PLATINUM", "SUB_ELITE"].includes(
+    String(plan?.slug || "").toUpperCase(),
+  );
+
 const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -198,6 +203,8 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
 
   const getPlanDescription = (plan) => {
     switch (String(plan?.slug || "").toUpperCase()) {
+      case "SUB_MARKETPLACE_VENDOR":
+        return "For merchandise, artisans, service providers, nonprofits, and exhibitors.";
       case "SUB_BASIC":
         return "A strong start for new food truck businesses.";
       case "SUB_PLATINUM":
@@ -211,6 +218,8 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
 
   const getPlanIcon = (plan) => {
     switch (String(plan?.slug || "").toUpperCase()) {
+      case "SUB_MARKETPLACE_VENDOR":
+        return "tent";
       case "SUB_ELITE":
         return "crown";
       case "SUB_PLATINUM":
@@ -286,6 +295,13 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
               >
                 {item.name}
               </Text>
+              {isFoodVendorPlan(item) ? (
+                <View style={styles.foodVendorBadge}>
+                  <Text style={styles.foodVendorBadgeText}>
+                    FOOD VENDORS ONLY
+                  </Text>
+                </View>
+              ) : null}
               <Text style={styles.planDescription}>
                 {getPlanDescription(item)}
               </Text>
@@ -294,7 +310,11 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
 
           <View style={styles.planRateWrap}>
             <Text style={styles.planRate}>{item.rate}%</Text>
-            <Text style={styles.planRateLabel}>per sale</Text>
+            <Text style={styles.planRateLabel}>
+              {String(item.rateType || "").toUpperCase() === "AWARD_CHECKOUT"
+                ? "award checkout fee"
+                : "per sale"}
+            </Text>
           </View>
         </View>
 
@@ -743,6 +763,20 @@ const styles = StyleSheet.create({
   planName: {
     fontSize: 21,
     fontFamily: Mulish700,
+  },
+  foodVendorBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#FFF3E8",
+    borderRadius: 999,
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  foodVendorBadgeText: {
+    color: "#9A4B00",
+    fontFamily: Mulish700,
+    fontSize: 10,
+    letterSpacing: 0.4,
   },
   planDescription: {
     fontSize: 12,

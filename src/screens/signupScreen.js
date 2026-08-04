@@ -45,6 +45,8 @@ const SignUpScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
 
   const { allSigninUsers } = useSelector((state) => state.userInfoReducer);
+  const { selectedPlan } = useSelector((state) => state.userReducer);
+  const isMarketplaceVendor = selectedPlan?.slug === "SUB_MARKETPLACE_VENDOR";
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -237,10 +239,12 @@ const SignUpScreen = ({ navigation }) => {
     let payload = {
       firstName: firstName,
       lastName: lastName,
-      foodTruck: {
-        name: foodTruckName,
-        infoType: "truck",
-      },
+      planId: selectedPlan?._id,
+      vendorSubtype: isMarketplaceVendor ? "EVENT_VENDOR" : "FOOD_VENDOR",
+      ...(isMarketplaceVendor ? { eventVendorBusinessName: foodTruckName } : {}),
+      ...(isMarketplaceVendor
+        ? {}
+        : { foodTruck: { name: foodTruckName, infoType: "truck" } }),
       email,
       password,
       countryCode,
@@ -334,7 +338,9 @@ const SignUpScreen = ({ navigation }) => {
             {/* Sign Up Form */}
             <Text style={styles.title}>{"Business Details"}</Text>
             <Text style={styles.subtitle}>
-              {"Tell us about you and your food truck."}
+              {isMarketplaceVendor
+                ? "Tell us about you and your Marketplace Vendor business."
+                : "Tell us about you and your food truck."}
             </Text>
 
             <View style={styles.formContainer}>
@@ -412,7 +418,7 @@ const SignUpScreen = ({ navigation }) => {
 
               {/* Food Truck Name */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                {"Food Truck Name *"}
+                {isMarketplaceVendor ? "Business Name *" : "Food Truck Name *"}
               </Text>
               <TextInput
                 dense
@@ -420,7 +426,7 @@ const SignUpScreen = ({ navigation }) => {
                 onChangeText={setFoodTruckName}
                 style={styles.input}
                 contentStyle={styles.inputText}
-                placeholder="Enter Food Truck Name"
+                placeholder={isMarketplaceVendor ? "Enter Business Name" : "Enter Food Truck Name"}
                 placeholderTextColor={AppColor.placeholderTextColor}
                 mode="outlined"
                 error={!!errors.foodTruckName}

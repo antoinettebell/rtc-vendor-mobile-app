@@ -3,7 +3,8 @@ import React
 
 @objc(RTCTapToPay)
 final class RTCTapToPay: NSObject {
-  private let manager = TapToPayManager()
+  @available(iOS 16.0, *)
+  private lazy var manager = TapToPayManager()
 
   @objc
   static func requiresMainQueueSetup() -> Bool {
@@ -18,34 +19,23 @@ final class RTCTapToPay: NSObject {
   ) {
     let amountString = stringValue(options["amount"])
     let amount = Double(amountString) ?? 0
-    let appleTeamId = stringValue(options["appleTeamId"])
-
     Task { @MainActor in
       do {
-        _ = try await manager.initializeTerminal(appleTeamId: appleTeamId)
-        let token = try await manager.executePaymentSheet(amount: amount)
-        var raw: [String: Any] = [
-          "provider": stringValue(options["provider"], fallback: "CYBERSOURCE"),
-          "environment": stringValue(options["environment"], fallback: "sandbox")
-        ]
-
-        if let orderNumber = nullableStringValue(options["orderNumber"]) {
-          raw["orderNumber"] = orderNumber
+        guard #available(iOS 16.0, *) else {
+          throw NSError(domain: "RTCTapToPay", code: 403, userInfo: [
+            NSLocalizedDescriptionKey: "Tap to Pay requires iOS 16 or later."
+          ])
         }
-
-        if let orderId = nullableStringValue(options["orderId"]) {
-          raw["orderId"] = orderId
-        }
-
-        resolve([
-          "opaqueToken": [
-            "dataValue": token,
-            "dataDescriptor": "COMMON.ACCEPT.INAPP.PAYMENT"
-          ],
-          "dataValue": token,
-          "dataDescriptor": "COMMON.ACCEPT.INAPP.PAYMENT",
-          "raw": raw
-        ])
+        let reference = nullableStringValue(options["orderNumber"])
+          ?? nullableStringValue(options["orderId"])
+          ?? UUID().uuidString
+        let result = try await manager.startSale(
+          amount: Decimal(amount),
+          currency: .USD,
+          environmentName: stringValue(options["environment"], fallback: "production"),
+          reference: reference
+        )
+        resolve(result)
       } catch let error as NSError {
         reject(String(error.code), error.localizedDescription, error)
       } catch {
@@ -58,6 +48,27 @@ final class RTCTapToPay: NSObject {
             userInfo: [NSLocalizedDescriptionKey: error.localizedDescription]
           )
         )
+      }
+    }
+  }
+
+  @objc(showMerchantEducation:rejecter:)
+  func showMerchantEducation(
+    resolver resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    Task { @MainActor in
+      do {
+        guard #available(iOS 18.0, *),
+              let viewController = TapToPayManager.topViewController() else {
+          throw NSError(domain: "RTCTapToPay", code: 403, userInfo: [
+            NSLocalizedDescriptionKey: "Tap to Pay education requires iOS 18 or later."
+          ])
+        }
+        try await manager.showMerchantEducation(from: viewController)
+        resolve(nil)
+      } catch let error as NSError {
+        reject(String(error.code), error.localizedDescription, error)
       }
     }
   }

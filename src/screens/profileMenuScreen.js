@@ -50,6 +50,8 @@ import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlic
 import AppImage from "../components/AppImage";
 import { updateUserKey } from "../redux/slices/userInfoSlice";
 import { formatVendorRating } from "../helpers/rating.helper";
+import { showTapToPayMerchantEducation } from "../services/tapToPay-service";
+import tapToPayConfig from "../services/tapToPay-config";
 
 const ItemComponent = ({ imageUri, label, rightIcon, isRed, onPress }) => (
   <TouchableOpacity
@@ -589,6 +591,17 @@ const ProfileMenuScreen = ({ navigation }) => {
     }
   };
 
+  const handleTapToPayEducationPress = async () => {
+    try {
+      await showTapToPayMerchantEducation();
+    } catch (error) {
+      Alert.alert(
+        "Tap to Pay",
+        error?.message || "Tap to Pay education is unavailable on this device."
+      );
+    }
+  };
+
   return (
     <View style={styles.container}>
       <StatusBarManager />
@@ -913,6 +926,17 @@ const ProfileMenuScreen = ({ navigation }) => {
             onPress={handleHelpSupportPress}
           />
           <HR />
+          {Platform.OS === "ios" && tapToPayConfig.enabled ? (
+            <>
+              <ItemComponent
+                rightIcon
+                label="How to Accept Tap to Pay"
+                imageUri={PROFILE_MENU_IMAGES.helpSupportTC}
+                onPress={handleTapToPayEducationPress}
+              />
+              <HR />
+            </>
+          ) : null}
           <ItemComponent
             rightIcon
             label="Terms of Service"

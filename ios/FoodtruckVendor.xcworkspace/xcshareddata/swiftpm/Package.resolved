@@ -1,0 +1,24 @@
+{
+  "originHash" : "8f441a9fedc44097f8341de6fb3e20322a37fd7f54a70c4867ac382b3b8898b8",
+  "pins" : [
+    {
+      "identity" : "acceptance-devices-ios-sdk",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/visa/acceptance-devices-ios-sdk",
+      "state" : {
+        "revision" : "a5b9f73f8953b76a2e0951e2cdf4f2f71b0eda8a",
+        "version" : "3.7.0"
+      }
+    },
+    {
+      "identity" : "lottie-spm",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/airbnb/lottie-spm.git",
+      "state" : {
+        "revision" : "04f2fd18cc9404a0a0917265a449002674f24ec9",
+        "version" : "4.5.2"
+      }
+    }
+  ],
+  "version" : 3
+}

@@ -82,11 +82,11 @@ TAP_TO_PAY_SDK_CONFIG_ID=
 TAP_TO_PAY_CURRENCY=USD
 ```
 
-`TAP_TO_PAY_MERCHANT_ID` is the Cybersource/Visa vMID, `TAP_TO_PAY_TERMINAL_ID` is the TID, and `TAP_TO_PAY_APPLE_TEAM_ID` is the Apple Developer Team ID approved for Tap to Pay on iPhone.
+`TAP_TO_PAY_APPLE_TEAM_ID` is the Apple Developer Team ID approved for Tap to Pay on iPhone. The activation code is entered only in the CyberSource SDK screen on the physical iPhone; never put it in an environment file, source code, or logs. Set `TAP_TO_PAY_ENVIRONMENT=sandbox` for a test activation code or `production` for a live activation code.
 
 Android requires an NFC-capable supported device and the Authorize.net/Cybersource Tap to Pay SDK bridge to resolve `RTCTapToPay.startSale`. iOS production builds require the Apple Tap to Pay entitlement in the provisioning profile and `com.apple.developer.proximity-reader.payment.acceptance` in the app entitlements. Keep this entitlement in both `app.json` under `expo.ios.entitlements` for Expo prebuild/EAS config sync and `ios/FoodtruckVendor/FoodtruckVendor.entitlements` for direct Xcode builds.
 
-React Native calls `NativeModules.RTCTapToPay.startSale(options)` from `src/services/tapToPay-service.js`. The payload includes `amount`, `currency`, `orderNumber`, `orderId`, `platform`, `provider`, `environment`, `merchantId`, `terminalId`, `appleTeamId`, and `sdkConfigId`. iOS now routes through `TapToPayManager`, which prepares Apple's `ProximityReader` session and contains the Cybersource/Visa Acceptance Devices adapter boundary. Map the exact SDK token calls in `CybersourceAcceptanceDevicesClient` after the SDK package is installed; until then the native bridge rejects with `E_TAP_TO_PAY_NOT_CONFIGURED` instead of running a fake sale.
+React Native calls `NativeModules.RTCTapToPay.startSale(options)` from `src/services/tapToPay-service.js`. iOS routes through CyberSource Acceptance Devices SDK 3.7 (`MposUI`), activates the physical device when needed, presents Apple's merchant education after a new activation, and returns the processed CyberSource transaction identifier to the checkout flow. Merchant education can be reopened from **Profile → How to Accept Tap to Pay**.
 
 ## Step 3: Modify your app
 

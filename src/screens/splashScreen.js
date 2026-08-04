@@ -55,9 +55,12 @@ const SplashScreen = () => {
       } else if (vendorOnboardingStep === "MENU") {
         navigation.replace("authMenuSetupPromptScreen");
       } else if (selectedPlan) {
-        navigation.replace("authFoodTruckProfileScreen", {
-          addOns: selectedSignupAddOns,
-        });
+        navigation.replace(
+          selectedPlan?.slug === "SUB_MARKETPLACE_VENDOR"
+            ? "eventVendorProfileScreen"
+            : "authFoodTruckProfileScreen",
+          { addOns: selectedSignupAddOns }
+        );
       } else {
         navigation.replace("authFoodTruckPlansScreen");
       }
