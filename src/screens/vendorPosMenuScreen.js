@@ -132,7 +132,10 @@ const VendorPosMenuScreen = ({ navigation }) => {
 
   const cartItemById = useMemo(() => {
     return order.items.reduce((acc, item) => {
-      acc[item._id] = item;
+      const existing = acc[item._id];
+      acc[item._id] = existing
+        ? { ...existing, quantity: existing.quantity + item.quantity }
+        : item;
       return acc;
     }, {});
   }, [order.items]);
@@ -407,8 +410,9 @@ const VendorPosMenuScreen = ({ navigation }) => {
   };
 
   const getItemQuantity = (itemId) => {
-    const orderItem = order.items.find((item) => item._id === itemId);
-    return orderItem ? orderItem.quantity : 0;
+    return order.items
+      .filter((item) => item._id === itemId)
+      .reduce((total, item) => total + item.quantity, 0);
   };
 
   const updateSelectedItemProperty = useCallback(

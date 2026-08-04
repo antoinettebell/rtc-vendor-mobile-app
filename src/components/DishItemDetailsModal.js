@@ -391,6 +391,7 @@ const DishItemDetailsModal = ({
   const [splitPlainDiscountFlavor, setSplitPlainDiscountFlavor] = useState(false);
   const [splitPlainDiscountTopping, setSplitPlainDiscountTopping] = useState(false);
   const [expandedRequirementSections, setExpandedRequirementSections] = useState({});
+  const [isAddingSeparateItem, setIsAddingSeparateItem] = useState(false);
 
   // Sync selection with existing order item or reset when menu item changes
   useEffect(() => {
@@ -427,6 +428,7 @@ const DishItemDetailsModal = ({
       "primary-item": false,
       "discount-reward": false,
     });
+    setIsAddingSeparateItem(false);
     setSplitPlainFlavor(
       (selectedMenuItem?.selectedFlavors || []).some(isPlainOption) &&
         (selectedMenuItem?.selectedFlavors || []).length > 1
@@ -893,9 +895,15 @@ const DishItemDetailsModal = ({
         ? selectedDiscountComboSides
         : [],
       selectedDiscountSubItems,
+      ...(isAddingSeparateItem
+        ? {
+            _forceNewLine: true,
+            _cartLineId: `${selectedMenuItem._id}-${Date.now()}`,
+          }
+        : {}),
     };
 
-    if (getItemQuantity(selectedMenuItem._id) === 0) {
+    if (getItemQuantity(selectedMenuItem._id) === 0 || isAddingSeparateItem) {
       handleAddItem(itemWithSelections);
     } else if (onSelectedFlavorsChange) {
       onCustomizationInputChange?.(itemWithSelections.customizationInput);
@@ -928,6 +936,7 @@ const DishItemDetailsModal = ({
     handleAddItem,
     hasComboSideChoices,
     hasDiscountComboSideChoices,
+    isAddingSeparateItem,
     hasDiscountCustomization,
     hasDiscountFlavorChoices,
     hasDiscountToppingChoices,
@@ -943,6 +952,87 @@ const DishItemDetailsModal = ({
     onSelectedDiscountToppingsChange,
     onSelectedFlavorsChange,
     onSelectedToppingsChange,
+    selectedComboSides,
+    selectedDiscountComboSides,
+    selectedDiscountCustomizationInput,
+    selectedDiscountFlavors,
+    selectedDiscountSubItems,
+    selectedDiscountToppings,
+    selectedFlavors,
+    selectedMenuItem,
+    selectedSubItems,
+    selectedToppings,
+    validateSelections,
+  ]);
+
+  const beginAdditionalCustomization = useCallback(() => {
+    const discountSource = getDiscountRequirementSource(selectedMenuItem);
+    setSelectedSubItems(
+      selectedMenuItem?.itemType === foodTypeStrings.combo
+        ? buildRequiredChildSelections(selectedMenuItem?.subItem, [])
+        : []
+    );
+    setCustomizationInput("");
+    setSelectedFlavors([]);
+    setSelectedToppings([]);
+    setSelectedComboSides([]);
+    setSelectedDiscountFlavors([]);
+    setSelectedDiscountToppings([]);
+    setSelectedDiscountCustomizationInput("");
+    setSelectedDiscountComboSides([]);
+    setSelectedDiscountSubItems(
+      discountSource?.itemType === foodTypeStrings.combo
+        ? buildRequiredChildSelections(discountSource?.subItem, [])
+        : []
+    );
+    setIsAddingSeparateItem(true);
+  }, [selectedMenuItem]);
+
+  const handleIncreaseQuantity = useCallback(() => {
+    const addWithCurrentOptions = () => {
+      if (!validateSelections()) return;
+      handleAddItem({
+        ...selectedMenuItem,
+        selectedSubItems,
+        customizationInput,
+        selectedFlavors: hasFlavorChoices ? selectedFlavors : [],
+        selectedToppings: hasToppingChoices ? selectedToppings : [],
+        selectedComboSides: hasComboSideChoices ? selectedComboSides : [],
+        selectedDiscountFlavors: hasDiscountFlavorChoices
+          ? selectedDiscountFlavors
+          : [],
+        selectedDiscountToppings: hasDiscountToppingChoices
+          ? selectedDiscountToppings
+          : [],
+        selectedDiscountCustomizationInput: hasDiscountCustomization
+          ? selectedDiscountCustomizationInput
+          : "",
+        selectedDiscountComboSides: hasDiscountComboSideChoices
+          ? selectedDiscountComboSides
+          : [],
+        selectedDiscountSubItems,
+      });
+    };
+
+    Alert.alert(
+      "Customize additional item?",
+      "Would you like to choose different options for the additional item?",
+      [
+        { text: "No", onPress: addWithCurrentOptions },
+        { text: "Yes", onPress: beginAdditionalCustomization },
+      ]
+    );
+  }, [
+    beginAdditionalCustomization,
+    customizationInput,
+    handleAddItem,
+    hasComboSideChoices,
+    hasDiscountComboSideChoices,
+    hasDiscountCustomization,
+    hasDiscountFlavorChoices,
+    hasDiscountToppingChoices,
+    hasFlavorChoices,
+    hasToppingChoices,
     selectedComboSides,
     selectedDiscountComboSides,
     selectedDiscountCustomizationInput,
@@ -1846,34 +1936,7 @@ const DishItemDetailsModal = ({
               </Text>
               <TouchableOpacity
                 style={styles.qtyBtn}
-                onPress={() => {
-                  if (!validateSelections()) {
-                    return;
-                  }
-                  handleAddItem({
-                    ...selectedMenuItem,
-                    selectedSubItems,
-                    customizationInput,
-                    selectedFlavors: hasFlavorChoices ? selectedFlavors : [],
-                    selectedToppings: hasToppingChoices ? selectedToppings : [],
-                    selectedComboSides: hasComboSideChoices
-                      ? selectedComboSides
-                      : [],
-                    selectedDiscountFlavors: hasDiscountFlavorChoices
-                      ? selectedDiscountFlavors
-                      : [],
-                    selectedDiscountToppings: hasDiscountToppingChoices
-                      ? selectedDiscountToppings
-                      : [],
-                    selectedDiscountCustomizationInput: hasDiscountCustomization
-                      ? selectedDiscountCustomizationInput
-                      : "",
-                    selectedDiscountComboSides: hasDiscountComboSideChoices
-                      ? selectedDiscountComboSides
-                      : [],
-                    selectedDiscountSubItems,
-                  });
-                }}
+                onPress={handleIncreaseQuantity}
                 disabled={
                   getItemQuantity(selectedMenuItem._id) >=
                   (selectedMenuItem.maxQty || 10)
@@ -1905,6 +1968,8 @@ const DishItemDetailsModal = ({
               <Text style={styles.addButtonText}>
                 {getItemQuantity(selectedMenuItem._id) === 0
                   ? "Add to Order"
+                  : isAddingSeparateItem
+                    ? "Add Customized Item"
                   : "Update Order"}
               </Text>
             </TouchableOpacity>
