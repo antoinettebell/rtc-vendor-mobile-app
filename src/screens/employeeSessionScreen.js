@@ -487,7 +487,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
       <View style={styles.orderActions}>
         <TouchableOpacity
           activeOpacity={0.8}
-          style={styles.secondaryButton}
+          style={styles.orderSecondaryButton}
           onPress={() => handlePrintOrder(item)}
         >
           <MaterialCommunityIcons
@@ -495,7 +495,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
             size={18}
             color={AppColor.black}
           />
-          <Text style={styles.secondaryButtonText}>Print</Text>
+          <Text style={styles.orderSecondaryButtonText}>Print</Text>
         </TouchableOpacity>
         {nextStatus && !isRefundPending ? (
           <TouchableOpacity
@@ -801,6 +801,13 @@ const EmployeeSessionScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.bottomActionPanel}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={styles.secondaryButton}
+                onPress={() => navigation.navigate("operationsScreen")}
+              >
+                <Text style={styles.secondaryButtonText}>Operations</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 activeOpacity={0.8}
                 style={styles.secondaryButton}
@@ -1215,7 +1222,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     marginTop: 14,
   },
-  secondaryButton: {
+  orderSecondaryButton: {
     alignItems: "center",
     borderColor: AppColor.border,
     borderRadius: 6,
@@ -1225,7 +1232,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
     paddingHorizontal: 14,
   },
-  secondaryButtonText: {
+  orderSecondaryButtonText: {
     color: AppColor.black,
     fontFamily: Mulish700,
     fontSize: 14,

@@ -93,6 +93,9 @@ import EventVendorProfileScreen from "./src/screens/eventVendorProfileScreen";
 import EventVendorPhotosScreen from "./src/screens/eventVendorPhotosScreen";
 import EventVendorMarketplaceScreen from "./src/screens/eventVendorMarketplaceScreen";
 import EventVendorApplicationScreen from "./src/screens/eventVendorApplicationScreen";
+import MoreMenuScreen from "./src/screens/moreMenuScreen";
+import OperationsScreen from "./src/screens/operationsScreen";
+import OperationalFormScreen from "./src/screens/operationalFormScreen";
 
 const Stack = createNativeStackNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -103,12 +106,8 @@ const orderActive = require("./src/assets/images/orderMenuActive.png");
 const orderInactive = require("./src/assets/images/orderMenuInactive.png");
 const menuActive = require("./src/assets/images/menuMenuActive.png");
 const menuInactive = require("./src/assets/images/menuMenuInactive.png");
-const earningsActive = require("./src/assets/images/earningsMenuActive.png");
-const earningsInactive = require("./src/assets/images/earningsMenuInactive.png");
 const profileActive = require("./src/assets/images/profileMenuActive.png");
 const profileInactive = require("./src/assets/images/profileMenuInactive.png");
-
-const canUseEmployeeLogin = (plan) => !!plan?.capabilities?.employeeLogin;
 
 const AuthNavigator = () => (
   <Stack.Navigator
@@ -190,7 +189,6 @@ const FinalSignupStepsNavigator = () => (
 // bottom tab navigator
 const BottomTabNavigator = ({ insets }) => {
   const { user } = useSelector((state) => state.userReducer);
-  const showEmployeesTab = canUseEmployeeLogin(user?.foodTruck?.plan);
   const isEventVendor = user?.vendorSubtype === "EVENT_VENDOR";
 
   if (isEventVendor) {
@@ -273,31 +271,6 @@ const BottomTabNavigator = ({ insets }) => {
       }}
     />
     <BottomTab.Screen
-      name="earningsScreen"
-      component={EarningsScreen}
-      options={{
-        tabBarLabel: "Earnings",
-        tabBarIcon: ({ focused, color, size }) => (
-          <Image
-            source={focused ? earningsActive : earningsInactive}
-            style={{ height: 24, width: 24, tintColor: color }}
-          />
-        ),
-      }}
-    />
-    {showEmployeesTab ? (
-      <BottomTab.Screen
-        name="employeesScreen"
-        component={EmployeesScreen}
-        options={{
-          tabBarLabel: "Employees",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="people-alt" size={size || 24} color={color} />
-          ),
-        }}
-      />
-    ) : null}
-    <BottomTab.Screen
       name="profileMenuScreen"
       component={ProfileMenuScreen}
       options={{
@@ -307,6 +280,16 @@ const BottomTabNavigator = ({ insets }) => {
             source={focused ? profileActive : profileInactive}
             style={{ height: 24, width: 24, tintColor: color }}
           />
+        ),
+      }}
+    />
+    <BottomTab.Screen
+      name="moreMenuScreen"
+      component={MoreMenuScreen}
+      options={{
+        tabBarLabel: "More",
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="menu" size={size || 25} color={color} />
         ),
       }}
     />
@@ -377,6 +360,10 @@ const MainAppNavigator = ({ insets }) => (
       name="profileEmployeeManagementScreen"
       component={ProfileEmployeeManagementScreen}
     />
+    <Stack.Screen name="employeesScreen" component={EmployeesScreen} />
+    <Stack.Screen name="earningsScreen" component={EarningsScreen} />
+    <Stack.Screen name="operationsScreen" component={OperationsScreen} />
+    <Stack.Screen name="operationalFormScreen" component={OperationalFormScreen} />
     <Stack.Screen
       name="deleteOtpVerification"
       component={OtpVerificationScreen}
@@ -488,6 +475,8 @@ const EmployeeAppNavigator = () => (
       name="employeeShiftScreen"
       component={EmployeeShiftScreen}
     />
+    <Stack.Screen name="operationsScreen" component={OperationsScreen} />
+    <Stack.Screen name="operationalFormScreen" component={OperationalFormScreen} />
     <Stack.Screen name="userProfileScreen" component={UserProfileScreen} />
     <Stack.Screen name="vendorPosMenuScreen" component={VendorPosMenuScreen} />
     <Stack.Screen

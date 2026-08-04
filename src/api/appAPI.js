@@ -103,6 +103,12 @@ import {
   VENDOR_COMPLIANCE_SUBMIT,
   VENDOR_EMPLOYEE_SHIFT_HISTORY_ITEM,
   ARCHIVE_VENDOR_EMPLOYEE_SHIFT_HISTORY,
+  OPERATIONAL_COMPLIANCE_ARCHIVE,
+  OPERATIONAL_COMPLIANCE_CURRENT,
+  OPERATIONAL_COMPLIANCE_FORM,
+  OPERATIONAL_COMPLIANCE_FORMS,
+  OPERATIONAL_COMPLIANCE_SUBMIT,
+  OPERATIONAL_COMPLIANCE_UNLOCK,
 } from "./apiEndPoint";
 
 /**
@@ -1422,6 +1428,29 @@ export const getVendorEmployees_API = async ({
     throw error?.response?.data || error;
   }
 };
+
+export const getOperationalComplianceForms_API = async ({ type, status } = {}) => {
+  const params = [];
+  if (type) params.push(`type=${encodeURIComponent(type)}`);
+  if (status) params.push(`status=${encodeURIComponent(status)}`);
+  const url = `${OPERATIONAL_COMPLIANCE_FORMS}${params.length ? `?${params.join("&")}` : ""}`;
+  return (await apiClient.get(url, { skipToken: false }))?.data;
+};
+
+export const getCurrentOperationalComplianceForm_API = async (type) =>
+  (await apiClient.get(OPERATIONAL_COMPLIANCE_CURRENT(type), { skipToken: false }))?.data;
+
+export const saveOperationalComplianceForm_API = async (id, payload) =>
+  (await apiClient.put(OPERATIONAL_COMPLIANCE_FORM(id), payload, { skipToken: false }))?.data;
+
+export const submitOperationalComplianceForm_API = async (id, payload) =>
+  (await apiClient.post(OPERATIONAL_COMPLIANCE_SUBMIT(id), payload, { skipToken: false }))?.data;
+
+export const unlockOperationalComplianceForm_API = async (id) =>
+  (await apiClient.patch(OPERATIONAL_COMPLIANCE_UNLOCK(id), undefined, { skipToken: false }))?.data;
+
+export const archiveOperationalComplianceForm_API = async (id) =>
+  (await apiClient.post(OPERATIONAL_COMPLIANCE_ARCHIVE(id), {}, { skipToken: false }))?.data;
 
 export const createVendorEmployee_API = async (payload) => {
   try {

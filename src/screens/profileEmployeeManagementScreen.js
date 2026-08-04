@@ -20,6 +20,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 import { Dropdown } from "react-native-element-dropdown";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 import StatusBarManager from "../components/StatusBarManager";
 import StatePickerModal from "../components/StatePickerModal";
 import usePermission from "../hooks/usePermission";
@@ -54,6 +55,23 @@ const initialForm = {
   assigned_truck_unit_id: "",
   pin: "",
 };
+
+const WEEK_DAYS = [
+  ["sun", "Sunday"], ["mon", "Monday"], ["tue", "Tuesday"],
+  ["wed", "Wednesday"], ["thu", "Thursday"], ["fri", "Friday"], ["sat", "Saturday"],
+];
+const getScheduleDraft = (employee) => WEEK_DAYS.map(([day]) => {
+  const saved = (employee.weekly_schedule || []).find((row) => row.day === day);
+  return { day, enabled: !!saved?.enabled, clock_in: saved?.clock_in || "09:00", clock_out: saved?.clock_out || "17:00" };
+});
+const timeToDate = (value) => {
+  const [hours, minutes] = String(value || "09:00").split(":").map(Number);
+  const date = new Date();
+  date.setHours(hours || 0, minutes || 0, 0, 0);
+  return date;
+};
+const dateToTime = (date) => `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+const formatScheduleTime = (value) => timeToDate(value).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
 const getGeneratedLoginPreview = ({ first_name, last_name, zip_code }) => {
   const initial = first_name.trim().charAt(0);
@@ -162,6 +180,9 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const [editingShiftId, setEditingShiftId] = useState(null);
   const [shiftEditDraft, setShiftEditDraft] = useState(null);
   const [employeeIdUploading, setEmployeeIdUploading] = useState(false);
+  const [scheduleExpandedId, setScheduleExpandedId] = useState(null);
+  const [scheduleDrafts, setScheduleDrafts] = useState({});
+  const [timePickerTarget, setTimePickerTarget] = useState(null);
   const isManageMode = managementMode === "manage";
 
   const locationOptions = useMemo(
@@ -707,6 +728,39 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
     } catch (error) {
       Alert.alert("PIN reset failed", error?.message || "Please try again.");
     }
+  };
+
+  const toggleEmployeeSchedule = (employee) => {
+    setScheduleExpandedId((current) => current === employee._id ? null : employee._id);
+    setScheduleDrafts((current) => current[employee._id]
+      ? current
+      : { ...current, [employee._id]: getScheduleDraft(employee) });
+  };
+
+  const updateScheduleRow = (employeeId, day, field, value) => {
+    setScheduleDrafts((current) => ({
+      ...current,
+      [employeeId]: (current[employeeId] || []).map((row) =>
+        row.day === day ? { ...row, [field]: value } : row),
+    }));
+  };
+
+  const saveEmployeeSchedule = async (employee) => {
+    const schedule = scheduleDrafts[employee._id] || getScheduleDraft(employee);
+    const invalid = schedule.find((row) => row.enabled && (!/^([01]\d|2[0-3]):[0-5]\d$/.test(row.clock_in) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(row.clock_out)));
+    if (invalid) {
+      Alert.alert("Valid times required", "Enter scheduled times as HH:MM, such as 09:00 or 17:30.");
+      return;
+    }
+    const saved = await updateEmployee(employee, { weekly_schedule: schedule, is_working: false });
+    if (saved) setScheduleExpandedId(null);
+  };
+
+  const confirmScheduleTime = (date) => {
+    if (timePickerTarget) {
+      updateScheduleRow(timePickerTarget.employeeId, timePickerTarget.day, timePickerTarget.field, dateToTime(date));
+    }
+    setTimePickerTarget(null);
   };
 
   const archiveEmployee = (employee) => {
@@ -1545,22 +1599,47 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
               ) : null}
 
 	              {isManageMode && activeTab === "current" ? (
-	              <View style={styles.toggleRow}>
-                <View>
-                  <Text style={styles.toggleLabel}>On/Off Duty</Text>
-                  <Text style={styles.employeeMeta}>
-                    {employee.is_working ? "Working" : "Off duty"}
-                  </Text>
+                <View style={styles.scheduleSection}>
+                  <TouchableOpacity style={styles.scheduleHeader} onPress={() => toggleEmployeeSchedule(employee)}>
+                    <View>
+                      <Text style={styles.toggleLabel}>Weekly Schedule</Text>
+                      <Text style={styles.employeeMeta}>
+                        {employee.is_working ? "Inside scheduled working window" : "Outside scheduled working window"}
+                      </Text>
+                    </View>
+                    <Text style={styles.scheduleChevron}>{scheduleExpandedId === employee._id ? "▲" : "▼"}</Text>
+                  </TouchableOpacity>
+                  {scheduleExpandedId === employee._id ? (
+                    <View style={styles.scheduleBody}>
+                      <Text style={styles.employeeMeta}>Employees may clock in 15 minutes early. Access ends and active shifts close 15 minutes after the scheduled clock-out time.</Text>
+                      {(scheduleDrafts[employee._id] || getScheduleDraft(employee)).map((row) => {
+                        const label = WEEK_DAYS.find(([day]) => day === row.day)?.[1] || row.day;
+                        return (
+                          <View key={row.day} style={styles.scheduleRow}>
+                            <View style={styles.scheduleDayBlock}>
+                              <Text style={styles.scheduleDay}>{label}</Text>
+                              <Switch value={row.enabled} onValueChange={(value) => updateScheduleRow(employee._id, row.day, "enabled", value)} />
+                            </View>
+                            {row.enabled ? (
+                              <View style={styles.scheduleTimeRow}>
+                                <TouchableOpacity style={styles.scheduleTimeInput} onPress={() => setTimePickerTarget({ employeeId: employee._id, day: row.day, field: "clock_in", value: row.clock_in })}>
+                                  <Text style={styles.scheduleTimeText}>{formatScheduleTime(row.clock_in)}</Text>
+                                </TouchableOpacity>
+                                <Text style={styles.employeeMeta}>to</Text>
+                                <TouchableOpacity style={styles.scheduleTimeInput} onPress={() => setTimePickerTarget({ employeeId: employee._id, day: row.day, field: "clock_out", value: row.clock_out })}>
+                                  <Text style={styles.scheduleTimeText}>{formatScheduleTime(row.clock_out)}</Text>
+                                </TouchableOpacity>
+                              </View>
+                            ) : <Text style={styles.employeeMeta}>Not scheduled</Text>}
+                          </View>
+                        );
+                      })}
+                      <TouchableOpacity style={styles.primaryButton} onPress={() => saveEmployeeSchedule(employee)}>
+                        <Text style={styles.primaryButtonText}>Save Weekly Schedule</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
                 </View>
-                <Switch
-                  value={!!employee.is_working}
-                  disabled={!employee.is_active}
-                  onValueChange={(value) =>
-                    updateEmployee(employee, { is_working: value })
-                  }
-                  trackColor={{ false: AppColor.border, true: AppColor.primary }}
-                />
-              </View>
               ) : null}
 
 	              {isManageMode &&
@@ -1755,6 +1834,14 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
           ))
         )}
       </ScrollView>
+      <DateTimePickerModal
+        isVisible={!!timePickerTarget}
+        mode="time"
+        date={timeToDate(timePickerTarget?.value)}
+        onConfirm={confirmScheduleTime}
+        onCancel={() => setTimePickerTarget(null)}
+        is24Hour={false}
+      />
     </View>
   );
 };
@@ -2112,6 +2199,41 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     marginTop: 8,
   },
+  scheduleSection: {
+    borderTopWidth: 1,
+    borderColor: AppColor.border,
+    marginTop: 10,
+    paddingTop: 10,
+  },
+  scheduleHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+  },
+  scheduleChevron: { color: AppColor.primary, fontSize: 16 },
+  scheduleBody: { gap: 8, paddingBottom: 10 },
+  scheduleRow: {
+    backgroundColor: "#F9FAFB",
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    padding: 10,
+  },
+  scheduleDayBlock: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
+  scheduleDay: { color: AppColor.text, fontFamily: Mulish700, fontSize: 14 },
+  scheduleTimeRow: { alignItems: "center", flexDirection: "row", gap: 8, marginTop: 8 },
+  scheduleTimeInput: {
+    backgroundColor: AppColor.white,
+    borderColor: AppColor.border,
+    borderRadius: 6,
+    borderWidth: 1,
+    fontFamily: Mulish600,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    width: 82,
+  },
+  scheduleTimeText: { color: AppColor.text, fontFamily: Mulish600, textAlign: "center" },
   shiftHistorySection: {
     borderTopWidth: 1,
     borderColor: AppColor.border,

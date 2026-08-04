@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -8,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import ImagePicker from "react-native-image-crop-picker";
 import {
   ActivityIndicator,
   Divider,
@@ -27,7 +29,7 @@ import {
   bankCurrencyList,
   emailRegex,
 } from "../utils/constants";
-import { addBankDetail_API, registerComplete_API } from "../api/appAPI";
+import { addBankDetail_API, registerComplete_API, uploadImage_API } from "../api/appAPI";
 import {
   onUnderReview,
   setVendorOnboardingStep,
@@ -105,6 +107,15 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
   const [iban, setIban] = useState("");
   const [selectedCurrency, setSelectedCurrency] = useState("");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
+  const [bankAddressLine1, setBankAddressLine1] = useState("");
+  const [bankAddressLine2, setBankAddressLine2] = useState("");
+  const [bankCity, setBankCity] = useState("");
+  const [bankState, setBankState] = useState("");
+  const [bankPostal, setBankPostal] = useState("");
+  const [paymentQrCodeUrl, setPaymentQrCodeUrl] = useState("");
+  const [uploadingQr, setUploadingQr] = useState(false);
+  const requiresBankDetails = ["ACH", "CHECK"].includes(selectedPaymentMethod);
+  const requiresQrCode = ["CASHAPP", "PAYPAL", "VENMO"].includes(selectedPaymentMethod);
 
   const [errors, setErrors] = useState({
     accountHolderName: "",
@@ -123,17 +134,22 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
     // Validate all required fields
     const newErrors = {
       accountHolderName: validateAccountHolderName(accountHolderName),
-      bankName: validateBankName(bankName),
-      accountNumber: validateAccountNumber(accountNumber),
-      routingNumber: validateRoutingNumber(routingNumber)
-        ? ""
-        : "Routing number is required",
-      accountType: validateAccountType(selectedAccountType),
+      bankName: requiresBankDetails ? validateBankName(bankName) : "",
+      accountNumber: requiresBankDetails ? validateAccountNumber(accountNumber) : "",
+      routingNumber: requiresBankDetails && !validateRoutingNumber(routingNumber)
+        ? "Routing number is required"
+        : "",
+      accountType: requiresBankDetails ? validateAccountType(selectedAccountType) : "",
       remittanceEmail: validateRemittanceEmail(remittanceEmail),
-      swiftCode: validateSwiftCode(swiftCode),
-      iban: validateIban(iban),
+      swiftCode: requiresBankDetails ? validateSwiftCode(swiftCode) : "",
+      iban: requiresBankDetails ? validateIban(iban) : "",
       currency: validateCurrency(selectedCurrency),
       paymentMethod: validatePaymentMethod(selectedPaymentMethod),
+      paymentQrCodeUrl: requiresQrCode && !paymentQrCodeUrl ? "QR code is required" : "",
+      bankAddressLine1: requiresBankDetails && !bankAddressLine1.trim() ? "Bank address is required" : "",
+      bankCity: requiresBankDetails && !bankCity.trim() ? "City is required" : "",
+      bankState: requiresBankDetails && !bankState.trim() ? "State is required" : "",
+      bankPostal: requiresBankDetails && !bankPostal.trim() ? "Postal code is required" : "",
     };
 
     setErrors(newErrors);
@@ -148,15 +164,21 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
     try {
       const payload = {
         accountHolderName,
-        bankName,
-        accountNumber,
-        routingNumber,
-        accountType: selectedAccountType,
+        bankName: requiresBankDetails ? bankName : "",
+        accountNumber: requiresBankDetails ? accountNumber : "",
+        routingNumber: requiresBankDetails ? routingNumber : "",
+        accountType: requiresBankDetails ? selectedAccountType : "",
         remittanceEmail,
         swiftCode,
         iban,
         currency: selectedCurrency,
         paymentMethod: selectedPaymentMethod,
+        paymentQrCodeUrl: requiresQrCode ? paymentQrCodeUrl : "",
+        bankAddressLine1: requiresBankDetails ? bankAddressLine1 : "",
+        bankAddressLine2: requiresBankDetails ? bankAddressLine2 : "",
+        bankCity: requiresBankDetails ? bankCity : "",
+        bankState: requiresBankDetails ? bankState : "",
+        bankPostal: requiresBankDetails ? bankPostal : "",
       };
       const response = await addBankDetail_API(payload);
       console.log("response => ", response);
@@ -185,6 +207,30 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
       console.log("error => ", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const uploadPaymentQrCode = async () => {
+    try {
+      const image = await ImagePicker.openPicker({ mediaType: "photo", cropping: false });
+      setUploadingQr(true);
+      const formData = new FormData();
+      formData.append("file", {
+        uri: image.path,
+        name: image.path.split("/").pop() || `payment-qr-${Date.now()}.jpg`,
+        type: image.mime || "image/jpeg",
+      });
+      const response = await uploadImage_API(formData);
+      const url = response?.data?.file;
+      if (!response?.success || !url) throw new Error("QR upload failed");
+      setPaymentQrCodeUrl(url);
+      setErrors((current) => ({ ...current, paymentQrCodeUrl: "" }));
+    } catch (error) {
+      if (!String(error?.message || error).toLowerCase().includes("cancel")) {
+        Alert.alert("Upload failed", "Could not upload the payment QR code.");
+      }
+    } finally {
+      setUploadingQr(false);
     }
   };
 
@@ -287,6 +333,40 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
 
               <Divider />
 
+              <View style={styles.section}>
+                <Text style={styles.inputLabel}>Payment Method</Text>
+                <Dropdown
+                  data={bankPaymentMethodList}
+                  labelField="label"
+                  valueField="type"
+                  value={selectedPaymentMethod}
+                  onChange={(selected) => {
+                    setSelectedPaymentMethod(selected.type);
+                    setPaymentQrCodeUrl("");
+                    setErrors((current) => ({ ...current, paymentMethod: "", paymentQrCodeUrl: "" }));
+                  }}
+                  placeholder="Select Payment Method"
+                  style={styles.dropdown}
+                  placeholderStyle={{ fontFamily: Mulish400, color: AppColor.textHighlighter }}
+                  itemTextStyle={{ fontFamily: Mulish400 }}
+                  selectedTextStyle={{ fontFamily: Mulish400 }}
+                />
+                {!!errors.paymentMethod && <HelperText type="error">{errors.paymentMethod}</HelperText>}
+              </View>
+
+              {requiresQrCode ? (
+                <View style={styles.section}>
+                  <Text style={styles.inputLabel}>Payment QR Code</Text>
+                  <TouchableOpacity style={styles.continueButton} onPress={uploadPaymentQrCode} disabled={uploadingQr}>
+                    <Text style={styles.continueButtonText}>
+                      {uploadingQr ? "Uploading…" : paymentQrCodeUrl ? "Replace QR Code" : "Upload QR Code"}
+                    </Text>
+                  </TouchableOpacity>
+                  {paymentQrCodeUrl ? <HelperText type="info">QR code uploaded</HelperText> : null}
+                  {!!errors.paymentQrCodeUrl && <HelperText type="error">{errors.paymentQrCodeUrl}</HelperText>}
+                </View>
+              ) : null}
+
               {/* Account Holder Name */}
               <View style={styles.section}>
                 <Text style={styles.inputLabel}>{"Account Holder Name"}</Text>
@@ -324,6 +404,7 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
                 )}
               </View>
 
+              <View style={{ display: requiresBankDetails ? "flex" : "none" }}>
               {/* Bank Name */}
               <View style={styles.section}>
                 <Text style={styles.inputLabel}>{"Bank Name"}</Text>
@@ -480,6 +561,32 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
               </View>
 
               {/* Remittance Email */}
+              {[
+                ["Bank Address", bankAddressLine1, setBankAddressLine1, "bankAddressLine1"],
+                ["Bank Address Line 2", bankAddressLine2, setBankAddressLine2, null],
+                ["Bank City", bankCity, setBankCity, "bankCity"],
+                ["Bank State", bankState, setBankState, "bankState"],
+                ["Bank Postal Code", bankPostal, setBankPostal, "bankPostal"],
+              ].map(([label, value, setter, errorKey]) => (
+                <View style={styles.section} key={label}>
+                  <Text style={styles.inputLabel}>{label}</Text>
+                  <TextInput
+                    dense
+                    value={value}
+                    onChangeText={(text) => {
+                      setter(text);
+                      if (errorKey && text.trim()) setErrors((current) => ({ ...current, [errorKey]: "" }));
+                    }}
+                    placeholder={label}
+                    mode="outlined"
+                    style={styles.inputStyle}
+                    error={errorKey ? !!errors[errorKey] : false}
+                  />
+                  {errorKey && errors[errorKey] ? <HelperText type="error">{errors[errorKey]}</HelperText> : null}
+                </View>
+              ))}
+              </View>
+              {/* Remittance Email */}
               <View style={styles.section}>
                 <Text style={styles.inputLabel}>{"Remittance Email"}</Text>
                 <TextInput
@@ -625,41 +732,6 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
                 )}
               </View>
 
-              {/* Payment Method */}
-              <View style={styles.section}>
-                <Text style={styles.inputLabel}>{"Payment Method"}</Text>
-                <Dropdown
-                  data={bankPaymentMethodList}
-                  dropdownPosition="top"
-                  labelField="label"
-                  valueField="type"
-                  value={selectedPaymentMethod}
-                  onChange={(selected) => {
-                    setSelectedPaymentMethod(selected.type);
-                    setErrors((prev) => ({
-                      ...prev,
-                      paymentMethod: "",
-                    }));
-                  }}
-                  placeholder="Select Payment Method"
-                  style={styles.dropdown}
-                  placeholderStyle={{
-                    fontFamily: Mulish400,
-                    color: AppColor.textHighlighter,
-                  }}
-                  itemTextStyle={{ fontFamily: Mulish400 }}
-                  selectedTextStyle={{ fontFamily: Mulish400 }}
-                />
-                {!!errors.paymentMethod && (
-                  <HelperText
-                    type="error"
-                    visible={!!errors.paymentMethod}
-                    style={styles.helper}
-                  >
-                    {errors.paymentMethod}
-                  </HelperText>
-                )}
-              </View>
             </View>
           </View>
         </ScrollView>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -9,6 +10,7 @@ import {
   ActivityIndicator as NativeIndicator,
   View,
 } from "react-native";
+import ImagePicker from "react-native-image-crop-picker";
 import {
   ActivityIndicator,
   Divider,
@@ -32,7 +34,7 @@ import {
   addressStateRegex,
   addressPostalCodeRegex,
 } from "../utils/constants";
-import { addBankDetail_API, getBankDetail_API } from "../api/appAPI";
+import { addBankDetail_API, getBankDetail_API, uploadImage_API } from "../api/appAPI";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
 import { setBankStatus } from "../redux/slices/userSlice";
 
@@ -154,6 +156,10 @@ const EditBankDetailScreen = ({ navigation, route }) => {
   const [iban, setIban] = useState("");
   const [selectedCurrency, setSelectedCurrency] = useState("");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
+  const [paymentQrCodeUrl, setPaymentQrCodeUrl] = useState("");
+  const [uploadingQr, setUploadingQr] = useState(false);
+  const requiresBankDetails = ["ACH", "CHECK"].includes(selectedPaymentMethod);
+  const requiresQrCode = ["CASHAPP", "PAYPAL", "VENMO"].includes(selectedPaymentMethod);
   const [addressLine1, setAddressLine1] = useState("");
   const [addressLine2, setAddressLine2] = useState("");
   const [city, setCity] = useState("");
@@ -182,22 +188,21 @@ const EditBankDetailScreen = ({ navigation, route }) => {
     // Validate all required fields
     const newErrors = {
       accountHolderName: validateAccountHolderName(accountHolderName),
-      bankName: validateBankName(bankName),
-      accountNumber: validateAccountNumber(accountNumber),
-      routingNumber: validateRoutingNumber(routingNumber)
-        ? ""
-        : "Routing number is required",
-      accountType: validateAccountType(selectedAccountType),
+      bankName: requiresBankDetails ? validateBankName(bankName) : "",
+      accountNumber: requiresBankDetails ? validateAccountNumber(accountNumber) : "",
+      routingNumber: requiresBankDetails && !validateRoutingNumber(routingNumber) ? "Routing number is required" : "",
+      accountType: requiresBankDetails ? validateAccountType(selectedAccountType) : "",
       remittanceEmail: validateRemittanceEmail(remittanceEmail),
       // swiftCode: validateSwiftCode(swiftCode),
       // iban: validateIban(iban),
       currency: validateCurrency(selectedCurrency),
       paymentMethod: validatePaymentMethod(selectedPaymentMethod),
-      addressLine1: validateAddressLine1(addressLine1),
+      addressLine1: requiresBankDetails ? validateAddressLine1(addressLine1) : "",
       addressLine2: validateAddressLine2(addressLine2),
-      city: validateCity(city),
-      state: validateState(state),
-      postalCode: validatePostalcode(postalCode),
+      city: requiresBankDetails ? validateCity(city) : "",
+      state: requiresBankDetails ? validateState(state) : "",
+      postalCode: requiresBankDetails ? validatePostalcode(postalCode) : "",
+      paymentQrCodeUrl: requiresQrCode && !paymentQrCodeUrl ? "QR code is required" : "",
     };
 
     setErrors(newErrors);
@@ -212,22 +217,23 @@ const EditBankDetailScreen = ({ navigation, route }) => {
     try {
       const payload = {
         accountHolderName,
-        bankName,
-        accountNumber: isMaskedAccountNumber(accountNumber)
+        bankName: requiresBankDetails ? bankName : "",
+        accountNumber: requiresBankDetails && isMaskedAccountNumber(accountNumber)
           ? savedAccountNumber
-          : accountNumber,
-        routingNumber,
-        accountType: selectedAccountType,
+          : requiresBankDetails ? accountNumber : "",
+        routingNumber: requiresBankDetails ? routingNumber : "",
+        accountType: requiresBankDetails ? selectedAccountType : "",
         remittanceEmail,
         // swiftCode,
         // iban,
         currency: selectedCurrency,
         paymentMethod: selectedPaymentMethod,
-        bankAddressLine1: addressLine1,
-        bankAddressLine2: addressLine2,
-        bankCity: city,
-        bankState: state,
-        bankPostal: postalCode,
+        paymentQrCodeUrl: requiresQrCode ? paymentQrCodeUrl : "",
+        bankAddressLine1: requiresBankDetails ? addressLine1 : "",
+        bankAddressLine2: requiresBankDetails ? addressLine2 : "",
+        bankCity: requiresBankDetails ? city : "",
+        bankState: requiresBankDetails ? state : "",
+        bankPostal: requiresBankDetails ? postalCode : "",
       };
       const response = await addBankDetail_API(payload);
       console.log("response => ", response);
@@ -262,11 +268,30 @@ const EditBankDetailScreen = ({ navigation, route }) => {
     setIban(data?.iban || "");
     setSelectedCurrency(data?.currency || "");
     setSelectedPaymentMethod(data?.paymentMethod || "");
+    setPaymentQrCodeUrl(data?.paymentQrCodeUrl || "");
     setAddressLine1(data?.bankAddressLine1 || "");
     setAddressLine2(data?.bankAddressLine2 || "");
     setCity(data?.bankCity || "");
     setState(getStateCode(data?.bankState || ""));
     setPostalCode(data?.bankPostal || "");
+  };
+
+  const uploadPaymentQrCode = async () => {
+    try {
+      const image = await ImagePicker.openPicker({ mediaType: "photo", cropping: false });
+      setUploadingQr(true);
+      const formData = new FormData();
+      formData.append("file", { uri: image.path, name: image.path.split("/").pop() || `payment-qr-${Date.now()}.jpg`, type: image.mime || "image/jpeg" });
+      const response = await uploadImage_API(formData);
+      const url = response?.data?.file;
+      if (!response?.success || !url) throw new Error("QR upload failed");
+      setPaymentQrCodeUrl(url);
+      setErrors((current) => ({ ...current, paymentQrCodeUrl: "" }));
+    } catch (error) {
+      if (!String(error?.message || error).toLowerCase().includes("cancel")) Alert.alert("Upload failed", "Could not upload the payment QR code.");
+    } finally {
+      setUploadingQr(false);
+    }
   };
 
   const getBankDetailFromAPI = async () => {
@@ -367,6 +392,36 @@ const EditBankDetailScreen = ({ navigation, route }) => {
                     { paddingBottom: insets.bottom + 20 },
                   ]}
                 >
+                  <View style={styles.section}>
+                    <Text style={styles.inputLabel}>Payment Method</Text>
+                    <Dropdown
+                      data={bankPaymentMethodList}
+                      labelField="label"
+                      valueField="type"
+                      value={selectedPaymentMethod}
+                      onChange={(selected) => {
+                        setSelectedPaymentMethod(selected.type);
+                        setPaymentQrCodeUrl("");
+                        setErrors((current) => ({ ...current, paymentMethod: "", paymentQrCodeUrl: "" }));
+                      }}
+                      placeholder="Select Payment Method"
+                      style={styles.dropdown}
+                      placeholderStyle={{ fontFamily: Mulish400, color: AppColor.textHighlighter }}
+                      itemTextStyle={{ fontFamily: Mulish400 }}
+                      selectedTextStyle={{ fontFamily: Mulish400 }}
+                    />
+                    {!!errors.paymentMethod && <HelperText type="error">{errors.paymentMethod}</HelperText>}
+                  </View>
+                  {requiresQrCode ? (
+                    <View style={styles.section}>
+                      <Text style={styles.inputLabel}>Payment QR Code</Text>
+                      <TouchableOpacity style={styles.continueButton} onPress={uploadPaymentQrCode} disabled={uploadingQr}>
+                        <Text style={styles.continueButtonText}>{uploadingQr ? "Uploading…" : paymentQrCodeUrl ? "Replace QR Code" : "Upload QR Code"}</Text>
+                      </TouchableOpacity>
+                      {paymentQrCodeUrl ? <HelperText type="info">QR code uploaded</HelperText> : null}
+                      {!!errors.paymentQrCodeUrl && <HelperText type="error">{errors.paymentQrCodeUrl}</HelperText>}
+                    </View>
+                  ) : null}
                   {/* Account Holder Name */}
                   <View style={styles.section}>
                     <Text style={styles.inputLabel}>
@@ -406,6 +461,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
                     )}
                   </View>
 
+                  {requiresBankDetails ? <>
                   {/* Bank Name */}
                   <View style={styles.section}>
                     <Text style={styles.inputLabel}>{"Bank Name"}</Text>
@@ -709,42 +765,6 @@ const EditBankDetailScreen = ({ navigation, route }) => {
                     )}
                   </View> */}
 
-                  {/* Payment Method */}
-                  <View style={styles.section}>
-                    <Text style={styles.inputLabel}>{"Payment Method"}</Text>
-                    <Dropdown
-                      data={bankPaymentMethodList}
-                      dropdownPosition="top"
-                      labelField="label"
-                      valueField="type"
-                      value={selectedPaymentMethod}
-                      onChange={(selected) => {
-                        setSelectedPaymentMethod(selected.type);
-                        setErrors((prev) => ({
-                          ...prev,
-                          paymentMethod: "",
-                        }));
-                      }}
-                      placeholder="Select Payment Method"
-                      style={styles.dropdown}
-                      placeholderStyle={{
-                        fontFamily: Mulish400,
-                        color: AppColor.textHighlighter,
-                      }}
-                      itemTextStyle={{ fontFamily: Mulish400 }}
-                      selectedTextStyle={{ fontFamily: Mulish400 }}
-                    />
-                    {!!errors.paymentMethod && (
-                      <HelperText
-                        type="error"
-                        visible={!!errors.paymentMethod}
-                        style={styles.helper}
-                      >
-                        {errors.paymentMethod}
-                      </HelperText>
-                    )}
-                  </View>
-
                   {/* Divider with address title */}
                   <View
                     style={[
@@ -943,6 +963,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
                       </HelperText>
                     )}
                   </View>
+                  </> : null}
                 </View>
               </View>
             </ScrollView>

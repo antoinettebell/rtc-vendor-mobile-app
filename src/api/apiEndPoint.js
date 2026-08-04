@@ -58,6 +58,19 @@ export const REFUND_CANCEL_REQUESTS = "/vendor-employee/refund-cancel-requests";
 export const REVIEW_REFUND_CANCEL_REQUEST = (request_id) =>
   `/vendor-employee/refund-cancel-requests/${request_id}/review`;
 
+// Operational compliance forms
+export const OPERATIONAL_COMPLIANCE_FORMS = "/operational-compliance";
+export const OPERATIONAL_COMPLIANCE_CURRENT = (type) =>
+  `/operational-compliance/current/${type}`;
+export const OPERATIONAL_COMPLIANCE_FORM = (id) =>
+  `/operational-compliance/${id}`;
+export const OPERATIONAL_COMPLIANCE_SUBMIT = (id) =>
+  `/operational-compliance/${id}/submit`;
+export const OPERATIONAL_COMPLIANCE_UNLOCK = (id) =>
+  `/operational-compliance/${id}/unlock`;
+export const OPERATIONAL_COMPLIANCE_ARCHIVE = (id) =>
+  `/operational-compliance/${id}/archive`;
+
 // Add-ons
 export const GET_ADD_ONS = "/public/add-ons";
 
