@@ -79,6 +79,16 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.ea.rtcvendor"
+    packaging {
+        resources {
+            excludes += ["META-INF/*", "LICENSE.txt", "asm-license.txt"]
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = "17" }
     defaultConfig {
         applicationId "com.rounddacorner.dev.vendor"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -104,6 +114,7 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            matchingFallbacks = ['release']
             resValue "string", "build_config_package", "com.ea.rtcvendor"
         }
         release {
@@ -120,6 +131,8 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+    implementation("io.payworks:paybutton-android:2.115.0")
+    implementation("io.payworks:mpos.android.taptophone:2.115.0")
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

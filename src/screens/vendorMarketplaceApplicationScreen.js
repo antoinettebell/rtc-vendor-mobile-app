@@ -143,19 +143,6 @@ const FormField = ({ label, children, full = false }) => (
   </View>
 );
 
-const askWhetherToSignNewAgreement = () =>
-  new Promise((resolve) => {
-    Alert.alert(
-      "Marketplace Agreements",
-      "You already have a signed NDA and governance agreement on file. Would you like to sign a new one for this application?",
-      [
-        { text: "No, Use Existing", style: "cancel", onPress: () => resolve(false) },
-        { text: "Yes, Sign New", onPress: () => resolve(true) },
-      ],
-      { cancelable: true, onDismiss: () => resolve(false) }
-    );
-  });
-
 const foodTruckCuisineText = (foodTruck = {}) =>
   Array.isArray(foodTruck?.cuisine)
     ? foodTruck.cuisine.map((item) => item?.name || item).filter(Boolean).join(", ")
@@ -672,24 +659,7 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
       });
 
       if (signingResponse?.data?.already_signed) {
-        const shouldSignNewAgreement = await askWhetherToSignNewAgreement();
-        if (!shouldSignNewAgreement) {
-          await finalizeApplicationSubmission();
-          return;
-        }
-
-        const newSigningResponse = await startMarketplaceVendorAgreementSigning_API({
-          event_id: eventId,
-          application_id: draft.application_id,
-          force_new_agreement: true,
-          return_url: "rounddacornervendor://docusign/return?status=completed",
-        });
-        pendingAgreementRef.current =
-          newSigningResponse?.data?.marketplaceVendorAgreement || null;
-        if (!newSigningResponse?.data?.signing_url) {
-          throw new Error("DocuSign signing URL was not returned.");
-        }
-        await Linking.openURL(newSigningResponse.data.signing_url);
+        await finalizeApplicationSubmission();
         return;
       }
 

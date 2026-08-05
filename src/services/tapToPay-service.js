@@ -46,7 +46,13 @@ export const startTapToPaySale = async ({
   currency = "USD",
   orderNumber,
   orderId,
+  reference,
 }) => {
+  if (!tapToPayConfig.enabled && !tapToPayConfig.mockMode) {
+    throw new Error(
+      "Tap to Pay is included with Elite, but it is not enabled in this app build. Install the Tap to Pay-enabled build or contact RTC support."
+    );
+  }
   if (tapToPayConfig.mockMode) {
     const invoiceNumber = orderNumber
       ? `MOCK-${String(orderNumber)}`
@@ -76,15 +82,25 @@ export const startTapToPaySale = async ({
     );
   }
 
+  if (
+    Platform.OS === "android" &&
+    (!tapToPayConfig.merchantId || !tapToPayConfig.merchantSecret)
+  ) {
+    throw new Error(
+      "Android Tap to Pay needs the CyberSource merchant ID and merchant secret in this app build."
+    );
+  }
+
   const result = await nativeTapToPay.startSale({
     amount: Number(amount).toFixed(2),
     currency: currency || tapToPayConfig.currency,
-    orderNumber: orderNumber ? String(orderNumber) : null,
+    orderNumber: orderNumber ? String(orderNumber) : reference ? String(reference) : null,
     orderId: orderId ? String(orderId) : null,
     platform: Platform.OS,
     provider: tapToPayConfig.provider,
     environment: tapToPayConfig.environment,
     merchantId: tapToPayConfig.merchantId,
+    merchantSecret: tapToPayConfig.merchantSecret,
     terminalId: tapToPayConfig.terminalId,
     appleTeamId: tapToPayConfig.appleTeamId,
     sdkConfigId: tapToPayConfig.sdkConfigId,

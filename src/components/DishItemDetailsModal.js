@@ -1015,11 +1015,11 @@ const DishItemDetailsModal = ({
     };
 
     Alert.alert(
-      "Customize additional item?",
-      "Would you like to choose different options for the additional item?",
+      "Use the same options?",
+      "Should the additional item use all the same options?",
       [
-        { text: "No", onPress: addWithCurrentOptions },
-        { text: "Yes", onPress: beginAdditionalCustomization },
+        { text: "No", onPress: beginAdditionalCustomization },
+        { text: "Yes", onPress: addWithCurrentOptions },
       ]
     );
   }, [
@@ -1078,9 +1078,9 @@ const DishItemDetailsModal = ({
         {state.hasFlavorChoices ? (
           <View style={styles.childOptionGroup}>
             <Text style={styles.childOptionTitle}>
-              {`${sectionPrefix}: choose up to ${state.flavorRequiredCount} flavor${
-                state.flavorRequiredCount === 1 ? "" : "s"
-              }`}
+              {`${sectionPrefix}: choose up to ${state.flavorRequiredCount} ${
+                item?.flavorLabel || "Flavor"
+              }${state.flavorRequiredCount === 1 ? "" : "s"}`}
             </Text>
             {state.flavorOptions.map((option) => (
               <OptionRow
@@ -1576,7 +1576,7 @@ const DishItemDetailsModal = ({
             {isRequirementExpanded("primary-item") && hasFlavorChoices && (
               <View style={styles.actionSheetSection}>
                 <Text style={styles.sectionTitle}>
-                  {`${selectedMenuItem?.name || "Item"}: choose Plain or up to ${flavorsMaxCount} Flavor${
+                  {`${selectedMenuItem?.name || "Item"}: choose Plain or up to ${flavorsMaxCount} ${selectedMenuItem?.flavorLabel || "Flavor"}${
                     flavorsMaxCount === 1 ? "" : "s"
                   }:`}
                 </Text>
@@ -1590,7 +1590,7 @@ const DishItemDetailsModal = ({
                         selectedFlavors,
                         setSelectedFlavors,
                         flavorsMaxCount,
-                        "Flavor"
+                        selectedMenuItem?.flavorLabel || "Flavor"
                       )
                     }
                   />
@@ -1606,7 +1606,7 @@ const DishItemDetailsModal = ({
                         setSelectedFlavors,
                         selectedFlavors,
                         flavorsMaxCount,
-                        "Flavor",
+                        selectedMenuItem?.flavorLabel || "Flavor",
                         splitPlainFlavor
                       )
                     }
@@ -1722,7 +1722,7 @@ const DishItemDetailsModal = ({
             {isRequirementExpanded("discount-reward") && hasDiscountFlavorChoices && (
               <View style={styles.actionSheetSection}>
                 <Text style={styles.sectionTitle}>
-                  {`Discount item: choose Plain or up to ${discountFlavorsMaxCount} Flavor${
+                  {`Discount item: choose Plain or up to ${discountFlavorsMaxCount} ${discountSourceItem?.flavorLabel || "Flavor"}${
                     discountFlavorsMaxCount === 1 ? "" : "s"
                   }:`}
                 </Text>

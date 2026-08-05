@@ -1,20 +1,16 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Linking,
-  Modal,
   ScrollView,
-  StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StatusBarManager from "../components/StatusBarManager";
 import { createMarketplaceFinalPayment_API } from "../api/appAPI";
-import { AppColor } from "../utils/theme";
 import {
   MarketplaceHeader,
   formatDate,
@@ -109,6 +105,9 @@ const getBidPayoutStatus = (bid, event) => {
   }
   if (["PENDING", "FAILED"].includes(bid?.final_payment_status)) {
     return "Awaiting Coordinator Payment";
+  }
+  if (bid?.final_payment_status === "PROCESSING") {
+    return "Payment Processing";
   }
   const explicitStatus =
     bid?.payout_status ||
@@ -359,91 +358,62 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
         }
       : null,
   );
-  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
-  const [additionalAmount, setAdditionalAmount] = useState("");
-  const [discountAmount, setDiscountAmount] = useState("");
-  const [tipAmount, setTipAmount] = useState("");
-  const [creatingPayment, setCreatingPayment] = useState(false);
-  const originalAwardAmount = Number(bid?.full_bid_amount || 0);
-  const finalPaymentId = finalPayment?.payment_id || record?.final_payment_id;
-  const finalPaymentStatus =
-    finalPayment?.payment_status || record?.final_payment_status || "NOT_REQUIRED";
-  const canCreateFinalEventPayment =
+  const [closingEvent, setClosingEvent] = useState(false);
+  const [currentTime, setCurrentTime] = useState(Date.now());
+  const closeState = record?.vendor_event_close || {};
+  const closeAvailableAt = closeState.available_at
+    ? new Date(closeState.available_at).getTime()
+    : null;
+  const canVendorCloseEvent =
     !vendorPays &&
     itemType === "BID" &&
     bid?.bid_status === "AWARDED" &&
-    !finalPaymentId;
+    !finalPayment?.payment_id &&
+    (closeState.can_close === true ||
+      (Number.isFinite(closeAvailableAt) && currentTime >= closeAvailableAt));
+  const showVendorCloseEvent =
+    !vendorPays &&
+    itemType === "BID" &&
+    bid?.bid_status === "AWARDED" &&
+    !finalPayment?.payment_id;
+  const finalPaymentId = finalPayment?.payment_id || record?.final_payment_id;
+  const finalPaymentStatus =
+    finalPayment?.payment_status || record?.final_payment_status || "NOT_REQUIRED";
   const canAcceptFinalEventPayment =
     !!finalPaymentId && finalPaymentStatus !== "PAID";
-  const paymentTotal =
-    originalAwardAmount +
-    Number(additionalAmount || 0) -
-    Number(discountAmount || 0) +
-    Number(tipAmount || 0);
 
-  const openFinalPayment = () => {
-    setAdditionalAmount("");
-    setDiscountAmount("");
-    setTipAmount("");
-    setPaymentModalVisible(true);
-  };
+  useEffect(() => {
+    if (!showVendorCloseEvent || !Number.isFinite(closeAvailableAt)) return undefined;
+    const interval = setInterval(() => setCurrentTime(Date.now()), 30000);
+    return () => clearInterval(interval);
+  }, [closeAvailableAt, showVendorCloseEvent]);
 
-  const createFinalPayment = async () => {
-    const increase = Number(additionalAmount || 0);
-    const discount = Number(discountAmount || 0);
-    const tip = Number(tipAmount || 0);
-    if (
-      [increase, discount, tip].some(
-        (amount) => !Number.isFinite(amount) || amount < 0,
-      )
-    ) {
-      Alert.alert("Close Event for Payment", "Please enter valid payment amounts.");
-      return;
-    }
-    if (discount > originalAwardAmount + increase) {
-      Alert.alert(
-        "Close Event for Payment",
-        "Discount cannot exceed the awarded amount plus additional fees.",
-      );
-      return;
-    }
-    if (paymentTotal <= 0) {
-      Alert.alert(
-        "Close Event for Payment",
-        "Final payment amount must be greater than zero.",
-      );
-      return;
-    }
-
-    setCreatingPayment(true);
+  const closeEventForPayment = async () => {
+    if (!canVendorCloseEvent || closingEvent) return;
+    setClosingEvent(true);
     try {
       const response = await createMarketplaceFinalPayment_API({
         event_id: event?.event_id || bid?.event_id,
         bid_id: bid?.bid_id,
-        additional_amount: increase,
-        discount_amount: discount,
-        tip_amount: tip,
       });
-      if (response?.success) {
-        const payment = response.data?.marketplacePayment;
-        setFinalPayment(payment);
-        setPaymentModalVisible(false);
-        if (payment) {
-          navigation.navigate("vendorMarketplacePaymentScreen", {
-            payment,
-            paymentId: payment.payment_id,
-            returnScreen: "VendorAwardedEventsScreen",
-            successMessage: "Final event payment is confirmed.",
-          });
-        }
+      const payment = response?.data?.marketplacePayment;
+      if (!response?.success || !payment?.payment_id) {
+        throw new Error("Final event payment was not created.");
       }
+      setFinalPayment(payment);
+      navigation.navigate("vendorMarketplacePaymentScreen", {
+        payment,
+        paymentId: payment.payment_id,
+        returnScreen: "VendorAwardedEventsScreen",
+        successMessage: "Final event payment is confirmed.",
+      });
     } catch (error) {
       Alert.alert(
-        "Close Event for Payment",
-        error?.message || "Unable to create final event payment.",
+        "Close Event",
+        error?.message || "Unable to close this event for payment.",
       );
     } finally {
-      setCreatingPayment(false);
+      setClosingEvent(false);
     }
   };
 
@@ -692,14 +662,30 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         ) : null}
 
-        {canCreateFinalEventPayment ? (
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={[styles.button, { marginBottom: 12 }]}
-            onPress={openFinalPayment}
-          >
-            <Text style={styles.buttonText}>Close Event for Payment</Text>
-          </TouchableOpacity>
+        {showVendorCloseEvent ? (
+          <>
+            <TouchableOpacity
+              activeOpacity={canVendorCloseEvent ? 0.8 : 1}
+              style={[
+                styles.button,
+                { marginBottom: 12, opacity: canVendorCloseEvent ? 1 : 0.5 },
+              ]}
+              onPress={closeEventForPayment}
+              disabled={!canVendorCloseEvent || closingEvent}
+            >
+              {closingEvent ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.buttonText}>Close Event</Text>
+              )}
+            </TouchableOpacity>
+            {!canVendorCloseEvent ? (
+              <Text style={[styles.emptyText, { marginBottom: 12 }]}>
+                The coordinator has one hour after the event ends to close it for
+                payment. You can close it when that window expires.
+              </Text>
+            ) : null}
+          </>
         ) : canAcceptFinalEventPayment ? (
           <TouchableOpacity
             activeOpacity={0.8}
@@ -712,104 +698,12 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
 	              })
 	            }
           >
-            <Text style={styles.buttonText}>Accept Event Payment</Text>
+            <Text style={styles.buttonText}>Collect Event Payment</Text>
           </TouchableOpacity>
         ) : null}
       </ScrollView>
-      <Modal
-        transparent
-        animationType="fade"
-        visible={paymentModalVisible}
-        onRequestClose={() => setPaymentModalVisible(false)}
-      >
-        <View style={localStyles.modalOverlay}>
-          <View style={localStyles.modalCard}>
-            <Text style={styles.title}>Close Event for Payment</Text>
-            <DetailRow
-              label="Original Awarded Amount"
-              value={formatMoney(originalAwardAmount)}
-              strong
-            />
-            <Text style={styles.label}>Increase / Additional Fees</Text>
-            <TextInput
-              value={additionalAmount}
-              onChangeText={setAdditionalAmount}
-              keyboardType="decimal-pad"
-              placeholder="0.00"
-              style={styles.input}
-              editable={!creatingPayment}
-            />
-            <Text style={styles.label}>Discount / Decrease</Text>
-            <TextInput
-              value={discountAmount}
-              onChangeText={setDiscountAmount}
-              keyboardType="decimal-pad"
-              placeholder="0.00"
-              style={styles.input}
-              editable={!creatingPayment}
-            />
-            <Text style={styles.label}>Tip</Text>
-            <TextInput
-              value={tipAmount}
-              onChangeText={setTipAmount}
-              keyboardType="decimal-pad"
-              placeholder="0.00"
-              style={styles.input}
-              editable={!creatingPayment}
-            />
-            <DetailRow label="Total" value={formatMoney(paymentTotal)} strong />
-            <View style={localStyles.modalActions}>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={[styles.secondaryButton, localStyles.modalButton]}
-                onPress={() => setPaymentModalVisible(false)}
-                disabled={creatingPayment}
-              >
-                <Text style={styles.secondaryButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={[styles.button, localStyles.modalButton]}
-                onPress={createFinalPayment}
-                disabled={creatingPayment}
-              >
-                {creatingPayment ? (
-                  <ActivityIndicator color={AppColor.white} />
-                ) : (
-                  <Text style={styles.buttonText}>Checkout</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 };
-
-const localStyles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
-  },
-  modalCard: {
-    width: "100%",
-    maxWidth: 520,
-    borderRadius: 12,
-    backgroundColor: AppColor.white,
-    padding: 18,
-  },
-  modalActions: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 18,
-  },
-  modalButton: {
-    flex: 1,
-  },
-});
 
 export default VendorMarketplaceAwardedEventDetailsScreen;

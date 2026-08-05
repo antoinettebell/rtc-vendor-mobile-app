@@ -861,30 +861,9 @@ const ProfileMenuScreen = ({ navigation }) => {
           <HR />
           <ItemComponent
             rightIcon
-            label="Serving Locations"
-            imageUri={PROFILE_MENU_IMAGES.servingLocations}
-            onPress={() => navigation.navigate("profileServingLocationScreen")}
-          />
-          <HR />
-          <ItemComponent
-            rightIcon
-            label="Cuisines"
-            imageUri={PROFILE_MENU_IMAGES.cuisine}
-            onPress={() => navigation.navigate("profileSelectCuisineScreen")}
-          />
-          <HR />
-          <ItemComponent
-            rightIcon
             label="Business Hours"
             imageUri={PROFILE_MENU_IMAGES.manageBusinessHours}
             onPress={() => navigation.navigate("profileSetBusinessHoursScreen")}
-          />
-          <HR />
-          <ItemComponent
-            rightIcon
-            label="Weekly Schedule"
-            imageUri={PROFILE_MENU_IMAGES.manageAvailability}
-            onPress={() => navigation.navigate("profileAvailabilityScreen")}
           />
           <HR />
           {(bankStatus || profileStatus === vendorProfileStatus.approved) && (

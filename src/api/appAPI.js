@@ -57,6 +57,7 @@ import {
   MARKETPLACE_PAYMENT_BY_ID,
   MARKETPLACE_PAYMENT_CALL,
   MARKETPLACE_PAYMENT_CHECKOUT,
+  MARKETPLACE_PAYMENT_TIP,
   MARKETPLACE_VENDOR_AGREEMENT_RETURN,
   MARKETPLACE_VENDOR_AGREEMENT_SIGNING,
   MEDIA_UPLOAD,
@@ -517,14 +518,12 @@ export const getMarketplaceAwardedBids_API = async () => {
 export const createMarketplaceFinalPayment_API = async ({
   event_id,
   bid_id,
-  additional_amount = 0,
-  discount_amount = 0,
   tip_amount = 0,
 }) => {
   try {
     const response = await apiClient.post(
       MARKETPLACE_FINAL_EVENT_PAYMENT(event_id),
-      { bid_id, additional_amount, discount_amount, tip_amount },
+      { bid_id, tip_amount },
       { skipToken: false },
     );
     return response?.data;
@@ -565,6 +564,22 @@ export const checkoutMarketplacePayment_API = async ({
     const response = await apiClient.post(
       MARKETPLACE_PAYMENT_CHECKOUT(payment_id),
       payload,
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const updateMarketplaceFinalPaymentTip_API = async ({
+  payment_id,
+  tip_amount,
+}) => {
+  try {
+    const response = await apiClient.patch(
+      MARKETPLACE_PAYMENT_TIP(payment_id),
+      { tip_amount },
       { skipToken: false },
     );
     return response?.data;

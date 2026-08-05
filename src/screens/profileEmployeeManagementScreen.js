@@ -4,6 +4,7 @@ import {
   Alert,
   Image,
   Linking,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -18,7 +19,7 @@ import ImagePicker from "react-native-image-crop-picker";
 import { RESULTS } from "react-native-permissions";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Dropdown } from "react-native-element-dropdown";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import StatusBarManager from "../components/StatusBarManager";
@@ -36,8 +37,10 @@ import {
   resetVendorEmployeePin_API,
   updateVendorEmployee_API,
   updateVendorEmployeeShiftHistory_API,
+  updateFoodTruckUnits_API,
   uploadImage_API,
 } from "../api/appAPI";
+import { updateFoodTruck } from "../redux/slices/userSlice";
 
 const initialForm = {
   first_name: "",
@@ -51,8 +54,6 @@ const initialForm = {
   employee_tax_identifier_type: "SSN",
   employee_tax_identifier: "",
   employee_rate: "",
-  assigned_location_id: "",
-  assigned_truck_unit_id: "",
   pin: "",
 };
 
@@ -60,10 +61,27 @@ const WEEK_DAYS = [
   ["sun", "Sunday"], ["mon", "Monday"], ["tue", "Tuesday"],
   ["wed", "Wednesday"], ["thu", "Thursday"], ["fri", "Friday"], ["sat", "Saturday"],
 ];
-const getScheduleDraft = (employee) => WEEK_DAYS.map(([day]) => {
-  const saved = (employee.weekly_schedule || []).find((row) => row.day === day);
+const getDayDraft = (schedule = []) => WEEK_DAYS.map(([day]) => {
+  const saved = schedule.find((row) => row.day === day);
   return { day, enabled: !!saved?.enabled, clock_in: saved?.clock_in || "09:00", clock_out: saved?.clock_out || "17:00" };
 });
+const getScheduleDraft = (employee) => {
+  if (employee.schedule_assignments?.length) {
+    return employee.schedule_assignments.map((assignment) => ({
+      truck_unit_id: assignment.truck_unit_id?._id || assignment.truck_unit_id || "",
+      location_id: assignment.location_id?._id || assignment.location_id || "",
+      days: getDayDraft(assignment.days || []),
+    }));
+  }
+  if (employee.weekly_schedule?.length) {
+    return [{
+      truck_unit_id: employee.assigned_truck_unit_id || "",
+      location_id: employee.assigned_location_id || "",
+      days: getDayDraft(employee.weekly_schedule),
+    }];
+  }
+  return [{ truck_unit_id: "", location_id: "", days: getDayDraft() }];
+};
 const timeToDate = (value) => {
   const [hours, minutes] = String(value || "09:00").split(":").map(Number);
   const date = new Date();
@@ -150,6 +168,7 @@ const formatTimecardInput = (value) => {
 const parseTimecardInput = (value) => new Date(String(value || "").trim().replace(" ", "T"));
 
 const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
+  const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
   const { checkAndRequestPermission: cameraPermissionStatus } = usePermission(
     permission.camera
@@ -183,6 +202,9 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const [scheduleExpandedId, setScheduleExpandedId] = useState(null);
   const [scheduleDrafts, setScheduleDrafts] = useState({});
   const [timePickerTarget, setTimePickerTarget] = useState(null);
+  const [missingTruckPromptVisible, setMissingTruckPromptVisible] = useState(false);
+  const [missingTruckName, setMissingTruckName] = useState("");
+  const [missingTruckSaving, setMissingTruckSaving] = useState(false);
   const isManageMode = managementMode === "manage";
 
   const locationOptions = useMemo(
@@ -295,16 +317,6 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 
     if (!form.zip_code.trim()) {
       Alert.alert("Zip code required", "Enter the employee's zip code.");
-      return false;
-    }
-
-    if (!form.assigned_location_id) {
-      Alert.alert("Location required", "Assign the employee to a saved location.");
-      return false;
-    }
-
-    if (!form.assigned_truck_unit_id && truckOptions.length > 1) {
-      Alert.alert("Truck required", "Assign the employee to a truck name.");
       return false;
     }
 
@@ -498,17 +510,30 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
     }
   };
 
-  const archiveShiftHistory = (employee) => {
-    const sessions = (shiftHistoryByEmployee[employee._id] || []).filter(
-      (session) => !session.is_active && session.ended_at,
-    );
+  const archiveShiftHistory = async (employee) => {
+    let weeklySessions = [];
+    try {
+      const response = await getVendorEmployeeShiftHistory_API({
+        employee_id: employee._id,
+        range: "week",
+      });
+      weeklySessions = response?.data?.sessions || [];
+    } catch (error) {
+      Alert.alert("Shift history unavailable", error?.message || "Please try again.");
+      return;
+    }
+    if (employee.has_open_shift || weeklySessions.some((session) => session.is_active)) {
+      Alert.alert("Open shift", "End this employee's open shift before archiving shift history.");
+      return;
+    }
+    const sessions = weeklySessions.filter((session) => !session.is_active && session.ended_at);
     if (!sessions.length) {
       Alert.alert("Nothing to archive", "Only completed timecards can be archived.");
       return;
     }
     Alert.alert(
-      "Archive shift history?",
-      "These timecards will remain stored for reporting and audit history, but cannot be edited afterward.",
+      "Archive Shift History?",
+      "Are you ready to roll this employee's completed timecards into history for next week? They will remain stored for reporting but cannot be edited afterward.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -731,34 +756,134 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   };
 
   const toggleEmployeeSchedule = (employee) => {
+    if (!(foodTruck?.truck_units || []).some((unit) => !unit.is_archived)) {
+      setMissingTruckName("");
+      setMissingTruckPromptVisible(true);
+      return;
+    }
     setScheduleExpandedId((current) => current === employee._id ? null : employee._id);
     setScheduleDrafts((current) => current[employee._id]
       ? current
       : { ...current, [employee._id]: getScheduleDraft(employee) });
   };
 
-  const updateScheduleRow = (employeeId, day, field, value) => {
+  const createMissingPrimaryTruck = async () => {
+    if (!missingTruckName.trim()) {
+      Alert.alert("Truck name required", "Enter the name used to identify this food truck.");
+      return;
+    }
+    setMissingTruckSaving(true);
+    try {
+      const response = await updateFoodTruckUnits_API({
+        foodtruck_id: foodTruck?._id,
+        payload: { food_truck_count: 1, create_name: missingTruckName.trim() },
+      });
+      const nextFoodTruck = response?.data?.foodtruck;
+      if (!nextFoodTruck?.truck_units?.length) {
+        throw new Error("The food truck record was not created.");
+      }
+      dispatch(updateFoodTruck(nextFoodTruck));
+      setMissingTruckPromptVisible(false);
+      setMissingTruckName("");
+      Alert.alert("Food truck created", "You can now open Employee Schedule and assign this truck.");
+    } catch (error) {
+      Alert.alert("Truck not saved", error?.message || "Please try again.");
+    } finally {
+      setMissingTruckSaving(false);
+    }
+  };
+
+  const updateScheduleRow = (employeeId, assignmentIndex, day, field, value) => {
     setScheduleDrafts((current) => ({
       ...current,
-      [employeeId]: (current[employeeId] || []).map((row) =>
-        row.day === day ? { ...row, [field]: value } : row),
+      [employeeId]: (current[employeeId] || []).map((assignment, index) =>
+        index === assignmentIndex
+          ? { ...assignment, days: assignment.days.map((row) => row.day === day ? { ...row, [field]: value } : row) }
+          : assignment),
+    }));
+  };
+
+  const updateScheduleAssignment = (employeeId, assignmentIndex, field, value) => {
+    setScheduleDrafts((current) => ({
+      ...current,
+      [employeeId]: (current[employeeId] || []).map((assignment, index) =>
+        index === assignmentIndex ? { ...assignment, [field]: value } : assignment),
+    }));
+  };
+
+  const addScheduleAssignment = (employeeId) => {
+    setScheduleDrafts((current) => ({
+      ...current,
+      [employeeId]: [
+        ...(current[employeeId] || []),
+        { truck_unit_id: "", location_id: "", days: getDayDraft() },
+      ],
+    }));
+  };
+
+  const removeScheduleAssignment = (employeeId, assignmentIndex) => {
+    setScheduleDrafts((current) => ({
+      ...current,
+      [employeeId]: (current[employeeId] || []).filter((_, index) => index !== assignmentIndex),
     }));
   };
 
   const saveEmployeeSchedule = async (employee) => {
-    const schedule = scheduleDrafts[employee._id] || getScheduleDraft(employee);
-    const invalid = schedule.find((row) => row.enabled && (!/^([01]\d|2[0-3]):[0-5]\d$/.test(row.clock_in) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(row.clock_out)));
+    const assignments = scheduleDrafts[employee._id] || getScheduleDraft(employee);
+    if (!assignments.length || assignments.some((item) => !item.truck_unit_id || !item.location_id)) {
+      Alert.alert("Truck and location required", "Select a food truck and serving location on every schedule card.");
+      return;
+    }
+    const enabledRows = assignments.flatMap((assignment) => assignment.days.filter((row) => row.enabled));
+    if (!enabledRows.length) {
+      Alert.alert("Workday required", "Check at least one workday before saving the employee schedule.");
+      return;
+    }
+    if (new Set(enabledRows.map((row) => row.day)).size !== enabledRows.length) {
+      Alert.alert("Duplicate workday", "Assign each day to only one food truck and location.");
+      return;
+    }
+    const invalid = enabledRows.find((row) => !/^([01]\d|2[0-3]):[0-5]\d$/.test(row.clock_in) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(row.clock_out));
     if (invalid) {
       Alert.alert("Valid times required", "Enter scheduled times as HH:MM, such as 09:00 or 17:30.");
       return;
     }
-    const saved = await updateEmployee(employee, { weekly_schedule: schedule, is_working: false });
+    const saved = await updateEmployee(employee, { schedule_assignments: assignments, is_working: false });
     if (saved) setScheduleExpandedId(null);
+  };
+
+  const archiveEmployeeSchedule = (employee) => {
+    if (employee.has_open_shift) {
+      Alert.alert("Open shift", "End this employee's open shift before archiving the schedule.");
+      return;
+    }
+    if (!employee.schedule_assignments?.length && !employee.weekly_schedule?.length) {
+      Alert.alert("Nothing to archive", "This employee does not have a saved schedule.");
+      return;
+    }
+    Alert.alert(
+      "Archive Employee Schedule?",
+      "Are you ready to set the schedule for next week? Before archiving, remove any future shifts and end any open shift. The current schedule will move to history and the schedule form will be cleared.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Archive",
+          style: "destructive",
+          onPress: async () => {
+            const saved = await updateEmployee(employee, { archive_schedule: true, is_working: false });
+            if (saved) {
+              setScheduleDrafts((current) => ({ ...current, [employee._id]: getScheduleDraft({}) }));
+              await fetchEmployees();
+            }
+          },
+        },
+      ],
+    );
   };
 
   const confirmScheduleTime = (date) => {
     if (timePickerTarget) {
-      updateScheduleRow(timePickerTarget.employeeId, timePickerTarget.day, timePickerTarget.field, dateToTime(date));
+      updateScheduleRow(timePickerTarget.employeeId, timePickerTarget.assignmentIndex, timePickerTarget.day, timePickerTarget.field, dateToTime(date));
     }
     setTimePickerTarget(null);
   };
@@ -984,7 +1109,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 	              </View>
 	            </View>
 
-	            <View style={styles.idUploadCard}>
+            <View style={styles.idUploadCard}>
               <View style={styles.idUploadCopy}>
                 <Text style={styles.toggleLabel}>Employee ID</Text>
                 <Text style={styles.employeeMeta}>
@@ -1005,33 +1130,9 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.label}>Assigned Location</Text>
-            <Dropdown
-              data={locationOptions}
-              labelField="label"
-              valueField="value"
-              value={form.assigned_location_id}
-              onChange={(item) => setFormValue("assigned_location_id", item.value)}
-              placeholder="Select location"
-              style={styles.dropdown}
-              selectedTextStyle={styles.dropdownText}
-              placeholderStyle={styles.placeholderText}
-              itemTextStyle={styles.dropdownText}
-            />
-
-            <Text style={styles.label}>Assigned Truck</Text>
-            <Dropdown
-              data={truckOptions}
-              labelField="label"
-              valueField="value"
-              value={form.assigned_truck_unit_id}
-              onChange={(item) => setFormValue("assigned_truck_unit_id", item.value)}
-              placeholder="Select truck"
-              style={styles.dropdown}
-              selectedTextStyle={styles.dropdownText}
-              placeholderStyle={styles.placeholderText}
-              itemTextStyle={styles.dropdownText}
-            />
+            <Text style={styles.helperText}>
+              Food truck, location, days, and hours are assigned from Employee Schedule after this profile is saved.
+            </Text>
 
             <Text style={styles.label}>Employee Login ID</Text>
             <TextInput value={loginPreview} editable={false} style={styles.readOnlyInput} />
@@ -1166,15 +1267,8 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                       {formatEmployeeAddress(employee)}
                     </Text>
                   ) : null}
-	                  <Text style={styles.employeeMeta}>
-	                    Assigned: {getLocationLabel(employee.assigned_location_id)}
-                  </Text>
                   <Text style={styles.employeeMeta}>
-                    Truck:{" "}
-                    {getTruckLabel(
-                      employee.assigned_truck_unit_id,
-                      employee.assigned_truck_unit_name
-                    )}
+                    Schedule cards: {employee.schedule_assignments?.length || (employee.weekly_schedule?.length ? 1 : 0)}
                   </Text>
                 </TouchableOpacity>
                 <View style={styles.employeeActions}>
@@ -1473,12 +1567,9 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 	                    </TouchableOpacity>
 	                  ) : null}
 
-                  <View style={styles.subsectionDivider} />
-                  <Text style={styles.submenuTitle}>Truck Assignment</Text>
-	                  <Text style={styles.helperText}>
-	                    Moving an employee to another truck or location sets them off
-	                    duty and ends any active session.
-	                  </Text>
+
+	                  <View style={styles.subsectionDivider} />
+	                  <Text style={styles.submenuTitle}>Pay Rate</Text>
 	                  <Text style={styles.label}>Employee Rate</Text>
 	                  <View style={styles.rateEditRow}>
 	                    <TextInput
@@ -1510,59 +1601,6 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 		                      </TouchableOpacity>
 		                    ) : null}
 	                  </View>
-	                  <Text style={styles.label}>Assigned Truck</Text>
-                  <Dropdown
-                    data={truckOptions}
-                    labelField="label"
-                    valueField="value"
-                    value={
-                      employeeTruckDrafts[employee._id] ||
-                      employee.assigned_truck_unit_id ||
-                      ""
-                    }
-	                    onChange={(item) =>
-	                      setEmployeeTruckDraft(employee._id, item.value)
-	                    }
-	                    placeholder="Select truck"
-	                    disable={!isEmployeeEditing(employee)}
-	                    style={[
-	                      styles.dropdown,
-	                      !isEmployeeEditing(employee) && styles.readOnlyInput,
-	                    ]}
-	                    selectedTextStyle={styles.dropdownText}
-	                    placeholderStyle={styles.placeholderText}
-	                    itemTextStyle={styles.dropdownText}
-                  />
-                  <Text style={styles.label}>Assigned Location</Text>
-                  <Dropdown
-                    data={locationOptions}
-                    labelField="label"
-                    valueField="value"
-                    value={
-                      employeeLocationDrafts[employee._id] ||
-                      employee.assigned_location_id
-                    }
-	                    onChange={(item) =>
-	                      setEmployeeLocationDraft(employee._id, item.value)
-	                    }
-	                    placeholder="Select location"
-	                    disable={!isEmployeeEditing(employee)}
-	                    style={[
-	                      styles.dropdown,
-	                      !isEmployeeEditing(employee) && styles.readOnlyInput,
-	                    ]}
-	                    selectedTextStyle={styles.dropdownText}
-	                    placeholderStyle={styles.placeholderText}
-	                    itemTextStyle={styles.dropdownText}
-	                  />
-	                  {isEmployeeEditing(employee) ? (
-	                    <TouchableOpacity
-	                      onPress={() => assignEmployeeLocation(employee)}
-	                      style={styles.secondaryButton}
-	                    >
-	                      <Text style={styles.secondaryButtonText}>Save Assignment</Text>
-	                    </TouchableOpacity>
-	                  ) : null}
                 </View>
               ) : null}
 
@@ -1602,7 +1640,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                 <View style={styles.scheduleSection}>
                   <TouchableOpacity style={styles.scheduleHeader} onPress={() => toggleEmployeeSchedule(employee)}>
                     <View>
-                      <Text style={styles.toggleLabel}>Weekly Schedule</Text>
+                      <Text style={styles.toggleLabel}>Employee Schedule</Text>
                       <Text style={styles.employeeMeta}>
                         {employee.is_working ? "Inside scheduled working window" : "Outside scheduled working window"}
                       </Text>
@@ -1612,30 +1650,79 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                   {scheduleExpandedId === employee._id ? (
                     <View style={styles.scheduleBody}>
                       <Text style={styles.employeeMeta}>Employees may clock in 15 minutes early. Access ends and active shifts close 15 minutes after the scheduled clock-out time.</Text>
-                      {(scheduleDrafts[employee._id] || getScheduleDraft(employee)).map((row) => {
-                        const label = WEEK_DAYS.find(([day]) => day === row.day)?.[1] || row.day;
-                        return (
-                          <View key={row.day} style={styles.scheduleRow}>
-                            <View style={styles.scheduleDayBlock}>
-                              <Text style={styles.scheduleDay}>{label}</Text>
-                              <Switch value={row.enabled} onValueChange={(value) => updateScheduleRow(employee._id, row.day, "enabled", value)} />
-                            </View>
-                            {row.enabled ? (
-                              <View style={styles.scheduleTimeRow}>
-                                <TouchableOpacity style={styles.scheduleTimeInput} onPress={() => setTimePickerTarget({ employeeId: employee._id, day: row.day, field: "clock_in", value: row.clock_in })}>
-                                  <Text style={styles.scheduleTimeText}>{formatScheduleTime(row.clock_in)}</Text>
-                                </TouchableOpacity>
-                                <Text style={styles.employeeMeta}>to</Text>
-                                <TouchableOpacity style={styles.scheduleTimeInput} onPress={() => setTimePickerTarget({ employeeId: employee._id, day: row.day, field: "clock_out", value: row.clock_out })}>
-                                  <Text style={styles.scheduleTimeText}>{formatScheduleTime(row.clock_out)}</Text>
-                                </TouchableOpacity>
-                              </View>
-                            ) : <Text style={styles.employeeMeta}>Not scheduled</Text>}
+                      {(scheduleDrafts[employee._id] || getScheduleDraft(employee)).map((assignment, assignmentIndex) => (
+                        <View key={`${employee._id}-${assignmentIndex}`} style={styles.scheduleAssignmentCard}>
+                          <View style={styles.scheduleCardHeader}>
+                            <Text style={styles.submenuTitle}>Truck / Location {assignmentIndex + 1}</Text>
+                            {assignmentIndex > 0 ? (
+                              <TouchableOpacity onPress={() => removeScheduleAssignment(employee._id, assignmentIndex)}>
+                                <Text style={styles.removeScheduleText}>Remove</Text>
+                              </TouchableOpacity>
+                            ) : null}
                           </View>
-                        );
-                      })}
+                          <Text style={styles.label}>Select Food Truck</Text>
+                          <Dropdown
+                            data={truckOptions}
+                            labelField="label"
+                            valueField="value"
+                            value={assignment.truck_unit_id}
+                            onChange={(item) => updateScheduleAssignment(employee._id, assignmentIndex, "truck_unit_id", item.value)}
+                            placeholder="Select food truck"
+                            style={styles.dropdown}
+                            selectedTextStyle={styles.dropdownText}
+                            placeholderStyle={styles.placeholderText}
+                            itemTextStyle={styles.dropdownText}
+                          />
+                          <Text style={styles.label}>Select Location</Text>
+                          <Dropdown
+                            data={locationOptions}
+                            labelField="label"
+                            valueField="value"
+                            value={assignment.location_id}
+                            onChange={(item) => updateScheduleAssignment(employee._id, assignmentIndex, "location_id", item.value)}
+                            placeholder="Select location"
+                            style={styles.dropdown}
+                            selectedTextStyle={styles.dropdownText}
+                            placeholderStyle={styles.placeholderText}
+                            itemTextStyle={styles.dropdownText}
+                          />
+                          {assignment.days.map((row) => {
+                            const label = WEEK_DAYS.find(([day]) => day === row.day)?.[1] || row.day;
+                            return (
+                              <View key={row.day} style={styles.scheduleRow}>
+                                <TouchableOpacity
+                                  style={styles.scheduleDayBlock}
+                                  onPress={() => updateScheduleRow(employee._id, assignmentIndex, row.day, "enabled", !row.enabled)}
+                                >
+                                  <View style={[styles.dayCheckbox, row.enabled && styles.dayCheckboxChecked]}>
+                                    {row.enabled ? <Text style={styles.dayCheckboxMark}>✓</Text> : null}
+                                  </View>
+                                  <Text style={styles.scheduleDay}>{label}</Text>
+                                </TouchableOpacity>
+                                {row.enabled ? (
+                                  <View style={styles.scheduleTimeRow}>
+                                    <TouchableOpacity style={styles.scheduleTimeInput} onPress={() => setTimePickerTarget({ employeeId: employee._id, assignmentIndex, day: row.day, field: "clock_in", value: row.clock_in })}>
+                                      <Text style={styles.scheduleTimeText}>{formatScheduleTime(row.clock_in)}</Text>
+                                    </TouchableOpacity>
+                                    <Text style={styles.employeeMeta}>to</Text>
+                                    <TouchableOpacity style={styles.scheduleTimeInput} onPress={() => setTimePickerTarget({ employeeId: employee._id, assignmentIndex, day: row.day, field: "clock_out", value: row.clock_out })}>
+                                      <Text style={styles.scheduleTimeText}>{formatScheduleTime(row.clock_out)}</Text>
+                                    </TouchableOpacity>
+                                  </View>
+                                ) : null}
+                              </View>
+                            );
+                          })}
+                        </View>
+                      ))}
+                      <TouchableOpacity style={styles.secondaryButton} onPress={() => addScheduleAssignment(employee._id)}>
+                        <Text style={styles.secondaryButtonText}>Add Food Truck</Text>
+                      </TouchableOpacity>
                       <TouchableOpacity style={styles.primaryButton} onPress={() => saveEmployeeSchedule(employee)}>
-                        <Text style={styles.primaryButtonText}>Save Weekly Schedule</Text>
+                        <Text style={styles.primaryButtonText}>Save Employee Schedule</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.archiveHistoryButton} onPress={() => archiveEmployeeSchedule(employee)}>
+                        <Text style={styles.archiveHistoryButtonText}>Archive Schedule</Text>
                       </TouchableOpacity>
                     </View>
                   ) : null}
@@ -1825,7 +1912,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                       style={styles.archiveHistoryButton}
                       onPress={() => archiveShiftHistory(employee)}
                     >
-                      <Text style={styles.archiveHistoryButtonText}>Archive</Text>
+                      <Text style={styles.archiveHistoryButtonText}>Archive Shift History</Text>
                     </TouchableOpacity>
                   ) : null}
                 </View>
@@ -1834,6 +1921,41 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
           ))
         )}
       </ScrollView>
+      <Modal transparent visible={missingTruckPromptVisible} animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalPanel}>
+            <Text style={styles.submenuTitle}>Food Truck Name Required</Text>
+            <Text style={styles.helperText}>
+              No food truck record is available for employee scheduling. Enter a name to create the primary truck.
+            </Text>
+            <TextInput
+              value={missingTruckName}
+              onChangeText={setMissingTruckName}
+              placeholder="Food truck name"
+              maxLength={80}
+              style={styles.input}
+            />
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                disabled={missingTruckSaving}
+                onPress={() => setMissingTruckPromptVisible(false)}
+              >
+                <Text style={styles.secondaryButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.smallPrimaryButton}
+                disabled={missingTruckSaving}
+                onPress={createMissingPrimaryTruck}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {missingTruckSaving ? "Saving..." : "Create Truck"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <DateTimePickerModal
         isVisible={!!timePickerTarget}
         mode="time"
@@ -1850,6 +1972,20 @@ export default ProfileEmployeeManagementScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F9FAFB" },
+  modalBackdrop: {
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.45)",
+    flex: 1,
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalPanel: {
+    backgroundColor: AppColor.white,
+    borderRadius: 12,
+    gap: 10,
+    padding: 20,
+    width: "100%",
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -2213,6 +2349,20 @@ const styles = StyleSheet.create({
   },
   scheduleChevron: { color: AppColor.primary, fontSize: 16 },
   scheduleBody: { gap: 8, paddingBottom: 10 },
+  scheduleAssignmentCard: {
+    backgroundColor: AppColor.white,
+    borderColor: AppColor.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 6,
+    padding: 12,
+  },
+  scheduleCardHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  removeScheduleText: { color: AppColor.error || "#B42318", fontFamily: Mulish700 },
   scheduleRow: {
     backgroundColor: "#F9FAFB",
     borderColor: AppColor.border,
@@ -2220,7 +2370,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 10,
   },
-  scheduleDayBlock: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
+  scheduleDayBlock: { alignItems: "center", flexDirection: "row", gap: 8 },
+  dayCheckbox: {
+    alignItems: "center",
+    borderColor: AppColor.border,
+    borderRadius: 4,
+    borderWidth: 1,
+    height: 22,
+    justifyContent: "center",
+    width: 22,
+  },
+  dayCheckboxChecked: { backgroundColor: AppColor.primary, borderColor: AppColor.primary },
+  dayCheckboxMark: { color: AppColor.white, fontFamily: Mulish700, fontSize: 14 },
   scheduleDay: { color: AppColor.text, fontFamily: Mulish700, fontSize: 14 },
   scheduleTimeRow: { alignItems: "center", flexDirection: "row", gap: 8, marginTop: 8 },
   scheduleTimeInput: {

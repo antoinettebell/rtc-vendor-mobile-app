@@ -24,7 +24,7 @@ import {
 import { clearPosOrder } from "../redux/slices/posOrderSlice";
 import { foodTypeStrings } from "../utils/constants";
 import { startTapToPaySale } from "../services/tapToPay-service";
-import tapToPayConfig from "../services/tapToPay-config";
+import { getVendorPaymentCapabilities } from "../helpers/vendorPaymentCapabilities.helper";
 
 const toAmount = (value) => {
   const n = Number(value);
@@ -157,9 +157,11 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
   const { foodTruck, location, truckUnit, guestPhone } = route.params || {};
   const isEmployeeSession =
     user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
+  const ownerPaymentCapabilities = getVendorPaymentCapabilities(user, foodTruck);
   const canUseTapToPay =
-    tapToPayConfig.enabled &&
-    (!isEmployeeSession || !!user?.employeeCapabilities?.tapToPay);
+    isEmployeeSession
+      ? !!user?.employeeCapabilities?.tapToPay
+      : ownerPaymentCapabilities.tapToPay;
 
   const [loading, setLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState(null);

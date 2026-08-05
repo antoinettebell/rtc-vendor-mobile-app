@@ -61,19 +61,6 @@ const FormField = ({ label, children, full = false }) => (
   </View>
 );
 
-const askWhetherToSignNewAgreement = () =>
-  new Promise((resolve) => {
-    Alert.alert(
-      "Marketplace Agreements",
-      "You already have a signed NDA and governance agreement on file. Would you like to sign a new one for this bid?",
-      [
-        { text: "No, Use Existing", style: "cancel", onPress: () => resolve(false) },
-        { text: "Yes, Sign New", onPress: () => resolve(true) },
-      ],
-      { cancelable: true, onDismiss: () => resolve(false) }
-    );
-  });
-
 const normalizeCurrencyInput = (value) =>
   String(value || "").replace(/[^0-9.]/g, "");
 
@@ -497,24 +484,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       });
 
       if (signingResponse?.data?.already_signed) {
-        const shouldSignNewAgreement = await askWhetherToSignNewAgreement();
-        if (!shouldSignNewAgreement) {
-          await finalizeBidSubmission();
-          return;
-        }
-
-        const newSigningResponse = await startMarketplaceVendorAgreementSigning_API({
-          event_id: eventId,
-          bid_id: draft.bid_id,
-          force_new_agreement: true,
-          return_url: "rounddacornervendor://docusign/return?status=completed",
-        });
-        pendingAgreementRef.current =
-          newSigningResponse?.data?.marketplaceVendorAgreement || null;
-        if (!newSigningResponse?.data?.signing_url) {
-          throw new Error("DocuSign signing URL was not returned.");
-        }
-        await Linking.openURL(newSigningResponse.data.signing_url);
+        await finalizeBidSubmission();
         return;
       }
 

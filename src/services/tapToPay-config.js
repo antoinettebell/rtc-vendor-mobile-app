@@ -21,6 +21,7 @@ const tapToPayConfig = {
     Config.PAYMENT_MODE ||
     "production",
   merchantId: Config.TAP_TO_PAY_MERCHANT_ID || "",
+  merchantSecret: Config.TAP_TO_PAY_MERCHANT_SECRET || "",
   terminalId: Config.TAP_TO_PAY_TERMINAL_ID || "",
   appleTeamId: Config.TAP_TO_PAY_APPLE_TEAM_ID || defaultAppleTeamId,
   sdkConfigId: Config.TAP_TO_PAY_SDK_CONFIG_ID || "",

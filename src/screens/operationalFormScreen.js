@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -55,30 +55,36 @@ const OperationalFormScreen = ({ navigation, route }) => {
   const [saving, setSaving] = useState(false);
   const [quantityTarget, setQuantityTarget] = useState(null);
   const [dateTarget, setDateTarget] = useState(null);
+  const [loadError, setLoadError] = useState("");
 
   const editable = form?.status === "DRAFT";
   const archived = form?.status === "ARCHIVED";
   const inventory = type === "INVENTORY";
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        if (formId) {
-          const response = await getOperationalComplianceForms_API({ type });
-          setForm((response?.forms || []).find((item) => item._id === formId) || null);
-        } else {
-          const response = await getCurrentOperationalComplianceForm_API(type);
-          setForm(response?.form || null);
-        }
-      } catch (error) {
-        Alert.alert("Operations", error?.message || "Unable to load the form.");
-      } finally {
-        setLoading(false);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError("");
+    setForm(null);
+    try {
+      let nextForm = null;
+      if (formId) {
+        const response = await getOperationalComplianceForms_API({ type });
+        const forms = response?.data?.forms || response?.forms || [];
+        nextForm = forms.find((item) => item._id === formId) || null;
+      } else {
+        const response = await getCurrentOperationalComplianceForm_API(type);
+        nextForm = response?.data?.form || response?.form || null;
       }
-    };
-    load();
+      if (!nextForm) throw new Error("The requested operations form was not found.");
+      setForm(nextForm);
+    } catch (error) {
+      setLoadError(error?.message || "Unable to load the form.");
+    } finally {
+      setLoading(false);
+    }
   }, [formId, type]);
+
+  useEffect(() => { load(); }, [load]);
 
   const updateHeader = (field, value) => setForm((current) => ({ ...current, [field]: value }));
   const updateInventory = (index, field, value) => setForm((current) => {
@@ -111,7 +117,7 @@ const OperationalFormScreen = ({ navigation, route }) => {
       const response = submit
         ? await submitOperationalComplianceForm_API(form._id, payload)
         : await saveOperationalComplianceForm_API(form._id, payload);
-      setForm(response?.form || form);
+      setForm(response?.data?.form || response?.form || form);
       Alert.alert(submit ? "Submitted" : "Saved", submit ? "The vendor can now review this form. No approval is required." : "Your changes were saved.");
     } catch (error) {
       Alert.alert("Operations", error?.message || "Unable to save this form.");
@@ -123,7 +129,7 @@ const OperationalFormScreen = ({ navigation, route }) => {
   const unlock = async () => {
     try {
       const response = await unlockOperationalComplianceForm_API(form._id);
-      setForm(response?.form || form);
+      setForm(response?.data?.form || response?.form || form);
     } catch (error) {
       Alert.alert("Operations", error?.message || "Unable to edit this form.");
     }
@@ -145,7 +151,32 @@ const OperationalFormScreen = ({ navigation, route }) => {
     ],
   );
 
-  if (loading || !form) return <SafeAreaView style={styles.loading}><ActivityIndicator color={AppColor.primary} /></SafeAreaView>;
+  if (loading) return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}><MaterialIcons name="arrow-back" size={27} color="#0F172A" /></TouchableOpacity>
+        <Text style={styles.title}>{TITLES[type] || "Operations"}</Text>
+      </View>
+      <View style={styles.loading}><ActivityIndicator color={AppColor.primary} /></View>
+    </SafeAreaView>
+  );
+
+  if (loadError || !form) return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}><MaterialIcons name="arrow-back" size={27} color="#0F172A" /></TouchableOpacity>
+        <Text style={styles.title}>{TITLES[type] || "Operations"}</Text>
+      </View>
+      <View style={styles.loadErrorContainer}>
+        <MaterialIcons name="error-outline" size={38} color="#B42318" />
+        <Text style={styles.loadErrorTitle}>Unable to open this form</Text>
+        <Text style={styles.loadErrorText}>{loadError || "Please try again."}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={load}>
+          <Text style={styles.retryText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
 
   const TextField = ({ label, value, onChangeText, maxLength = 80, multiline = false }) => (
     <View style={styles.field}>
@@ -240,6 +271,11 @@ const OperationalFormScreen = ({ navigation, route }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" }, loading: { alignItems: "center", flex: 1, justifyContent: "center" },
+  loadErrorContainer: { alignItems: "center", flex: 1, justifyContent: "center", padding: 28 },
+  loadErrorTitle: { color: "#912018", fontSize: 18, fontWeight: "700", marginTop: 10 },
+  loadErrorText: { color: "#B42318", fontSize: 14, marginTop: 6, textAlign: "center" },
+  retryButton: { backgroundColor: AppColor.primary, borderRadius: 9, marginTop: 16, paddingHorizontal: 24, paddingVertical: 11 },
+  retryText: { color: "white", fontSize: 15, fontWeight: "700" },
   header: { alignItems: "center", backgroundColor: "white", borderBottomColor: "#E2E8F0", borderBottomWidth: 1, flexDirection: "row", padding: 18 }, headerCopy: { flex: 1, marginLeft: 15 }, title: { color: "#0F172A", fontSize: 22, fontWeight: "700" }, status: { color: "#64748B", fontSize: 12, marginTop: 2 },
   content: { padding: 16, paddingBottom: 50 }, card: { backgroundColor: "white", borderColor: "#E2E8F0", borderRadius: 14, borderWidth: 1, marginBottom: 14, padding: 15 },
   archiveBanner: { alignItems: "center", backgroundColor: "#E2E8F0", borderRadius: 10, flexDirection: "row", gap: 8, marginBottom: 14, padding: 12 }, archiveText: { color: "#475569", fontWeight: "600" },

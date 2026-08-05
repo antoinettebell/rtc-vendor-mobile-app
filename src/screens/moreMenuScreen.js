@@ -13,6 +13,9 @@ const MoreMenuScreen = ({ navigation }) => {
       : []),
     { label: "Earnings", detail: "Sales and payout information", icon: "payments", route: "earningsScreen" },
     { label: "Operations", detail: "Inventory and daily checklists", icon: "fact-check", route: "operationsScreen" },
+    { label: "Weekly Schedule", detail: "Set when your food trucks are open", icon: "calendar-month", route: "profileAvailabilityScreen" },
+    { label: "Cuisines", detail: "Manage the cuisines customers see", icon: "restaurant-menu", route: "profileSelectCuisineScreen" },
+    { label: "Serving Locations", detail: "Manage saved service locations", icon: "location-on", route: "profileServingLocationScreen" },
   ];
 
   return (

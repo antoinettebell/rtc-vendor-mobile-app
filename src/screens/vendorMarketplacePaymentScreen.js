@@ -5,11 +5,13 @@ import {
   Linking,
   Platform,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSelector } from "react-redux";
 import {
   EnvironmentEnum,
   PaymentMethodNameEnum,
@@ -23,9 +25,10 @@ import {
   callMarketplacePayment_API,
   checkoutMarketplacePayment_API,
   getMarketplacePaymentById_API,
+  updateMarketplaceFinalPaymentTip_API,
 } from "../api/appAPI";
 import { startTapToPaySale } from "../services/tapToPay-service";
-import tapToPayConfig from "../services/tapToPay-config";
+import { getVendorPaymentCapabilities } from "../helpers/vendorPaymentCapabilities.helper";
 import {
   MarketplaceHeader,
   formatMoney,
@@ -84,6 +87,10 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
   const [payment, setPayment] = useState(route?.params?.payment || null);
   const [loading, setLoading] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(null);
+  const [tipInput, setTipInput] = useState(
+    String(route?.params?.payment?.tip_amount || ""),
+  );
+  const { user } = useSelector((state) => state.userReducer);
   const paymentId = route?.params?.paymentId || payment?.payment_id;
   const returnScreen = route?.params?.returnScreen;
   const successMessage = route?.params?.successMessage;
@@ -96,6 +103,7 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
       if (response?.success) {
         const nextPayment = response.data?.marketplacePayment;
         setPayment(nextPayment);
+        setTipInput(nextPayment?.tip_amount ? String(nextPayment.tip_amount) : "");
         if (nextPayment?.payment_status === "PAID" && returnScreen) {
           if (successMessage) {
             Alert.alert("Payment Successful", successMessage, [
@@ -161,6 +169,7 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
         payload: {
           payment_method: method === "googlePay" ? "GOOGLE_PAY" : "APPLE_PAY",
           payment_data: paymentRawToken,
+          expected_total: Number(payment.total_amount || 0),
         },
       });
 
@@ -203,27 +212,51 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
   };
 
   const paid = payment?.payment_status === "PAID";
+  const processing = payment?.payment_status === "PROCESSING";
   const isFinalEventPayment = payment?.payment_type === "FINAL_EVENT_PAYMENT";
+  const paymentCapabilities = getVendorPaymentCapabilities(user);
+  const canUseCash =
+    isFinalEventPayment && paymentCapabilities.cash;
   const canUseTapToPay =
-    isFinalEventPayment && tapToPayConfig.enabled;
+    isFinalEventPayment && paymentCapabilities.tapToPay;
+
+  const saveTipIfNeeded = async () => {
+    const tipAmount = Number(tipInput || 0);
+    if (!Number.isFinite(tipAmount) || tipAmount < 0) {
+      throw new Error("Enter a valid tip amount.");
+    }
+    if (Number(payment?.tip_amount || 0) === tipAmount) return payment;
+    const response = await updateMarketplaceFinalPaymentTip_API({
+      payment_id: payment.payment_id,
+      tip_amount: tipAmount,
+    });
+    const updatedPayment = response?.data?.marketplacePayment;
+    if (!response?.success || !updatedPayment) {
+      throw new Error("The tip could not be saved.");
+    }
+    setPayment(updatedPayment);
+    return updatedPayment;
+  };
 
   const payWithTapToPay = async () => {
     if (!payment || paymentLoading) return;
     setPaymentLoading("tapToPay");
     try {
+      const paymentToCollect = await saveTipIfNeeded();
       const tapToPayResult = await startTapToPaySale({
-        amount: Number(payment.total_amount || 0),
-        reference: payment.payment_id,
+        amount: Number(paymentToCollect.total_amount || 0),
+        reference: paymentToCollect.payment_id,
         metadata: {
-          paymentId: payment.payment_id,
-          paymentType: payment.payment_type,
+          paymentId: paymentToCollect.payment_id,
+          paymentType: paymentToCollect.payment_type,
         },
       });
       const response = await checkoutMarketplacePayment_API({
-        payment_id: payment.payment_id,
+        payment_id: paymentToCollect.payment_id,
         payload: {
           payment_method: "TAP_TO_PAY",
           payment_data: tapToPayResult?.opaqueToken || tapToPayResult,
+          expected_total: Number(paymentToCollect.total_amount || 0),
         },
       });
       if (response?.success) {
@@ -247,11 +280,21 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
     }
   };
 
-  const payWithCash = () => {
+  const payWithCash = async () => {
     if (!payment || paymentLoading) return;
+    let paymentToCollect;
+    try {
+      setPaymentLoading("cashTip");
+      paymentToCollect = await saveTipIfNeeded();
+    } catch (error) {
+      setPaymentLoading(null);
+      Alert.alert("Tip", error?.message || "Unable to save the tip.");
+      return;
+    }
+    setPaymentLoading(null);
     Alert.alert(
       "Confirm Cash Payment",
-      `Confirm cash payment of ${formatMoney(payment.total_amount || 0)}?`,
+      `Confirm cash payment of ${formatMoney(paymentToCollect.total_amount || 0)}?`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -260,8 +303,11 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
             setPaymentLoading("cash");
             try {
               const response = await checkoutMarketplacePayment_API({
-                payment_id: payment.payment_id,
-                payload: { payment_method: "CASH" },
+                payment_id: paymentToCollect.payment_id,
+                payload: {
+                  payment_method: "CASH",
+                  expected_total: Number(paymentToCollect.total_amount || 0),
+                },
               });
               if (response?.success) {
                 setPayment(response.data?.marketplacePayment);
@@ -313,16 +359,6 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
                 )}
               </Text>
               <Text style={styles.meta}>
-                Increase / Additional Fees: {formatMoney(
-                  payment?.additional_amount || 0,
-                )}
-              </Text>
-              <Text style={styles.meta}>
-                Discount / Decrease: -{formatMoney(
-                  payment?.discount_amount || 0,
-                )}
-              </Text>
-              <Text style={styles.meta}>
                 Tip: {formatMoney(payment?.tip_amount || 0)}
               </Text>
             </>
@@ -340,7 +376,31 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
 
         {loading ? <ActivityIndicator color={AppColor.primary} /> : null}
 
-        {!paid ? (
+        {isFinalEventPayment && !paid ? (
+          <View style={styles.card}>
+            <Text style={styles.label}>Optional Tip</Text>
+            <Text style={styles.meta}>
+              Ask the coordinator whether they would like to leave a tip before
+              collecting payment.
+            </Text>
+            <TextInput
+              value={tipInput}
+              onChangeText={(value) => setTipInput(value.replace(/[^0-9.]/g, ""))}
+              placeholder="0.00"
+              keyboardType="decimal-pad"
+              editable={!processing && !paymentLoading}
+              style={styles.input}
+            />
+          </View>
+        ) : null}
+
+        {processing ? (
+          <Text style={[styles.meta, { marginTop: 12 }]}>
+            Payment is processing. Refresh to see the completed status.
+          </Text>
+        ) : null}
+
+        {!paid && !processing ? (
           <>
             {canUseTapToPay ? (
               <TouchableOpacity
@@ -357,7 +417,7 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
               </TouchableOpacity>
             ) : null}
 
-            {isFinalEventPayment ? (
+            {canUseCash ? (
               <TouchableOpacity
                 activeOpacity={0.7}
                 style={[styles.secondaryButton, { marginTop: 12 }]}
@@ -365,7 +425,7 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
                 onPress={payWithCash}
               >
                 <Text style={styles.secondaryButtonText}>
-                  {paymentLoading === "cash"
+                  {["cash", "cashTip"].includes(paymentLoading)
                     ? "Processing..."
                     : `Cash ${formatMoney(payment?.total_amount || 0)}`}
                 </Text>

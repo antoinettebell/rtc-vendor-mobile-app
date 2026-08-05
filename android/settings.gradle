@@ -1,6 +1,19 @@
 pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
 plugins { id("com.facebook.react.settings") }
 extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
+    repositories {
+        google()
+        mavenCentral()
+        exclusiveContent {
+            forRepository {
+                maven { url = uri("https://repo.visa.com/mpos-releases/") }
+            }
+            filter { includeGroup("io.payworks") }
+        }
+    }
+}
 rootProject.name = "rtc-vendor"
 include ':app'
 includeBuild('../node_modules/@react-native/gradle-plugin')

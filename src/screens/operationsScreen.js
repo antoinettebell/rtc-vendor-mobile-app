@@ -15,14 +15,23 @@ const OperationsScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [submitted, setSubmitted] = useState([]);
   const [archived, setArchived] = useState([]);
+  const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
       const response = await getOperationalComplianceForms_API();
-      const forms = response?.forms || [];
+      const forms = response?.data?.forms || response?.forms;
+      if (!Array.isArray(forms)) {
+        throw new Error("Operations returned an invalid response.");
+      }
       setSubmitted(forms.filter((item) => item.status === "SUBMITTED"));
       setArchived(forms.filter((item) => item.status === "ARCHIVED"));
+    } catch (loadError) {
+      setSubmitted([]);
+      setArchived([]);
+      setError(loadError?.message || "Unable to load operations.");
     } finally {
       setLoading(false);
     }
@@ -47,8 +56,19 @@ const OperationsScreen = ({ navigation }) => {
           </TouchableOpacity>
         ))}
 
+        {error ? (
+          <View style={styles.errorCard}>
+            <MaterialIcons name="error-outline" size={28} color="#B42318" />
+            <Text style={styles.errorTitle}>Operations could not load</Text>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={load}>
+              <Text style={styles.retryText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         <Text style={styles.sectionTitle}>Submitted for Review</Text>
-        {loading ? <ActivityIndicator color={AppColor.primary} /> : submitted.length ? submitted.map((form) => (
+        {loading ? <ActivityIndicator color={AppColor.primary} /> : error ? null : submitted.length ? submitted.map((form) => (
           <TouchableOpacity key={form._id} style={styles.record} onPress={() => open(form.form_type, form._id)}>
             <Text style={styles.recordTitle}>{TYPES.find((x) => x.type === form.form_type)?.title}</Text>
             <Text style={styles.detail}>{new Date(form.submitted_at).toLocaleString()}</Text>
@@ -56,13 +76,13 @@ const OperationsScreen = ({ navigation }) => {
         )) : <Text style={styles.empty}>No submitted forms.</Text>}
 
         <Text style={styles.sectionTitle}>Archive</Text>
-        {archived.map((form) => (
+        {!error && archived.map((form) => (
           <TouchableOpacity key={form._id} style={styles.record} onPress={() => open(form.form_type, form._id)}>
             <View><Text style={styles.recordTitle}>{TYPES.find((x) => x.type === form.form_type)?.title}</Text><Text style={styles.detail}>{new Date(form.archived_at).toLocaleString()}</Text></View>
             <MaterialIcons name="image" size={22} color="#64748B" />
           </TouchableOpacity>
         ))}
-        {!loading && !archived.length ? <Text style={styles.empty}>No archived forms.</Text> : null}
+        {!loading && !error && !archived.length ? <Text style={styles.empty}>No archived forms.</Text> : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -81,6 +101,11 @@ const styles = StyleSheet.create({
   record: { alignItems: "center", backgroundColor: "white", borderRadius: 10, flexDirection: "row", justifyContent: "space-between", marginBottom: 9, padding: 14 },
   recordTitle: { color: "#0F172A", fontSize: 15, fontWeight: "600" },
   empty: { color: "#64748B", fontSize: 14 },
+  errorCard: { alignItems: "center", backgroundColor: "#FEF3F2", borderColor: "#FDA29B", borderRadius: 12, borderWidth: 1, marginTop: 8, padding: 18 },
+  errorTitle: { color: "#912018", fontSize: 16, fontWeight: "700", marginTop: 8 },
+  errorText: { color: "#B42318", fontSize: 13, marginTop: 4, textAlign: "center" },
+  retryButton: { backgroundColor: AppColor.primary, borderRadius: 8, marginTop: 12, paddingHorizontal: 22, paddingVertical: 10 },
+  retryText: { color: "white", fontSize: 14, fontWeight: "700" },
 });
 
 export default OperationsScreen;

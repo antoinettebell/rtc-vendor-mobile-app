@@ -851,6 +851,14 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <Pressable
+          accessibilityLabel="Back"
+          hitSlop={12}
+          onPress={() => navigation.goBack()}
+          style={[styles.headerBackButton, { top: insets.top + 2 }]}
+        >
+          <Entypo name="chevron-left" size={28} color={AppColor.black} />
+        </Pressable>
         <Text numberOfLines={1} style={styles.headerTitle}>
           {isEmployeesScreen ? "Employees" : "Earnings"}
         </Text>
@@ -1438,6 +1446,15 @@ const styles = StyleSheet.create({
     fontSize: 19.78,
     fontFamily: Mulish700,
     color: AppColor.black,
+  },
+  headerBackButton: {
+    alignItems: "center",
+    height: 42,
+    justifyContent: "center",
+    left: 8,
+    position: "absolute",
+    width: 42,
+    zIndex: 2,
   },
   contentContainer: {
     flexGrow: 1,

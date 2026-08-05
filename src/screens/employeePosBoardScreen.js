@@ -967,7 +967,9 @@ const EmployeePosBoardScreen = ({ navigation }) => {
               ) : null}
               {flavorOptions.length > 0 ? (
                 <>
-                  <Text style={styles.optionTitle}>Flavors</Text>
+                  <Text style={styles.optionTitle}>
+                    {selectedItem?.flavorLabel || "Flavors"}
+                  </Text>
                   {flavorOptions.map((option) => (
                     <Pressable
                       key={option.name}

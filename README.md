@@ -76,6 +76,7 @@ TAP_TO_PAY_ENABLED=true
 TAP_TO_PAY_PROVIDER=CYBERSOURCE
 TAP_TO_PAY_ENVIRONMENT=production
 TAP_TO_PAY_MERCHANT_ID=
+TAP_TO_PAY_MERCHANT_SECRET=
 TAP_TO_PAY_TERMINAL_ID=
 TAP_TO_PAY_APPLE_TEAM_ID=5G26GFF98P
 TAP_TO_PAY_SDK_CONFIG_ID=
@@ -83,6 +84,8 @@ TAP_TO_PAY_CURRENCY=USD
 ```
 
 `TAP_TO_PAY_APPLE_TEAM_ID` is the Apple Developer Team ID approved for Tap to Pay on iPhone. The activation code is entered only in the CyberSource SDK screen on the physical iPhone; never put it in an environment file, source code, or logs. Set `TAP_TO_PAY_ENVIRONMENT=sandbox` for a test activation code or `production` for a live activation code.
+
+Android uses the same CyberSource merchant account but requires `TAP_TO_PAY_MERCHANT_ID` and `TAP_TO_PAY_MERCHANT_SECRET` as protected EAS environment values. A compatible Android 12+ NFC device must also have Visa's Tap to Pay Ready app installed and developer options disabled.
 
 Android requires an NFC-capable supported device and the Authorize.net/Cybersource Tap to Pay SDK bridge to resolve `RTCTapToPay.startSale`. iOS production builds require the Apple Tap to Pay entitlement in the provisioning profile and `com.apple.developer.proximity-reader.payment.acceptance` in the app entitlements. Keep this entitlement in both `app.json` under `expo.ios.entitlements` for Expo prebuild/EAS config sync and `ios/FoodtruckVendor/FoodtruckVendor.entitlements` for direct Xcode builds.
 

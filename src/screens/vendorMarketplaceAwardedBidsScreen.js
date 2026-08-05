@@ -81,6 +81,9 @@ const getBidPayoutStatus = (bid, event) => {
   if (["PENDING", "FAILED"].includes(bid?.final_payment_status)) {
     return "Awaiting Coordinator Payment";
   }
+  if (bid?.final_payment_status === "PROCESSING") {
+    return "Payment Processing";
+  }
   const explicitStatus =
     bid?.payout_status ||
     bid?.vendor_payout_status ||

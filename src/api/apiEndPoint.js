@@ -117,6 +117,8 @@ export const MARKETPLACE_PAYMENT_CALL = (payment_id) =>
   `/marketplace/payments/${payment_id}/call`;
 export const MARKETPLACE_PAYMENT_CHECKOUT = (payment_id) =>
   `/marketplace/payments/${payment_id}/checkout`;
+export const MARKETPLACE_PAYMENT_TIP = (payment_id) =>
+  `/marketplace/payments/${payment_id}/tip`;
 
 // Bank Detail
 export const ADD_BANK_DETAIL = "/user/bank-detail";
