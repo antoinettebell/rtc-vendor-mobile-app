@@ -2,6 +2,7 @@ import moment from "moment";
 import RNPrint from "react-native-print";
 
 import { getVendorOrderTotal } from "./order.helper";
+import { getOrderItemDetailLines } from "./orderItemDetails.helper";
 
 const escapeHtml = (value) =>
   String(value ?? "")
@@ -11,22 +12,10 @@ const escapeHtml = (value) =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 
-const joinList = (label, values) => {
-  if (!Array.isArray(values) || values.length === 0) return null;
-  return `${label}: ${values.join(", ")}`;
-};
-
 const getItemName = (item) =>
   item?.menuItem?.name || item?.name || item?.fullMenuItemData?.name || "Item";
 
-const getItemNotes = (item) =>
-  [
-    item?.customization,
-    joinList("Flavors", item?.selectedFlavors),
-    joinList("Toppings", item?.selectedToppings),
-    joinList("Discount flavors", item?.selectedDiscountFlavors),
-    joinList("Discount toppings", item?.selectedDiscountToppings),
-  ].filter(Boolean);
+const getItemNotes = (item) => getOrderItemDetailLines(item);
 
 const getCustomerName = (order) => {
   const firstName = order?.user?.firstName || order?.customer?.firstName || "";
@@ -68,12 +57,14 @@ const renderOrderHtml = (order) => {
               const notes = getItemNotes(item);
               return `
                 <tr>
-                  <td>${escapeHtml(item?.qty || 0)}</td>
+                  <td>${escapeHtml(item?.qty || item?.quantity || 0)}</td>
                   <td>
                     <div class="item-name">${escapeHtml(getItemName(item))}</div>
                     ${
                       notes.length
-                        ? `<div class="notes"><strong>Notes:</strong> ${escapeHtml(notes.join(" | "))}</div>`
+                        ? `<div class="notes">${notes
+                            .map((note) => `<div>${escapeHtml(note)}</div>`)
+                            .join("")}</div>`
                         : ""
                     }
                   </td>

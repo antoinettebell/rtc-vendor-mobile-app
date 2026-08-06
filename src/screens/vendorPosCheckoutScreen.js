@@ -21,10 +21,15 @@ import {
   placePosOrder_API,
   validatePosOrder_API,
 } from "../api/appAPI";
-import { clearPosOrder } from "../redux/slices/posOrderSlice";
+import {
+  clearPosOrder,
+  removeItemFromPosOrder,
+} from "../redux/slices/posOrderSlice";
 import { foodTypeStrings } from "../utils/constants";
 import { startTapToPaySale } from "../services/tapToPay-service";
 import { getVendorPaymentCapabilities } from "../helpers/vendorPaymentCapabilities.helper";
+import { getOrderItemDetailLines } from "../helpers/orderItemDetails.helper";
+import { calculateItemTotalWithDiscount } from "../helpers/discount.helper";
 
 const toAmount = (value) => {
   const n = Number(value);
@@ -581,22 +586,29 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
                 style={styles.checkoutItem}
               >
                 <View style={styles.checkoutItemHeader}>
-                  <Text style={styles.checkoutItemName}>
-                    {index + 1}. {item.name}
-                  </Text>
+                  <View style={styles.checkoutItemTitleRow}>
+                    <Text style={styles.checkoutItemName}>
+                      {index + 1}. {item.name}
+                    </Text>
+                    <IconButton
+                      icon="trash-can-outline"
+                      iconColor={AppColor.primary}
+                      size={21}
+                      accessibilityLabel={`Remove ${item.name}`}
+                      onPress={() =>
+                        dispatch(
+                          removeItemFromPosOrder({
+                            itemId: item._cartLineId || item._id,
+                          })
+                        )
+                      }
+                    />
+                  </View>
                   <Text style={styles.checkoutItemPrice}>
-                    ${toAmount(item.price)}
+                    ${toAmount(calculateItemTotalWithDiscount(item))}
                   </Text>
                 </View>
-                {[
-                  item.selectedFlavors?.join(", "),
-                  item.selectedToppings?.join(", "),
-                  item.selectedComboSides?.map((value) => value?.name || value).join(", "),
-                  item.selectedSubItems?.map((value) => value?.name || value?.menuItem?.name).join(", "),
-                  item.customizationInput,
-                ]
-                  .filter(Boolean)
-                  .map((detail, detailIndex) => (
+                {getOrderItemDetailLines(item).map((detail, detailIndex) => (
                     <Text key={`${index}-${detailIndex}`} style={styles.checkoutItemDetail}>
                       {detail}
                     </Text>
@@ -775,6 +787,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 12,
+  },
+  checkoutItemTitleRow: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
   },
   checkoutItemName: { flex: 1, fontFamily: Mulish700, color: AppColor.black },
   checkoutItemPrice: { fontFamily: Mulish600, color: AppColor.black },
