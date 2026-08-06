@@ -97,6 +97,22 @@ const SHIFT_NOT_STARTED_MESSAGE =
   "You are not currently clocked in. Please start your shift to continue.";
 const SHIFT_ON_BREAK_MESSAGE =
   "Your shift is paused for break. Please resume your shift to log back in.";
+const SCHEDULE_DAY_LABELS = {
+  sun: "Sunday",
+  mon: "Monday",
+  tue: "Tuesday",
+  wed: "Wednesday",
+  thu: "Thursday",
+  fri: "Friday",
+  sat: "Saturday",
+};
+
+const formatScheduleTime = (value) => {
+  const [hours, minutes] = String(value || "00:00").split(":").map(Number);
+  const date = new Date();
+  date.setHours(hours || 0, minutes || 0, 0, 0);
+  return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+};
 
 const isCashPayment = (order) =>
   ["CASH", "COD"].includes(
@@ -552,6 +568,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
     (request) =>
       String(request.request_status || "").toUpperCase() === selectedRefundBucket,
   );
+  const employeeSchedule = dashboard?.employee_schedule || [];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -736,6 +753,45 @@ const EmployeeSessionScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.panel}>
+              <Text style={styles.panelTitle}>My Employee Schedule</Text>
+              <Text style={styles.scheduleHelp}>
+                This schedule is read-only. Contact the vendor to request changes.
+              </Text>
+              {employeeSchedule.length ? (
+                employeeSchedule.map((assignment, assignmentIndex) => {
+                  const enabledDays = (assignment.days || []).filter(
+                    (day) => day.enabled,
+                  );
+                  return (
+                    <View
+                      key={assignment._id || `${assignment.truck_unit_id}-${assignmentIndex}`}
+                      style={styles.scheduleCard}
+                    >
+                      <Text style={styles.scheduleAssignmentTitle}>
+                        {assignment.truck_unit_name || "Food truck"}
+                      </Text>
+                      <Text style={styles.scheduleLocation}>
+                        {assignment.location_name || "Assigned location"}
+                      </Text>
+                      {enabledDays.map((day) => (
+                        <View key={day.day} style={styles.scheduleDayRow}>
+                          <Text style={styles.scheduleDayName}>
+                            {SCHEDULE_DAY_LABELS[day.day] || day.day}
+                          </Text>
+                          <Text style={styles.scheduleDayTime}>
+                            {formatScheduleTime(day.clock_in)} – {formatScheduleTime(day.clock_out)}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  );
+                })
+              ) : (
+                <Text style={styles.scheduleHelp}>No employee schedule is assigned.</Text>
+              )}
+            </View>
+
+            <View style={styles.panel}>
               <Text style={styles.panelTitle}>Order Management</Text>
               <View style={styles.bucketRow}>
                 {ORDER_BUCKETS.map((bucket) => {
@@ -888,6 +944,40 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginBottom: 8,
   },
+  scheduleHelp: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 13,
+    marginBottom: 10,
+  },
+  scheduleCard: {
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 8,
+    padding: 12,
+  },
+  scheduleAssignmentTitle: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 15,
+  },
+  scheduleLocation: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 13,
+    marginBottom: 8,
+    marginTop: 2,
+  },
+  scheduleDayRow: {
+    borderTopColor: AppColor.border,
+    borderTopWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+  },
+  scheduleDayName: { color: AppColor.black, fontFamily: Mulish600, fontSize: 13 },
+  scheduleDayTime: { color: AppColor.black, fontFamily: Mulish400, fontSize: 13 },
   panelHeaderRow: {
     alignItems: "center",
     flexDirection: "row",

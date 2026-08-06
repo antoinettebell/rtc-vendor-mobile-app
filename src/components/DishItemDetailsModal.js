@@ -989,42 +989,57 @@ const DishItemDetailsModal = ({
   }, [selectedMenuItem]);
 
   const handleIncreaseQuantity = useCallback(() => {
+    const buildItemWithCurrentOptions = () => ({
+      ...selectedMenuItem,
+      selectedSubItems,
+      customizationInput,
+      selectedFlavors: hasFlavorChoices ? selectedFlavors : [],
+      selectedToppings: hasToppingChoices ? selectedToppings : [],
+      selectedComboSides: hasComboSideChoices ? selectedComboSides : [],
+      selectedDiscountFlavors: hasDiscountFlavorChoices
+        ? selectedDiscountFlavors
+        : [],
+      selectedDiscountToppings: hasDiscountToppingChoices
+        ? selectedDiscountToppings
+        : [],
+      selectedDiscountCustomizationInput: hasDiscountCustomization
+        ? selectedDiscountCustomizationInput
+        : "",
+      selectedDiscountComboSides: hasDiscountComboSideChoices
+        ? selectedDiscountComboSides
+        : [],
+      selectedDiscountSubItems,
+    });
+
+    const saveInitialDraftIfNeeded = () => {
+      if (getItemQuantity(selectedMenuItem._id) > 0) return;
+      handleAddItem(buildItemWithCurrentOptions());
+    };
+
     const addWithCurrentOptions = () => {
       if (!validateSelections()) return;
-      handleAddItem({
-        ...selectedMenuItem,
-        selectedSubItems,
-        customizationInput,
-        selectedFlavors: hasFlavorChoices ? selectedFlavors : [],
-        selectedToppings: hasToppingChoices ? selectedToppings : [],
-        selectedComboSides: hasComboSideChoices ? selectedComboSides : [],
-        selectedDiscountFlavors: hasDiscountFlavorChoices
-          ? selectedDiscountFlavors
-          : [],
-        selectedDiscountToppings: hasDiscountToppingChoices
-          ? selectedDiscountToppings
-          : [],
-        selectedDiscountCustomizationInput: hasDiscountCustomization
-          ? selectedDiscountCustomizationInput
-          : "",
-        selectedDiscountComboSides: hasDiscountComboSideChoices
-          ? selectedDiscountComboSides
-          : [],
-        selectedDiscountSubItems,
-      });
+      saveInitialDraftIfNeeded();
+      handleAddItem(buildItemWithCurrentOptions());
+    };
+
+    const addSeparately = () => {
+      if (!validateSelections()) return;
+      saveInitialDraftIfNeeded();
+      beginAdditionalCustomization();
     };
 
     Alert.alert(
       "Use the same options?",
       "Should the additional item use all the same options?",
       [
-        { text: "No", onPress: beginAdditionalCustomization },
+        { text: "No", onPress: addSeparately },
         { text: "Yes", onPress: addWithCurrentOptions },
       ]
     );
   }, [
     beginAdditionalCustomization,
     customizationInput,
+    getItemQuantity,
     handleAddItem,
     hasComboSideChoices,
     hasDiscountComboSideChoices,

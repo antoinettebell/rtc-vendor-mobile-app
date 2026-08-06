@@ -47,6 +47,31 @@ const emptyInventoryItem = () => ({
 });
 const asDateLabel = (value) => value ? new Date(value).toLocaleDateString() : "Select date";
 
+const OperationalTextField = ({
+  editable,
+  label,
+  value,
+  onChangeText,
+  maxLength = 80,
+  multiline = false,
+}) => (
+  <View style={styles.field}>
+    <Text style={styles.fieldLabel}>{label}</Text>
+    <TextInput
+      editable={editable}
+      maxLength={maxLength}
+      multiline={multiline}
+      onChangeText={onChangeText}
+      style={[
+        styles.input,
+        multiline && styles.notesInput,
+        !editable && styles.readonly,
+      ]}
+      value={value || ""}
+    />
+  </View>
+);
+
 const OperationalFormScreen = ({ navigation, route }) => {
   const { type, formId } = route.params || {};
   const { user } = useSelector((state) => state.userReducer);
@@ -60,6 +85,8 @@ const OperationalFormScreen = ({ navigation, route }) => {
   const [quantityTarget, setQuantityTarget] = useState(null);
   const [dateTarget, setDateTarget] = useState(null);
   const [loadError, setLoadError] = useState("");
+  const [truckUnits, setTruckUnits] = useState([]);
+  const [truckUnitPickerVisible, setTruckUnitPickerVisible] = useState(false);
 
   const editable = form?.status === "DRAFT";
   const archived = form?.status === "ARCHIVED";
@@ -71,15 +98,18 @@ const OperationalFormScreen = ({ navigation, route }) => {
     setForm(null);
     try {
       let nextForm = null;
+      let response = null;
       if (formId) {
-        const response = await getOperationalComplianceForms_API({ type });
+        response = await getOperationalComplianceForms_API({ type });
         const forms = response?.data?.forms || response?.forms || [];
         nextForm = forms.find((item) => item._id === formId) || null;
       } else {
-        const response = await getCurrentOperationalComplianceForm_API(type);
+        response = await getCurrentOperationalComplianceForm_API(type);
         nextForm = response?.data?.form || response?.form || null;
       }
       if (!nextForm) throw new Error("The requested operations form was not found.");
+      const responseTruckUnits = response?.data?.truckUnits || response?.truckUnits || [];
+      setTruckUnits(responseTruckUnits);
       setForm({
         ...nextForm,
         prepared_by_name: nextForm.prepared_by_name || defaultPreparedByName,
@@ -193,20 +223,6 @@ const OperationalFormScreen = ({ navigation, route }) => {
     </SafeAreaView>
   );
 
-  const TextField = ({ label, value, onChangeText, maxLength = 80, multiline = false }) => (
-    <View style={styles.field}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput
-        editable={editable}
-        maxLength={maxLength}
-        multiline={multiline}
-        onChangeText={onChangeText}
-        style={[styles.input, multiline && styles.notesInput, !editable && styles.readonly]}
-        value={value || ""}
-      />
-    </View>
-  );
-
   const QuantityField = ({ label, value, onSelect, readOnly = false }) => (
     <TouchableOpacity disabled={!editable || readOnly} style={styles.field} onPress={() => setQuantityTarget({ label, value, onSelect })}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -237,19 +253,31 @@ const OperationalFormScreen = ({ navigation, route }) => {
       <ScrollView contentContainerStyle={styles.content}>
         {archived ? <View style={styles.archiveBanner}><MaterialIcons name="image" size={20} color="#475569" /><Text style={styles.archiveText}>Archived read-only snapshot</Text></View> : null}
         <View style={styles.card}>
-          <TextField label="Employee / Vendor Name" value={form.prepared_by_name} onChangeText={(value) => updateHeader("prepared_by_name", value)} />
-          {!inventory ? <TextField label="Initials" value={form.initials} maxLength={10} onChangeText={(value) => updateHeader("initials", value)} /> : null}
+          <OperationalTextField editable={editable} label="Employee / Vendor Name" value={form.prepared_by_name} onChangeText={(value) => updateHeader("prepared_by_name", value)} />
+          {!inventory ? <OperationalTextField editable={editable} label="Initials" value={form.initials} maxLength={10} onChangeText={(value) => updateHeader("initials", value)} /> : null}
           <DateField label="Date" value={form.form_date} onSelect={(value) => updateHeader("form_date", value)} />
-          {!inventory ? <TextField label="Truck / Unit" value={form.truck_unit} onChangeText={(value) => updateHeader("truck_unit", value)} /> : null}
+          <TouchableOpacity
+            disabled={!editable}
+            style={styles.field}
+            onPress={() => setTruckUnitPickerVisible(true)}
+          >
+            <Text style={styles.fieldLabel}>Truck Unit</Text>
+            <View style={[styles.select, !editable && styles.readonly]}>
+              <Text style={styles.selectText}>
+                {form.truck_unit || "Select truck unit"}
+              </Text>
+              {editable ? <MaterialIcons name="expand-more" size={22} color="#64748B" /> : null}
+            </View>
+          </TouchableOpacity>
         </View>
 
         {inventory ? (form.inventory_items || []).map((item, index) => (
           <View key={item._id || index} style={styles.card}>
             <View style={styles.itemHeader}><Text style={styles.itemTitle}>Item {index + 1}</Text>{editable ? <TouchableOpacity onPress={() => updateHeader("inventory_items", form.inventory_items.filter((_, itemIndex) => itemIndex !== index))}><MaterialIcons name="delete-outline" size={22} color="#B91C1C" /></TouchableOpacity> : null}</View>
-            <TextField label="Item Location" value={item.item_location} onChangeText={(value) => updateInventory(index, "item_location", value)} />
-            <TextField label="Brand" value={item.brand} onChangeText={(value) => updateInventory(index, "brand", value)} />
-            <TextField label="Item Name" value={item.item_name} onChangeText={(value) => updateInventory(index, "item_name", value)} />
-            <TextField label="Purchased From" value={item.purchased_from} onChangeText={(value) => updateInventory(index, "purchased_from", value)} />
+            <OperationalTextField editable={editable} label="Item Location" value={item.item_location} onChangeText={(value) => updateInventory(index, "item_location", value)} />
+            <OperationalTextField editable={editable} label="Brand" value={item.brand} onChangeText={(value) => updateInventory(index, "brand", value)} />
+            <OperationalTextField editable={editable} label="Item Name" value={item.item_name} onChangeText={(value) => updateInventory(index, "item_name", value)} />
+            <OperationalTextField editable={editable} label="Purchased From" value={item.purchased_from} onChangeText={(value) => updateInventory(index, "purchased_from", value)} />
             <DateField label="Date Purchased" value={item.date_purchased} onSelect={(value) => updateInventory(index, "date_purchased", value)} />
             <DateField label="Use-By Date" value={item.use_by_date} onSelect={(value) => updateInventory(index, "use_by_date", value)} />
             <View style={styles.quantityRow}>
@@ -260,7 +288,7 @@ const OperationalFormScreen = ({ navigation, route }) => {
               <View style={styles.quantityColumn}><QuantityField label="Max Quantity" value={item.max_quantity} onSelect={(value) => updateInventory(index, "max_quantity", value)} /></View>
               <View style={styles.quantityColumn}><QuantityField label="Reorder Quantity" value={item.reorder_quantity} readOnly /></View>
             </View>
-            <TextField label="Notes" value={item.notes} maxLength={250} multiline onChangeText={(value) => updateInventory(index, "notes", value)} />
+            <OperationalTextField editable={editable} label="Notes" value={item.notes} maxLength={250} multiline onChangeText={(value) => updateInventory(index, "notes", value)} />
           </View>
         )) : (form.checklist_items || []).map((item, index) => (
           <View key={item._id || index} style={styles.card}>
@@ -268,8 +296,8 @@ const OperationalFormScreen = ({ navigation, route }) => {
               <MaterialIcons name={item.completed ? "check-box" : "check-box-outline-blank"} size={28} color={item.completed ? AppColor.primary : "#64748B"} />
               <TextInput editable={editable} maxLength={80} style={[styles.areaInput, !editable && styles.readonly]} value={item.area} onChangeText={(value) => updateChecklist(index, "area", value)} />
             </TouchableOpacity>
-            <TextField label="Task" value={item.task} maxLength={250} multiline onChangeText={(value) => updateChecklist(index, "task", value)} />
-            <TextField label="Notes" value={item.notes} maxLength={250} multiline onChangeText={(value) => updateChecklist(index, "notes", value)} />
+            <OperationalTextField editable={editable} label="Task" value={item.task} maxLength={250} multiline onChangeText={(value) => updateChecklist(index, "task", value)} />
+            <OperationalTextField editable={editable} label="Notes" value={item.notes} maxLength={250} multiline onChangeText={(value) => updateChecklist(index, "notes", value)} />
           </View>
         ))}
 
@@ -281,6 +309,39 @@ const OperationalFormScreen = ({ navigation, route }) => {
 
       <Modal transparent visible={!!quantityTarget} animationType="slide" onRequestClose={() => setQuantityTarget(null)}>
         <View style={styles.modalBackdrop}><View style={styles.modalCard}><Text style={styles.modalTitle}>{quantityTarget?.label}</Text><FlatList data={QUANTITIES} keyExtractor={(item) => String(item)} renderItem={({ item }) => <TouchableOpacity style={styles.quantityOption} onPress={() => { quantityTarget?.onSelect(item); setQuantityTarget(null); }}><Text style={styles.quantityOptionText}>{item}</Text></TouchableOpacity>} /><TouchableOpacity style={styles.modalClose} onPress={() => setQuantityTarget(null)}><Text style={styles.secondaryText}>Cancel</Text></TouchableOpacity></View></View>
+      </Modal>
+      <Modal
+        transparent
+        visible={truckUnitPickerVisible}
+        animationType="slide"
+        onRequestClose={() => setTruckUnitPickerVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Select Truck Unit</Text>
+            <FlatList
+              data={truckUnits}
+              keyExtractor={(item) => String(item._id || item.name)}
+              ListEmptyComponent={
+                <Text style={styles.emptyText}>No active truck units are available.</Text>
+              }
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.quantityOption}
+                  onPress={() => {
+                    updateHeader("truck_unit", item.name);
+                    setTruckUnitPickerVisible(false);
+                  }}
+                >
+                  <Text style={styles.quantityOptionText}>{item.name}</Text>
+                </TouchableOpacity>
+              )}
+            />
+            <TouchableOpacity style={styles.modalClose} onPress={() => setTruckUnitPickerVisible(false)}>
+              <Text style={styles.secondaryText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
       <DateTimePickerModal isVisible={!!dateTarget} mode="date" date={dateTarget?.value ? new Date(dateTarget.value) : new Date()} onConfirm={(date) => { dateTarget?.onSelect(date.toISOString()); setDateTarget(null); }} onCancel={() => setDateTarget(null)} />
     </SafeAreaView>
@@ -303,6 +364,7 @@ const styles = StyleSheet.create({
   checkRow: { alignItems: "center", flexDirection: "row", gap: 10, marginBottom: 12 }, areaInput: { borderBottomColor: "#CBD5E1", borderBottomWidth: 1, color: "#0F172A", flex: 1, fontSize: 16, fontWeight: "700", paddingVertical: 7 }, safetyNote: { color: "#475569", fontSize: 13, fontStyle: "italic", lineHeight: 19, marginBottom: 18 },
   actions: { flexDirection: "row", gap: 10 }, primaryButton: { alignItems: "center", backgroundColor: AppColor.primary, borderRadius: 10, flex: 1, justifyContent: "center", minHeight: 48, padding: 12 }, primaryText: { color: "white", fontSize: 15, fontWeight: "700" }, secondaryButton: { alignItems: "center", backgroundColor: "white", borderColor: AppColor.primary, borderRadius: 10, borderWidth: 1, flexDirection: "row", gap: 6, justifyContent: "center", marginBottom: 12, minHeight: 48, padding: 12 }, secondaryText: { color: AppColor.primary, fontSize: 15, fontWeight: "700" }, archiveButton: { alignItems: "center", backgroundColor: "#475569", borderRadius: 10, marginTop: 12, padding: 14 },
   modalBackdrop: { backgroundColor: "rgba(15,23,42,0.45)", flex: 1, justifyContent: "flex-end" }, modalCard: { backgroundColor: "white", borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "65%", padding: 18 }, modalTitle: { color: "#0F172A", fontSize: 20, fontWeight: "700", marginBottom: 10 }, quantityOption: { alignItems: "center", borderBottomColor: "#E2E8F0", borderBottomWidth: 1, padding: 13 }, quantityOptionText: { color: "#0F172A", fontSize: 17 }, modalClose: { alignItems: "center", paddingTop: 14 },
+  emptyText: { color: "#64748B", padding: 18, textAlign: "center" },
 });
 
 export default OperationalFormScreen;
