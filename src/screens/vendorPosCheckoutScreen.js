@@ -574,6 +574,38 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.summaryBox}>
+            <Text style={styles.sectionTitle}>Full order</Text>
+            {order.items.map((item, index) => (
+              <View
+                key={item._cartLineId || `${item._id}-${index}`}
+                style={styles.checkoutItem}
+              >
+                <View style={styles.checkoutItemHeader}>
+                  <Text style={styles.checkoutItemName}>
+                    {index + 1}. {item.name}
+                  </Text>
+                  <Text style={styles.checkoutItemPrice}>
+                    ${toAmount(item.price)}
+                  </Text>
+                </View>
+                {[
+                  item.selectedFlavors?.join(", "),
+                  item.selectedToppings?.join(", "),
+                  item.selectedComboSides?.map((value) => value?.name || value).join(", "),
+                  item.selectedSubItems?.map((value) => value?.name || value?.menuItem?.name).join(", "),
+                  item.customizationInput,
+                ]
+                  .filter(Boolean)
+                  .map((detail, detailIndex) => (
+                    <Text key={`${index}-${detailIndex}`} style={styles.checkoutItemDetail}>
+                      {detail}
+                    </Text>
+                  ))}
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.summaryBox}>
             <Text style={styles.sectionTitle}>Order summary</Text>
             <SummaryRow
               label="Item Total"
@@ -734,6 +766,24 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   sectionTitle: { fontFamily: Mulish700, fontSize: 18, marginBottom: 10 },
+  checkoutItem: {
+    borderTopWidth: 1,
+    borderTopColor: AppColor.border,
+    paddingVertical: 10,
+  },
+  checkoutItemHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  checkoutItemName: { flex: 1, fontFamily: Mulish700, color: AppColor.black },
+  checkoutItemPrice: { fontFamily: Mulish600, color: AppColor.black },
+  checkoutItemDetail: {
+    fontFamily: Mulish400,
+    color: AppColor.gray,
+    fontSize: 13,
+    marginTop: 3,
+  },
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",

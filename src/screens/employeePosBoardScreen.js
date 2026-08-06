@@ -462,7 +462,7 @@ const EmployeePosBoardScreen = ({ navigation }) => {
   };
 
   const openOptions = (item) => {
-    const existing = cartItemById[item._id];
+    const existing = item._cartLineId ? item : cartItemById[item._id];
     setSelectedItem(mergeMenuItemWithSavedSelections(item, existing));
     setCustomizationInput(existing?.customizationInput || "");
     setSelectedFlavors(existing?.selectedFlavors || []);
@@ -633,7 +633,11 @@ const EmployeePosBoardScreen = ({ navigation }) => {
   };
 
   const handleRemoveItem = (menuItem) => {
-    dispatch(removeItemFromPosOrder({ itemId: menuItem._id }));
+    dispatch(
+      removeItemFromPosOrder({
+        itemId: menuItem._cartLineId || menuItem._id,
+      }),
+    );
   };
 
   const getItemQuantity = (itemId) => {
@@ -647,13 +651,13 @@ const EmployeePosBoardScreen = ({ navigation }) => {
       if (!selectedItem?._id) return;
       dispatch(
         updatePosItemProperty({
-          itemId: selectedItem._id,
+          itemId: selectedItem._cartLineId || selectedItem._id,
           keyName,
           value,
         })
       );
     },
-    [dispatch, selectedItem?._id]
+    [dispatch, selectedItem?._cartLineId, selectedItem?._id]
   );
 
   const updateOrderStatus = async (orderItem, nextStatus) => {
@@ -1309,10 +1313,14 @@ const EmployeePosBoardScreen = ({ navigation }) => {
           {order.items.length === 0 ? (
             <Text style={styles.emptyText}>Cart is empty.</Text>
           ) : (
-            order.items.map((item) => (
-              <View key={item._id} style={styles.cartItem}>
+            order.items.map((item, index) => (
+              <TouchableOpacity
+                key={item._cartLineId || `${item._id}-${index}`}
+                style={styles.cartItem}
+                onPress={() => openOptions(item)}
+              >
                 <Text style={styles.cartItemName}>
-                  {item.quantity}x {item.name}
+                  {index + 1}. {item.name}
                 </Text>
                 <Text style={styles.cartItemMeta}>
                   {[
@@ -1322,7 +1330,12 @@ const EmployeePosBoardScreen = ({ navigation }) => {
                     .filter(Boolean)
                     .join(" | ")}
                 </Text>
-              </View>
+                  {!item.selectedFlavors?.length &&
+                  !item.selectedToppings?.length &&
+                  !item.customizationInput ? (
+                    <Text style={styles.cartItemMeta}>Tap to review or customize</Text>
+                  ) : null}
+              </TouchableOpacity>
             ))
           )}
           <View style={styles.totalRow}>

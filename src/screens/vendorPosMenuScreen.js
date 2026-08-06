@@ -229,7 +229,7 @@ const VendorPosMenuScreen = ({ navigation }) => {
   };
 
   const openOptions = (item) => {
-    const existing = cartItemById[item._id];
+    const existing = item._cartLineId ? item : cartItemById[item._id];
     setSelectedItem(mergeMenuItemWithSavedSelections(item, existing));
     setCustomizationInput(existing?.customizationInput || "");
     setSelectedFlavors(existing?.selectedFlavors || []);
@@ -406,7 +406,11 @@ const VendorPosMenuScreen = ({ navigation }) => {
   };
 
   const handleRemoveItem = (menuItem) => {
-    dispatch(removeItemFromPosOrder({ itemId: menuItem._id }));
+    dispatch(
+      removeItemFromPosOrder({
+        itemId: menuItem._cartLineId || menuItem._id,
+      })
+    );
   };
 
   const getItemQuantity = (itemId) => {
@@ -420,13 +424,13 @@ const VendorPosMenuScreen = ({ navigation }) => {
       if (!selectedItem?._id) return;
       dispatch(
         updatePosItemProperty({
-          itemId: selectedItem._id,
+          itemId: selectedItem._cartLineId || selectedItem._id,
           keyName,
           value,
         })
       );
     },
-    [dispatch, selectedItem?._id]
+    [dispatch, selectedItem?._cartLineId, selectedItem?._id]
   );
 
   const renderItem = ({ item }) => {
@@ -541,6 +545,34 @@ const VendorPosMenuScreen = ({ navigation }) => {
               <Text style={styles.emptyText}>No available menu items.</Text>
             }
           />
+
+          {order.items.length > 0 ? (
+            <View style={styles.currentOrderBox}>
+              <Text style={styles.currentOrderTitle}>Current walk-up order</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {order.items.map((item, index) => (
+                  <TouchableOpacity
+                    key={item._cartLineId || `${item._id}-${index}`}
+                    style={styles.orderLineCard}
+                    onPress={() => openOptions(item)}
+                  >
+                    <Text style={styles.orderLineTitle}>
+                      {index + 1}. {item.name}
+                    </Text>
+                    <Text numberOfLines={2} style={styles.orderLineDetails}>
+                      {[
+                        item.selectedFlavors?.join(", "),
+                        item.selectedToppings?.join(", "),
+                        item.customizationInput,
+                      ]
+                        .filter(Boolean)
+                        .join(" | ") || "Tap to review or customize"}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          ) : null}
 
           {order.totalItems > 0 ? (
             <View style={[styles.cartBar, { paddingBottom: insets.bottom || 12 }]}>
@@ -793,6 +825,30 @@ const styles = StyleSheet.create({
   },
   quantityButtonText: { color: AppColor.white, fontSize: 20, lineHeight: 22 },
   quantityText: { fontFamily: Mulish700, fontSize: 16 },
+  currentOrderBox: {
+    borderTopWidth: 1,
+    borderTopColor: AppColor.border,
+    backgroundColor: AppColor.white,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
+  currentOrderTitle: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  orderLineCard: {
+    width: 190,
+    borderWidth: 1,
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    padding: 10,
+    marginRight: 8,
+    marginBottom: 10,
+  },
+  orderLineTitle: { color: AppColor.black, fontFamily: Mulish700, fontSize: 13 },
+  orderLineDetails: { color: AppColor.gray, fontFamily: Mulish400, fontSize: 12, marginTop: 4 },
   cartBar: {
     position: "absolute",
     left: 0,

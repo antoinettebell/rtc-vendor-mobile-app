@@ -1683,7 +1683,7 @@ const DishItemDetailsModal = ({
               </View>
             )}
 
-            {isRequirementExpanded("primary-item") && selectedMenuItem?.allowCustomize && (
+            {selectedMenuItem?.allowCustomize && (
               <View style={styles.actionSheetSection}>
                 <Text style={styles.sectionTitle}>
                   Primary Item Customizations

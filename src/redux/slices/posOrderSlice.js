@@ -37,29 +37,17 @@ const posOrderSlice = createSlice({
         };
       }
 
-      const forceNewLine = item._forceNewLine === true;
       const cleanItem = { ...item };
       delete cleanItem._forceNewLine;
-      const existingItemIndex = forceNewLine
-        ? -1
-        : state.currentOrder.items.findIndex((i) =>
-            cleanItem._cartLineId
-              ? (i._cartLineId || i._id) === cleanItem._cartLineId
-              : i._id === cleanItem._id
-          );
+      cleanItem._cartLineId =
+        `${cleanItem._id}-${Date.now()}-${state.currentOrder.items.length}`;
 
-      if (existingItemIndex === -1) {
-        state.currentOrder.items.push({
-          ...cleanItem,
-          quantity: 1,
-        });
-      } else {
-        state.currentOrder.items[existingItemIndex] = {
-          ...state.currentOrder.items[existingItemIndex],
-          ...cleanItem,
-          quantity: state.currentOrder.items[existingItemIndex].quantity + 1,
-        };
-      }
+      // Each walk-up quantity is its own editable line. This preserves separate
+      // customizations for otherwise identical menu items and combos.
+      state.currentOrder.items.push({
+        ...cleanItem,
+        quantity: 1,
+      });
 
       state.currentOrder.totalItems = state.currentOrder.items.reduce(
         (sum, item) => sum + item.quantity,
