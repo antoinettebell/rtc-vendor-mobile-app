@@ -1134,6 +1134,9 @@ const EmployeePosBoardScreen = ({ navigation }) => {
         onSelectedComboSidesChange={(value) =>
           updateSelectedItemProperty("selectedComboSides", value)
         }
+        onAdditionalItemCreated={(additionalItem) =>
+          setSelectedItem(additionalItem)
+        }
       />
 
       <Modal

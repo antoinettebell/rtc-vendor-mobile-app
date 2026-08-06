@@ -40,6 +40,7 @@ const posOrderSlice = createSlice({
       const cleanItem = { ...item };
       delete cleanItem._forceNewLine;
       cleanItem._cartLineId =
+        cleanItem._cartLineId ||
         `${cleanItem._id}-${Date.now()}-${state.currentOrder.items.length}`;
 
       // Each walk-up quantity is its own editable line. This preserves separate

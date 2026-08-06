@@ -737,6 +737,9 @@ const VendorPosMenuScreen = ({ navigation }) => {
         onSelectedComboSidesChange={(value) =>
           updateSelectedItemProperty("selectedComboSides", value)
         }
+        onAdditionalItemCreated={(additionalItem) =>
+          setSelectedItem(additionalItem)
+        }
       />
     </View>
   );
