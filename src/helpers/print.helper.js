@@ -189,3 +189,66 @@ export const printOrderTickets = async (orders) => {
         : `RTC Orders ${printableOrders.length}`,
   });
 };
+
+const operationalTitle = (type) => ({
+  INVENTORY: "Inventory",
+  OPENING_CHECKLIST: "Opening Checklist",
+  CLOSING_CHECKLIST: "Closing Checklist",
+}[type] || "Operations Form");
+
+const operationalRows = (form) => {
+  if (form?.form_type === "INVENTORY") {
+    return (form.inventory_items || []).map((item, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(item.item_name)}</td>
+        <td>${escapeHtml(item.brand)}</td>
+        <td>${escapeHtml(item.item_location)}</td>
+        <td>${escapeHtml(item.purchased_from)}</td>
+        <td>${escapeHtml(item.beginning_quantity)}</td>
+        <td>${escapeHtml(item.current_quantity)}</td>
+        <td>${escapeHtml(item.max_quantity)}</td>
+        <td>${escapeHtml(item.reorder_quantity)}</td>
+        <td>${escapeHtml(item.notes)}</td>
+      </tr>`).join("");
+  }
+  return (form?.checklist_items || []).map((item, index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td>${item.completed ? "Yes" : "No"}</td>
+      <td>${escapeHtml(item.area)}</td>
+      <td>${escapeHtml(item.task)}</td>
+      <td>${escapeHtml(item.notes)}</td>
+    </tr>`).join("");
+};
+
+export const printOperationalComplianceForm = async (form) => {
+  if (!form) throw new Error("No operations form is available to print.");
+  const inventory = form.form_type === "INVENTORY";
+  const date = form.form_date ? moment(form.form_date).format("MMM D, YYYY") : "";
+  const html = `<!doctype html>
+    <html><head><meta charset="utf-8" /><style>
+      body { color:#111; font-family:Arial,Helvetica,sans-serif; padding:18px; }
+      h1 { margin:0 0 6px; } .meta { line-height:1.6; margin:14px 0 18px; }
+      table { border-collapse:collapse; font-size:${inventory ? "9px" : "12px"}; width:100%; }
+      th,td { border:1px solid #bbb; padding:6px; text-align:left; vertical-align:top; }
+      th { background:#eee; } .status { font-size:12px; font-weight:bold; text-transform:uppercase; }
+    </style></head><body>
+      <h1>${escapeHtml(operationalTitle(form.form_type))}</h1>
+      <div class="status">${escapeHtml(form.status || "DRAFT")}</div>
+      <div class="meta">
+        <div><strong>Employee / Vendor Name:</strong> ${escapeHtml(form.prepared_by_name)}</div>
+        ${form.initials ? `<div><strong>Initials:</strong> ${escapeHtml(form.initials)}</div>` : ""}
+        <div><strong>Date:</strong> ${escapeHtml(date)}</div>
+        ${form.truck_unit ? `<div><strong>Truck / Unit:</strong> ${escapeHtml(form.truck_unit)}</div>` : ""}
+      </div>
+      <table><thead><tr>${inventory
+        ? "<th>#</th><th>Item</th><th>Brand</th><th>Location</th><th>Purchased From</th><th>Beginning</th><th>Current</th><th>Max</th><th>Reorder</th><th>Notes</th>"
+        : "<th>#</th><th>Complete</th><th>Area</th><th>Task</th><th>Notes</th>"
+      }</tr></thead><tbody>${operationalRows(form)}</tbody></table>
+    </body></html>`;
+  await RNPrint.print({
+    html,
+    jobName: `RTC ${operationalTitle(form.form_type)} ${date}`.trim(),
+  });
+};

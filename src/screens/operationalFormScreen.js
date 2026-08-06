@@ -24,6 +24,7 @@ import {
   unlockOperationalComplianceForm_API,
 } from "../api/appAPI";
 import { AppColor } from "../utils/theme";
+import { printOperationalComplianceForm } from "../helpers/print.helper";
 
 const TITLES = {
   INVENTORY: "Inventory",
@@ -50,6 +51,9 @@ const OperationalFormScreen = ({ navigation, route }) => {
   const { type, formId } = route.params || {};
   const { user } = useSelector((state) => state.userReducer);
   const isEmployee = user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
+  const defaultPreparedByName = isEmployee
+    ? [user?.first_name || user?.firstName, user?.last_name || user?.lastName].filter(Boolean).join(" ")
+    : "Vendor";
   const [form, setForm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -76,13 +80,16 @@ const OperationalFormScreen = ({ navigation, route }) => {
         nextForm = response?.data?.form || response?.form || null;
       }
       if (!nextForm) throw new Error("The requested operations form was not found.");
-      setForm(nextForm);
+      setForm({
+        ...nextForm,
+        prepared_by_name: nextForm.prepared_by_name || defaultPreparedByName,
+      });
     } catch (error) {
       setLoadError(error?.message || "Unable to load the form.");
     } finally {
       setLoading(false);
     }
-  }, [formId, type]);
+  }, [defaultPreparedByName, formId, type]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -151,6 +158,14 @@ const OperationalFormScreen = ({ navigation, route }) => {
     ],
   );
 
+  const print = async () => {
+    try {
+      await printOperationalComplianceForm(form);
+    } catch (error) {
+      Alert.alert("Print", error?.message || "Unable to print this form.");
+    }
+  };
+
   if (loading) return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -214,7 +229,10 @@ const OperationalFormScreen = ({ navigation, route }) => {
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}><MaterialIcons name="arrow-back" size={27} color="#0F172A" /></TouchableOpacity>
         <View style={styles.headerCopy}><Text style={styles.title}>{TITLES[type]}</Text><Text style={styles.status}>{form.status}</Text></View>
-        {form.status === "SUBMITTED" ? <TouchableOpacity onPress={unlock}><MaterialIcons name="edit" size={25} color={AppColor.primary} /></TouchableOpacity> : null}
+        <View style={styles.headerActions}>
+          <TouchableOpacity accessibilityLabel="Print form" onPress={print}><MaterialIcons name="print" size={25} color={AppColor.primary} /></TouchableOpacity>
+          {form.status === "SUBMITTED" ? <TouchableOpacity onPress={unlock}><MaterialIcons name="edit" size={25} color={AppColor.primary} /></TouchableOpacity> : null}
+        </View>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         {archived ? <View style={styles.archiveBanner}><MaterialIcons name="image" size={20} color="#475569" /><Text style={styles.archiveText}>Archived read-only snapshot</Text></View> : null}
@@ -276,7 +294,7 @@ const styles = StyleSheet.create({
   loadErrorText: { color: "#B42318", fontSize: 14, marginTop: 6, textAlign: "center" },
   retryButton: { backgroundColor: AppColor.primary, borderRadius: 9, marginTop: 16, paddingHorizontal: 24, paddingVertical: 11 },
   retryText: { color: "white", fontSize: 15, fontWeight: "700" },
-  header: { alignItems: "center", backgroundColor: "white", borderBottomColor: "#E2E8F0", borderBottomWidth: 1, flexDirection: "row", padding: 18 }, headerCopy: { flex: 1, marginLeft: 15 }, title: { color: "#0F172A", fontSize: 22, fontWeight: "700" }, status: { color: "#64748B", fontSize: 12, marginTop: 2 },
+  header: { alignItems: "center", backgroundColor: "white", borderBottomColor: "#E2E8F0", borderBottomWidth: 1, flexDirection: "row", padding: 18 }, headerCopy: { flex: 1, marginLeft: 15 }, headerActions: { alignItems: "center", flexDirection: "row", gap: 16 }, title: { color: "#0F172A", fontSize: 22, fontWeight: "700" }, status: { color: "#64748B", fontSize: 12, marginTop: 2 },
   content: { padding: 16, paddingBottom: 50 }, card: { backgroundColor: "white", borderColor: "#E2E8F0", borderRadius: 14, borderWidth: 1, marginBottom: 14, padding: 15 },
   archiveBanner: { alignItems: "center", backgroundColor: "#E2E8F0", borderRadius: 10, flexDirection: "row", gap: 8, marginBottom: 14, padding: 12 }, archiveText: { color: "#475569", fontWeight: "600" },
   field: { marginBottom: 12 }, fieldLabel: { color: "#475569", fontSize: 12, fontWeight: "600", marginBottom: 5 }, input: { backgroundColor: "white", borderColor: "#CBD5E1", borderRadius: 9, borderWidth: 1, color: "#0F172A", fontSize: 15, minHeight: 44, paddingHorizontal: 12, paddingVertical: 9 }, notesInput: { minHeight: 74, textAlignVertical: "top" }, readonly: { backgroundColor: "#F1F5F9", color: "#475569" },
