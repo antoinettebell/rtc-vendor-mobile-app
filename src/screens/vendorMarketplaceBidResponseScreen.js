@@ -87,6 +87,9 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     pricePerGuest: currencyDraftValue(initialBid?.price_per_guest),
     averagePricePerMeal: currencyDraftValue(initialBid?.average_price_per_meal),
     fullBidAmount: currencyDraftValue(initialBid?.full_bid_amount),
+    guestCoverage: initialBid?.guest_coverage || "REGULAR",
+    regularGuestAmount: currencyDraftValue(initialBid?.regular_guest_amount),
+    vipCateringAmount: currencyDraftValue(initialBid?.vip_catering_amount),
     menuDescription: initialBid?.menu_description || "",
     notes: initialBid?.notes || "",
   };
@@ -100,6 +103,13 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     initialDraft.averagePricePerMeal,
   );
   const [fullBidAmount, setFullBidAmount] = useState(initialDraft.fullBidAmount);
+  const [guestCoverage, setGuestCoverage] = useState(initialDraft.guestCoverage);
+  const [regularGuestAmount, setRegularGuestAmount] = useState(
+    initialDraft.regularGuestAmount,
+  );
+  const [vipCateringAmount, setVipCateringAmount] = useState(
+    initialDraft.vipCateringAmount,
+  );
   const [menuDescription, setMenuDescription] = useState(
     initialDraft.menuDescription,
   );
@@ -157,7 +167,12 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     }, [eventId]),
   );
 
-  const fullBidNumber = Number(fullBidAmount);
+  const cateredVipEnabled = event?.catered_vip_section_enabled === true;
+  const regularGuestAmountNumber = Number(regularGuestAmount);
+  const vipCateringAmountNumber = Number(vipCateringAmount);
+  const fullBidNumber = guestCoverage === "BOTH"
+    ? regularGuestAmountNumber + vipCateringAmountNumber
+    : Number(fullBidAmount);
   const pricePerGuestNumber = pricePerGuest ? Number(pricePerGuest) : null;
   const averagePricePerMealNumber = averagePricePerMeal
     ? Number(averagePricePerMeal)
@@ -230,6 +245,9 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       !notesError &&
       (!fullBidAmount.trim() ||
         (!Number.isNaN(fullBidNumber) && fullBidNumber >= 0)) &&
+      (guestCoverage !== "BOTH" ||
+        ((!regularGuestAmount.trim() || regularGuestAmountNumber >= 0) &&
+          (!vipCateringAmount.trim() || vipCateringAmountNumber >= 0))) &&
       (!pricePerGuest || (!Number.isNaN(pricePerGuestNumber) && pricePerGuestNumber >= 0)) &&
       (!averagePricePerMeal ||
         (!Number.isNaN(averagePricePerMealNumber) &&
@@ -240,16 +258,23 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       eventId,
       fullBidAmount,
       fullBidNumber,
+      guestCoverage,
       isCoordinatorPaysEvent,
       notesError,
       pricePerGuest,
       pricePerGuestNumber,
+      regularGuestAmount,
+      regularGuestAmountNumber,
+      vipCateringAmount,
+      vipCateringAmountNumber,
     ],
   );
-  const bidFieldsComplete =
-    fullBidAmount.trim() &&
-    !Number.isNaN(fullBidNumber) &&
-    fullBidNumber >= 0;
+  const bidFieldsComplete = guestCoverage === "BOTH"
+    ? regularGuestAmount.trim() &&
+      vipCateringAmount.trim() &&
+      regularGuestAmountNumber > 0 &&
+      vipCateringAmountNumber > 0
+    : fullBidAmount.trim() && !Number.isNaN(fullBidNumber) && fullBidNumber > 0;
   const canSubmit = canSaveDraft && bidFieldsComplete && requirementsSatisfied;
   const hasUnsavedDraftContent = useMemo(() => {
     const initial = initialDraftRef.current;
@@ -257,6 +282,9 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       pricePerGuest !== initial.pricePerGuest ||
       averagePricePerMeal !== initial.averagePricePerMeal ||
       fullBidAmount !== initial.fullBidAmount ||
+      guestCoverage !== initial.guestCoverage ||
+      regularGuestAmount !== initial.regularGuestAmount ||
+      vipCateringAmount !== initial.vipCateringAmount ||
       menuDescription !== initial.menuDescription ||
       notes !== initial.notes ||
       !!menuPdf ||
@@ -266,16 +294,28 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     averagePricePerMeal,
     bidImages.length,
     fullBidAmount,
+    guestCoverage,
     menuDescription,
     menuPdf,
     notes,
     pricePerGuest,
+    regularGuestAmount,
+    vipCateringAmount,
   ]);
 
   const buildBidPayload = (bidStatus) => ({
     price_per_guest: pricePerGuestNumber,
     average_price_per_meal: averagePricePerMealNumber,
     full_bid_amount: fullBidAmount.trim() ? fullBidNumber : null,
+    guest_coverage: cateredVipEnabled ? guestCoverage : "REGULAR",
+    regular_guest_amount:
+      cateredVipEnabled && guestCoverage === "BOTH"
+        ? regularGuestAmountNumber
+        : null,
+    vip_catering_amount:
+      cateredVipEnabled && guestCoverage === "BOTH"
+        ? vipCateringAmountNumber
+        : null,
     menu_description: menuDescription.trim(),
     notes: notes.trim(),
     insurance_confirmed: uploadedRequirementLabels.has("Insurance"),
@@ -323,6 +363,9 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
         pricePerGuest,
         averagePricePerMeal,
         fullBidAmount,
+        guestCoverage,
+        regularGuestAmount,
+        vipCateringAmount,
         menuDescription,
         notes,
       };
@@ -832,8 +875,34 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
 
             <View style={styles.card}>
               <Text style={styles.sectionHeader}>Pricing Details</Text>
+              {cateredVipEnabled ? (
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={styles.fieldLabel}>Applying For *</Text>
+                  <View style={[styles.row, { flexWrap: "wrap", gap: 8, marginTop: 8 }]}>
+                    {[
+                      ["REGULAR", "Regular Guests"],
+                      ["VIP", "VIP Guests"],
+                      ["BOTH", "Both"],
+                    ].map(([value, label]) => (
+                      <TouchableOpacity
+                        key={value}
+                        activeOpacity={0.8}
+                        style={[
+                          styles.secondaryButton,
+                          guestCoverage === value
+                            ? { borderColor: AppColor.primary, backgroundColor: "#FFF1E6" }
+                            : null,
+                        ]}
+                        onPress={() => setGuestCoverage(value)}
+                      >
+                        <Text style={styles.secondaryButtonText}>{label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              ) : null}
               <View style={styles.formGrid}>
-                <FormField label="Bid Amount *">
+                {guestCoverage !== "BOTH" ? <FormField label="Bid Amount *">
                   <TextInput
                     value={fullBidAmount}
                     onChangeText={(value) =>
@@ -847,7 +916,19 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                     placeholderTextColor={AppColor.placeholderTextColor}
                     style={styles.input}
                   />
-                </FormField>
+                </FormField> : (
+                  <>
+                    <FormField label="Regular Guests Amount *">
+                      <TextInput value={regularGuestAmount} onChangeText={(value) => setRegularGuestAmount(normalizeCurrencyInput(value))} onBlur={() => formatCurrencyInput(regularGuestAmount, setRegularGuestAmount)} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor={AppColor.placeholderTextColor} style={styles.input} />
+                    </FormField>
+                    <FormField label="VIP Catering Amount *">
+                      <TextInput value={vipCateringAmount} onChangeText={(value) => setVipCateringAmount(normalizeCurrencyInput(value))} onBlur={() => formatCurrencyInput(vipCateringAmount, setVipCateringAmount)} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor={AppColor.placeholderTextColor} style={styles.input} />
+                    </FormField>
+                    <FormField label="Total Bid Amount" full>
+                      <Text style={styles.meta}>{formatMoney(fullBidNumber)}</Text>
+                    </FormField>
+                  </>
+                )}
                 <FormField label="Price Per Guest">
                   <TextInput
                     value={pricePerGuest}
