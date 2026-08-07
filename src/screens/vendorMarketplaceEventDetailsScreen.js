@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   Modal,
   ScrollView,
@@ -32,6 +33,7 @@ import {
   getPaymentAmountLabel,
   getPaymentTypeLabel,
   getPrimaryActionLabel,
+  isBothPaymentEvent,
   isVendorPaysToAttendEvent,
   listText,
   styles,
@@ -149,16 +151,18 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
   const images = Array.isArray(event?.images) ? event.images : [];
   const primaryImageUrl = getEventImageUrl(event);
   const vendorPays = isVendorPaysToAttendEvent(event);
+  const bothPay = isBothPaymentEvent(event);
   const isClosed =
     !["OPEN", "REOPENED"].includes(event?.status) ||
     (event?.event_close_date && new Date(event.event_close_date) <= new Date());
-  const primaryActionRoute = vendorPays
-    ? "VendorApplicationScreen"
-    : "VendorBidResponseScreen";
-  const handlePrimaryAction = async () => {
+  const openSubmissionPath = async (submissionType) => {
     if (isClosed || primaryActionLoading) return;
 
     const currentEventId = event?.event_id || eventId;
+    const isApplication = submissionType === "application";
+    const primaryActionRoute = isApplication
+      ? "VendorApplicationScreen"
+      : "VendorBidResponseScreen";
     const params = {
       eventId: currentEventId,
       event,
@@ -166,9 +170,62 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
 
     setPrimaryActionLoading(true);
     try {
-      if (vendorPays) {
-        const response = await getMarketplaceMyApplications_API();
-        const draft = (response?.data?.marketplaceApplicationList || []).find(
+      const [applicationResponse, bidResponse] = await Promise.all([
+        getMarketplaceMyApplications_API(),
+        getMarketplaceMyBids_API(),
+      ]);
+      const applications = applicationResponse?.data?.marketplaceApplicationList || [];
+      const bids = bidResponse?.data?.marketplaceBidList || [];
+      const existingApplication = applications.find(
+        (application) =>
+          isSubmissionForEvent(application, currentEventId) &&
+          String(application.application_status || "").toUpperCase() !== "WITHDRAWN",
+      );
+      const existingBid = bids.find(
+        (bid) =>
+          isSubmissionForEvent(bid, currentEventId) &&
+          String(bid.bid_status || "").toUpperCase() !== "WITHDRAWN",
+      );
+
+      if (isApplication && existingBid) {
+        Alert.alert(
+          "Bid Option Already Selected",
+          "You already chose the coordinator-paid bid option for this event. You cannot also submit an application.",
+        );
+        return;
+      }
+      if (!isApplication && existingApplication) {
+        Alert.alert(
+          "Application Option Already Selected",
+          "You already chose the vendor-paid application option for this event. You cannot also submit a bid.",
+        );
+        return;
+      }
+      if (
+        isApplication &&
+        existingApplication &&
+        !isEditableDraftStatus(existingApplication.application_status)
+      ) {
+        Alert.alert(
+          "Application Already Submitted",
+          "Your vendor-paid application has already been submitted for this event.",
+        );
+        return;
+      }
+      if (
+        !isApplication &&
+        existingBid &&
+        !isEditableDraftStatus(existingBid.bid_status)
+      ) {
+        Alert.alert(
+          "Bid Already Submitted",
+          "Your coordinator-paid bid has already been submitted for this event.",
+        );
+        return;
+      }
+
+      if (isApplication) {
+        const draft = applications.find(
           (application) =>
             isSubmissionForEvent(application, currentEventId) &&
             isEditableDraftStatus(application.application_status),
@@ -181,8 +238,7 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
         return;
       }
 
-      const response = await getMarketplaceMyBids_API();
-      const draft = (response?.data?.marketplaceBidList || []).find(
+      const draft = bids.find(
         (bid) =>
           isSubmissionForEvent(bid, currentEventId) &&
           isEditableDraftStatus(bid.bid_status),
@@ -198,6 +254,27 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
     } finally {
       setPrimaryActionLoading(false);
     }
+  };
+
+  const confirmSubmissionPath = (submissionType) => {
+    if (!bothPay) {
+      openSubmissionPath(submissionType);
+      return;
+    }
+    const isApplication = submissionType === "application";
+    Alert.alert(
+      isApplication ? "Vendor-Paid Application" : "Coordinator-Paid Bid",
+      isApplication
+        ? "This option is for vendors paying the attendance fee to participate in the event. You will not be eligible for the coordinator-paid award. Would you like to proceed?"
+        : "This option is for vendors bidding for the coordinator-paid award amount. You will not participate through the vendor-paid application option. Would you like to proceed?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: isApplication ? "Continue to Application" : "Continue to Bid",
+          onPress: () => openSubmissionPath(submissionType),
+        },
+      ],
+    );
   };
 
   const openImagePreview = (imageUrl) => {
@@ -588,23 +665,45 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
             </>
           ))}
 
-          <TouchableOpacity
-            activeOpacity={0.7}
-            style={[
-              styles.button,
-              (isClosed || primaryActionLoading) && { opacity: 0.55 },
-            ]}
-            disabled={isClosed || primaryActionLoading}
-            onPress={handlePrimaryAction}
-          >
-            <Text style={styles.buttonText}>
-              {isClosed
-                ? "Closed to Submissions"
-                : primaryActionLoading
-                  ? "Checking Draft..."
-                  : getPrimaryActionLabel(event)}
-            </Text>
-          </TouchableOpacity>
+          {bothPay ? (
+            <View style={{ gap: 12 }}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[styles.button, (isClosed || primaryActionLoading) && { opacity: 0.55 }]}
+                disabled={isClosed || primaryActionLoading}
+                onPress={() => confirmSubmissionPath("application")}
+              >
+                <Text style={styles.buttonText}>
+                  {isClosed ? "Closed to Submissions" : "Submit Application"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[styles.secondaryButton, { paddingVertical: 14 }, (isClosed || primaryActionLoading) && { opacity: 0.55 }]}
+                disabled={isClosed || primaryActionLoading}
+                onPress={() => confirmSubmissionPath("bid")}
+              >
+                <Text style={styles.secondaryButtonText}>
+                  {isClosed ? "Closed to Submissions" : "Submit Bid"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={[styles.button, (isClosed || primaryActionLoading) && { opacity: 0.55 }]}
+              disabled={isClosed || primaryActionLoading}
+              onPress={() => confirmSubmissionPath(vendorPays ? "application" : "bid")}
+            >
+              <Text style={styles.buttonText}>
+                {isClosed
+                  ? "Closed to Submissions"
+                  : primaryActionLoading
+                    ? "Checking Draft..."
+                    : getPrimaryActionLabel(event)}
+              </Text>
+            </TouchableOpacity>
+          )}
 
         </ScrollView>
       )}
