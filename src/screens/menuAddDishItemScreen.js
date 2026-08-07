@@ -848,7 +848,11 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     // Set combo items if food type is combo
     if (item.itemType === foodTypeStrings.combo) {
       if (item.subItem && item.subItem.length > 0) {
-        setComboItems(item.subItem.map((item) => item.menuItem) || []);
+        setComboItems(item.subItem.map((entry) => ({
+          ...entry.menuItem,
+          hasAdditionalCost: !!entry.hasAdditionalCost,
+          additionalCost: `${entry.additionalCost || 0}`,
+        })) || []);
       } else {
         setComboItems([]);
       }
@@ -1123,23 +1127,16 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
         payload.subItem = comboItems.map((item) => ({
           menuItem: item._id || "",
           qty: 1,
+          hasAdditionalCost: !!item.hasAdditionalCost,
+          additionalCost: item.hasAdditionalCost
+            ? parseFloat(item.additionalCost || "0") || 0
+            : 0,
         }));
-        const sideNames = comboSideOptions
-          .slice(0, comboSideCount)
-          .map((name) => toTitleCase(name.trim()))
-          .filter(Boolean);
-        payload.comboSideOptions = sideNames;
-        payload.comboSideOptionCosts = sideNames.map((name, index) => ({
-          name,
-          hasCost: !!(hasComboSideCosts && comboSideCostEnabled[index]),
-          cost:
-            hasComboSideCosts && comboSideCostEnabled[index]
-              ? parseFloat(comboSideCosts[index] || "0") || 0
-              : 0,
-        }));
+        payload.comboSideOptions = [];
+        payload.comboSideOptionCosts = [];
         payload.comboSidesPerOrder = Math.min(
           Math.max(comboSidesPerOrder, 1),
-          Math.max(sideNames.length, 1)
+          Math.max(comboItems.length, 1)
         );
       }
 
@@ -2819,6 +2816,38 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                                       <Text style={styles.bogoItemPrice}>
                                         ${parseFloat(item.price).toFixed(2)}
                                       </Text>
+                                      <View style={styles.switchRow}>
+                                        <Text style={[styles.inputLabel, { marginBottom: 0 }]}>Additional Cost</Text>
+                                        <Switch
+                                          color={AppColor.primary}
+                                          value={!!item.hasAdditionalCost}
+                                          onValueChange={(value) =>
+                                            setComboItems((current) => current.map((comboItem, itemIndex) =>
+                                              itemIndex === index
+                                                ? { ...comboItem, hasAdditionalCost: value, additionalCost: value ? comboItem.additionalCost || "" : "0" }
+                                                : comboItem
+                                            ))
+                                          }
+                                        />
+                                      </View>
+                                      {item.hasAdditionalCost ? (
+                                        <TextInput
+                                          dense
+                                          value={`${item.additionalCost || ""}`}
+                                          onChangeText={(text) =>
+                                            setComboItems((current) => current.map((comboItem, itemIndex) =>
+                                              itemIndex === index
+                                                ? { ...comboItem, additionalCost: text.replace(/[^0-9.]/g, "") }
+                                                : comboItem
+                                            ))
+                                          }
+                                          style={[styles.input, styles.optionCostInput]}
+                                          contentStyle={styles.inputText}
+                                          placeholder="Cost"
+                                          mode="outlined"
+                                          keyboardType="decimal-pad"
+                                        />
+                                      ) : null}
                                     </View>
                                     <IconButton
                                       icon="close-circle"
@@ -2854,41 +2883,11 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 	                          </TouchableOpacity>
 
                           <View style={{ marginTop: 16, gap: 12 }}>
-                            <Text style={styles.inputLabel}>Side Options</Text>
-                            <View style={styles.flavorPickerRow}>
-                              <View style={{ flex: 1 }}>
-                                <Text style={styles.inputLabel}>How many sides</Text>
-                                <Dropdown
-                                  data={flavorCountOptions}
-                                  labelField="label"
-                                  valueField="value"
-                                  value={comboSideCount}
-                                  onChange={(selected) => {
-                                    const count = selected.value;
-                                    setComboSideCount(count);
-                                    setComboSidesPerOrder((current) =>
-                                      Math.min(current, count)
-                                    );
-                                    setComboSideOptions((current) =>
-                                      Array.from({ length: count }, (_, index) => current[index] || "")
-                                    );
-                                    setComboSideCostEnabled((current) =>
-                                      Array.from({ length: count }, (_, index) => current[index] || false)
-                                    );
-                                    setComboSideCosts((current) =>
-                                      Array.from({ length: count }, (_, index) => current[index] || "0")
-                                    );
-                                  }}
-                                  placeholder="Select"
-                                  style={styles.dropdown}
-                                  containerStyle={styles.dropdownContainer}
-                                />
-                              </View>
-                              <View style={{ flex: 1 }}>
+                              <View>
                                 <Text style={styles.inputLabel}>Sides per Order</Text>
                                 <Dropdown
                                   data={flavorsPerOrderOptions.filter(
-                                    (option) => option.value <= comboSideCount
+                                    (option) => option.value <= Math.max(comboItems.length, 1)
                                   )}
                                   labelField="label"
                                   valueField="value"
@@ -2899,77 +2898,6 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                                   containerStyle={styles.dropdownContainer}
                                 />
                               </View>
-                            </View>
-
-                            {comboSideOptions.slice(0, comboSideCount).map((side, index) => (
-                              <View key={`combo-side-${index}`} style={styles.optionCostRow}>
-                                <TextInput
-                                  dense
-                                  value={side}
-                                  onChangeText={(text) =>
-                                    setComboSideOptions((current) =>
-                                      current.map((value, itemIndex) =>
-                                        itemIndex === index ? text : value
-                                      )
-                                    )
-                                  }
-                                  style={[styles.input, { flex: 1 }]}
-                                  contentStyle={styles.inputText}
-                                  placeholder={`Side ${index + 1}`}
-                                  mode="outlined"
-                                  outlineColor={AppColor.border}
-                                  activeOutlineColor={AppColor.primary}
-                                  outlineStyle={{ borderRadius: 8 }}
-                                />
-                                {hasComboSideCosts ? (
-                                  <>
-                                    <Switch
-                                      color={AppColor.primary}
-                                      value={!!comboSideCostEnabled[index]}
-                                      onValueChange={() =>
-                                        setComboSideCostEnabled((current) =>
-                                          current.map((value, itemIndex) =>
-                                            itemIndex === index ? !value : value
-                                          )
-                                        )
-                                      }
-                                    />
-                                    {comboSideCostEnabled[index] ? (
-                                      <TextInput
-                                        dense
-                                        value={comboSideCosts[index] || ""}
-                                        onChangeText={(text) =>
-                                          setComboSideCosts((current) =>
-                                            current.map((value, itemIndex) =>
-                                              itemIndex === index
-                                                ? text.replace(/[^0-9.]/g, "")
-                                                : value
-                                            )
-                                          )
-                                        }
-                                        style={[styles.input, styles.optionCostInput]}
-                                        contentStyle={styles.inputText}
-                                        placeholder="Cost"
-                                        mode="outlined"
-                                        keyboardType="decimal-pad"
-                                        outlineColor={AppColor.border}
-                                        activeOutlineColor={AppColor.primary}
-                                        outlineStyle={{ borderRadius: 8 }}
-                                      />
-                                    ) : null}
-                                  </>
-                                ) : null}
-                              </View>
-                            ))}
-
-                            <View style={styles.switchRow}>
-                              <Text style={[styles.inputLabel, { marginBottom: 0 }]}>Additional cost</Text>
-                              <Switch
-                                color={AppColor.primary}
-                                value={hasComboSideCosts}
-                                onValueChange={setHasComboSideCosts}
-                              />
-                            </View>
                           </View>
 
 		                          {!!errors.comboItems && (
