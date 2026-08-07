@@ -37,15 +37,31 @@ const posOrderSlice = createSlice({
         };
       }
 
+      const forceNewLine = item._forceNewLine === true;
+      const existingLineIndex =
+        !forceNewLine && item._cartLineId
+          ? state.currentOrder.items.findIndex(
+              (currentItem) => currentItem._cartLineId === item._cartLineId
+            )
+          : -1;
       const cleanItem = { ...item };
       delete cleanItem._forceNewLine;
       cleanItem._cartLineId =
+        item._cartLineId ||
         `${cleanItem._id}-${Date.now()}-${state.currentOrder.items.length}`;
 
-      state.currentOrder.items.push({
-        ...cleanItem,
-        quantity: 1,
-      });
+      if (existingLineIndex >= 0) {
+        state.currentOrder.items[existingLineIndex] = {
+          ...state.currentOrder.items[existingLineIndex],
+          ...cleanItem,
+          quantity: 1,
+        };
+      } else {
+        state.currentOrder.items.push({
+          ...cleanItem,
+          quantity: 1,
+        });
+      }
 
       state.currentOrder.totalItems = state.currentOrder.items.reduce(
         (sum, item) => sum + item.quantity,

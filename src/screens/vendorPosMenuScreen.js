@@ -218,19 +218,24 @@ const VendorPosMenuScreen = ({ navigation }) => {
   const addOrConfigureItem = (item) => {
     const existing = cartItemById[item._id];
     if (menuItemRequiresOptions(existing || item)) {
-      openOptions(item);
+      openOptions(item, { addAnother: !!existing });
       return;
     }
 
     addItem(item);
   };
 
-  const openOptions = (item) => {
-    const existing = cartItemById[item._id];
-    setSelectedItem(mergeMenuItemWithSavedSelections(item, existing));
-    setCustomizationInput(existing?.customizationInput || "");
-    setSelectedFlavors(existing?.selectedFlavors || []);
-    setSelectedToppings(existing?.selectedToppings || []);
+  const openOptions = (item, options = {}) => {
+    const existing = item._cartLineId ? item : cartItemById[item._id];
+    const addAnother = options.addAnother === true;
+    setSelectedItem(
+      addAnother
+        ? { ...item, _startAdditionalItem: true }
+        : mergeMenuItemWithSavedSelections(item, existing)
+    );
+    setCustomizationInput(addAnother ? "" : existing?.customizationInput || "");
+    setSelectedFlavors(addAnother ? [] : existing?.selectedFlavors || []);
+    setSelectedToppings(addAnother ? [] : existing?.selectedToppings || []);
     requestAnimationFrame(() => {
       itemDetailsActionSheetRef.current?.show();
     });
