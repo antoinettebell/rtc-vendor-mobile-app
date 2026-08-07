@@ -140,8 +140,15 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
   const [menuList, setMenuList] = useState([]);
   const [bogoItems, setBogoItems] = useState([]);
   const [comboItems, setComboItems] = useState([]);
+  const [comboSideCount, setComboSideCount] = useState(1);
+  const [comboSideOptions, setComboSideOptions] = useState([""]);
+  const [comboSidesPerOrder, setComboSidesPerOrder] = useState(1);
+  const [hasComboSideCosts, setHasComboSideCosts] = useState(false);
+  const [comboSideCostEnabled, setComboSideCostEnabled] = useState([false]);
+  const [comboSideCosts, setComboSideCosts] = useState(["0"]);
   const [customization, setCustomization] = useState(false);
   const [hasFlavors, setHasFlavors] = useState(false);
+  const [flavorLabel, setFlavorLabel] = useState("Flavor");
   const [flavorCount, setFlavorCount] = useState(1);
   const [flavorsPerOrder, setFlavorsPerOrder] = useState(1);
   const [flavors, setFlavors] = useState(["Plain"]);
@@ -752,6 +759,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     setSelectedPhotos(transformedPhotos);
     setCustomization(item.allowCustomize || false);
     setHasFlavors(canUseFlavors ? item.hasFlavors || false : false);
+    setFlavorLabel(item.flavorLabel || "Flavor");
 	    const itemFlavors =
 	      Array.isArray(item.flavors) && item.flavors.length > 0
 	        ? item.flavors
@@ -844,6 +852,25 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
       } else {
         setComboItems([]);
       }
+      const savedSides = Array.isArray(item.comboSideOptions)
+        ? item.comboSideOptions.filter(Boolean)
+        : [];
+      const sideNames = savedSides.length ? savedSides : [""];
+      const pricedSides = Array.isArray(item.comboSideOptionCosts)
+        ? item.comboSideOptionCosts
+        : [];
+      setComboSideCount(sideNames.length);
+      setComboSideOptions(sideNames);
+      setComboSidesPerOrder(
+        Math.min(Math.max(item.comboSidesPerOrder || 1, 1), sideNames.length)
+      );
+      setHasComboSideCosts(pricedSides.some((option) => option?.hasCost));
+      setComboSideCostEnabled(
+        sideNames.map((name) => !!pricedSides.find((option) => option?.name === name)?.hasCost)
+      );
+      setComboSideCosts(
+        sideNames.map((name) => `${pricedSides.find((option) => option?.name === name)?.cost || 0}`)
+      );
     } else {
       setComboItems([]);
     }
@@ -1009,6 +1036,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 
 	      if (canUseFlavors && hasFlavors) {
 	        payload.hasFlavors = true;
+	        payload.flavorLabel = flavorLabel.trim() || "Flavor";
 		        payload.flavors = flavors
 		          .slice(0, flavorCount)
 		          .map((flavor, index) =>
@@ -1025,6 +1053,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 	        payload.flavorsPerOrder = Math.min(flavorsPerOrder, flavorCount, 5);
 	      } else {
 	        payload.hasFlavors = false;
+	        payload.flavorLabel = flavorLabel.trim() || "Flavor";
 	        payload.flavors = [];
 	        payload.flavorOptions = [];
 	        payload.flavorsPerOrder = 1;
@@ -1095,6 +1124,23 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
           menuItem: item._id || "",
           qty: 1,
         }));
+        const sideNames = comboSideOptions
+          .slice(0, comboSideCount)
+          .map((name) => toTitleCase(name.trim()))
+          .filter(Boolean);
+        payload.comboSideOptions = sideNames;
+        payload.comboSideOptionCosts = sideNames.map((name, index) => ({
+          name,
+          hasCost: !!(hasComboSideCosts && comboSideCostEnabled[index]),
+          cost:
+            hasComboSideCosts && comboSideCostEnabled[index]
+              ? parseFloat(comboSideCosts[index] || "0") || 0
+              : 0,
+        }));
+        payload.comboSidesPerOrder = Math.min(
+          Math.max(comboSidesPerOrder, 1),
+          Math.max(sideNames.length, 1)
+        );
       }
 
       console.log("Food Item API request payload => ", payload);
@@ -1304,7 +1350,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 
             {/* Toggle Buttons */}
             <View style={styles.toggleContainer}>
-              <TouchableOpacity
+	                          <TouchableOpacity
                 style={[
                   styles.toggleButton,
                   activeSection === "basic" && styles.toggleButtonActive,
@@ -1576,8 +1622,21 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                               Use toggle button to charge extra for flavors/toppings
                             </Text>
 
-                            {hasFlavors ? (
-                              <View style={{ marginTop: 12, gap: 12 }}>
+	                          {hasFlavors ? (
+	                            <View style={{ marginTop: 12, gap: 12 }}>
+                                  <TextInput
+                                    dense
+                                    value={flavorLabel}
+                                    onChangeText={setFlavorLabel}
+                                    style={styles.input}
+                                    contentStyle={styles.inputText}
+                                    placeholder="Customer-facing label (for example, Wing Sauce)"
+                                    mode="outlined"
+                                    maxLength={40}
+                                    outlineColor={AppColor.border}
+                                    activeOutlineColor={AppColor.primary}
+                                    outlineStyle={{ borderRadius: 8 }}
+                                  />
                                 <View style={styles.flavorPickerRow}>
                                   <View style={{ flex: 1 }}>
                                     <Text style={styles.inputLabel}>
@@ -2799,6 +2858,125 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 	                              {`Add Item for Combo Sides`}
 	                            </Text>
 	                          </TouchableOpacity>
+
+                          <View style={{ marginTop: 16, gap: 12 }}>
+                            <Text style={styles.inputLabel}>Side Options</Text>
+                            <View style={styles.flavorPickerRow}>
+                              <View style={{ flex: 1 }}>
+                                <Text style={styles.inputLabel}>How many sides</Text>
+                                <Dropdown
+                                  data={flavorCountOptions}
+                                  labelField="label"
+                                  valueField="value"
+                                  value={comboSideCount}
+                                  onChange={(selected) => {
+                                    const count = selected.value;
+                                    setComboSideCount(count);
+                                    setComboSidesPerOrder((current) =>
+                                      Math.min(current, count)
+                                    );
+                                    setComboSideOptions((current) =>
+                                      Array.from({ length: count }, (_, index) => current[index] || "")
+                                    );
+                                    setComboSideCostEnabled((current) =>
+                                      Array.from({ length: count }, (_, index) => current[index] || false)
+                                    );
+                                    setComboSideCosts((current) =>
+                                      Array.from({ length: count }, (_, index) => current[index] || "0")
+                                    );
+                                  }}
+                                  placeholder="Select"
+                                  style={styles.dropdown}
+                                  containerStyle={styles.dropdownContainer}
+                                />
+                              </View>
+                              <View style={{ flex: 1 }}>
+                                <Text style={styles.inputLabel}>Sides per Order</Text>
+                                <Dropdown
+                                  data={flavorsPerOrderOptions.filter(
+                                    (option) => option.value <= comboSideCount
+                                  )}
+                                  labelField="label"
+                                  valueField="value"
+                                  value={comboSidesPerOrder}
+                                  onChange={(selected) => setComboSidesPerOrder(selected.value)}
+                                  placeholder="Select"
+                                  style={styles.dropdown}
+                                  containerStyle={styles.dropdownContainer}
+                                />
+                              </View>
+                            </View>
+
+                            {comboSideOptions.slice(0, comboSideCount).map((side, index) => (
+                              <View key={`combo-side-${index}`} style={styles.optionCostRow}>
+                                <TextInput
+                                  dense
+                                  value={side}
+                                  onChangeText={(text) =>
+                                    setComboSideOptions((current) =>
+                                      current.map((value, itemIndex) =>
+                                        itemIndex === index ? text : value
+                                      )
+                                    )
+                                  }
+                                  style={[styles.input, { flex: 1 }]}
+                                  contentStyle={styles.inputText}
+                                  placeholder={`Side ${index + 1}`}
+                                  mode="outlined"
+                                  outlineColor={AppColor.border}
+                                  activeOutlineColor={AppColor.primary}
+                                  outlineStyle={{ borderRadius: 8 }}
+                                />
+                                {hasComboSideCosts ? (
+                                  <>
+                                    <Switch
+                                      color={AppColor.primary}
+                                      value={!!comboSideCostEnabled[index]}
+                                      onValueChange={() =>
+                                        setComboSideCostEnabled((current) =>
+                                          current.map((value, itemIndex) =>
+                                            itemIndex === index ? !value : value
+                                          )
+                                        )
+                                      }
+                                    />
+                                    {comboSideCostEnabled[index] ? (
+                                      <TextInput
+                                        dense
+                                        value={comboSideCosts[index] || ""}
+                                        onChangeText={(text) =>
+                                          setComboSideCosts((current) =>
+                                            current.map((value, itemIndex) =>
+                                              itemIndex === index
+                                                ? text.replace(/[^0-9.]/g, "")
+                                                : value
+                                            )
+                                          )
+                                        }
+                                        style={[styles.input, styles.optionCostInput]}
+                                        contentStyle={styles.inputText}
+                                        placeholder="Cost"
+                                        mode="outlined"
+                                        keyboardType="decimal-pad"
+                                        outlineColor={AppColor.border}
+                                        activeOutlineColor={AppColor.primary}
+                                        outlineStyle={{ borderRadius: 8 }}
+                                      />
+                                    ) : null}
+                                  </>
+                                ) : null}
+                              </View>
+                            ))}
+
+                            <View style={styles.switchRow}>
+                              <Text style={[styles.inputLabel, { marginBottom: 0 }]}>Additional cost</Text>
+                              <Switch
+                                color={AppColor.primary}
+                                value={hasComboSideCosts}
+                                onValueChange={setHasComboSideCosts}
+                              />
+                            </View>
+                          </View>
 
 		                          {!!errors.comboItems && (
 		                            <HelperText

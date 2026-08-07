@@ -134,4 +134,18 @@ const tenPercentTip =
   }) * 0.1;
 assert.equal(Math.round(tenPercentTip * 100) / 100, 1.33);
 
+assert.equal(
+  calculateItemTotalWithDiscount({
+    price: 14,
+    quantity: 1,
+    itemType: "COMBO",
+    selectedComboSides: ["Onion Rings"],
+    comboSideOptionCosts: [
+      { name: "Fries", hasCost: false, cost: 0 },
+      { name: "Onion Rings", hasCost: true, cost: 2 },
+    ],
+  }),
+  16
+);
+
 console.log("vendor discount and tip base tests passed");
