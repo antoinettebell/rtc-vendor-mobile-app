@@ -32,9 +32,6 @@ import {
   formatMoney,
   getEventImageUrl,
   getEventLocation,
-  getPaymentAmount,
-  getPaymentAmountLabel,
-  getPaymentTypeLabel,
   getPrimaryActionLabel,
   isBothPaymentEvent,
   isEventAccessError,
@@ -246,6 +243,7 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
   const renderEvent = ({ item }) => {
     const imageUrl = getEventImageUrl(item);
     const vendorPays = isVendorPaysToAttendEvent(item);
+    const bothPay = isBothPaymentEvent(item);
 
     return (
       <TouchableOpacity
@@ -254,42 +252,33 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
         onPress={() => openEventDetails(item)}
       >
         <AppImage uri={imageUrl} containerStyle={styles.cardImage} />
-        <View style={styles.rowBetween}>
-          <Text style={[styles.title, { flex: 1, paddingRight: 8 }]}>
-            {item.event_name}
-          </Text>
-          <View
-            style={[
-              styles.badge,
-              vendorPays ? styles.paymentBadgeOrange : styles.paymentBadgeGreen,
-            ]}
-          >
-            <Text
-              style={[
-                styles.badgeText,
-                vendorPays
-                  ? styles.paymentBadgeTextOrange
-                  : styles.paymentBadgeTextGreen,
-              ]}
-            >
-              {getPaymentTypeLabel(item)}
-            </Text>
-          </View>
-        </View>
+        <Text style={styles.title}>{item.event_name}</Text>
         <Text style={styles.subtitle} numberOfLines={2}>
           {item.event_description || "Event details available on the next screen."}
         </Text>
+        <Text style={styles.meta}>{item.event_type || "Event"}</Text>
         <Text style={styles.meta}>
-          {item.event_type || "Event"} | {getEventLocation(item)}
+          Who Pays: {bothPay ? "Both" : vendorPays ? "Vendor" : "Coordinator"}
         </Text>
+        {(vendorPays || bothPay) && (
+          <Text style={styles.meta}>Vendor Fee: {formatMoney(item.vendor_fee)}</Text>
+        )}
+        {bothPay && (
+          <Text style={styles.meta}>
+            Coordinator Event Budget: {formatMoney(item.budgeted_amount)}
+          </Text>
+        )}
+        {!vendorPays && !bothPay && (
+          <Text style={styles.meta}>
+            Coordinator Event Budget: {formatMoney(item.budgeted_amount)}
+          </Text>
+        )}
+        <Text style={styles.meta}>{getEventLocation(item)}</Text>
         <Text style={styles.meta}>
           {formatDate(item.event_date)} {item.event_time || ""}
         </Text>
         <Text style={styles.meta}>
           Estimated guests: {item.number_of_guests || "Not set"}
-        </Text>
-        <Text style={styles.meta}>
-          {getPaymentAmountLabel(item)}: {formatMoney(getPaymentAmount(item))}
         </Text>
         {renderEventActions(item)}
       </TouchableOpacity>

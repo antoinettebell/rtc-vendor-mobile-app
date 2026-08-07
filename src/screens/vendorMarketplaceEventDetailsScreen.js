@@ -29,9 +29,6 @@ import {
   formatMoney,
   getEventImageUrl,
   getEventLocation,
-  getPaymentAmount,
-  getPaymentAmountLabel,
-  getPaymentTypeLabel,
   getPrimaryActionLabel,
   isBothPaymentEvent,
   isVendorPaysToAttendEvent,
@@ -529,6 +526,19 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
             <>
             <DetailRow label="Event Type" value={event?.event_type} />
             <DetailRow
+              label="Who Pays"
+              value={bothPay ? "Both" : vendorPays ? "Vendor" : "Coordinator"}
+            />
+            {(vendorPays || bothPay) && (
+              <DetailRow label="Vendor Fee" value={formatMoney(event?.vendor_fee)} />
+            )}
+            {(!vendorPays || bothPay) && (
+              <DetailRow
+                label="Coordinator Event Budget"
+                value={formatMoney(event?.budgeted_amount)}
+              />
+            )}
+            <DetailRow
               label="Date"
               value={formatDate(event?.event_date)}
             />
@@ -553,43 +563,6 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
             ) : null}
             </>
           ))}
-
-          {renderCollapsibleSection(
-            "payment",
-            "Payment Type",
-            (
-              <>
-            <View
-              style={[
-                styles.badge,
-                vendorPays ? styles.paymentBadgeOrange : styles.paymentBadgeGreen,
-                { marginTop: 12 },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.badgeText,
-                  vendorPays
-                    ? styles.paymentBadgeTextOrange
-                    : styles.paymentBadgeTextGreen,
-                ]}
-              >
-                {getPaymentTypeLabel(event)}
-              </Text>
-            </View>
-            <DetailRow
-              label={getPaymentAmountLabel(event)}
-              value={formatMoney(getPaymentAmount(event))}
-            />
-            <Text style={styles.meta}>
-              {vendorPays
-                ? "Set by Event Coordinator. Payment required only if accepted."
-                : "Budget set by Event Coordinator"}
-            </Text>
-              </>
-            ),
-            vendorPays ? styles.feeSummaryCard : styles.summaryCard
-          )}
 
           {renderCollapsibleSection("requirements", "Requirements", (
             <>
