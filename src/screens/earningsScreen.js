@@ -114,8 +114,9 @@ const formatDateTime = (value) => {
   }
 
   return date.toLocaleString([], {
-    month: "short",
-    day: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
     hour: "numeric",
     minute: "2-digit",
   });
@@ -134,6 +135,7 @@ const formatShiftDateTime = (value) => {
   return date.toLocaleString([], {
     month: "2-digit",
     day: "2-digit",
+    year: "numeric",
     hour: "numeric",
     minute: "2-digit",
   });
@@ -623,8 +625,8 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
       title: summaryItem.label,
       value: summaryItem.value,
       detailLabel: summaryItem.detailLabel,
-      dateLabel: `${moment(startDate).format("MMM D")} - ${moment(endDate).format(
-        "MMM D"
+      dateLabel: `${moment(startDate).format("MM/DD/YYYY")} - ${moment(endDate).format(
+        "MM/DD/YYYY"
       )}`,
       breakdownRows,
       totals: {

@@ -30,6 +30,7 @@ import {
   MarketplaceHeader,
   formatDate,
   formatMoney,
+  formatTimeRange,
   getEventImageUrl,
   getEventLocation,
   getPrimaryActionLabel,
@@ -252,11 +253,10 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
         onPress={() => openEventDetails(item)}
       >
         <AppImage uri={imageUrl} containerStyle={styles.cardImage} />
-        <Text style={styles.title}>{item.event_name}</Text>
+        <Text style={styles.title}>{item.event_type || "Event"}</Text>
         <Text style={styles.subtitle} numberOfLines={2}>
           {item.event_description || "Event details available on the next screen."}
         </Text>
-        <Text style={styles.meta}>{item.event_type || "Event"}</Text>
         <Text style={styles.meta}>
           Who Pays: {bothPay ? "Both" : vendorPays ? "Vendor" : "Coordinator"}
         </Text>
@@ -275,7 +275,7 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
         )}
         <Text style={styles.meta}>{getEventLocation(item)}</Text>
         <Text style={styles.meta}>
-          {formatDate(item.event_date)} {item.event_time || ""}
+          {formatDate(item.event_date)} {formatTimeRange(item.event_time)}
         </Text>
         <Text style={styles.meta}>
           Estimated guests: {item.number_of_guests || "Not set"}

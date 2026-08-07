@@ -42,10 +42,29 @@ export const formatDate = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
   return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
+    month: "2-digit",
+    day: "2-digit",
     year: "numeric",
   });
+};
+
+export const formatTime = (value) => {
+  const match = String(value || "").trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return String(value || "Not set");
+  const date = new Date();
+  date.setHours(Number(match[1]), Number(match[2]), 0, 0);
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+};
+
+export const formatTimeRange = (value) => {
+  const parts = String(value || "")
+    .split(/\s*(?:-|–|—|to)\s*/i)
+    .filter(Boolean);
+  if (!parts.length) return "Not set";
+  return parts.map(formatTime).join(" - ");
 };
 
 export const formatMoney = (value) => {

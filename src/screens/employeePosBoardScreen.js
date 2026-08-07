@@ -139,8 +139,9 @@ const formatDateTime = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Not available";
   return date.toLocaleString([], {
-    month: "short",
-    day: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
     hour: "numeric",
     minute: "2-digit",
   });

@@ -8,6 +8,7 @@ import {
   formatDate,
   formatDuration,
   formatMoney,
+  formatTimeRange,
   formatStatusLabel,
   getApplicationEvent,
   getEventLocation,
@@ -89,7 +90,7 @@ const VendorMarketplaceApplicationDetailScreen = ({ navigation, route }) => {
           ) : null}
           <DetailRow label="Event Type" value={event?.event_type} />
           <DetailRow label="Event Date" value={formatDate(event?.event_date)} />
-          <DetailRow label="Event Time" value={event?.event_time || "Not set"} />
+          <DetailRow label="Event Time" value={formatTimeRange(event?.event_time)} />
           <DetailRow label="Duration" value={formatDuration(event)} />
           <DetailRow label="Location" value={getEventLocation(event)} />
         </View>

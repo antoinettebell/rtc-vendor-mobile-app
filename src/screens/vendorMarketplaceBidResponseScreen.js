@@ -35,6 +35,7 @@ import {
   formatDate,
   formatDuration,
   formatMoney,
+  formatTimeRange,
   getEventLocation,
   getMarketplaceNotesError,
   getMarketplaceRequirementLabels,
@@ -840,7 +841,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
               <Text style={styles.title}>{event?.event_name || "Event Bid"}</Text>
               <ReadOnlyRow label="Event Type" value={event?.event_type} />
               <ReadOnlyRow label="Event Date" value={formatDate(event?.event_date)} />
-              <ReadOnlyRow label="Event Time" value={event?.event_time || "Not set"} />
+              <ReadOnlyRow label="Event Time" value={formatTimeRange(event?.event_time)} />
               <ReadOnlyRow label="Duration" value={formatDuration(event)} />
               <ReadOnlyRow label="Location" value={getEventLocation(event)} />
               <ReadOnlyRow

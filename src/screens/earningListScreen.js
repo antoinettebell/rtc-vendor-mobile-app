@@ -75,7 +75,7 @@ const EarningListScreen = ({ navigation, route }) => {
         <View>
           <Text style={styles.orderNumberText}>{`# ${item.orderNumber}`}</Text>
           <Text numberOfLines={1} style={styles.createdAtText}>
-            {`${moment(item.createdAt).format("MMM DD, YYYY - h:mm a")}`}
+            {`${moment(item.createdAt).format("MM/DD/YYYY - h:mm A")}`}
           </Text>
         </View>
         <View>

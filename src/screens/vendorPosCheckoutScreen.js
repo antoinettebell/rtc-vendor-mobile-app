@@ -700,7 +700,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
               <Text style={styles.guestText}>Guest phone: {guestPhone}</Text>
             ) : null}
             <Text style={styles.guestText}>
-              Created {moment().format("MMM D, h:mm A")}
+              Created {moment().format("MM/DD/YYYY h:mm A")}
             </Text>
           </View>
 

@@ -151,6 +151,7 @@ const formatShiftDateTime = (value) => {
   return date.toLocaleString([], {
     month: "2-digit",
     day: "2-digit",
+    year: "numeric",
     hour: "numeric",
     minute: "2-digit",
   });
@@ -162,10 +163,34 @@ const formatShiftHours = (value) => {
 const formatTimecardInput = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  const pad = (part) => String(part).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${date.toLocaleDateString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  })} ${date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  })}`;
 };
-const parseTimecardInput = (value) => new Date(String(value || "").trim().replace(" ", "T"));
+const parseTimecardInput = (value) => {
+  const match = String(value || "")
+    .trim()
+    .match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s*([AP]M)$/i);
+  if (!match) return new Date(NaN);
+  let hours = Number(match[4]) % 12;
+  if (match[6].toUpperCase() === "PM") hours += 12;
+  return new Date(
+    Number(match[3]),
+    Number(match[1]) - 1,
+    Number(match[2]),
+    hours,
+    Number(match[5]),
+  );
+};
+const formatOperationalDay = (value) => {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? `${match[2]}/${match[3]}/${match[1]}` : value || "Shift";
+};
 
 const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
@@ -1819,7 +1844,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                       >
                         <View style={styles.timecardTitleRow}>
                           <Text style={styles.shiftHistoryValue}>
-                            {session.operational_day_key || "Shift"}
+                            {formatOperationalDay(session.operational_day_key)}
                           </Text>
                           {!session.is_active ? (
                             <TouchableOpacity onPress={() => beginShiftEdit(session)}>
@@ -1829,13 +1854,13 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                         </View>
                         {editingShiftId === session.employee_session_id ? (
                           <View style={styles.timecardEditor}>
-                            <Text style={styles.label}>Start (YYYY-MM-DD HH:mm)</Text>
+                            <Text style={styles.label}>Start (MM/DD/YYYY h:mm AM/PM)</Text>
                             <TextInput
                               style={styles.input}
                               value={shiftEditDraft?.started_at || ""}
                               onChangeText={(value) => setShiftEditDraft((draft) => ({ ...draft, started_at: value }))}
                             />
-                            <Text style={styles.label}>End (YYYY-MM-DD HH:mm)</Text>
+                            <Text style={styles.label}>End (MM/DD/YYYY h:mm AM/PM)</Text>
                             <TextInput
                               style={styles.input}
                               value={shiftEditDraft?.ended_at || ""}

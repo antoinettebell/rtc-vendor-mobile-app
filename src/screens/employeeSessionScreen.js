@@ -859,8 +859,15 @@ const EmployeeSessionScreen = ({ navigation }) => {
             <View style={styles.bottomActionPanel}>
               <TouchableOpacity
                 activeOpacity={0.8}
-                style={styles.secondaryButton}
-                onPress={() => navigation.navigate("operationsScreen")}
+                style={[
+                  styles.secondaryButton,
+                  (!isShiftActive || isOnBreak) && styles.disabledButton,
+                ]}
+                onPress={() =>
+                  runShiftProtectedAction(() =>
+                    navigation.navigate("operationsScreen"),
+                  )
+                }
               >
                 <Text style={styles.secondaryButtonText}>Operations</Text>
               </TouchableOpacity>
