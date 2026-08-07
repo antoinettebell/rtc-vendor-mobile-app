@@ -1332,7 +1332,7 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
           ) : (
             order.items.map((item, index) => (
               <TouchableOpacity
-                key={item._cartLineId || `${item._id}-${index}`}
+                key={`${item._cartLineId || item._id || "cart-item"}-${index}`}
                 style={styles.cartItem}
                 onPress={() => openOptions(item)}
               >

@@ -488,7 +488,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
         <View style={styles.orderItemsBox}>
           {(item.items || []).map((orderItem, index) => (
             <Text
-              key={`${item?._id || "order"}-${orderItem?._id || index}`}
+              key={`${item?._id || "order"}-${orderItem?._id || "item"}-${index}`}
               style={styles.orderItemLine}
             >
               {orderItem?.qty || orderItem?.quantity || 1}x{" "}

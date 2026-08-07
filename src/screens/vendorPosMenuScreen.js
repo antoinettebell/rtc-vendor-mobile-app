@@ -569,7 +569,7 @@ const VendorPosMenuScreen = ({ navigation, route }) => {
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {order.items.map((item, index) => (
                   <TouchableOpacity
-                    key={item._cartLineId || `${item._id}-${index}`}
+                    key={`${item._cartLineId || item._id || "cart-item"}-${index}`}
                     style={styles.orderLineCard}
                     onPress={() => openOptions(item)}
                   >

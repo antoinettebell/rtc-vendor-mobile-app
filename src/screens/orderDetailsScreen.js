@@ -715,7 +715,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
 
                 return (
                   <View
-                    key={itm?.menuItemId || itm?._id || `line-${idx}`}
+                    key={`${itm?.menuItemId || itm?._id || "line"}-${idx}`}
                     style={styles.orderLineBlock}
                   >
                     <View style={styles.orderLineMainRow}>
@@ -765,7 +765,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                               index === rewardItems.length - 1 &&
                                 styles.nestedItemRowLast,
                             ]}
-                            key={rewardItem._id || `r-${index}`}
+                            key={`${rewardItem._id || "reward"}-${index}`}
                           >
                             <AppImage
                               uri={rewardItem.displayImg}
@@ -852,7 +852,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                               cIdx === comboItemsList.length - 1 &&
                                 styles.nestedItemRowLast,
                             ]}
-                            key={comboItem?._id || `c-${cIdx}`}
+                            key={`${comboItem?._id || "combo"}-${cIdx}`}
                           >
                             <AppImage
                               uri={comboItem?.imgUrls?.[0]}
