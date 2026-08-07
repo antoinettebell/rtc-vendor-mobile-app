@@ -1320,8 +1320,11 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
           {order.items.length === 0 ? (
             <Text style={styles.emptyText}>Cart is empty.</Text>
           ) : (
-            order.items.map((item) => (
-              <View key={item._id} style={styles.cartItem}>
+            order.items.map((item, index) => (
+              <View
+                key={`${item._cartLineId || item._id || "cart-item"}-${index}`}
+                style={styles.cartItem}
+              >
                 <Text style={styles.cartItemName}>
                   {item.quantity}x {item.name}
                 </Text>
