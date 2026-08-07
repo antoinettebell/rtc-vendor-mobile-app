@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Alert,
 } from "react-native";
 import ActionSheet from "react-native-actions-sheet";
 import AntDesign from "react-native-vector-icons/AntDesign";
@@ -96,6 +97,17 @@ const ComboItemsActionSheet = ({
 
   // Handle item selection
   const handleItemSelect = (item) => {
+    if (
+      !internalSelectedMenus.some((selected) => selected._id === item._id) &&
+      item?.hasDiscount &&
+      ["BOGO", "BOGOHO"].includes(item?.discountType)
+    ) {
+      Alert.alert(
+        "Invalid Combo Item",
+        "Please choose another item - Discount items are not valid for Combos"
+      );
+      return;
+    }
     setInternalSelectedMenus((prev) => {
       const isSelected = prev.some((selected) => selected._id === item._id);
 
