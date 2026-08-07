@@ -997,7 +997,16 @@ const DishItemDetailsModal = ({
   }, [selectedMenuItem]);
 
   const handleIncreaseQuantity = useCallback(() => {
-    const buildItemWithCurrentOptions = () => ({
+    if (getItemQuantity(selectedMenuItem._id) === 0) {
+      Alert.alert(
+        "Add Item First",
+        "Please tap Add to Order before increasing the quantity."
+      );
+      return;
+    }
+
+    if (!validateSelections()) return;
+    handleAddItem({
       ...selectedMenuItem,
       selectedSubItems,
       customizationInput,
@@ -1018,34 +1027,7 @@ const DishItemDetailsModal = ({
         : [],
       selectedDiscountSubItems,
     });
-
-    const saveInitialDraftIfNeeded = () => {
-      if (getItemQuantity(selectedMenuItem._id) > 0) return;
-      handleAddItem(buildItemWithCurrentOptions());
-    };
-
-    const addWithCurrentOptions = () => {
-      if (!validateSelections()) return;
-      saveInitialDraftIfNeeded();
-      handleAddItem(buildItemWithCurrentOptions());
-    };
-
-    const addSeparately = () => {
-      if (!validateSelections()) return;
-      saveInitialDraftIfNeeded();
-      beginAdditionalCustomization();
-    };
-
-    Alert.alert(
-      "Use the same options?",
-      "Should the additional item use all the same options?",
-      [
-        { text: "No", onPress: addSeparately },
-        { text: "Yes", onPress: addWithCurrentOptions },
-      ]
-    );
   }, [
-    beginAdditionalCustomization,
     customizationInput,
     getItemQuantity,
     handleAddItem,
@@ -1959,7 +1941,7 @@ const DishItemDetailsModal = ({
                 </Text>
               </TouchableOpacity>
               <Text style={styles.qtyText}>
-                {getItemQuantity(selectedMenuItem._id)}
+                {Math.max(1, getItemQuantity(selectedMenuItem._id))}
               </Text>
               <TouchableOpacity
                 style={styles.qtyBtn}
