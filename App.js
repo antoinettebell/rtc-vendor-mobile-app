@@ -11,6 +11,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import BootSplash from "react-native-bootsplash";
+import { check, request, RESULTS } from "react-native-permissions";
 import { AppColor, vendorTheme } from "./src/utils/theme";
 import GlobalSnackbar from "./src/components/GlobalSnackbar";
 import {
@@ -19,6 +20,7 @@ import {
 } from "./src/helpers/notification.helper";
 import { clearCurrentNotificationOrder } from "./src/redux/slices/pushNotificationSlice";
 import { navigationRef } from "./src/helpers/navigation.helper";
+import { permission } from "./src/helpers/permission.helper";
 import NewOrderPopup from "./src/components/NewOrderPopup";
 
 import SigninScreen from "./src/screens/signinScreen";
@@ -493,6 +495,13 @@ const configureNotification = async () => {
   }
 };
 
+const configureLocationPermission = async () => {
+  const status = await check(permission.location);
+  if (status === RESULTS.DENIED) {
+    await request(permission.location);
+  }
+};
+
 const App = () => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -510,6 +519,9 @@ const App = () => {
 
   useEffect(() => {
     configureNotification();
+    configureLocationPermission().catch((error) =>
+      console.log("Location permission setup error", error),
+    );
     BootSplash.hide({ fade: true });
   }, []);
 
