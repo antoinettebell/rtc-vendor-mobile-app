@@ -252,7 +252,7 @@ const getNextStatusLabel = (status) => {
   return null;
 };
 
-const EmployeePosBoardScreen = ({ navigation }) => {
+const EmployeePosBoardScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const user = useSelector((state) => state.userReducer.user);
@@ -479,6 +479,18 @@ const EmployeePosBoardScreen = ({ navigation }) => {
       itemDetailsActionSheetRef.current?.show();
     });
   };
+
+  useEffect(() => {
+    const editCartLineId = route?.params?.editCartLineId;
+    if (!editCartLineId) return;
+    const cartLine = order.items.find(
+      (item) => (item._cartLineId || item._id) === editCartLineId
+    );
+    navigation.setParams({ editCartLineId: undefined });
+    if (cartLine) {
+      openOptions(cartLine);
+    }
+  }, [navigation, order.items, route?.params?.editCartLineId]);
 
   const toggleSelection = (
     value,

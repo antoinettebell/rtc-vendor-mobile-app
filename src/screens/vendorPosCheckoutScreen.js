@@ -584,9 +584,26 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
                   <Text style={styles.checkoutItemName}>
                     {index + 1}. {item.name}
                   </Text>
-                  <Text style={styles.checkoutItemPrice}>
-                    ${toAmount(item.price)}
-                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <IconButton
+                      icon="pencil"
+                      size={20}
+                      accessibilityLabel={`Edit ${item.name}`}
+                      onPress={() =>
+                        navigation.navigate(
+                          isEmployeeSession
+                            ? "employeePosBoardScreen"
+                            : "vendorPosMenuScreen",
+                          {
+                            editCartLineId: item._cartLineId || item._id,
+                          }
+                        )
+                      }
+                    />
+                    <Text style={styles.checkoutItemPrice}>
+                      ${toAmount(item.price)}
+                    </Text>
+                  </View>
                 </View>
                 {[
                   item.selectedFlavors?.join(", "),
