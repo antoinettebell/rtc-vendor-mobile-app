@@ -966,6 +966,60 @@ const DishItemDetailsModal = ({
     validateSelections,
   ]);
 
+  const handleIncreaseQuantity = useCallback(() => {
+    if (getItemQuantity(selectedMenuItem._id) === 0) {
+      Alert.alert(
+        "Add Item First",
+        "Please tap Add to Order before increasing the quantity."
+      );
+      return;
+    }
+
+    if (!validateSelections()) return;
+    handleAddItem({
+      ...selectedMenuItem,
+      selectedSubItems,
+      customizationInput,
+      selectedFlavors: hasFlavorChoices ? selectedFlavors : [],
+      selectedToppings: hasToppingChoices ? selectedToppings : [],
+      selectedComboSides: hasComboSideChoices ? selectedComboSides : [],
+      selectedDiscountFlavors: hasDiscountFlavorChoices
+        ? selectedDiscountFlavors
+        : [],
+      selectedDiscountToppings: hasDiscountToppingChoices
+        ? selectedDiscountToppings
+        : [],
+      selectedDiscountCustomizationInput: hasDiscountCustomization
+        ? selectedDiscountCustomizationInput
+        : "",
+      selectedDiscountComboSides: hasDiscountComboSideChoices
+        ? selectedDiscountComboSides
+        : [],
+      selectedDiscountSubItems,
+    });
+  }, [
+    customizationInput,
+    getItemQuantity,
+    handleAddItem,
+    hasComboSideChoices,
+    hasDiscountComboSideChoices,
+    hasDiscountCustomization,
+    hasDiscountFlavorChoices,
+    hasDiscountToppingChoices,
+    hasFlavorChoices,
+    hasToppingChoices,
+    selectedComboSides,
+    selectedDiscountComboSides,
+    selectedDiscountCustomizationInput,
+    selectedDiscountFlavors,
+    selectedDiscountSubItems,
+    selectedDiscountToppings,
+    selectedFlavors,
+    selectedMenuItem,
+    selectedSubItems,
+    selectedToppings,
+    validateSelections,
+  ]);
   const updateSelectedChildItem = useCallback((setter, childId, updates) => {
     setter((prevItems) =>
       prevItems.map((item) =>
@@ -1873,38 +1927,11 @@ const DishItemDetailsModal = ({
                 </Text>
               </TouchableOpacity>
               <Text style={styles.qtyText}>
-                {getItemQuantity(selectedMenuItem._id)}
+                {Math.max(1, getItemQuantity(selectedMenuItem._id))}
               </Text>
               <TouchableOpacity
                 style={styles.qtyBtn}
-                onPress={() => {
-                  if (!validateSelections()) {
-                    return;
-                  }
-                  handleAddItem({
-                    ...selectedMenuItem,
-                    selectedSubItems,
-                    customizationInput,
-                    selectedFlavors: hasFlavorChoices ? selectedFlavors : [],
-                    selectedToppings: hasToppingChoices ? selectedToppings : [],
-                    selectedComboSides: hasComboSideChoices
-                      ? selectedComboSides
-                      : [],
-                    selectedDiscountFlavors: hasDiscountFlavorChoices
-                      ? selectedDiscountFlavors
-                      : [],
-                    selectedDiscountToppings: hasDiscountToppingChoices
-                      ? selectedDiscountToppings
-                      : [],
-                    selectedDiscountCustomizationInput: hasDiscountCustomization
-                      ? selectedDiscountCustomizationInput
-                      : "",
-                    selectedDiscountComboSides: hasDiscountComboSideChoices
-                      ? selectedDiscountComboSides
-                      : [],
-                    selectedDiscountSubItems,
-                  });
-                }}
+                onPress={handleIncreaseQuantity}
                 disabled={
                   getItemQuantity(selectedMenuItem._id) >=
                   (selectedMenuItem.maxQty || 10)

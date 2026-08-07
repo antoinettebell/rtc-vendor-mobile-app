@@ -37,22 +37,15 @@ const posOrderSlice = createSlice({
         };
       }
 
-      const existingItemIndex = state.currentOrder.items.findIndex(
-        (i) => i._id === item._id
-      );
+      const cleanItem = { ...item };
+      delete cleanItem._forceNewLine;
+      cleanItem._cartLineId =
+        `${cleanItem._id}-${Date.now()}-${state.currentOrder.items.length}`;
 
-      if (existingItemIndex === -1) {
-        state.currentOrder.items.push({
-          ...item,
-          quantity: 1,
-        });
-      } else {
-        state.currentOrder.items[existingItemIndex] = {
-          ...state.currentOrder.items[existingItemIndex],
-          ...item,
-          quantity: state.currentOrder.items[existingItemIndex].quantity + 1,
-        };
-      }
+      state.currentOrder.items.push({
+        ...cleanItem,
+        quantity: 1,
+      });
 
       state.currentOrder.totalItems = state.currentOrder.items.reduce(
         (sum, item) => sum + item.quantity,
@@ -67,7 +60,9 @@ const posOrderSlice = createSlice({
 
     removeItemFromPosOrder: (state, { payload }) => {
       const itemIndex = state.currentOrder.items.findIndex(
-        (item) => item._id === payload.itemId
+        (item) =>
+          (item._cartLineId || item._id) === payload.itemId ||
+          item._id === payload.itemId
       );
 
       if (itemIndex === -1) {
@@ -99,7 +94,8 @@ const posOrderSlice = createSlice({
     updatePosItemProperty: (state, { payload }) => {
       const { itemId, keyName, value } = payload;
       const itemIndex = state.currentOrder.items.findIndex(
-        (item) => item._id === itemId
+        (item) =>
+          (item._cartLineId || item._id) === itemId || item._id === itemId
       );
 
       if (itemIndex === -1) {
