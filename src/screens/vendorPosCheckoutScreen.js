@@ -678,7 +678,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
             <Text style={styles.sectionTitle}>Full order</Text>
             {order.items.map((item, index) => (
               <View
-                key={item._cartLineId || `${item._id}-${index}`}
+                key={`${item._cartLineId || item._id || "checkout-item"}-${index}`}
                 style={styles.checkoutItem}
               >
                 <View style={styles.checkoutItemHeader}>
