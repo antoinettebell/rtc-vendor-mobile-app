@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Modal,
   RefreshControl,
@@ -35,6 +36,7 @@ import {
   getPaymentAmountLabel,
   getPaymentTypeLabel,
   getPrimaryActionLabel,
+  isBothPaymentEvent,
   isEventAccessError,
   isVendorPaysToAttendEvent,
   listText,
@@ -169,19 +171,76 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
       event: item,
     });
 
-  const openEventAction = (item) => {
-    if (isVendorPaysToAttendEvent(item)) {
-      navigation.navigate("VendorApplicationScreen", {
+  const openEventAction = (item, submissionType) => {
+    const isApplication = submissionType
+      ? submissionType === "application"
+      : isVendorPaysToAttendEvent(item);
+    const navigateToSubmission = () => {
+      if (isApplication) {
+        navigation.navigate("VendorApplicationScreen", {
+          eventId: item.event_id,
+          event: item,
+        });
+        return;
+      }
+
+      navigation.navigate("VendorBidResponseScreen", {
         eventId: item.event_id,
         event: item,
       });
+    };
+
+    if (!isBothPaymentEvent(item)) {
+      navigateToSubmission();
       return;
     }
 
-    navigation.navigate("VendorBidResponseScreen", {
-      eventId: item.event_id,
-      event: item,
-    });
+    Alert.alert(
+      isApplication ? "Vendor-Paid Application" : "Coordinator-Paid Bid",
+      isApplication
+        ? "This option is for vendors paying the attendance fee to participate in the event. You will not be eligible for the coordinator-paid award. Would you like to proceed?"
+        : "This option is for vendors bidding for the coordinator-paid award amount. You will not participate through the vendor-paid application option. Would you like to proceed?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: isApplication ? "Continue to Application" : "Continue to Bid",
+          onPress: navigateToSubmission,
+        },
+      ],
+    );
+  };
+
+  const renderEventActions = (item) => {
+    if (!isBothPaymentEvent(item)) {
+      return (
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={[styles.button, { marginTop: 14 }]}
+          onPress={() => openEventAction(item)}
+        >
+          <Text style={styles.buttonText}>{getPrimaryActionLabel(item)}</Text>
+        </TouchableOpacity>
+      );
+    }
+
+    return (
+      <View style={{ gap: 10, marginTop: 14 }}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={styles.button}
+          onPress={() => openEventAction(item, "application")}
+        >
+          <Text style={styles.buttonText}>Submit Application</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={[styles.secondaryButton, { paddingVertical: 14 }]}
+          onPress={() => openEventAction(item, "bid")}
+        >
+          <Text style={styles.secondaryButtonText}>Submit Bid</Text>
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   const renderEvent = ({ item }) => {
@@ -232,13 +291,7 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
         <Text style={styles.meta}>
           {getPaymentAmountLabel(item)}: {formatMoney(getPaymentAmount(item))}
         </Text>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={[styles.button, { marginTop: 14 }]}
-          onPress={() => openEventAction(item)}
-        >
-          <Text style={styles.buttonText}>{getPrimaryActionLabel(item)}</Text>
-        </TouchableOpacity>
+        {renderEventActions(item)}
       </TouchableOpacity>
     );
   };
