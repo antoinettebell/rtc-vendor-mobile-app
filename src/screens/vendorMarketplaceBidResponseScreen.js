@@ -231,13 +231,20 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       });
       if (response?.success) {
         applyProfileRequirementFiles(
-          getVerifiedComplianceRequirementFiles(response.data?.compliance),
+          getVerifiedComplianceRequirementFiles(
+            response.data?.compliance,
+            requiredRequirementLabels,
+          ),
         );
       }
     } catch (error) {
       console.log("Marketplace profile requirement docs error", error);
     }
-  }, [applyProfileRequirementFiles, foodTruck?._id]);
+  }, [
+    applyProfileRequirementFiles,
+    foodTruck?._id,
+    requiredRequirementLabels,
+  ]);
 
   const canSaveDraft = useMemo(
     () =>
