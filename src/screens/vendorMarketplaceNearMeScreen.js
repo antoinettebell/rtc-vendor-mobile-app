@@ -197,7 +197,9 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
       isApplication ? "Vendor-Paid Application" : "Coordinator-Paid Bid",
       isApplication
         ? "This option is for vendors paying the attendance fee to participate in the event. You will not be eligible for the coordinator-paid award. Would you like to proceed?"
-        : "This option is for vendors bidding for the coordinator-paid award amount. You will not participate through the vendor-paid application option. Would you like to proceed?",
+        : item.catered_vip_section_enabled
+          ? "This option is for bidding on VIP catering. If GA sales are allowed, you may offer VIP Catering + GA Sales in the bid. The coordinator can only award services you offer. Would you like to proceed?"
+          : "This option is for bidding for the coordinator-paid catering award. Would you like to proceed?",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -235,7 +237,9 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
           style={[styles.secondaryButton, { paddingVertical: 14 }]}
           onPress={() => openEventAction(item, "bid")}
         >
-          <Text style={styles.secondaryButtonText}>Submit Bid</Text>
+          <Text style={styles.secondaryButtonText}>
+            {item.catered_vip_section_enabled ? "Submit VIP Catering Bid" : "Submit Bid"}
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -265,9 +269,16 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
         )}
         {bothPay && (
           <Text style={styles.meta}>
-            Coordinator Event Budget: {formatMoney(item.budgeted_amount)}
+            {item.catered_vip_section_enabled && !item.fully_catered_event
+              ? "Coordinator VIP Catering Budget"
+              : "Coordinator Event Budget"}: {formatMoney(item.budgeted_amount)}
           </Text>
         )}
+        {item.catered_vip_section_enabled ? (
+          <Text style={styles.meta}>
+            GA Food Sales: {item.ga_food_sales_allowed ? "Allowed" : "Not allowed"}
+          </Text>
+        ) : null}
         {!vendorPays && !bothPay && (
           <Text style={styles.meta}>
             Coordinator Event Budget: {formatMoney(item.budgeted_amount)}

@@ -535,10 +535,38 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
             )}
             {(!vendorPays || bothPay) && (
               <DetailRow
-                label="Coordinator Event Budget"
+                label={event?.catered_vip_section_enabled && !event?.fully_catered_event
+                  ? "Coordinator VIP Catering Budget"
+                  : "Coordinator Event Budget"}
                 value={formatMoney(event?.budgeted_amount)}
               />
             )}
+            <DetailRow
+              label="Catering Opportunity"
+              value={event?.fully_catered_event
+                ? "Fully Catered Event"
+                : event?.catered_vip_section_enabled
+                  ? "VIP Catering"
+                  : "Event Catering"}
+            />
+            {event?.catered_vip_section_enabled ? (
+              <DetailRow
+                label="GA Food Sales"
+                value={event?.ga_food_sales_allowed ? "Allowed" : "Not allowed"}
+              />
+            ) : null}
+            {event?.ga_food_sales_allowed ? (
+              <DetailRow
+                label="Vendor Fee for Combined Award"
+                value={event?.waive_vendor_fee_for_combined_award ? "Waived" : formatMoney(event?.vendor_fee)}
+              />
+            ) : null}
+            {event?.vendor_fee_payment_deadline ? (
+              <DetailRow
+                label="Last Date to Accept Payments"
+                value={formatDate(event.vendor_fee_payment_deadline)}
+              />
+            ) : null}
             <DetailRow
               label="Date"
               value={formatDate(event?.event_date)}

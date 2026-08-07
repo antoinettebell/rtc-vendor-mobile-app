@@ -169,10 +169,33 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   );
 
   const cateredVipEnabled = event?.catered_vip_section_enabled === true;
+  const fullyCateredEvent = event?.fully_catered_event === true;
+  const allowedCoverages = useMemo(() => {
+    if (fullyCateredEvent) {
+      return Number(event?.number_of_guests || 0) > 0 && Number(event?.vip_guest_count || 0) > 0
+        ? [["REGULAR", "GA Catering"], ["VIP", "VIP Catering"], ["BOTH", "Both"]]
+        : Number(event?.vip_guest_count || 0) > 0
+          ? [["VIP", "VIP Catering"]]
+          : [["REGULAR", "All Guests"]];
+    }
+    if (cateredVipEnabled) {
+      return event?.ga_food_sales_allowed
+        ? [["VIP", "VIP Catering"], ["BOTH", "VIP Catering + GA Sales"]]
+        : [["VIP", "VIP Catering"]];
+    }
+    return [["REGULAR", "Event Catering"]];
+  }, [cateredVipEnabled, event?.ga_food_sales_allowed, event?.number_of_guests, event?.vip_guest_count, fullyCateredEvent]);
+  useEffect(() => {
+    if (!allowedCoverages.some(([value]) => value === guestCoverage)) {
+      setGuestCoverage(allowedCoverages[0]?.[0] || "REGULAR");
+    }
+  }, [allowedCoverages, guestCoverage]);
   const regularGuestAmountNumber = Number(regularGuestAmount);
   const vipCateringAmountNumber = Number(vipCateringAmount);
   const fullBidNumber = guestCoverage === "BOTH"
-    ? regularGuestAmountNumber + vipCateringAmountNumber
+    ? fullyCateredEvent
+      ? regularGuestAmountNumber + vipCateringAmountNumber
+      : vipCateringAmountNumber
     : Number(fullBidAmount);
   const pricePerGuestNumber = pricePerGuest ? Number(pricePerGuest) : null;
   const averagePricePerMealNumber = averagePricePerMeal
@@ -278,10 +301,10 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     ],
   );
   const bidFieldsComplete = guestCoverage === "BOTH"
-    ? regularGuestAmount.trim() &&
-      vipCateringAmount.trim() &&
-      regularGuestAmountNumber > 0 &&
-      vipCateringAmountNumber > 0
+    ? (fullyCateredEvent
+        ? regularGuestAmount.trim() && regularGuestAmountNumber > 0
+        : true) &&
+      vipCateringAmount.trim() && vipCateringAmountNumber > 0
     : fullBidAmount.trim() && !Number.isNaN(fullBidNumber) && fullBidNumber > 0;
   const canSubmit = canSaveDraft && bidFieldsComplete && requirementsSatisfied;
   const hasUnsavedDraftContent = useMemo(() => {
@@ -314,14 +337,15 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   const buildBidPayload = (bidStatus) => ({
     price_per_guest: pricePerGuestNumber,
     average_price_per_meal: averagePricePerMealNumber,
-    full_bid_amount: fullBidAmount.trim() ? fullBidNumber : null,
-    guest_coverage: cateredVipEnabled ? guestCoverage : "REGULAR",
+    full_bid_amount:
+      guestCoverage === "BOTH" || fullBidAmount.trim() ? fullBidNumber : null,
+    guest_coverage: guestCoverage,
     regular_guest_amount:
-      cateredVipEnabled && guestCoverage === "BOTH"
+      fullyCateredEvent && guestCoverage === "BOTH"
         ? regularGuestAmountNumber
         : null,
     vip_catering_amount:
-      cateredVipEnabled && guestCoverage === "BOTH"
+      guestCoverage === "BOTH"
         ? vipCateringAmountNumber
         : null,
     menu_description: menuDescription.trim(),
@@ -883,15 +907,11 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
 
             <View style={styles.card}>
               <Text style={styles.sectionHeader}>Pricing Details</Text>
-              {cateredVipEnabled ? (
+              {allowedCoverages.length > 1 ? (
                 <View style={{ marginBottom: 12 }}>
                   <Text style={styles.fieldLabel}>Applying For *</Text>
                   <View style={[styles.row, { flexWrap: "wrap", gap: 8, marginTop: 8 }]}>
-                    {[
-                      ["REGULAR", "Regular Guests"],
-                      ["VIP", "VIP Guests"],
-                      ["BOTH", "Both"],
-                    ].map(([value, label]) => (
+                    {allowedCoverages.map(([value, label]) => (
                       <TouchableOpacity
                         key={value}
                         activeOpacity={0.8}
@@ -926,15 +946,22 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                   />
                 </FormField> : (
                   <>
+                    {fullyCateredEvent ? (
                     <FormField label="Regular Guests Amount *">
                       <TextInput value={regularGuestAmount} onChangeText={(value) => setRegularGuestAmount(normalizeCurrencyInput(value))} onBlur={() => formatCurrencyInput(regularGuestAmount, setRegularGuestAmount)} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor={AppColor.placeholderTextColor} style={styles.input} />
                     </FormField>
+                    ) : null}
                     <FormField label="VIP Catering Amount *">
                       <TextInput value={vipCateringAmount} onChangeText={(value) => setVipCateringAmount(normalizeCurrencyInput(value))} onBlur={() => formatCurrencyInput(vipCateringAmount, setVipCateringAmount)} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor={AppColor.placeholderTextColor} style={styles.input} />
                     </FormField>
                     <FormField label="Total Bid Amount" full>
                       <Text style={styles.meta}>{formatMoney(fullBidNumber)}</Text>
                     </FormField>
+                    {!fullyCateredEvent ? (
+                      <Text style={styles.meta}>
+                        This bid covers VIP catering. If awarded Both, you may also sell to GA guests and the event's vendor-fee rule will apply.
+                      </Text>
+                    ) : null}
                   </>
                 )}
                 <FormField label="Price Per Guest">
