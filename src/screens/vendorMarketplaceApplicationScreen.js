@@ -81,6 +81,25 @@ const buildPickedImageFile = (image, fallbackPrefix = "photo") => ({
   size: image?.size,
 });
 
+const normalizePickedDocumentFile = (file, fallbackName) => {
+  const name = file?.name || fallbackName;
+  const extension = String(name || "").split(".").pop()?.toLowerCase();
+  const typeByExtension = {
+    pdf: "application/pdf",
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    heic: "image/heic",
+    heif: "image/heif",
+  };
+  return {
+    uri: file?.uri,
+    name,
+    type: typeByExtension[extension] || file?.type || "application/octet-stream",
+    size: file?.size,
+  };
+};
+
 const buildSavedAttachment = ({
   attachmentType,
   fileUrl,
@@ -702,12 +721,7 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
     try {
       const [file] = await DocumentPicker.pick({ type: [types.pdf, types.images] });
       if (file) {
-        setSelectedMenuFile({
-          uri: file.uri,
-          name: file.name || "menu-upload",
-          type: file.type || "application/octet-stream",
-          size: file.size,
-        });
+        setSelectedMenuFile(normalizePickedDocumentFile(file, "menu-upload"));
       }
     } catch (error) {
       if (!DocumentPicker.isCancel(error)) {
@@ -792,11 +806,12 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
         type: [types.pdf, types.images],
       });
       if (file) {
-        await uploadSelectedRequirementFile({
-          uri: file.uri,
-          name: file.name || `${selectedRequirementLabel}.pdf`,
-          type: file.type || "application/pdf",
-        });
+        await uploadSelectedRequirementFile(
+          normalizePickedDocumentFile(
+            file,
+            `${selectedRequirementLabel}.pdf`,
+          ),
+        );
       }
     } catch (error) {
       if (!DocumentPicker.isCancel(error)) {

@@ -201,11 +201,11 @@ export const normalizeMarketplaceRequirementLabel = (label) => {
   if (
     normalized === "business license" ||
     normalized === "business license/permit" ||
-    normalized === "license"
+    normalized === "license" ||
+    normalized === "city permit"
   ) {
-    return "Business License/Permit";
+    return "City Permit";
   }
-  if (normalized === "city permit") return "City Permit";
   if (normalized === "food vendor") return "Food Vendor Permit";
   if (normalized === "other") return "Other";
 
