@@ -263,8 +263,8 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
     Alert.alert(
       isApplication ? "Vendor-Paid Application" : "Coordinator-Paid Bid",
       isApplication
-        ? "This option is for vendors paying the attendance fee to participate in the event. You will not be eligible for the coordinator-paid award. Would you like to proceed?"
-        : "This option is for vendors bidding for the coordinator-paid award amount. You will not participate through the vendor-paid application option. Would you like to proceed?",
+        ? "This option is for vendors paying to attend and sell at the event. Would you like to proceed?"
+        : "This option is for vendors bidding for the coordinator-paid VIP catering award. Would you like to proceed?",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -686,7 +686,7 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
                 onPress={() => confirmSubmissionPath("bid")}
               >
                 <Text style={styles.secondaryButtonText}>
-                  {isClosed ? "Closed to Submissions" : "Submit Bid"}
+                  {isClosed ? "Closed to Submissions" : "Submit VIP Catering Bid"}
                 </Text>
               </TouchableOpacity>
             </View>

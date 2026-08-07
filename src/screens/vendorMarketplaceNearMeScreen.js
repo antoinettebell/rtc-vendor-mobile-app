@@ -196,10 +196,8 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
     Alert.alert(
       isApplication ? "Vendor-Paid Application" : "Coordinator-Paid Bid",
       isApplication
-        ? "This option is for vendors paying the attendance fee to participate in the event. You will not be eligible for the coordinator-paid award. Would you like to proceed?"
-        : item.catered_vip_section_enabled
-          ? "This option is for bidding on VIP catering. If GA sales are allowed, you may offer VIP Catering + GA Sales in the bid. The coordinator can only award services you offer. Would you like to proceed?"
-          : "This option is for bidding for the coordinator-paid catering award. Would you like to proceed?",
+        ? "This option is for vendors paying to attend and sell at the event. Would you like to proceed?"
+        : "This option is for vendors bidding for the coordinator-paid VIP catering award. Would you like to proceed?",
       [
         { text: "Cancel", style: "cancel" },
         {

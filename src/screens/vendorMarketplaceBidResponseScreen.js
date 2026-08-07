@@ -173,7 +173,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   const allowedCoverages = useMemo(() => {
     if (fullyCateredEvent) {
       return Number(event?.number_of_guests || 0) > 0 && Number(event?.vip_guest_count || 0) > 0
-        ? [["REGULAR", "GA Catering"], ["VIP", "VIP Catering"], ["BOTH", "Both"]]
+        ? [["REGULAR", "GA Catering"], ["VIP", "VIP Catering"], ["BOTH", "VIP Catering + GA Sales"]]
         : Number(event?.vip_guest_count || 0) > 0
           ? [["VIP", "VIP Catering"]]
           : [["REGULAR", "All Guests"]];
@@ -909,7 +909,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
               <Text style={styles.sectionHeader}>Pricing Details</Text>
               {allowedCoverages.length > 1 ? (
                 <View style={{ marginBottom: 12 }}>
-                  <Text style={styles.fieldLabel}>Applying For *</Text>
+                  <Text style={styles.fieldLabel}>Participation Type *</Text>
                   <View style={[styles.row, { flexWrap: "wrap", gap: 8, marginTop: 8 }]}>
                     {allowedCoverages.map(([value, label]) => (
                       <TouchableOpacity
@@ -959,7 +959,14 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                     </FormField>
                     {!fullyCateredEvent ? (
                       <Text style={styles.meta}>
-                        This bid covers VIP catering. If awarded Both, you may also sell to GA guests and the event's vendor-fee rule will apply.
+                        You are bidding for the coordinator-paid VIP catering opportunity and also applying to sell to GA guests at this event.
+                        {`\n`}Expected VIP Guests: {event?.vip_guest_count || 0}
+                        {`\n`}Coordinator VIP Catering Budget: {formatMoney(event?.budgeted_amount)}
+                        {`\n`}Expected GA Guests: {event?.number_of_guests || 0}
+                        {`\n`}Vendor Fee: {event?.waive_vendor_fee_for_combined_award ? "Waived if awarded both services" : formatMoney(event?.vendor_fee)}
+                        {!event?.waive_vendor_fee_for_combined_award && event?.vendor_fee_payment_deadline
+                          ? `${"\n"}Payment Deadline: ${formatDate(event.vendor_fee_payment_deadline)}`
+                          : ""}
                       </Text>
                     ) : null}
                   </>

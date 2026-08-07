@@ -127,7 +127,7 @@ const getBidPayoutStatus = (bid, event) => {
     case "PENDING":
     case "NOT_REQUIRED":
     default:
-      return "Awaiting Coordinator Payment";
+      return "Pending Event Closing";
   }
 };
 
