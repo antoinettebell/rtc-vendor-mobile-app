@@ -436,7 +436,7 @@ const DishItemDetailsModal = ({
       "primary-item": false,
       "discount-reward": false,
     });
-    setIsAddingSeparateItem(false);
+    setIsAddingSeparateItem(selectedMenuItem?._startAdditionalItem === true);
     setSplitPlainFlavor(
       (selectedMenuItem?.selectedFlavors || []).some(isPlainOption) &&
         (selectedMenuItem?.selectedFlavors || []).length > 1
@@ -455,6 +455,7 @@ const DishItemDetailsModal = ({
     );
   }, [
     selectedMenuItem?._id,
+    selectedMenuItem?._startAdditionalItem,
     selectedMenuItem?.selectedSubItems,
     selectedMenuItem?.customizationInput,
     selectedMenuItem?.selectedFlavors,
@@ -1005,50 +1006,11 @@ const DishItemDetailsModal = ({
       return;
     }
 
-    if (!validateSelections()) return;
-    handleAddItem({
-      ...selectedMenuItem,
-      selectedSubItems,
-      customizationInput,
-      selectedFlavors: hasFlavorChoices ? selectedFlavors : [],
-      selectedToppings: hasToppingChoices ? selectedToppings : [],
-      selectedComboSides: hasComboSideChoices ? selectedComboSides : [],
-      selectedDiscountFlavors: hasDiscountFlavorChoices
-        ? selectedDiscountFlavors
-        : [],
-      selectedDiscountToppings: hasDiscountToppingChoices
-        ? selectedDiscountToppings
-        : [],
-      selectedDiscountCustomizationInput: hasDiscountCustomization
-        ? selectedDiscountCustomizationInput
-        : "",
-      selectedDiscountComboSides: hasDiscountComboSideChoices
-        ? selectedDiscountComboSides
-        : [],
-      selectedDiscountSubItems,
-    });
+    beginAdditionalCustomization();
   }, [
-    customizationInput,
+    beginAdditionalCustomization,
     getItemQuantity,
-    handleAddItem,
-    hasComboSideChoices,
-    hasDiscountComboSideChoices,
-    hasDiscountCustomization,
-    hasDiscountFlavorChoices,
-    hasDiscountToppingChoices,
-    hasFlavorChoices,
-    hasToppingChoices,
-    selectedComboSides,
-    selectedDiscountComboSides,
-    selectedDiscountCustomizationInput,
-    selectedDiscountFlavors,
-    selectedDiscountSubItems,
-    selectedDiscountToppings,
-    selectedFlavors,
     selectedMenuItem,
-    selectedSubItems,
-    selectedToppings,
-    validateSelections,
   ]);
 
   const updateSelectedChildItem = useCallback((setter, childId, updates) => {
@@ -1941,7 +1903,11 @@ const DishItemDetailsModal = ({
                 </Text>
               </TouchableOpacity>
               <Text style={styles.qtyText}>
-                {Math.max(1, getItemQuantity(selectedMenuItem._id))}
+                {Math.max(
+                  1,
+                  getItemQuantity(selectedMenuItem._id) +
+                    (isAddingSeparateItem ? 1 : 0)
+                )}
               </Text>
               <TouchableOpacity
                 style={styles.qtyBtn}
@@ -1978,8 +1944,8 @@ const DishItemDetailsModal = ({
                 {getItemQuantity(selectedMenuItem._id) === 0
                   ? "Add to Order"
                   : isAddingSeparateItem
-                    ? "Add Customized Item"
-                  : "Update Order"}
+                    ? "Update Order"
+                    : "Update Order"}
               </Text>
             </TouchableOpacity>
           </View>
