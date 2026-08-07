@@ -47,6 +47,13 @@ const ensurePlainOption = (options) => {
 const getSelectedCount = (selectedOptions) =>
   Array.isArray(selectedOptions) ? selectedOptions.length : 0;
 
+const getComboSideOption = (menuItem, optionName) => {
+  const pricedOption = (menuItem?.comboSideOptionCosts || []).find(
+    (option) => option?.name === optionName
+  );
+  return pricedOption || { name: optionName, hasCost: false, cost: 0 };
+};
+
 const isOptionSelectionComplete = (hasChoices, selectedOptions, maxCount) => {
   if (!hasChoices) {
     return true;
@@ -293,6 +300,7 @@ const getChildRequirementState = (item) => {
     flavorOptions,
     toppingOptions,
     comboSideOptions,
+    comboSideOptionCosts: child?.comboSideOptionCosts || [],
     hasFlavorChoices: child?.hasFlavors && flavorOptions.length > 0,
     hasToppingChoices: child?.hasToppings && toppingOptions.length > 0,
     hasComboSideChoices:
@@ -1071,7 +1079,11 @@ const DishItemDetailsModal = ({
             {state.comboSideOptions.map((optionName) => (
               <OptionRow
                 key={`${sectionPrefix}-${childId}-side-${optionName}`}
-                option={{ name: optionName, hasCost: false, cost: 0 }}
+                option={
+                  state.comboSideOptionCosts.find(
+                    (option) => option?.name === optionName
+                  ) || { name: optionName, hasCost: false, cost: 0 }
+                }
                 isSelected={(item.selectedComboSides || []).includes(optionName)}
                 onToggle={(selectedName) =>
                   updateSelectedChildItem(setter, childId, {
@@ -1486,7 +1498,7 @@ const DishItemDetailsModal = ({
             {isRequirementExpanded("primary-item") && hasFlavorChoices && (
               <View style={styles.actionSheetSection}>
                 <Text style={styles.sectionTitle}>
-                  {`${selectedMenuItem?.name || "Item"}: choose Plain or up to ${flavorsMaxCount} Flavor${
+                  {`${selectedMenuItem?.name || "Item"}: choose Plain or up to ${flavorsMaxCount} ${selectedMenuItem?.flavorLabel || "Flavor"}${
                     flavorsMaxCount === 1 ? "" : "s"
                   }:`}
                 </Text>
@@ -1577,7 +1589,7 @@ const DishItemDetailsModal = ({
                 {comboSideOptions.map((optionName) => (
                   <OptionRow
                     key={`combo-side-${optionName}`}
-                    option={{ name: optionName, hasCost: false, cost: 0 }}
+                    option={getComboSideOption(selectedMenuItem, optionName)}
                     isSelected={selectedComboSides.includes(optionName)}
                     onToggle={(option) =>
                       toggleOptionSelection(
@@ -1632,7 +1644,7 @@ const DishItemDetailsModal = ({
             {isRequirementExpanded("discount-reward") && hasDiscountFlavorChoices && (
               <View style={styles.actionSheetSection}>
                 <Text style={styles.sectionTitle}>
-                  {`Discount item: choose Plain or up to ${discountFlavorsMaxCount} Flavor${
+                  {`Discount item: choose Plain or up to ${discountFlavorsMaxCount} ${discountSourceItem?.flavorLabel || "Flavor"}${
                     discountFlavorsMaxCount === 1 ? "" : "s"
                   }:`}
                 </Text>
