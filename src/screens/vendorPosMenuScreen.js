@@ -107,7 +107,7 @@ const getItemCategory = (item) =>
   item?.categoryId?.categoriesId?.name ||
   "Other";
 
-const VendorPosMenuScreen = ({ navigation }) => {
+const VendorPosMenuScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.userReducer);
@@ -240,6 +240,18 @@ const VendorPosMenuScreen = ({ navigation }) => {
       itemDetailsActionSheetRef.current?.show();
     });
   };
+
+  useEffect(() => {
+    const editCartLineId = route?.params?.editCartLineId;
+    if (!editCartLineId) return;
+    const cartLine = order.items.find(
+      (item) => (item._cartLineId || item._id) === editCartLineId
+    );
+    navigation.setParams({ editCartLineId: undefined });
+    if (cartLine) {
+      openOptions(cartLine);
+    }
+  }, [navigation, order.items, route?.params?.editCartLineId]);
 
   const toggleSelection = (value, selectedValues, setSelectedValues, maxCount) => {
     if (selectedValues.includes(value)) {
