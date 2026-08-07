@@ -24,6 +24,10 @@ import {
 import { clearPosOrder } from "../redux/slices/posOrderSlice";
 import { foodTypeStrings } from "../utils/constants";
 import { startTapToPaySale } from "../services/tapToPay-service";
+import {
+  calculateItemTotalWithDiscount,
+  normalizeMenuOptions,
+} from "../helpers/discount.helper";
 
 const toAmount = (value) => {
   const n = Number(value);
@@ -39,6 +43,129 @@ const toCents = (value) => Math.round(Math.max(0, Number(value) || 0) * 100);
 const centsToMoney = (value) => Number((Math.max(0, value) / 100).toFixed(2));
 const calculateProcessingFeeAmount = (baseAmount, rate) =>
   centsToMoney(Math.round(toCents(baseAmount) * rate));
+
+const formatSelectedOptionLabels = (item, type, selectedKey) => {
+  const pricedOptions = normalizeMenuOptions(item, type);
+  return (item?.[selectedKey] || []).map((selected) => {
+    const name =
+      typeof selected === "string"
+        ? selected
+        : selected?.name || selected?.label || "";
+    const match = pricedOptions.find(
+      (option) => option.name.trim().toLowerCase() === name.trim().toLowerCase()
+    );
+    const directCost =
+      typeof selected === "object" && selected?.hasCost !== false
+        ? Number(selected?.cost ?? selected?.price ?? 0) || 0
+        : 0;
+    const cost = match?.hasCost ? Number(match.cost) || 0 : directCost;
+    return cost > 0 ? `${name} +$${toAmount(cost)}` : name;
+  });
+};
+
+const formatSelectedSideLabels = (item) =>
+  (item?.selectedComboSides || []).map((selected) => {
+    const name = typeof selected === "string" ? selected : selected?.name || "";
+    const option = (item?.comboSideOptionCosts || []).find(
+      (candidate) => candidate?.name === name
+    );
+    const directCost =
+      typeof selected === "object" && selected?.hasCost !== false
+        ? Number(selected?.cost ?? selected?.price ?? 0) || 0
+        : 0;
+    const cost = option?.hasCost ? Number(option.cost) || 0 : directCost;
+    return cost > 0 ? `${name} +$${toAmount(cost)}` : name;
+  });
+
+const getDisplayItem = (item) => ({
+  ...((item?.menuItem && typeof item.menuItem === "object" && item.menuItem) || {}),
+  ...((item?.itemId && typeof item.itemId === "object" && item.itemId) || {}),
+  ...item,
+});
+
+const getDisplayItemName = (item, fallback = "Item") => {
+  const displayItem = getDisplayItem(item);
+  return displayItem?.name || displayItem?.label || fallback;
+};
+
+const formatNestedItemDetails = (item, prefix) => {
+  const displayItem = getDisplayItem(item);
+  const details = [];
+  const flavors = formatSelectedOptionLabels(
+    displayItem,
+    "flavor",
+    "selectedFlavors"
+  );
+  const toppings = formatSelectedOptionLabels(
+    displayItem,
+    "topping",
+    "selectedToppings"
+  );
+  const sides = formatSelectedSideLabels(displayItem);
+  if (flavors.length) details.push(`${prefix} flavors: ${flavors.join(", ")}`);
+  if (toppings.length) details.push(`${prefix} toppings: ${toppings.join(", ")}`);
+  if (sides.length) details.push(`${prefix} sides: ${sides.join(", ")}`);
+  const customization =
+    displayItem?.customizationInput || displayItem?.customization || "";
+  if (customization) details.push(`${prefix} instructions: ${customization}`);
+  return details;
+};
+
+const formatComboChildDetails = (items, prefix = "Combo") =>
+  (Array.isArray(items) ? items : []).flatMap((item) => {
+    const displayItem = getDisplayItem(item);
+    const name = getDisplayItemName(displayItem, "Combo item");
+    const quantity = Math.max(1, Number(displayItem?.qty) || 1);
+    const additionalCost = displayItem?.hasAdditionalCost
+      ? Number(displayItem?.additionalCost) || 0
+      : 0;
+    const costLabel =
+      additionalCost > 0 ? ` +$${toAmount(additionalCost)}` : "";
+    return [
+      `${prefix}: ${name} x${quantity}${costLabel}`,
+      ...formatNestedItemDetails(displayItem, name),
+    ];
+  });
+
+const getDiscountRewardSource = (item) => {
+  const reward = (item?.bogoItems || []).find((entry) => !entry?.isSameItem) ||
+    (item?.bogoItems || []).find((entry) => entry?.isSameItem);
+  return reward?.isSameItem
+    ? { ...item, ...reward, name: item?.name }
+    : getDisplayItem(reward || {});
+};
+
+const buildCheckoutLineDetails = (item) => {
+  const details = [];
+  const flavors = formatSelectedOptionLabels(item, "flavor", "selectedFlavors");
+  const toppings = formatSelectedOptionLabels(item, "topping", "selectedToppings");
+  const sides = formatSelectedSideLabels(item);
+  if (flavors.length) details.push(`Flavors: ${flavors.join(", ")}`);
+  if (toppings.length) details.push(`Toppings: ${toppings.join(", ")}`);
+  if (sides.length) details.push(`Sides: ${sides.join(", ")}`);
+  details.push(...formatComboChildDetails(item?.selectedSubItems));
+
+  const reward = getDiscountRewardSource(item);
+  if (item?.discountType === "BOGO" || item?.discountType === "BOGOHO") {
+    const rewardQty = Math.max(1, Number(reward?.qty) || 1);
+    details.push(`${item.discountType} reward: ${getDisplayItemName(reward, item.name)} x${rewardQty}`);
+  }
+  const discountDisplay = {
+    ...reward,
+    selectedFlavors: item?.selectedDiscountFlavors || [],
+    selectedToppings: item?.selectedDiscountToppings || [],
+    selectedComboSides: item?.selectedDiscountComboSides || [],
+    customizationInput: item?.selectedDiscountCustomizationInput || "",
+  };
+  details.push(...formatNestedItemDetails(discountDisplay, "Discount item"));
+  details.push(
+    ...formatComboChildDetails(item?.selectedDiscountSubItems, "Discount combo")
+  );
+  if (item?.customizationInput) {
+    details.push(`Instructions: ${item.customizationInput}`);
+  }
+  return details;
+};
 
 const getActiveTruckUnits = (foodTruck) =>
   (foodTruck?.truck_units || []).filter((unit) => !unit.is_archived);
@@ -575,19 +702,11 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
                       }
                     />
                     <Text style={styles.checkoutItemPrice}>
-                      ${toAmount(item.price)}
+                      Line total: ${toAmount(calculateItemTotalWithDiscount(item))}
                     </Text>
                   </View>
                 </View>
-                {[
-                  item.selectedFlavors?.join(", "),
-                  item.selectedToppings?.join(", "),
-                  item.selectedComboSides?.map((value) => value?.name || value).join(", "),
-                  item.selectedSubItems?.map((value) => value?.name || value?.menuItem?.name).join(", "),
-                  item.customizationInput,
-                ]
-                  .filter(Boolean)
-                  .map((detail, detailIndex) => (
+                {buildCheckoutLineDetails(item).map((detail, detailIndex) => (
                     <Text key={`${index}-${detailIndex}`} style={styles.checkoutItemDetail}>
                       {detail}
                     </Text>
