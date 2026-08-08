@@ -130,6 +130,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
   const [selectedDiscountType, setSelectedDiscountType] = useState("FIXED");
   const [itemDiscount, setItemDiscount] = useState("0");
   const [newDishItemEnabled, setNewDishItemEnabled] = useState(false);
+  const [popularDishEnabled, setPopularDishEnabled] = useState(false);
   const [minQt, setMinQt] = useState("1");
   const [maxQt, setMaxQt] = useState("10");
   const [prepTime, setPrepTime] = useState("10");
@@ -140,12 +141,12 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
   const [menuList, setMenuList] = useState([]);
   const [bogoItems, setBogoItems] = useState([]);
   const [comboItems, setComboItems] = useState([]);
-  const [comboSideCount, setComboSideCount] = useState(1);
-  const [comboSideOptions, setComboSideOptions] = useState([""]);
+  const [comboSideCount, setComboSideCount] = useState(0);
+  const [comboSideOptions, setComboSideOptions] = useState([]);
   const [comboSidesPerOrder, setComboSidesPerOrder] = useState(1);
   const [hasComboSideCosts, setHasComboSideCosts] = useState(false);
-  const [comboSideCostEnabled, setComboSideCostEnabled] = useState([false]);
-  const [comboSideCosts, setComboSideCosts] = useState(["0"]);
+  const [comboSideCostEnabled, setComboSideCostEnabled] = useState([]);
+  const [comboSideCosts, setComboSideCosts] = useState([]);
   const [customization, setCustomization] = useState(false);
   const [hasFlavors, setHasFlavors] = useState(false);
   const [flavorLabel, setFlavorLabel] = useState("Flavor");
@@ -181,6 +182,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     customDiscount: "",
     predefinedDiscount: "",
     comboItems: "",
+    comboSideOptions: "",
     itemDescription: "",
     itemPrice: "",
     qtMin: "",
@@ -474,6 +476,34 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     });
   };
 
+  const addComboSideOption = () => {
+    if (comboSideCount >= 15) return;
+    setComboSideCount((count) => count + 1);
+    setComboSideOptions((values) => [...values, ""]);
+    setComboSideCostEnabled((values) => [...values, false]);
+    setComboSideCosts((values) => [...values, "0"]);
+    setErrors((prev) => ({ ...prev, comboSideOptions: "" }));
+  };
+
+  const removeComboSideOption = (index) => {
+    const nextCount = Math.max(comboSideCount - 1, 0);
+    setComboSideCount(nextCount);
+    setComboSideOptions((values) => values.filter((_, i) => i !== index));
+    setComboSideCostEnabled((values) => values.filter((_, i) => i !== index));
+    setComboSideCosts((values) => values.filter((_, i) => i !== index));
+    setComboSidesPerOrder((current) =>
+      nextCount > 0 ? Math.min(current, nextCount) : 1
+    );
+    setErrors((prev) => ({ ...prev, comboSideOptions: "" }));
+  };
+
+  const changeComboSideOption = (text, index) => {
+    setComboSideOptions((values) =>
+      values.map((value, i) => (i === index ? text : value))
+    );
+    setErrors((prev) => ({ ...prev, comboSideOptions: "" }));
+  };
+
   const validateFlavors = () => {
     if (!canUseFlavors || !hasFlavors) {
       return "";
@@ -597,7 +627,19 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 
   // Handle Combo items change
   const handleComboItemsChange = (selectedItems) => {
-    setComboItems(selectedItems);
+    setComboItems((currentItems) =>
+      selectedItems.map((selectedItem) => {
+        const currentItem = currentItems.find(
+          (item) => String(item?._id) === String(selectedItem?._id)
+        );
+        return {
+          ...selectedItem,
+          qty: currentItem?.qty || selectedItem?.qty || 1,
+          hasAdditionalCost: !!currentItem?.hasAdditionalCost,
+          additionalCost: `${currentItem?.additionalCost || 0}`,
+        };
+      })
+    );
     if (selectedItems.length === 0) {
       setErrors((prev) => ({
         ...prev,
@@ -751,6 +793,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     setDiscountEnabled(item.hasDiscount || false);
     setDiscountSource(`${item.discountMode.toLowerCase()}` || "custom");
     setNewDishItemEnabled(item?.newDish || false);
+    setPopularDishEnabled(item?.popularDish || false);
     setSelectedMeat(item.meatId || "");
     setMeatWellness(item.meatWellness || "");
     setMinQt(minQtString);
@@ -850,6 +893,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
       if (item.subItem && item.subItem.length > 0) {
         setComboItems(item.subItem.map((entry) => ({
           ...entry.menuItem,
+          qty: Number(entry.qty) || 1,
           hasAdditionalCost: !!entry.hasAdditionalCost,
           additionalCost: `${entry.additionalCost || 0}`,
         })) || []);
@@ -859,7 +903,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
       const savedSides = Array.isArray(item.comboSideOptions)
         ? item.comboSideOptions.filter(Boolean)
         : [];
-      const sideNames = savedSides.length ? savedSides : [""];
+      const sideNames = savedSides;
       const pricedSides = Array.isArray(item.comboSideOptionCosts)
         ? item.comboSideOptionCosts
         : [];
@@ -1006,8 +1050,31 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
       } else {
         newErrors.comboItems = "";
       }
+
+      const configuredSides = comboSideOptions.slice(0, comboSideCount);
+      const normalizedSides = configuredSides.map((side) =>
+        String(side || "").trim().toLowerCase()
+      );
+      if (configuredSides.some((side) => !String(side || "").trim())) {
+        newErrors.comboSideOptions = "Enter a name for every selectable side";
+      } else if (new Set(normalizedSides).size !== normalizedSides.length) {
+        newErrors.comboSideOptions = "Selectable side names must be unique";
+      } else if (
+        configuredSides.some(
+          (_, index) =>
+            hasComboSideCosts &&
+            comboSideCostEnabled[index] &&
+            !(parseFloat(comboSideCosts[index] || "0") > 0)
+        )
+      ) {
+        newErrors.comboSideOptions =
+          "Enter a cost greater than $0 for each paid side";
+      } else {
+        newErrors.comboSideOptions = "";
+      }
 	    } else {
 	      newErrors.comboItems = "";
+	      newErrors.comboSideOptions = "";
 	    }
     newErrors.flavors = validateFlavors();
     newErrors.toppings = validateToppings();
@@ -1033,6 +1100,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
         minQty: parseInt(minQt, 10) || 1,
         name: itemName || "",
         newDish: canHighlightNewDish ? newDishItemEnabled || false : false,
+        popularDish: popularDishEnabled || false,
         preparationTime: parseInt(prepTime || 0, 10) || 0,
         price: parseFloat(parseFloat(itemPrice).toFixed(2)) || 0, // will change after discount check
         ...discountParams,
@@ -1126,18 +1194,32 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
       if (foodType === foodTypeStrings.combo) {
         payload.subItem = comboItems.map((item) => ({
           menuItem: item._id || "",
-          qty: 1,
+          qty: Math.min(Math.max(parseInt(item.qty, 10) || 1, 1), 99),
           hasAdditionalCost: !!item.hasAdditionalCost,
           additionalCost: item.hasAdditionalCost
             ? parseFloat(item.additionalCost || "0") || 0
             : 0,
         }));
-        payload.comboSideOptions = [];
-        payload.comboSideOptionCosts = [];
-        payload.comboSidesPerOrder = Math.min(
-          Math.max(comboSidesPerOrder, 1),
-          Math.max(comboItems.length, 1)
+        payload.comboSideOptions = comboSideOptions
+          .slice(0, comboSideCount)
+          .map((name) => toTitleCase(String(name || "").trim()))
+          .filter(Boolean);
+        payload.comboSideOptionCosts = payload.comboSideOptions.map(
+          (name, index) => ({
+            name,
+            hasCost: !!(hasComboSideCosts && comboSideCostEnabled[index]),
+            cost:
+              hasComboSideCosts && comboSideCostEnabled[index]
+                ? parseFloat(comboSideCosts[index] || "0") || 0
+                : 0,
+          })
         );
+        payload.comboSidesPerOrder = payload.comboSideOptions.length
+          ? Math.min(
+              Math.max(comboSidesPerOrder, 1),
+              payload.comboSideOptions.length
+            )
+          : 1;
       }
 
       console.log("Food Item API request payload => ", payload);
@@ -2641,6 +2723,26 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                             </View>
                           </View>
                         ) : null}
+
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          <Text
+                            numberOfLines={1}
+                            style={[styles.inputLabel, { marginBottom: 0 }]}
+                          >
+                            Popular Dish/Item
+                          </Text>
+                          <Switch
+                            color={AppColor.primary}
+                            value={popularDishEnabled}
+                            onValueChange={setPopularDishEnabled}
+                          />
+                        </View>
                       </View>
                     </>
                   )}
@@ -2823,6 +2925,44 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                                         ${parseFloat(item.price).toFixed(2)}
                                       </Text>
                                       <View style={styles.switchRow}>
+                                        <Text
+                                          style={[
+                                            styles.inputLabel,
+                                            { marginBottom: 0 },
+                                          ]}
+                                        >
+                                          Quantity Included
+                                        </Text>
+                                        <TextInput
+                                          dense
+                                          value={`${item.qty || 1}`}
+                                          onChangeText={(text) =>
+                                            setComboItems((current) =>
+                                              current.map(
+                                                (comboItem, itemIndex) =>
+                                                  itemIndex === index
+                                                    ? {
+                                                        ...comboItem,
+                                                        qty: text.replace(
+                                                          /[^0-9]/g,
+                                                          ""
+                                                        ),
+                                                      }
+                                                    : comboItem
+                                              )
+                                            )
+                                          }
+                                          style={[
+                                            styles.input,
+                                            styles.optionCostInput,
+                                          ]}
+                                          contentStyle={styles.inputText}
+                                          placeholder="Qty"
+                                          mode="outlined"
+                                          keyboardType="number-pad"
+                                        />
+                                      </View>
+                                      <View style={styles.switchRow}>
                                         <Text style={[styles.inputLabel, { marginBottom: 0 }]}>Additional Cost</Text>
                                         <Switch
                                           color={AppColor.primary}
@@ -2884,16 +3024,139 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                               color={AppColor.primary}
                             />
 	                            <Text style={styles.bogoToggleText}>
-	                              {`Add Item for Combo Sides`}
+	                              {`Add Included Menu Item`}
 	                            </Text>
 	                          </TouchableOpacity>
 
                           <View style={{ marginTop: 16, gap: 12 }}>
+                            <Text style={styles.inputLabel}>
+                              Selectable Side Options
+                            </Text>
+                            <Text style={styles.optionChargeHelpText}>
+                              Add the side choices customers can select. Turn on
+                              Additional Cost only for paid substitutions.
+                            </Text>
+                            {comboSideOptions
+                              .slice(0, comboSideCount)
+                              .map((sideName, index) => (
+                                <View
+                                  key={`combo-side-${index}`}
+                                  style={styles.optionCostRow}
+                                >
+                                  <TextInput
+                                    dense
+                                    value={sideName}
+                                    onChangeText={(text) =>
+                                      changeComboSideOption(text, index)
+                                    }
+                                    style={[styles.input, { flex: 1 }]}
+                                    contentStyle={styles.inputText}
+                                    placeholder={`Side ${index + 1}`}
+                                    mode="outlined"
+                                    outlineColor={AppColor.border}
+                                    activeOutlineColor={AppColor.primary}
+                                    outlineStyle={{ borderRadius: 8 }}
+                                    autoCapitalize="words"
+                                  />
+                                  {hasComboSideCosts ? (
+                                    <>
+                                      <Switch
+                                        color={AppColor.primary}
+                                        value={!!comboSideCostEnabled[index]}
+                                        onValueChange={() =>
+                                          handleOptionCostToggle(
+                                            setComboSideCostEnabled,
+                                            index
+                                          )
+                                        }
+                                      />
+                                      {comboSideCostEnabled[index] ? (
+                                        <TextInput
+                                          dense
+                                          value={comboSideCosts[index] || ""}
+                                          onChangeText={(text) =>
+                                            handleOptionCostChange(
+                                              setComboSideCosts,
+                                              text,
+                                              index
+                                            )
+                                          }
+                                          style={[
+                                            styles.input,
+                                            styles.optionCostInput,
+                                          ]}
+                                          contentStyle={styles.inputText}
+                                          placeholder="Cost"
+                                          mode="outlined"
+                                          keyboardType="decimal-pad"
+                                          outlineColor={AppColor.border}
+                                          activeOutlineColor={AppColor.primary}
+                                          outlineStyle={{ borderRadius: 8 }}
+                                        />
+                                      ) : null}
+                                    </>
+                                  ) : null}
+                                  <IconButton
+                                    icon="close-circle"
+                                    iconColor={AppColor.error}
+                                    size={20}
+                                    onPress={() =>
+                                      removeComboSideOption(index)
+                                    }
+                                  />
+                                </View>
+                              ))}
+
+                            <TouchableOpacity
+                              style={styles.bogoToggleContainer}
+                              onPress={addComboSideOption}
+                              activeOpacity={0.7}
+                              disabled={comboSideCount >= 15}
+                            >
+                              <AntDesign
+                                name="pluscircleo"
+                                size={20}
+                                color={AppColor.primary}
+                              />
+                              <Text style={styles.bogoToggleText}>
+                                Add Selectable Side
+                              </Text>
+                            </TouchableOpacity>
+
+                            {comboSideCount > 0 ? (
+                              <View style={styles.switchRow}>
+                                <Text
+                                  style={[
+                                    styles.inputLabel,
+                                    { marginBottom: 0 },
+                                  ]}
+                                >
+                                  Additional Cost
+                                </Text>
+                                <Switch
+                                  color={AppColor.primary}
+                                  value={hasComboSideCosts}
+                                  onValueChange={setHasComboSideCosts}
+                                />
+                              </View>
+                            ) : null}
+
+                            {!!errors.comboSideOptions && (
+                              <HelperText
+                                type="error"
+                                visible={!!errors.comboSideOptions}
+                                style={styles.helper}
+                              >
+                                {errors.comboSideOptions}
+                              </HelperText>
+                            )}
+
+                            {comboSideCount > 0 ? (
                               <View>
                                 <Text style={styles.inputLabel}>Sides per Order</Text>
                                 <Dropdown
                                   data={flavorsPerOrderOptions.filter(
-                                    (option) => option.value <= Math.max(comboItems.length, 1)
+                                    (option) => option.value <= comboSideCount
                                   )}
                                   labelField="label"
                                   valueField="value"
@@ -2904,6 +3167,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                                   containerStyle={styles.dropdownContainer}
                                 />
                               </View>
+                            ) : null}
                           </View>
 
 		                          {!!errors.comboItems && (

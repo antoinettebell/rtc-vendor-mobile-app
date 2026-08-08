@@ -2,6 +2,7 @@ import moment from "moment";
 import RNPrint from "react-native-print";
 
 import { getVendorOrderTotal } from "./order.helper";
+import { getRewardItemsDisplay } from "./discount.helper";
 
 const escapeHtml = (value) =>
   String(value ?? "")
@@ -24,9 +25,56 @@ const getItemNotes = (item) =>
     item?.customization,
     joinList("Flavors", item?.selectedFlavors),
     joinList("Toppings", item?.selectedToppings),
+    joinList("Sides", item?.selectedComboSides),
+    item?.selectedDiscountCustomization
+      ? `Discount item instructions: ${item.selectedDiscountCustomization}`
+      : null,
     joinList("Discount flavors", item?.selectedDiscountFlavors),
     joinList("Discount toppings", item?.selectedDiscountToppings),
+    joinList("Discount sides", item?.selectedDiscountComboSides),
+    Number(item?.optionsTotal || 0) > 0
+      ? `Options/add-ons: $${Number(item.optionsTotal).toFixed(2)}`
+      : null,
   ].filter(Boolean);
+
+const getNestedItemName = (item) =>
+  item?.menuItem?.name ||
+  item?.itemId?.name ||
+  item?.name ||
+  item?.displayName ||
+  "Item";
+
+const getNestedItemNotes = (item) =>
+  [
+    item?.customization || item?.customizationInput || item?.displayCustomization,
+    joinList("Flavors", item?.selectedFlavors || item?.displayFlavors),
+    joinList("Toppings", item?.selectedToppings || item?.displayToppings),
+    joinList("Sides", item?.selectedComboSides || item?.displayComboSides),
+  ].filter(Boolean);
+
+const renderNestedItems = (items, label) => {
+  if (!Array.isArray(items) || items.length === 0) return "";
+
+  return `
+    <div class="nested-group">
+      <strong>${escapeHtml(label)}</strong>
+      ${items
+        .map((item) => {
+          const notes = getNestedItemNotes(item);
+          const qty = item?.displayQty || item?.qty || 1;
+          const price = item?.displayPrice;
+          return `
+            <div class="nested-item">
+              ${escapeHtml(qty)} × ${escapeHtml(getNestedItemName(item))}
+              ${price ? ` · ${escapeHtml(price)}` : ""}
+              ${notes.length ? `<div>${escapeHtml(notes.join(" | "))}</div>` : ""}
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+};
 
 const getCustomerName = (order) => {
   const firstName = order?.user?.firstName || order?.customer?.firstName || "";
@@ -66,6 +114,16 @@ const renderOrderHtml = (order) => {
           ${items
             .map((item) => {
               const notes = getItemNotes(item);
+              const fullItem = {
+                ...(item?.fullMenuItemData || {}),
+                ...item,
+                bogoItems:
+                  item?.bogoItems || item?.fullMenuItemData?.bogoItems || [],
+              };
+              const rewardItems = getRewardItemsDisplay(
+                fullItem,
+                item?.qty || 0
+              );
               return `
                 <tr>
                   <td>${escapeHtml(item?.qty || 0)}</td>
@@ -76,6 +134,12 @@ const renderOrderHtml = (order) => {
                         ? `<div class="notes"><strong>Notes:</strong> ${escapeHtml(notes.join(" | "))}</div>`
                         : ""
                     }
+                    ${renderNestedItems(item?.comboItems, "Combo includes")}
+                    ${renderNestedItems(
+                      item?.selectedDiscountSubItems,
+                      "Discount combo includes"
+                    )}
+                    ${renderNestedItems(rewardItems, "Included with offer")}
                   </td>
                   <td>$${Number(item?.total || 0).toFixed(2)}</td>
                 </tr>
@@ -155,6 +219,16 @@ const buildPrintHtml = (orders) => `
           margin-top: 4px;
           font-size: 12px;
           line-height: 1.4;
+        }
+        .nested-group {
+          margin-top: 6px;
+          padding-left: 8px;
+          border-left: 2px solid #bbb;
+          font-size: 12px;
+          line-height: 1.4;
+        }
+        .nested-item {
+          margin-top: 3px;
         }
         .totals {
           margin-top: 14px;

@@ -745,6 +745,11 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                             {`Toppings: ${itm.selectedToppings.join(", ")}`}
                           </Text>
                         ) : null}
+                        {itm.selectedComboSides?.length > 0 ? (
+                          <Text style={styles.orderLineCustomization}>
+                            {`Sides: ${itm.selectedComboSides.join(", ")}`}
+                          </Text>
+                        ) : null}
                       </View>
                       <Text style={styles.orderLineMainPrice}>
                         ${Number(itm?.total || 0).toFixed(2)}
