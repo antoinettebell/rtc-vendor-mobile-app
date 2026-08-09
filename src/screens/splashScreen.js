@@ -5,8 +5,16 @@ import { AppColor, Mulish400, Mulish700 } from "../utils/theme";
 import { useNavigation } from "@react-navigation/native";
 import BootSplash from "react-native-bootsplash";
 import { useDispatch, useSelector } from "react-redux";
-import { setPostSignInRoute } from "../redux/slices/authSlice";
+import {
+  setPendingAuthRoute,
+  setPendingEventVendorApplication,
+  setPostSignInRoute,
+} from "../redux/slices/authSlice";
 import StatusBarManager from "../components/StatusBarManager";
+import {
+  consumePendingAuthRoute,
+  getFinalSignupDestination,
+} from "../helpers/signupNavigation.helper";
 
 const SplashScreen = () => {
   const insets = useSafeAreaInsets();
@@ -18,25 +26,38 @@ const SplashScreen = () => {
     isUnderReview,
     vendorOnboardingStep,
     postSignInRoute,
+    pendingAuthRoute,
+    pendingEventVendorApplication,
   } = useSelector(
     (state) => state.authReducer
   );
-  const { selectedPlan, selectedSignupAddOns } = useSelector(
+  const { selectedPlan, selectedSignupAddOns, user } = useSelector(
     (state) => state.userReducer
   );
 
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (isSignedIn) {
-        navigation.replace(
-          "bottomRoot",
-          postSignInRoute ? { screen: postSignInRoute } : undefined
-        );
+        if (pendingEventVendorApplication?.event?.event_id) {
+          navigation.replace("eventVendorApplicationScreen", {
+            event: pendingEventVendorApplication.event,
+          });
+          dispatch(setPendingEventVendorApplication(null));
+        } else {
+          navigation.replace(
+            "bottomRoot",
+            postSignInRoute ? { screen: postSignInRoute } : undefined
+          );
+        }
         if (postSignInRoute) {
           dispatch(setPostSignInRoute(null));
         }
       } else if (!isOnboarded) {
-        navigation.replace("signin");
+        const pendingTransition = consumePendingAuthRoute(pendingAuthRoute);
+        navigation.replace(pendingTransition.destination);
+        if (pendingAuthRoute) {
+          dispatch(setPendingAuthRoute(pendingTransition.pendingAuthRoute));
+        }
       } else if (isUnderReview) {
         navigation.replace("authUnderReviewNoteScreen");
       } else if (vendorOnboardingStep === "COMPLIANCE") {
@@ -56,11 +77,11 @@ const SplashScreen = () => {
         navigation.replace("authMenuSetupPromptScreen");
       } else if (selectedPlan) {
         navigation.replace(
-          selectedPlan?.slug === "SUB_MARKETPLACE_VENDOR"
-            ? "eventVendorProfileScreen"
-            : "authFoodTruckProfileScreen",
+          getFinalSignupDestination({ selectedPlan, user }),
           { addOns: selectedSignupAddOns }
         );
+      } else if (user?.vendorSubtype === "EVENT_VENDOR") {
+        navigation.replace(getFinalSignupDestination({ user }));
       } else {
         navigation.replace("authFoodTruckPlansScreen");
       }
@@ -73,10 +94,13 @@ const SplashScreen = () => {
     isUnderReview,
     vendorOnboardingStep,
     postSignInRoute,
+    pendingAuthRoute,
+    pendingEventVendorApplication,
     dispatch,
     navigation,
     selectedPlan,
     selectedSignupAddOns,
+    user,
   ]);
 
   useEffect(() => {

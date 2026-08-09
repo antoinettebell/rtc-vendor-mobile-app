@@ -29,10 +29,19 @@ import {
   setSelectedSignupAddOns,
 } from "../redux/slices/userSlice";
 import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlice";
-import { onSignOut } from "../redux/slices/authSlice";
+import {
+  onOnBoard,
+  onSignOut,
+  setPendingAuthRoute,
+} from "../redux/slices/authSlice";
 import StatusBarManager from "../components/StatusBarManager";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
 import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlice";
+import {
+  performAuthNavigation,
+  SIGNIN_ROUTE,
+  SIGNUP_ROUTE,
+} from "../helpers/signupNavigation.helper";
 
 const EVENT_MARKETPLACE_PATTERN = /event|booking|marketplace/i;
 
@@ -65,6 +74,19 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
 
   const { selectedPlan } = useSelector((state) => state.userReducer);
   const isSignupFlow = route?.params?.signupFlow === true;
+
+  const switchToAuthRoot = (destination) => {
+    dispatch(setPendingAuthRoute(destination));
+    dispatch(onOnBoard(false));
+  };
+
+  const handleSignupFlowBack = () =>
+    performAuthNavigation({
+      navigation,
+      destination: SIGNIN_ROUTE,
+      preferHistory: true,
+      switchAuthRoot: switchToAuthRoot,
+    });
 
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
@@ -110,7 +132,11 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
       dispatch(setSelectedPlan(temp_plan));
       dispatch(setSelectedSignupAddOns(submittedAddOns));
       if (isSignupFlow) {
-        navigation.navigate("signup");
+        performAuthNavigation({
+          navigation,
+          destination: SIGNUP_ROUTE,
+          switchAuthRoot: switchToAuthRoot,
+        });
       } else {
         navigation.navigate("authFoodTruckProfileScreen", {
           addOns: submittedAddOns,
@@ -394,7 +420,7 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
         {isSignupFlow ? (
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() => navigation.goBack()}
+            onPress={handleSignupFlowBack}
             style={styles.cancelButton}
           >
             <Text style={styles.cancelButtonText}>Cancel</Text>

@@ -83,7 +83,7 @@ assert.match(applicationScreen, /application_id: savedApplicationRef\.current\?\
 assert.match(bidScreen, /bid_id: savedBidRef\.current\?\.bid_id/);
 assert.match(eventVendorScreen, /AsyncStorage\.setItem/);
 assert.match(eventVendorScreen, /pendingAgreement: true/);
-assert.match(eventVendorScreen, /AsyncStorage\.removeItem/);
+assert.match(eventVendorScreen, /clearEventVendorApplicationRecovery/);
 assert.match(agreementHook, /setTerminalRecoveryStopped\(true\)/);
 assert.match(agreementHook, /recoveryStopped/);
 assert.match(agreementHook, /onTerminalRef\.current/);

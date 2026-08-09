@@ -194,9 +194,13 @@ const BottomTabNavigator = ({ insets }) => {
   const isEventVendor = user?.vendorSubtype === "EVENT_VENDOR";
 
   if (isEventVendor) {
+    const showsPhotos = user?.eventVendorProfile?.vendor_types?.includes(
+      "MERCHANDISE",
+    );
     return (
       <BottomTab.Navigator screenOptions={{ headerShown: false, tabBarStyle: { height: insets.bottom + 60 } }}>
         <BottomTab.Screen name="eventVendorMarketplaceScreen" component={EventVendorMarketplaceScreen} options={{ tabBarLabel: "Marketplace", tabBarIcon: ({ color, size }) => <MaterialIcons name="storefront" size={size || 24} color={color} /> }} />
+        {showsPhotos ? <BottomTab.Screen name="eventVendorPhotosScreen" component={EventVendorPhotosScreen} options={{ tabBarLabel: "Photos", tabBarIcon: ({ color, size }) => <MaterialIcons name="photo-library" size={size || 24} color={color} /> }} /> : null}
         <BottomTab.Screen name="eventVendorProfileScreen" component={EventVendorProfileScreen} options={{ tabBarLabel: "Profile", tabBarIcon: ({ color, size }) => <MaterialIcons name="person" size={size || 24} color={color} /> }} />
       </BottomTab.Navigator>
     );

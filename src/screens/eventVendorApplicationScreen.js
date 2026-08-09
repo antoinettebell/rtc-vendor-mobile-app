@@ -10,14 +10,39 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import ImagePicker from "react-native-image-crop-picker";
 import {
   getEventVendorPhotos_API,
   getEventVendorProfile_API,
+  getEventVendorEvents_API,
+  removeEventVendorApplicationPhoto_API,
   submitEventVendorApplication_API,
+  uploadEventVendorApplicationPhoto_API,
 } from "../api/appAPI";
 import { useMarketplaceAgreementCompletion } from "../hooks/useMarketplaceAgreementCompletion";
 import { AppColor } from "../utils/theme";
+import {
+  MERCHANDISE_CATEGORIES,
+  toggleApplicationPhoto,
+} from "../helpers/eventVendorProfile.helper";
+import {
+  buildEventVendorApplicationDraft,
+  clearEventVendorApplicationRecovery,
+  EVENT_VENDOR_APPLICATION_RETURN_KEY,
+  hydrateEventVendorApplication,
+  isAuthoritativeApplicationUnavailable,
+  getPhotoRemovalPersistenceMessage,
+  persistApplicationPhotoSelection,
+} from "../helpers/eventVendorApplicationDraft.helper";
+import { useDispatch } from "react-redux";
+import {
+  onOnBoard,
+  onSignin,
+  onUnderReview,
+  setVendorOnboardingStep,
+} from "../redux/slices/authSlice";
 export default function EventVendorApplicationScreen({ navigation, route }) {
+  const dispatch = useDispatch();
   const event = route.params.event;
   const [profile, setProfile] = useState(null);
   const [photos, setPhotos] = useState([]);
@@ -29,37 +54,159 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
   const [electricity, setElectricity] = useState(null);
   const [feeAck, setFeeAck] = useState(false);
   const [hasPendingAgreement, setHasPendingAgreement] = useState(false);
+  const [uploadCategory, setUploadCategory] = useState("");
+  const [saveUploadToRepository, setSaveUploadToRepository] = useState(false);
+  const [hydrationAttempt, setHydrationAttempt] = useState(0);
   const draftKey = `event-vendor-application-draft:${event.event_id}`;
   useEffect(() => {
-    Promise.all([
-      getEventVendorProfile_API(),
-      getEventVendorPhotos_API(),
-    ]).then(([p, x]) => {
-      setProfile(p?.data?.eventVendorProfile);
-      setPhotos(x?.data?.photoList || []);
-    });
-  }, []);
-  useEffect(() => {
-    AsyncStorage.getItem(draftKey)
-      .then((value) => {
-        if (!value) return;
-        const draft = JSON.parse(value);
-        setSelected(Array.isArray(draft.selected) ? draft.selected : []);
-        setTypes(Array.isArray(draft.types) ? draft.types : []);
-        setBullets(draft.bullets || "");
-        setPrice(draft.price || "");
-        setNotes(draft.notes || "");
-        setElectricity(draft.electricity ?? null);
-        setFeeAck(draft.feeAck === true);
-        setHasPendingAgreement(draft.pendingAgreement === true);
+    hydrateEventVendorApplication({
+      storage: AsyncStorage,
+      draftKey,
+      returnKey: EVENT_VENDOR_APPLICATION_RETURN_KEY,
+      loadProfile: getEventVendorProfile_API,
+      loadPhotos: () => getEventVendorPhotos_API(event.event_id),
+      loadEvent: getEventVendorEvents_API,
+      eventId: event.event_id,
+    })
+      .then(async ({ profile: hydratedProfile, photos: hydratedPhotos, draft }) => {
+        setProfile(hydratedProfile);
+        setPhotos(hydratedPhotos);
+        if (draft) {
+          setSelected(Array.isArray(draft.selected) ? draft.selected : []);
+          setTypes(Array.isArray(draft.types) ? draft.types : []);
+          setBullets(draft.bullets || "");
+          setPrice(draft.price || "");
+          setNotes(draft.notes || "");
+          setElectricity(draft.electricity ?? null);
+          setFeeAck(draft.feeAck === true);
+          setHasPendingAgreement(draft.pendingAgreement === true);
+        }
+        await clearEventVendorApplicationRecovery({
+          storage: AsyncStorage,
+          returnKey: EVENT_VENDOR_APPLICATION_RETURN_KEY,
+        }).catch(() => {});
       })
-      .catch(() => {});
-  }, [draftKey]);
+      .catch((error) => {
+        const unavailable = isAuthoritativeApplicationUnavailable(error);
+        Alert.alert(
+          unavailable ? "Application Unavailable" : "Unable to Restore Application",
+          unavailable
+            ? error?.message || "This event is closed or no longer accepting applications."
+            : "We could not restore your application right now. Check your connection and try again. Your saved return path has been preserved.",
+          unavailable
+            ? [{ text: "OK", onPress: () => navigation.replace("bottomRoot") }]
+            : [
+                { text: "Later", onPress: () => navigation.replace("bottomRoot") },
+                { text: "Retry", onPress: () => setHydrationAttempt((value) => value + 1) },
+              ],
+        );
+      });
+  }, [draftKey, event.event_id, hydrationAttempt, navigation]);
   const eligible = (event.event_vendor_needs || []).filter((n) =>
     profile?.vendor_types?.includes(n.vendor_type),
   );
   const toggle = (v, setter, list) =>
     setter(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+  const currentDraft = (overrides = {}) =>
+    buildEventVendorApplicationDraft(
+      {
+        selected,
+        types,
+        bullets,
+        price,
+        notes,
+        electricity,
+        feeAck,
+        pendingAgreement: hasPendingAgreement,
+      },
+      overrides,
+    );
+  const persistDraft = async (overrides = {}) => {
+    await AsyncStorage.setItem(draftKey, JSON.stringify(currentDraft(overrides)));
+  };
+  const persistSelected = async (nextSelected, removedPhotoId = null) =>
+    persistApplicationPhotoSelection({
+      storage: AsyncStorage,
+      draftKey,
+      draft: currentDraft(),
+      nextSelected,
+      removedPhotoId,
+    });
+  const uploadPhonePhoto = async () => {
+    if (selected.length >= 5) return Alert.alert("Application Photos", "Up to five photos may be selected.");
+    const merchandiseVendor = profile?.vendor_types?.includes("MERCHANDISE");
+    if (merchandiseVendor && !uploadCategory) {
+      return Alert.alert("Application Photos", "Select a merchandise category for this photo.");
+    }
+    try {
+      await persistDraft();
+      const image = await ImagePicker.openPicker({ mediaType: "photo" });
+      const form = new FormData();
+      form.append("file", {
+        uri: image.path,
+        name: image.filename || `application-${Date.now()}.jpg`,
+        type: image.mime || "image/jpeg",
+      });
+      form.append("event_id", event.event_id);
+      if (uploadCategory) form.append("category", uploadCategory);
+      form.append("save_to_repository", String(saveUploadToRepository));
+      const response = await uploadEventVendorApplicationPhoto_API(form);
+      const photo = response?.data?.photo;
+      if (photo) {
+        const nextSelected = [...selected, photo.photo_id];
+        setPhotos((current) => [photo, ...current]);
+        setSelected(nextSelected);
+        await persistSelected(nextSelected);
+      }
+      if (response?.data?.requires_reapproval === true) {
+        await AsyncStorage.setItem(
+          EVENT_VENDOR_APPLICATION_RETURN_KEY,
+          JSON.stringify({ event }),
+        );
+        dispatch(onSignin(false));
+        dispatch(onOnBoard(true));
+        dispatch(onUnderReview(false));
+        dispatch(setVendorOnboardingStep(null));
+        Alert.alert(
+          "Review Required",
+          "The photo was saved to your permanent portfolio. Your application remains a draft until the revised portfolio is approved.",
+        );
+      }
+    } catch (e) {
+      if (e?.code !== "E_PICKER_CANCELLED") Alert.alert("Application Photos", e?.message || "Unable to upload photo.");
+    }
+  };
+  const toggleSelectedPhoto = async (photo) => {
+    if (selected.includes(photo.photo_id) && photo.source === "APPLICATION") {
+      try {
+        await removeEventVendorApplicationPhoto_API(photo.photo_id);
+      } catch (e) {
+        Alert.alert("Application Photos", e?.message || "Unable to remove this upload.");
+        return;
+      }
+      const nextSelected = selected.filter((id) => id !== photo.photo_id);
+      setSelected(nextSelected);
+      setPhotos((current) =>
+        current.filter((item) => item.photo_id !== photo.photo_id),
+      );
+      try {
+        await persistSelected(nextSelected, photo.photo_id);
+      } catch (e) {
+        Alert.alert(
+          "Photo Removed",
+          getPhotoRemovalPersistenceMessage(),
+        );
+      }
+      return;
+    }
+    const nextSelected = toggleApplicationPhoto(selected, photo.photo_id);
+    setSelected(nextSelected);
+    try {
+      await persistSelected(nextSelected);
+    } catch (error) {
+      Alert.alert("Application Draft", error?.message || "Unable to save this photo selection.");
+    }
+  };
   const submitApplication = async () => {
     try {
       await submitEventVendorApplication_API(event.event_id, {
@@ -74,7 +221,11 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
         electricity_required: electricity,
         electricity_fee_acknowledged: feeAck,
       });
-      await AsyncStorage.removeItem(draftKey);
+      await clearEventVendorApplicationRecovery({
+        storage: AsyncStorage,
+        draftKey,
+        returnKey: EVENT_VENDOR_APPLICATION_RETURN_KEY,
+      });
       setHasPendingAgreement(false);
       Alert.alert(
         "Application Submitted",
@@ -145,18 +296,31 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
         </TouchableOpacity>
       ))}
       <Text style={s.label}>Application Photos (up to 5)</Text>
+      {profile?.vendor_types?.includes("MERCHANDISE") ? (
+        <>
+          <Text style={s.help}>Choose a category for phone uploads.</Text>
+          {MERCHANDISE_CATEGORIES.map((category) => (
+            <TouchableOpacity key={category.value} style={[s.choice, uploadCategory === category.value && s.on]} onPress={() => setUploadCategory(category.value)}>
+              <Text>{category.label}</Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity style={[s.choice, saveUploadToRepository && s.on]} onPress={() => setSaveUploadToRepository(!saveUploadToRepository)}>
+            <Text>Save phone upload to my permanent repository</Text>
+          </TouchableOpacity>
+        </>
+      ) : null}
+      <TouchableOpacity style={s.phoneUpload} onPress={uploadPhonePhoto}>
+        <Text style={s.submitText}>Upload Photo from Phone</Text>
+      </TouchableOpacity>
       <View style={s.grid}>
         {photos.map((p) => (
           <TouchableOpacity
             key={p.photo_id}
             style={[s.photoWrap, selected.includes(p.photo_id) && s.photoOn]}
-            onPress={() =>
-              selected.includes(p.photo_id) || selected.length < 5
-                ? toggle(p.photo_id, setSelected, selected)
-                : null
-            }
+            onPress={() => toggleSelectedPhoto(p)}
           >
             <Image source={{ uri: p.file_url }} style={s.photo} />
+            {selected.includes(p.photo_id) ? <Text style={s.selectedLabel}>Selected · tap to remove</Text> : null}
           </TouchableOpacity>
         ))}
       </View>
@@ -233,6 +397,8 @@ const s = StyleSheet.create({
     color: "#172033",
   },
   help: { color: "#64748b", marginBottom: 6 },
+  phoneUpload: { backgroundColor: AppColor.primary, padding: 12, borderRadius: 10, alignItems: "center", marginBottom: 10 },
+  selectedLabel: { fontSize: 10, color: "#166534", padding: 4 },
   choice: {
     borderWidth: 1,
     borderColor: "#cbd5e1",

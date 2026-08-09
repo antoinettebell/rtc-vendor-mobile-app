@@ -22,7 +22,7 @@ import Modal from "react-native-modal";
 import Octicons from "react-native-vector-icons/Octicons";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { resendOTP_API, verifyOTP_API } from "../api/authAPI";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   onOnBoard,
   onSignOut,
@@ -39,6 +39,11 @@ import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlic
 import { clearPushNotificationRedux } from "../redux/slices/pushNotificationSlice";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
 import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
+import {
+  performAuthNavigation,
+  getOtpCompletionTransition,
+  SIGNIN_ROUTE,
+} from "../helpers/signupNavigation.helper";
 
 const RESEND_CODE_TIME = 120;
 
@@ -46,6 +51,7 @@ const OtpVerificationScreen = ({ route }) => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const dispatch = useDispatch();
+  const { selectedPlan } = useSelector((state) => state.userReducer);
   const timerRef = useRef(null);
 
   const [resendTimer, setResendTimer] = useState(RESEND_CODE_TIME);
@@ -59,11 +65,19 @@ const OtpVerificationScreen = ({ route }) => {
     type: "info",
   });
   const [isModalVisible, setModalVisible] = useState(false);
+  const [verifiedUser, setVerifiedUser] = useState(null);
 
   const inputRefs = useRef([]);
 
   // Combine digits
   const otp = otpDigits.join("");
+  const handleBack = () =>
+    performAuthNavigation({
+      navigation,
+      destination: SIGNIN_ROUTE,
+      preferHistory: true,
+      switchAuthRoot: () => {},
+    });
 
   const validateOtp = () => /^\d{6}$/.test(otp);
 
@@ -109,6 +123,7 @@ const OtpVerificationScreen = ({ route }) => {
 
           dispatch(setUser(response.data.user));
           dispatch(setAuthToken(response.data.authToken));
+          setVerifiedUser(response.data.user);
 
           dispatch(
             addOrUpdateUser({
@@ -116,8 +131,14 @@ const OtpVerificationScreen = ({ route }) => {
               userData: {
                 emailid: response.data.user.email,
                 password: params?.data?.localPassword,
-                username: response?.data?.user?.foodTruck?.name || "",
-                imageUrl: response?.data?.user?.foodTruck.logo || null,
+                username:
+                  response?.data?.user?.eventVendorBusinessName ||
+                  response?.data?.user?.foodTruck?.name ||
+                  "",
+                imageUrl:
+                  response?.data?.user?.eventVendorProfile?.logo_url ||
+                  response?.data?.user?.foodTruck?.logo ||
+                  null,
               },
             })
           );
@@ -214,7 +235,7 @@ const OtpVerificationScreen = ({ route }) => {
           icon="arrow-left"
           iconColor={AppColor.white}
           size={24}
-          onPress={() => navigation.goBack()}
+          onPress={handleBack}
         />
         <Text style={styles.headerTitle}>{"Verification"}</Text>
         <View style={{ width: 48 }} />
@@ -342,9 +363,15 @@ const OtpVerificationScreen = ({ route }) => {
             activeOpacity={0.7}
             onPress={() => {
               setModalVisible(false);
-              dispatch(onOnBoard(true));
-              dispatch(onUnderReview(true));
-              dispatch(setVendorOnboardingStep("AWAITING_APPROVAL"));
+              const transition = getOtpCompletionTransition({
+                selectedPlan,
+                user: verifiedUser || params?.data?.user,
+              });
+              dispatch(onOnBoard(transition.isOnboarded));
+              dispatch(onUnderReview(transition.isUnderReview));
+              dispatch(
+                setVendorOnboardingStep(transition.vendorOnboardingStep),
+              );
             }}
           >
             <Text style={styles.backToLoginText}>{"Next"}</Text>

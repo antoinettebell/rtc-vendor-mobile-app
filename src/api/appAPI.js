@@ -24,8 +24,12 @@ import {
   GET_ORDER_LIST,
   GET_PLANS_DATA,
   EVENT_VENDOR_PROFILE,
+  EVENT_VENDOR_PROFILE_SUBMIT,
   EVENT_VENDOR_PHOTOS,
   EVENT_VENDOR_LOGO,
+  EVENT_VENDOR_APPLICATION_PHOTOS,
+  EVENT_VENDOR_PHOTO_REPLACE,
+  EVENT_VENDOR_APPLICATION_PHOTO,
   EVENT_VENDOR_EVENTS,
   EVENT_VENDOR_APPLICATIONS,
   EVENT_VENDOR_APPLY,
@@ -1845,9 +1849,13 @@ export const removeFcmToken_API = async (device_id) => {
 
 export const getEventVendorProfile_API = async () => (await apiClient.get(EVENT_VENDOR_PROFILE, { skipToken: false }))?.data;
 export const saveEventVendorProfile_API = async (payload) => (await apiClient.put(EVENT_VENDOR_PROFILE, payload, { skipToken: false }))?.data;
-export const getEventVendorPhotos_API = async () => (await apiClient.get(EVENT_VENDOR_PHOTOS, { skipToken: false }))?.data;
+export const submitEventVendorProfile_API = async () => (await apiClient.post(EVENT_VENDOR_PROFILE_SUBMIT, {}, { skipToken: false }))?.data;
+export const getEventVendorPhotos_API = async (eventId = null) => (await apiClient.get(EVENT_VENDOR_PHOTOS, { skipToken: false, ...(eventId ? { params: { event_id: eventId } } : {}) }))?.data;
 export const uploadEventVendorPhoto_API = async (payload) => (await apiClient.post(EVENT_VENDOR_PHOTOS, payload, { formData: true, skipToken: false }))?.data;
 export const uploadEventVendorLogo_API = async (payload) => (await apiClient.post(EVENT_VENDOR_LOGO, payload, { formData: true, skipToken: false }))?.data;
+export const uploadEventVendorApplicationPhoto_API = async (payload) => (await apiClient.post(EVENT_VENDOR_APPLICATION_PHOTOS, payload, { formData: true, skipToken: false }))?.data;
+export const replaceEventVendorPhoto_API = async (photoId, payload) => (await apiClient.post(EVENT_VENDOR_PHOTO_REPLACE(photoId), payload, { formData: true, skipToken: false }))?.data;
+export const removeEventVendorApplicationPhoto_API = async (photoId) => (await apiClient.delete(EVENT_VENDOR_APPLICATION_PHOTO(photoId), { skipToken: false }))?.data;
 export const removeEventVendorPhoto_API = async (photoId) => (await apiClient.delete(`${EVENT_VENDOR_PHOTOS}/${photoId}`, { skipToken: false }))?.data;
 export const getEventVendorEvents_API = async () => (await apiClient.get(EVENT_VENDOR_EVENTS, { skipToken: false }))?.data;
 export const getEventVendorApplications_API = async () => (await apiClient.get(EVENT_VENDOR_APPLICATIONS, { skipToken: false }))?.data;

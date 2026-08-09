@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
   StyleSheet,
@@ -34,8 +35,10 @@ import {
   onSignin,
   onUnderReview,
   setVendorOnboardingStep,
+  setPendingEventVendorApplication,
 } from "../redux/slices/authSlice";
 import StatusBarManager from "../components/StatusBarManager";
+import { getEventVendorSignInTransition } from "../helpers/eventVendorProfile.helper";
 import {
   setSelectedCuisine,
   setSelectedLocations,
@@ -47,6 +50,10 @@ import {
 import { setFcmToken_API } from "../api/appAPI";
 import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
 import { restoreSavedEmployeeLogin } from "../helpers/savedEmployeeLogin.helper";
+import {
+  EVENT_VENDOR_APPLICATION_RETURN_KEY,
+  parseEventVendorApplicationReturn,
+} from "../helpers/eventVendorApplicationDraft.helper";
 
 const SignInScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -145,8 +152,14 @@ const SignInScreen = ({ navigation, route }) => {
               userData: {
                 emailid: currentEmail,
                 password: currentPassword,
-                username: response?.data?.user?.foodTruck?.name || "",
-                imageUrl: response?.data?.user?.foodTruck.logo || null,
+                username:
+                  response?.data?.user?.eventVendorBusinessName ||
+                  response?.data?.user?.foodTruck?.name ||
+                  "",
+                imageUrl:
+                  response?.data?.user?.eventVendorProfile?.logo_url ||
+                  response?.data?.user?.foodTruck?.logo ||
+                  null,
               },
             })
           );
@@ -154,6 +167,29 @@ const SignInScreen = ({ navigation, route }) => {
           const requestStatus = String(
             response?.data?.user?.requestStatus || "PENDING"
           ).toUpperCase();
+
+          if (response?.data?.user?.vendorSubtype === "EVENT_VENDOR") {
+            const transition = getEventVendorSignInTransition(
+              response?.data?.user?.eventVendorProfile,
+            );
+            dispatch(onSignin(transition.isSignedIn));
+            dispatch(onOnBoard(transition.isOnboarded));
+            dispatch(onUnderReview(transition.isUnderReview));
+            dispatch(
+              setVendorOnboardingStep(transition.vendorOnboardingStep),
+            );
+            if (transition.isSignedIn) {
+              const returnValue = await AsyncStorage.getItem(
+                EVENT_VENDOR_APPLICATION_RETURN_KEY,
+              );
+              dispatch(
+                setPendingEventVendorApplication(
+                  parseEventVendorApplicationReturn(returnValue),
+                ),
+              );
+            }
+            return;
+          }
 
           if (requestStatus !== "APPROVED") {
             dispatch(onSignin(false));

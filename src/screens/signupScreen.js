@@ -37,6 +37,10 @@ import StatusBarManager from "../components/StatusBarManager";
 import { useSelector } from "react-redux";
 import StatePickerModal from "../components/StatePickerModal";
 import { usStates } from "../utils/usStates";
+import {
+  performAuthNavigation,
+  SIGNIN_ROUTE,
+} from "../helpers/signupNavigation.helper";
 
 const SMS_CONSENT_MESSAGE =
   "I agree to receive automated transactional text messages from Round the Corner, including order confirmations, ready-for-pickup alerts, delivery updates, account updates, and order completion notices at the mobile number provided. Consent is not a condition of purchase. Message and data rates may apply. Message frequency varies. Reply HELP for help and STOP to cancel. View our ";
@@ -47,6 +51,13 @@ const SignUpScreen = ({ navigation }) => {
   const { allSigninUsers } = useSelector((state) => state.userInfoReducer);
   const { selectedPlan } = useSelector((state) => state.userReducer);
   const isMarketplaceVendor = selectedPlan?.slug === "SUB_MARKETPLACE_VENDOR";
+  const handleBack = () =>
+    performAuthNavigation({
+      navigation,
+      destination: SIGNIN_ROUTE,
+      preferHistory: true,
+      switchAuthRoot: () => {},
+    });
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -301,7 +312,7 @@ const SignUpScreen = ({ navigation }) => {
           icon="arrow-left"
           iconColor={AppColor.white}
           size={24}
-          onPress={() => navigation.goBack()}
+          onPress={handleBack}
         />
         <Text style={styles.headerTitle}>Business Details</Text>
         <View style={{ width: 48 }} />

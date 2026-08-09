@@ -11,16 +11,31 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import ImagePicker from "react-native-image-crop-picker";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   getEventVendorProfile_API,
   saveEventVendorProfile_API,
+  submitEventVendorProfile_API,
   uploadEventVendorLogo_API,
 } from "../api/appAPI";
 import { AppColor } from "../utils/theme";
+import {
+  getEventVendorAccessState,
+  getProfileOnboardingDestination,
+  getProfileActionPresentation,
+  MERCHANDISE_CATEGORIES,
+} from "../helpers/eventVendorProfile.helper";
+import { updateUser } from "../redux/slices/userSlice";
+import {
+  onOnBoard,
+  onSignin,
+  onUnderReview,
+  setVendorOnboardingStep,
+} from "../redux/slices/authSlice";
 
 const TYPES = ["MERCHANDISE", "SERVICE", "OTHER"];
 export default function EventVendorProfileScreen({ navigation }) {
+  const dispatch = useDispatch();
   const user = useSelector((state) => state.userReducer.user);
   const [profile, setProfile] = useState(null);
   const [businessName, setBusinessName] = useState(
@@ -29,7 +44,22 @@ export default function EventVendorProfileScreen({ navigation }) {
   const [description, setDescription] = useState("");
   const [vendorTypes, setVendorTypes] = useState([]);
   const [links, setLinks] = useState(["", ""]);
+  const [merchandiseCategories, setMerchandiseCategories] = useState([]);
   const [saving, setSaving] = useState(false);
+  const applyProfileState = (nextProfile, wasApproved = false) => {
+    setProfile(nextProfile);
+    dispatch(updateUser({ eventVendorProfile: nextProfile }));
+    if (wasApproved && nextProfile?.review_status === "DRAFT") {
+      dispatch(onSignin(false));
+      dispatch(onOnBoard(true));
+      dispatch(onUnderReview(false));
+      dispatch(setVendorOnboardingStep(null));
+      Alert.alert(
+        "Review Required",
+        "Your material profile changes were saved. Marketplace access is paused until the revised profile is approved.",
+      );
+    }
+  };
   const load = useCallback(async () => {
     const response = await getEventVendorProfile_API().catch(() => null);
     const value = response?.data?.eventVendorProfile;
@@ -39,8 +69,10 @@ export default function EventVendorProfileScreen({ navigation }) {
       setDescription(value.business_description || "");
       setVendorTypes(value.vendor_types || []);
       setLinks([...(value.social_links || []), "", ""].slice(0, 2));
+      setMerchandiseCategories(value.merchandise_categories || []);
+      dispatch(updateUser({ eventVendorProfile: value }));
     }
-  }, []);
+  }, [dispatch]);
   useFocusEffect(
     useCallback(() => {
       load();
@@ -51,6 +83,12 @@ export default function EventVendorProfileScreen({ navigation }) {
       current.includes(type)
         ? current.filter((item) => item !== type)
         : [...current, type],
+    );
+  const toggleCategory = (category) =>
+    setMerchandiseCategories((current) =>
+      current.includes(category)
+        ? current.filter((item) => item !== category)
+        : [...current, category],
     );
   const save = async () => {
     if (!businessName.trim() || !description.trim() || !vendorTypes.length)
@@ -65,15 +103,49 @@ export default function EventVendorProfileScreen({ navigation }) {
         business_description: description.trim(),
         vendor_types: vendorTypes,
         social_links: links.map((item) => item.trim()).filter(Boolean),
+        merchandise_categories: vendorTypes.includes("MERCHANDISE")
+          ? merchandiseCategories
+          : [],
       });
-      setProfile(response?.data?.eventVendorProfile);
-      Alert.alert("Profile", "Marketplace Vendor profile saved.");
+      const savedProfile = response?.data?.eventVendorProfile;
+      applyProfileState(savedProfile, access.canUseMarketplace);
+      if (
+        getProfileOnboardingDestination(vendorTypes) ===
+        "EVENT_VENDOR_PHOTOS"
+      ) {
+        navigation.navigate("eventVendorPhotosScreen", {
+          onboardingFlow: true,
+        });
+      } else {
+        Alert.alert(
+          "Profile Saved",
+          "Add your business logo, then submit your profile for review.",
+        );
+      }
     } catch (e) {
       Alert.alert("Profile", e?.message || "Unable to save profile.");
     } finally {
       setSaving(false);
     }
   };
+  const submitForReview = async () => {
+    setSaving(true);
+    try {
+      const response = await submitEventVendorProfile_API();
+      const submittedProfile = response?.data?.eventVendorProfile;
+      setProfile(submittedProfile);
+      dispatch(updateUser({ eventVendorProfile: submittedProfile }));
+      dispatch(onOnBoard(true));
+      dispatch(onUnderReview(true));
+      dispatch(setVendorOnboardingStep("AWAITING_APPROVAL"));
+    } catch (e) {
+      Alert.alert("Submit Profile", e?.message || "Unable to submit profile.");
+    } finally {
+      setSaving(false);
+    }
+  };
+  const access = getEventVendorAccessState(profile);
+  const presentation = getProfileActionPresentation(profile, vendorTypes);
   const uploadLogo = async () => {
     try {
       const image = await ImagePicker.openPicker({
@@ -87,7 +159,8 @@ export default function EventVendorProfileScreen({ navigation }) {
         type: image.mime || "image/jpeg",
       });
       const response = await uploadEventVendorLogo_API(form);
-      setProfile(response?.data?.eventVendorProfile);
+      const nextProfile = response?.data?.eventVendorProfile;
+      applyProfileState(nextProfile, access.canUseMarketplace);
     } catch (e) {
       if (e?.code !== "E_PICKER_CANCELLED")
         Alert.alert("Logo", e?.message || "Unable to upload logo.");
@@ -99,13 +172,17 @@ export default function EventVendorProfileScreen({ navigation }) {
       <Text style={s.sub}>
         Merchandise, artisans, services, nonprofits, and exhibitors.
       </Text>
-      <TouchableOpacity style={s.logoButton} onPress={uploadLogo}>
-        {profile?.logo_url ? (
-          <Image source={{ uri: profile.logo_url }} style={s.logo} />
-        ) : (
-          <Text style={s.buttonText}>Add Business Logo</Text>
-        )}
-      </TouchableOpacity>
+      {profile ? (
+        <TouchableOpacity style={s.logoButton} onPress={uploadLogo} disabled={!access.canEdit}>
+          {profile?.logo_url ? (
+            <Image source={{ uri: profile.logo_url }} style={s.logo} />
+          ) : (
+            <Text style={s.buttonText}>Add Business Logo</Text>
+          )}
+        </TouchableOpacity>
+      ) : (
+        <Text style={s.setupNotice}>Save the basic profile below before adding the logo.</Text>
+      )}
       <Text style={s.label}>Type of Vendor *</Text>
       <View style={s.types}>
         {TYPES.map((type) => (
@@ -154,15 +231,43 @@ export default function EventVendorProfileScreen({ navigation }) {
           />
         </View>
       ))}
-      <TouchableOpacity
-        style={s.secondary}
-        onPress={() => navigation.navigate("eventVendorPhotosScreen")}
-      >
-        <Text style={s.secondaryText}>Photo Repository (up to 10)</Text>
+      {vendorTypes.includes("MERCHANDISE") ? (
+        <>
+          <Text style={s.label}>Merchandise Categories *</Text>
+          {MERCHANDISE_CATEGORIES.map((category) => (
+            <TouchableOpacity
+              key={category.value}
+              onPress={() => toggleCategory(category.value)}
+              style={[
+                s.category,
+                merchandiseCategories.includes(category.value) && s.chipOn,
+              ]}
+            >
+              <Text style={merchandiseCategories.includes(category.value) ? s.chipTextOn : s.chipText}>{category.label}</Text>
+              <Text style={s.categoryDescription}>{category.description}</Text>
+            </TouchableOpacity>
+          ))}
+        </>
+      ) : null}
+      {profile?.rejection_reason ? (
+        <Text style={s.rejection}>Rejection reason: {profile.rejection_reason}</Text>
+      ) : null}
+      {presentation.showApprovedStatus ? (
+        <Text style={s.approved}>Profile approved. Material changes require another review.</Text>
+      ) : null}
+      <TouchableOpacity style={s.primary} onPress={save} disabled={saving || !access.canEdit}>
+        <Text style={s.buttonText}>{saving ? "Saving…" : vendorTypes.includes("MERCHANDISE") ? "Save Profile & Continue to Photos" : "Save Draft / Profile"}</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={s.primary} onPress={save} disabled={saving}>
-        <Text style={s.buttonText}>{saving ? "Saving…" : "Save Profile"}</Text>
-      </TouchableOpacity>
+      {presentation.showSubmitFromProfile ? (
+        <TouchableOpacity style={[s.submitReview, !profile?.logo_url && s.disabled]} onPress={submitForReview} disabled={saving || !profile?.logo_url}>
+          <Text style={s.buttonText}>{access.canResubmit ? "Resubmit Profile for Review" : "Submit Profile for Review"}</Text>
+        </TouchableOpacity>
+      ) : presentation.showAwaitingApproval ? (
+        <Text style={s.pending}>Profile submitted and awaiting approval.</Text>
+      ) : null}
+      {!vendorTypes.includes("MERCHANDISE") && profile && !profile.logo_url ? (
+        <Text style={s.setupNotice}>Add the business logo before submitting for review.</Text>
+      ) : null}
     </ScrollView>
   );
 }
@@ -212,6 +317,14 @@ const s = StyleSheet.create({
   },
   secondaryText: { color: AppColor.primary, fontWeight: "800" },
   buttonText: { color: "#fff", fontWeight: "800" },
+  category: { borderWidth: 1, borderColor: "#cbd5e1", borderRadius: 10, padding: 12, marginBottom: 8 },
+  categoryDescription: { color: "#64748b", marginTop: 4 },
+  submitReview: { backgroundColor: "#166534", padding: 15, borderRadius: 12, alignItems: "center", marginTop: 12 },
+  rejection: { color: "#991b1b", backgroundColor: "#fee2e2", padding: 12, borderRadius: 10, marginTop: 14 },
+  pending: { color: "#92400e", backgroundColor: "#fef3c7", padding: 12, borderRadius: 10, marginTop: 12, textAlign: "center" },
+  setupNotice: { color: "#475569", backgroundColor: "#f1f5f9", padding: 12, borderRadius: 10, marginBottom: 12 },
+  disabled: { opacity: 0.5 },
+  approved: { color: "#166534", backgroundColor: "#dcfce7", padding: 12, borderRadius: 10, marginTop: 12 },
   logoButton: {
     height: 120,
     borderRadius: 14,
