@@ -13,6 +13,70 @@ export const buildEventVendorApplicationDraft = (state, overrides = {}) => ({
   ...overrides,
 });
 
+const BULLET_PREFIX = "• ";
+
+export const normalizeApplicationBullets = (value = "") => {
+  const normalized = String(value).replace(/\r/g, "");
+  if (!normalized) return BULLET_PREFIX;
+  return normalized
+    .split("\n")
+    .map((line) => `${BULLET_PREFIX}${line.replace(/^\s*[-•]\s*/, "")}`)
+    .join("\n");
+};
+
+export const removeEmptyApplicationBullet = (value = "") => {
+  const normalized = normalizeApplicationBullets(value);
+  const lines = normalized.split("\n");
+  if (lines.length > 1 && lines.at(-1) === BULLET_PREFIX) {
+    lines.pop();
+    return lines.join("\n");
+  }
+  return normalized;
+};
+
+export const updateApplicationBullets = (previous = "", next = "") => {
+  if (
+    String(previous).endsWith("\n• ") &&
+    String(next) === String(previous).slice(0, -1)
+  ) {
+    return removeEmptyApplicationBullet(previous);
+  }
+  return normalizeApplicationBullets(next);
+};
+
+export const applicationBulletItems = (value = "") =>
+  normalizeApplicationBullets(value)
+    .split("\n")
+    .map((line) => line.replace(/^\s*[-•]\s*/, "").trim())
+    .filter(Boolean);
+
+export const sanitizeApplicationCurrency = (value = "") => {
+  const stripped = String(value).replace(/[$,\s]/g, "").replace(/[^\d.]/g, "");
+  const [whole = "", ...decimalParts] = stripped.split(".");
+  const decimals = decimalParts.join("").slice(0, 2);
+  return `${whole}${decimalParts.length ? `.${decimals}` : ""}`;
+};
+
+export const formatApplicationCurrency = (value = "") => {
+  const sanitized = sanitizeApplicationCurrency(value);
+  const amount = Number(sanitized);
+  return Number.isFinite(amount) && sanitized !== "" ? `$${amount.toFixed(2)}` : "$0.00";
+};
+
+export const applicationCurrencyNumber = (value = "") => {
+  const amount = Number(sanitizeApplicationCurrency(value));
+  return Number.isFinite(amount) ? amount : 0;
+};
+
+export const getApprovedApplicationUploadCategories = (
+  profile,
+  categoryOptions = [],
+) => {
+  if (!profile?.vendor_types?.includes("MERCHANDISE")) return [];
+  const selected = new Set(profile.merchandise_categories || []);
+  return categoryOptions.filter((category) => selected.has(category.value));
+};
+
 export const parseEventVendorApplicationReturn = (value) => {
   try {
     const parsed = JSON.parse(value || "null");

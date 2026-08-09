@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import ImagePicker from "react-native-image-crop-picker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   getEventVendorPhotos_API,
   getEventVendorProfile_API,
@@ -33,6 +34,13 @@ import {
   isAuthoritativeApplicationUnavailable,
   getPhotoRemovalPersistenceMessage,
   persistApplicationPhotoSelection,
+  normalizeApplicationBullets,
+  updateApplicationBullets,
+  applicationBulletItems,
+  sanitizeApplicationCurrency,
+  formatApplicationCurrency,
+  applicationCurrencyNumber,
+  getApprovedApplicationUploadCategories,
 } from "../helpers/eventVendorApplicationDraft.helper";
 import { useDispatch } from "react-redux";
 import {
@@ -42,14 +50,16 @@ import {
   setVendorOnboardingStep,
 } from "../redux/slices/authSlice";
 export default function EventVendorApplicationScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const event = route.params.event;
   const [profile, setProfile] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [selected, setSelected] = useState([]);
   const [types, setTypes] = useState([]);
-  const [bullets, setBullets] = useState("");
+  const [bullets, setBullets] = useState("• ");
   const [price, setPrice] = useState("");
+  const [priceFocused, setPriceFocused] = useState(false);
   const [notes, setNotes] = useState("");
   const [electricity, setElectricity] = useState(null);
   const [feeAck, setFeeAck] = useState(false);
@@ -74,8 +84,8 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
         if (draft) {
           setSelected(Array.isArray(draft.selected) ? draft.selected : []);
           setTypes(Array.isArray(draft.types) ? draft.types : []);
-          setBullets(draft.bullets || "");
-          setPrice(draft.price || "");
+          setBullets(normalizeApplicationBullets(draft.bullets));
+          setPrice(sanitizeApplicationCurrency(draft.price));
           setNotes(draft.notes || "");
           setElectricity(draft.electricity ?? null);
           setFeeAck(draft.feeAck === true);
@@ -124,6 +134,16 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
   const persistDraft = async (overrides = {}) => {
     await AsyncStorage.setItem(draftKey, JSON.stringify(currentDraft(overrides)));
   };
+  const saveDraft = async () => {
+    try {
+      await persistDraft();
+      Alert.alert("Application Draft", "Your application draft was saved.");
+    } catch (error) {
+      Alert.alert("Application Draft", error?.message || "Unable to save this draft.");
+    }
+  };
+  const returnToMarketplace = () =>
+    navigation.navigate("bottomRoot", { screen: "eventVendorMarketplaceScreen" });
   const persistSelected = async (nextSelected, removedPhotoId = null) =>
     persistApplicationPhotoSelection({
       storage: AsyncStorage,
@@ -212,11 +232,8 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
       await submitEventVendorApplication_API(event.event_id, {
         vendor_types: types,
         photo_ids: selected,
-        offering_bullets: bullets
-          .split("\n")
-          .map((x) => x.replace(/^[-•]\s*/, "").trim())
-          .filter(Boolean),
-        average_price: Number(price),
+        offering_bullets: applicationBulletItems(bullets),
+        average_price: applicationCurrencyNumber(price),
         additional_notes: notes,
         electricity_required: electricity,
         electricity_fee_acknowledged: feeAck,
@@ -230,7 +247,7 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
       Alert.alert(
         "Application Submitted",
         "Your application was submitted to the coordinator.",
-        [{ text: "Done", onPress: () => navigation.goBack() }],
+        [{ text: "Done", onPress: returnToMarketplace }],
       );
     } catch (e) {
       Alert.alert("Application", e?.message || "Unable to submit application.");
@@ -278,7 +295,10 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
     }
   };
   return (
-    <ScrollView contentContainerStyle={s.page}>
+    <ScrollView contentContainerStyle={[s.page, { paddingTop: insets.top + 12 }]}>
+      <TouchableOpacity style={s.back} onPress={returnToMarketplace}>
+        <Text style={s.backText}>‹ Back to Marketplace</Text>
+      </TouchableOpacity>
       <Text style={s.heading}>{event.event_name}</Text>
       <Text style={s.meta}>
         Business: {profile?.business_name || "Complete profile"}
@@ -298,8 +318,11 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
       <Text style={s.label}>Application Photos (up to 5)</Text>
       {profile?.vendor_types?.includes("MERCHANDISE") ? (
         <>
-          <Text style={s.help}>Choose a category for phone uploads.</Text>
-          {MERCHANDISE_CATEGORIES.map((category) => (
+          <Text style={s.help}>Select the merchandise category for this photo.</Text>
+          {getApprovedApplicationUploadCategories(
+            profile,
+            MERCHANDISE_CATEGORIES,
+          ).map((category) => (
             <TouchableOpacity key={category.value} style={[s.choice, uploadCategory === category.value && s.on]} onPress={() => setUploadCategory(category.value)}>
               <Text>{category.label}</Text>
             </TouchableOpacity>
@@ -320,6 +343,9 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
             onPress={() => toggleSelectedPhoto(p)}
           >
             <Image source={{ uri: p.file_url }} style={s.photo} />
+            {p.category && p.category !== "GENERAL" ? (
+              <Text style={s.categoryLabel}>{MERCHANDISE_CATEGORIES.find((item) => item.value === p.category)?.label || p.category}</Text>
+            ) : null}
             {selected.includes(p.photo_id) ? <Text style={s.selectedLabel}>Selected · tap to remove</Text> : null}
           </TouchableOpacity>
         ))}
@@ -330,14 +356,16 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
         style={[s.input, s.area]}
         multiline
         value={bullets}
-        onChangeText={setBullets}
+        onChangeText={(value) => setBullets(updateApplicationBullets(bullets, value))}
       />
       <Text style={s.label}>Average Price *</Text>
       <TextInput
         style={s.input}
         keyboardType="decimal-pad"
-        value={price}
-        onChangeText={setPrice}
+        value={priceFocused ? price : formatApplicationCurrency(price)}
+        onChangeText={(value) => setPrice(sanitizeApplicationCurrency(value))}
+        onFocus={() => setPriceFocused(true)}
+        onBlur={() => setPriceFocused(false)}
       />
       <Text style={s.label}>Additional Notes</Text>
       <TextInput
@@ -380,6 +408,9 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
       <Text style={s.agreementNotice}>
         The Marketplace NDA and Governance Document must be signed in DocuSign before this application is submitted.
       </Text>
+      <TouchableOpacity style={s.saveDraft} onPress={saveDraft}>
+        <Text style={s.saveDraftText}>Save Draft</Text>
+      </TouchableOpacity>
       <TouchableOpacity style={s.submit} onPress={startSigningAndSubmit}>
         <Text style={s.submitText}>Sign Agreements &amp; Submit</Text>
       </TouchableOpacity>
@@ -388,6 +419,8 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
 }
 const s = StyleSheet.create({
   page: { padding: 18, paddingBottom: 60, backgroundColor: "#fff" },
+  back: { alignSelf: "flex-start", paddingVertical: 8, marginBottom: 4 },
+  backText: { color: AppColor.primary, fontWeight: "800", fontSize: 16 },
   heading: { fontSize: 25, fontWeight: "800", color: "#172033" },
   meta: { color: "#64748b", marginTop: 5 },
   label: {
@@ -399,6 +432,7 @@ const s = StyleSheet.create({
   help: { color: "#64748b", marginBottom: 6 },
   phoneUpload: { backgroundColor: AppColor.primary, padding: 12, borderRadius: 10, alignItems: "center", marginBottom: 10 },
   selectedLabel: { fontSize: 10, color: "#166534", padding: 4 },
+  categoryLabel: { fontSize: 10, color: "#475569", paddingHorizontal: 4, paddingTop: 4 },
   choice: {
     borderWidth: 1,
     borderColor: "#cbd5e1",
@@ -432,5 +466,7 @@ const s = StyleSheet.create({
     marginTop: 18,
   },
   submitText: { color: "#fff", fontWeight: "800" },
+  saveDraft: { borderWidth: 1, borderColor: AppColor.primary, padding: 14, borderRadius: 12, alignItems: "center", marginTop: 18 },
+  saveDraftText: { color: AppColor.primary, fontWeight: "800" },
   agreementNotice: { marginTop: 18, color: "#475569", lineHeight: 20 },
 });

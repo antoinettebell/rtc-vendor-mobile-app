@@ -118,6 +118,44 @@ await helper.clearEventVendorApplicationRecovery({
   storage, draftKey: "draft", returnKey: helper.EVENT_VENDOR_APPLICATION_RETURN_KEY,
 });
 assert.equal(memory.has("draft"), false, "successful submission clears the draft");
+
+assert.equal(helper.normalizeApplicationBullets(""), "• ");
+assert.equal(helper.normalizeApplicationBullets("Candles\nSoap"), "• Candles\n• Soap");
+assert.equal(helper.normalizeApplicationBullets("• Candles\n• Soap"), "• Candles\n• Soap", "rerenders do not duplicate bullets");
+assert.equal(helper.removeEmptyApplicationBullet("• Candles\n• "), "• Candles");
+assert.equal(helper.updateApplicationBullets("• Candles\n• ", "• Candles\n•"), "• Candles");
+assert.deepEqual(helper.applicationBulletItems("• Candles\n• Soap"), ["Candles", "Soap"]);
+assert.equal(helper.sanitizeApplicationCurrency("$1,234.567"), "1234.56");
+assert.equal(helper.sanitizeApplicationCurrency("12..3bad"), "12.3");
+assert.equal(helper.formatApplicationCurrency("12"), "$12.00");
+assert.equal(helper.formatApplicationCurrency("12.5"), "$12.50");
+assert.equal(helper.formatApplicationCurrency("bad"), "$0.00");
+assert.equal(helper.applicationCurrencyNumber("$1,234.50"), 1234.5);
+const categoryOptions = [
+  { value: "ARTISANS_CRAFTERS", label: "Artisans" },
+  { value: "COMMERCIAL_RETAIL", label: "Retail" },
+];
+assert.deepEqual(
+  helper.getApprovedApplicationUploadCategories({
+    vendor_types: ["MERCHANDISE"],
+    merchandise_categories: ["COMMERCIAL_RETAIL"],
+  }, categoryOptions),
+  [categoryOptions[1]],
+  "merchandise uploads show only categories in the approved profile",
+);
+assert.deepEqual(
+  helper.getApprovedApplicationUploadCategories({ vendor_types: ["SERVICE"] }, categoryOptions),
+  [],
+  "service and other vendors are not asked for merchandise categories",
+);
+
+const screenSource = await readFile(new URL("../screens/eventVendorApplicationScreen.js", import.meta.url), "utf8");
+assert.match(screenSource, /Save Draft/);
+assert.match(screenSource, /Back to Marketplace/);
+assert.match(screenSource, /navigation\.navigate\("bottomRoot", \{ screen: "eventVendorMarketplaceScreen" \}\)/);
+assert.doesNotMatch(screenSource, /navigation\.goBack\(\)/);
+assert.match(screenSource, /getApprovedApplicationUploadCategories/);
+assert.match(screenSource, /Select the merchandise category for this photo\./);
 assert.equal(memory.has(helper.EVENT_VENDOR_APPLICATION_RETURN_KEY), false, "successful submission clears return intent");
 
 console.log("Marketplace Vendor application draft recovery tests passed.");
