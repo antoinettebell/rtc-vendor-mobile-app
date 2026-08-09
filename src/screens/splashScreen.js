@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppColor, Mulish400, Mulish700 } from "../utils/theme";
 import { useNavigation } from "@react-navigation/native";
@@ -9,12 +9,26 @@ import {
   setPendingAuthRoute,
   setPendingEventVendorApplication,
   setPostSignInRoute,
+  onSignin,
+  onOnBoard,
+  onUnderReview,
+  onSignOut,
+  setVendorOnboardingStep,
+  setEventVendorOnboardingSessionActive,
 } from "../redux/slices/authSlice";
 import StatusBarManager from "../components/StatusBarManager";
 import {
   consumePendingAuthRoute,
   getFinalSignupDestination,
 } from "../helpers/signupNavigation.helper";
+import { getEventVendorProfile_API } from "../api/appAPI";
+import {
+  getEventVendorResumeDestination,
+  getEventVendorColdLaunchTransition,
+  getEventVendorStatusFailureTransition,
+  getEventVendorStatusFailureUserAction,
+} from "../helpers/eventVendorProfile.helper";
+import { clearUserSlice, updateUser } from "../redux/slices/userSlice";
 
 const SplashScreen = () => {
   const insets = useSafeAreaInsets();
@@ -28,15 +42,78 @@ const SplashScreen = () => {
     postSignInRoute,
     pendingAuthRoute,
     pendingEventVendorApplication,
+    eventVendorOnboardingSessionActive,
   } = useSelector(
     (state) => state.authReducer
   );
+  const eventVendorCheckRef = useRef(false);
+  const [statusCheckFailure, setStatusCheckFailure] = useState(null);
+  const [statusCheckAttempt, setStatusCheckAttempt] = useState(0);
   const { selectedPlan, selectedSignupAddOns, user } = useSelector(
     (state) => state.userReducer
   );
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
+    const timeout = setTimeout(async () => {
+      if (user?.vendorSubtype === "EVENT_VENDOR" && !eventVendorCheckRef.current) {
+        eventVendorCheckRef.current = true;
+        try {
+          setStatusCheckFailure(null);
+          const response = await getEventVendorProfile_API();
+          const profile = response?.data?.eventVendorProfile || null;
+          const transition = getEventVendorColdLaunchTransition({
+            profile,
+            onboardingSessionActive: eventVendorOnboardingSessionActive,
+          });
+          dispatch(updateUser({ eventVendorProfile: profile }));
+          dispatch(onSignin(transition.isSignedIn));
+          dispatch(onOnBoard(transition.isOnboarded));
+          dispatch(onUnderReview(transition.isUnderReview));
+          dispatch(setVendorOnboardingStep(transition.vendorOnboardingStep));
+          if (transition.isSignedIn) {
+            if (isSignedIn) {
+              navigation.replace(
+                "bottomRoot",
+                postSignInRoute ? { screen: postSignInRoute } : undefined,
+              );
+            }
+            return;
+          }
+          if (transition.isUnderReview) {
+            dispatch(setEventVendorOnboardingSessionActive(false));
+            if (isOnboarded && !isSignedIn) {
+              navigation.replace("authUnderReviewNoteScreen");
+            }
+            return;
+          }
+          if (!eventVendorOnboardingSessionActive) {
+            dispatch(onSignOut());
+            dispatch(clearUserSlice());
+            return;
+          }
+          const destination = getEventVendorResumeDestination(profile);
+          if (isOnboarded && !isSignedIn) {
+            navigation.replace(
+              destination === "EVENT_VENDOR_PHOTOS"
+                ? "eventVendorPhotosScreen"
+                : "eventVendorProfileScreen",
+            );
+          }
+          return;
+        } catch (error) {
+          const failure = getEventVendorStatusFailureTransition({
+            error,
+            existingProfile: user?.eventVendorProfile,
+          });
+          if (failure.authoritativeMissing) {
+            dispatch(onSignOut());
+            dispatch(clearUserSlice());
+            return;
+          }
+          setStatusCheckFailure(failure);
+          return;
+        }
+      }
       if (isSignedIn) {
         if (pendingEventVendorApplication?.event?.event_id) {
           navigation.replace("eventVendorApplicationScreen", {
@@ -96,12 +173,27 @@ const SplashScreen = () => {
     postSignInRoute,
     pendingAuthRoute,
     pendingEventVendorApplication,
+    eventVendorOnboardingSessionActive,
+    statusCheckAttempt,
     dispatch,
     navigation,
     selectedPlan,
     selectedSignupAddOns,
     user,
   ]);
+
+  const retryStatusCheck = () => {
+    if (!getEventVendorStatusFailureUserAction("RETRY").retry) return;
+    eventVendorCheckRef.current = false;
+    setStatusCheckFailure(null);
+    setStatusCheckAttempt((value) => value + 1);
+  };
+
+  const signOutAfterStatusFailure = () => {
+    if (!getEventVendorStatusFailureUserAction("SIGN_OUT").clearSession) return;
+    dispatch(onSignOut());
+    dispatch(clearUserSlice());
+  };
 
   useEffect(() => {
     const hideSplash = async () => {
@@ -110,6 +202,23 @@ const SplashScreen = () => {
 
     hideSplash();
   }, []);
+
+  if (statusCheckFailure) {
+    return (
+      <View style={[styles.statusFailure, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+        <Text style={styles.statusFailureTitle}>Unable to Check Marketplace Vendor Status</Text>
+        <Text style={styles.statusFailureText}>
+          We could not confirm your Marketplace Vendor status. Your session and saved profile state have been preserved.
+        </Text>
+        <TouchableOpacity style={styles.statusRetryButton} onPress={retryStatusCheck}>
+          <Text style={styles.statusRetryText}>Retry</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.statusSignOutButton} onPress={signOutAfterStatusFailure}>
+          <Text style={styles.statusSignOutText}>Sign Out</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top / 2 }]}>
@@ -136,6 +245,38 @@ const SplashScreen = () => {
 export default SplashScreen;
 
 const styles = StyleSheet.create({
+  statusFailure: {
+    alignItems: "center",
+    backgroundColor: AppColor.white,
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 28,
+  },
+  statusFailureTitle: {
+    color: AppColor.text,
+    fontFamily: Mulish700,
+    fontSize: 22,
+    textAlign: "center",
+  },
+  statusFailureText: {
+    color: AppColor.text,
+    fontFamily: Mulish400,
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 12,
+    textAlign: "center",
+  },
+  statusRetryButton: {
+    alignItems: "center",
+    backgroundColor: AppColor.primary,
+    borderRadius: 10,
+    marginTop: 24,
+    paddingVertical: 14,
+    width: "100%",
+  },
+  statusRetryText: { color: AppColor.white, fontFamily: Mulish700 },
+  statusSignOutButton: { marginTop: 18, padding: 10 },
+  statusSignOutText: { color: AppColor.text, fontFamily: Mulish700 },
   container: {
     flex: 1,
     backgroundColor: AppColor.header,

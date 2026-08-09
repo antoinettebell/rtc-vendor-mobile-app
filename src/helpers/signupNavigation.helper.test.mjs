@@ -96,6 +96,20 @@ assert.deepEqual(
   },
   "the registration default does not block merchandise profile completion",
 );
+assert.deepEqual(
+  getOtpCompletionTransition({
+    selectedPlan: { slug: "SUB_MARKETPLACE_VENDOR" },
+    user: {
+      vendorSubtype: "EVENT_VENDOR",
+      requestStatus: "PENDING",
+      isUnderReview: true,
+      vendorOnboardingStep: "AWAITING_APPROVAL",
+      eventVendorProfile: { review_status: "DRAFT" },
+    },
+  }),
+  { isOnboarded: true, isUnderReview: false, vendorOnboardingStep: null },
+  "stale generic approval flags cannot override a Draft Marketplace Vendor profile",
+);
 assert.equal(
   getFinalSignupDestination({
     selectedPlan: { slug: "SUB_MARKETPLACE_VENDOR" },

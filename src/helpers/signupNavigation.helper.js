@@ -16,9 +16,8 @@ export const getOtpCompletionTransition = ({ selectedPlan, user } = {}) => {
   }
 
   const backendExplicitlyRequiresReview =
-    user?.isUnderReview === true ||
-    String(user?.vendorOnboardingStep || "").toUpperCase() ===
-      "AWAITING_APPROVAL";
+    String(user?.eventVendorProfile?.review_status || "").toUpperCase() ===
+    "PENDING_REVIEW";
 
   return {
     isOnboarded: true,

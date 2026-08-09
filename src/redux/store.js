@@ -1,5 +1,5 @@
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
-import { persistStore, persistReducer } from "redux-persist";
+import { persistStore, persistReducer, createTransform } from "redux-persist";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import authReducer from "./slices/authSlice";
@@ -22,6 +22,16 @@ const persistConfig = {
     "posOrderReducer",
   ],
   blacklist: ["snackbarReducer"],
+  transforms: [
+    createTransform(
+      (state) => ({
+        ...state,
+        eventVendorOnboardingSessionActive: false,
+      }),
+      (state) => state,
+      { whitelist: ["authReducer"] },
+    ),
+  ],
 };
 
 const rootReducer = combineReducers({

@@ -74,6 +74,55 @@ export const getEventVendorSignInTransition = (profile) => {
   };
 };
 
+export const getEventVendorResumeDestination = (profile) => {
+  const status = String(profile?.review_status || "MISSING").toUpperCase();
+  if (status === "PENDING_REVIEW") return "AWAITING_APPROVAL";
+  if (status === "APPROVED") return "MARKETPLACE";
+  if (status === "REJECTED" || !profile) return "EVENT_VENDOR_PROFILE";
+  const merchandiseReadyForPhotos =
+    profile.vendor_types?.includes("MERCHANDISE") &&
+    !!profile.business_name &&
+    !!profile.business_description &&
+    !!profile.logo_url &&
+    (profile.merchandise_categories || []).length > 0;
+  return merchandiseReadyForPhotos
+    ? "EVENT_VENDOR_PHOTOS"
+    : "EVENT_VENDOR_PROFILE";
+};
+
+export const getEventVendorColdLaunchTransition = ({
+  profile,
+  onboardingSessionActive = false,
+}) => {
+  const transition = getEventVendorSignInTransition(profile);
+  if (transition.isSignedIn || transition.isUnderReview) return transition;
+  return {
+    ...transition,
+    isOnboarded: onboardingSessionActive,
+    destination: onboardingSessionActive
+      ? getEventVendorResumeDestination(profile)
+      : "SIGN_IN",
+  };
+};
+
+export const getEventVendorStatusFailureTransition = ({ error, existingProfile }) => {
+  const status = Number(error?.response?.status || error?.status);
+  if ([404, 410].includes(status)) {
+    return { action: "SIGN_IN", clearSession: true, authoritativeMissing: true };
+  }
+  return {
+    action: "RETRY",
+    clearSession: false,
+    authoritativeMissing: false,
+    preservedDestination: getEventVendorSignInTransition(existingProfile).destination,
+  };
+};
+
+export const getEventVendorStatusFailureUserAction = (action) => ({
+  retry: action === "RETRY",
+  clearSession: action === "SIGN_OUT",
+});
+
 export const groupPhotosByCategory = (photos = []) =>
   MERCHANDISE_CATEGORIES.reduce(
     (groups, category) => ({

@@ -16,10 +16,16 @@ import {
   onOnBoard,
   onUnderReview,
   setVendorOnboardingStep,
+  onSignin,
+  setEventVendorOnboardingSessionActive,
 } from "../redux/slices/authSlice";
 import StatusBarManager from "../components/StatusBarManager";
 import { getUserDetail_API } from "../api/appAPI";
 import { setUser } from "../redux/slices/userSlice";
+import {
+  getEventVendorResumeDestination,
+  getEventVendorSignInTransition,
+} from "../helpers/eventVendorProfile.helper";
 
 export default function AuthUnderReviewNoteScreen() {
   const insets = useSafeAreaInsets();
@@ -44,6 +50,38 @@ export default function AuthUnderReviewNoteScreen() {
       if (response?.success && response?.data) {
         const refreshedUser = response.data.user;
         dispatch(setUser(refreshedUser));
+
+        if (refreshedUser?.vendorSubtype === "EVENT_VENDOR") {
+          const profile = refreshedUser?.eventVendorProfile || null;
+          const transition = getEventVendorSignInTransition(profile);
+          dispatch(onSignin(transition.isSignedIn));
+          dispatch(onOnBoard(transition.isOnboarded));
+          dispatch(onUnderReview(transition.isUnderReview));
+          dispatch(setVendorOnboardingStep(transition.vendorOnboardingStep));
+          if (transition.isSignedIn) {
+            approvalHandledRef.current = true;
+            navigation.reset({ index: 0, routes: [{ name: "splash" }] });
+            return;
+          }
+          if (!transition.isUnderReview) {
+            approvalHandledRef.current = true;
+            dispatch(setEventVendorOnboardingSessionActive(true));
+            const destination = getEventVendorResumeDestination(profile);
+            navigation.reset({
+              index: 0,
+              routes: [{
+                name: destination === "EVENT_VENDOR_PHOTOS"
+                  ? "eventVendorPhotosScreen"
+                  : "eventVendorProfileScreen",
+              }],
+            });
+            return;
+          }
+          if (!silent) {
+            Alert.alert("Approval Pending", "Your Marketplace Vendor profile is still being reviewed.");
+          }
+          return;
+        }
 
         const requestStatus = String(
           refreshedUser?.requestStatus || "PENDING"

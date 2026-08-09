@@ -36,6 +36,7 @@ import {
   onUnderReview,
   setVendorOnboardingStep,
   setPendingEventVendorApplication,
+  setEventVendorOnboardingSessionActive,
 } from "../redux/slices/authSlice";
 import StatusBarManager from "../components/StatusBarManager";
 import { getEventVendorSignInTransition } from "../helpers/eventVendorProfile.helper";
@@ -177,6 +178,11 @@ const SignInScreen = ({ navigation, route }) => {
             dispatch(onUnderReview(transition.isUnderReview));
             dispatch(
               setVendorOnboardingStep(transition.vendorOnboardingStep),
+            );
+            dispatch(
+              setEventVendorOnboardingSessionActive(
+                !transition.isSignedIn && !transition.isUnderReview,
+              ),
             );
             if (transition.isSignedIn) {
               const returnValue = await AsyncStorage.getItem(

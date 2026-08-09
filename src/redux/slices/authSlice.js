@@ -8,6 +8,7 @@ const initialState = {
   postSignInRoute: null,
   pendingAuthRoute: null,
   pendingEventVendorApplication: null,
+  eventVendorOnboardingSessionActive: false,
 };
 
 const authSlice = createSlice({
@@ -35,6 +36,9 @@ const authSlice = createSlice({
     setPendingEventVendorApplication: (state, { payload }) => {
       state.pendingEventVendorApplication = payload;
     },
+    setEventVendorOnboardingSessionActive: (state, { payload }) => {
+      state.eventVendorOnboardingSessionActive = payload === true;
+    },
     onSignOut: () => initialState,
   },
 });
@@ -47,6 +51,7 @@ export const {
   setPostSignInRoute,
   setPendingAuthRoute,
   setPendingEventVendorApplication,
+  setEventVendorOnboardingSessionActive,
   onSignOut,
 } = authSlice.actions;
 export default authSlice.reducer;

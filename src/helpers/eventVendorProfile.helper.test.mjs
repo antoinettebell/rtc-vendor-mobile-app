@@ -26,6 +26,80 @@ assert.equal(
   "EVENT_VENDOR_PROFILE",
   "an event vendor never enters food-truck onboarding",
 );
+const approvedNetworkFailure = helper.getEventVendorStatusFailureTransition({
+  error: new Error("Network unavailable"),
+  existingProfile: { review_status: "APPROVED" },
+});
+assert.deepEqual(approvedNetworkFailure, {
+  action: "RETRY",
+  clearSession: false,
+  authoritativeMissing: false,
+  preservedDestination: "MARKETPLACE",
+});
+const pendingServerFailure = helper.getEventVendorStatusFailureTransition({
+  error: { response: { status: 500 } },
+  existingProfile: { review_status: "PENDING_REVIEW" },
+});
+assert.equal(pendingServerFailure.clearSession, false);
+assert.equal(pendingServerFailure.preservedDestination, "AWAITING_APPROVAL");
+for (const status of [404, 410]) {
+  assert.deepEqual(
+    helper.getEventVendorStatusFailureTransition({ error: { response: { status } } }),
+    { action: "SIGN_IN", clearSession: true, authoritativeMissing: true },
+  );
+}
+assert.deepEqual(helper.getEventVendorStatusFailureUserAction("RETRY"), { retry: true, clearSession: false });
+assert.deepEqual(helper.getEventVendorStatusFailureUserAction("SIGN_OUT"), { retry: false, clearSession: true });
+
+for (const [profile, expected] of [
+  [null, "EVENT_VENDOR_PROFILE"],
+  [{ review_status: "DRAFT" }, "EVENT_VENDOR_PROFILE"],
+  [{ review_status: "DRAFT", vendor_types: ["MERCHANDISE"], business_name: "Maker", business_description: "Goods", logo_url: "logo", merchandise_categories: ["ARTISANS_CRAFTERS"] }, "EVENT_VENDOR_PHOTOS"],
+  [{ review_status: "PENDING_REVIEW" }, "AWAITING_APPROVAL"],
+  [{ review_status: "REJECTED" }, "EVENT_VENDOR_PROFILE"],
+  [{ review_status: "APPROVED" }, "MARKETPLACE"],
+]) {
+  assert.equal(
+    helper.getEventVendorColdLaunchTransition({ profile, onboardingSessionActive: true }).destination,
+    expected,
+    `retry reconciliation routes ${profile?.review_status || "missing"} correctly`,
+  );
+}
+for (const [profile, expected] of [
+  [null, "SIGN_IN"],
+  [{ review_status: "DRAFT" }, "SIGN_IN"],
+  [{ review_status: "REJECTED", rejection_reason: "More photos" }, "SIGN_IN"],
+  [{ review_status: "PENDING_REVIEW" }, "AWAITING_APPROVAL"],
+  [{ review_status: "APPROVED" }, "MARKETPLACE"],
+]) {
+  const cold = helper.getEventVendorColdLaunchTransition({
+    profile,
+    onboardingSessionActive: false,
+    isUnderReview: true,
+    vendorOnboardingStep: "AWAITING_APPROVAL",
+  });
+  assert.equal(cold.destination, expected, `cold launch uses profile status for ${profile?.review_status || "missing"}`);
+}
+assert.equal(
+  helper.getEventVendorColdLaunchTransition({
+    profile: { review_status: "DRAFT" },
+    onboardingSessionActive: true,
+  }).destination,
+  "EVENT_VENDOR_PROFILE",
+  "a deliberate live onboarding session may resume a draft",
+);
+assert.equal(
+  helper.getEventVendorResumeDestination({
+    review_status: "DRAFT",
+    vendor_types: ["MERCHANDISE"],
+    business_name: "Maker",
+    business_description: "Goods",
+    logo_url: "logo",
+    merchandise_categories: ["ARTISANS_CRAFTERS"],
+  }),
+  "EVENT_VENDOR_PHOTOS",
+  "a completed merchandise profile resumes at categorized photos",
+);
 assert.equal(helper.shouldShowPermanentPhotos({ vendor_types: ["SERVICE"] }), false);
 assert.equal(helper.shouldShowPermanentPhotos({ vendor_types: ["MERCHANDISE", "SERVICE"] }), true);
 assert.equal(helper.getProfileOnboardingDestination(["MERCHANDISE"]), "EVENT_VENDOR_PHOTOS");

@@ -28,6 +28,7 @@ import {
   onSignOut,
   onUnderReview,
   setVendorOnboardingStep,
+  setEventVendorOnboardingSessionActive,
 } from "../redux/slices/authSlice";
 import {
   clearUserSlice,
@@ -43,6 +44,7 @@ import {
   performAuthNavigation,
   getOtpCompletionTransition,
   SIGNIN_ROUTE,
+  isMarketplaceVendorSignup,
 } from "../helpers/signupNavigation.helper";
 
 const RESEND_CODE_TIME = 120;
@@ -371,6 +373,14 @@ const OtpVerificationScreen = ({ route }) => {
               dispatch(onUnderReview(transition.isUnderReview));
               dispatch(
                 setVendorOnboardingStep(transition.vendorOnboardingStep),
+              );
+              dispatch(
+                setEventVendorOnboardingSessionActive(
+                  isMarketplaceVendorSignup({
+                    selectedPlan,
+                    user: verifiedUser || params?.data?.user,
+                  }) && !transition.isUnderReview,
+                ),
               );
             }}
           >
