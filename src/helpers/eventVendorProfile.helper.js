@@ -134,6 +134,28 @@ export const groupPhotosByCategory = (photos = []) =>
     {},
   );
 
+export const getSelectedMerchandiseCategories = (profile) => {
+  const selected = new Set(profile?.merchandise_categories || []);
+  return MERCHANDISE_CATEGORIES.filter((category) => selected.has(category.value));
+};
+
+export const getMerchandisePortfolioProgress = (profile, photos = []) => {
+  const selected = new Set(profile?.merchandise_categories || []);
+  const activeCount = photos.filter((photo) =>
+    selected.has(photo?.category) &&
+    (photo?.source == null || photo.source === "REPOSITORY") &&
+    (photo?.status == null || photo.status === "ACTIVE")
+  ).length;
+  return { activeCount, required: 3, complete: selected.size > 0 && activeCount >= 3 };
+};
+
+export const getMarketplaceApiErrorMessage = (error, fallback) =>
+  error?.response?.data?.message ||
+  error?.response?.data?.error ||
+  error?.data?.message ||
+  error?.message ||
+  fallback;
+
 export const toggleApplicationPhoto = (selected = [], photoId, maximum = 5) => {
   if (selected.includes(photoId)) return selected.filter((id) => id !== photoId);
   return selected.length < maximum ? [...selected, photoId] : selected;

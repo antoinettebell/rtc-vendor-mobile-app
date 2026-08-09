@@ -73,6 +73,7 @@ export default function AuthUnderReviewNoteScreen() {
                 name: destination === "EVENT_VENDOR_PHOTOS"
                   ? "eventVendorPhotosScreen"
                   : "eventVendorProfileScreen",
+                params: { onboardingFlow: true },
               }],
             });
             return;

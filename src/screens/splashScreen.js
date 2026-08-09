@@ -97,6 +97,7 @@ const SplashScreen = () => {
               destination === "EVENT_VENDOR_PHOTOS"
                 ? "eventVendorPhotosScreen"
                 : "eventVendorProfileScreen",
+              { onboardingFlow: true },
             );
           }
           return;

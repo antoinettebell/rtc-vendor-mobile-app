@@ -24,7 +24,9 @@ import {
 import { AppColor } from "../utils/theme";
 import {
   groupPhotosByCategory,
-  MERCHANDISE_CATEGORIES,
+  getMarketplaceApiErrorMessage,
+  getMerchandisePortfolioProgress,
+  getSelectedMerchandiseCategories,
 } from "../helpers/eventVendorProfile.helper";
 import { useDispatch } from "react-redux";
 import { updateUser } from "../redux/slices/userSlice";
@@ -42,10 +44,9 @@ export default function EventVendorPhotosScreen({ route }) {
   const [profile, setProfile] = useState(null);
   const onboardingFlow = route?.params?.onboardingFlow === true;
   const groupedPhotos = groupPhotosByCategory(photos);
-  const selectedCategoriesComplete = (profile?.merchandise_categories || []).every(
-    (category) => (groupedPhotos[category] || []).length > 0,
-  );
-  const canSubmitReview = !!profile?.logo_url && selectedCategoriesComplete;
+  const selectedCategories = getSelectedMerchandiseCategories(profile);
+  const portfolioProgress = getMerchandisePortfolioProgress(profile, photos);
+  const canSubmitReview = !!profile?.logo_url && portfolioProgress.complete;
   const handleReapproval = (response) => {
     if (response?.data?.requires_reapproval !== true) return;
     dispatch(onSignin(false));
@@ -97,7 +98,7 @@ export default function EventVendorPhotosScreen({ route }) {
       await load();
     } catch (e) {
       if (e?.code !== "E_PICKER_CANCELLED")
-        Alert.alert("Photos", e?.message || "Unable to upload photo.");
+        Alert.alert("Photos", getMarketplaceApiErrorMessage(e, "Unable to upload photo."));
     }
   };
   const uploadLogo = async () => {
@@ -114,7 +115,7 @@ export default function EventVendorPhotosScreen({ route }) {
       dispatch(updateUser({ eventVendorProfile: response?.data?.eventVendorProfile || profile }));
       handleReapproval(response);
     } catch (e) {
-      if (e?.code !== "E_PICKER_CANCELLED") Alert.alert("Logo", e?.message || "Unable to upload logo.");
+      if (e?.code !== "E_PICKER_CANCELLED") Alert.alert("Logo", getMarketplaceApiErrorMessage(e, "Unable to upload logo."));
     }
   };
   const submitForReview = async () => {
@@ -126,7 +127,7 @@ export default function EventVendorPhotosScreen({ route }) {
       dispatch(onUnderReview(true));
       dispatch(setVendorOnboardingStep("AWAITING_APPROVAL"));
     } catch (e) {
-      Alert.alert("Submit Profile", e?.message || "Unable to submit profile.");
+      Alert.alert("Submit Profile", getMarketplaceApiErrorMessage(e, "Unable to submit profile."));
     }
   };
   const remove = (photo) =>
@@ -152,6 +153,9 @@ export default function EventVendorPhotosScreen({ route }) {
       <Text style={s.sub}>
         {photos.length}/40 photos · Up to 10 photos in each category.
       </Text>
+      <Text style={s.progress}>
+        Portfolio photos: {portfolioProgress.activeCount} of 3 required.
+      </Text>
       {onboardingFlow ? (
         <View style={s.onboardingCard}>
           <Text style={s.sectionTitle}>Business Logo</Text>
@@ -160,20 +164,16 @@ export default function EventVendorPhotosScreen({ route }) {
           </TouchableOpacity>
         </View>
       ) : null}
-      {MERCHANDISE_CATEGORIES.map((category) => {
+      {selectedCategories.map((category) => {
         const categoryPhotos = groupedPhotos[category.value] || [];
         return (
           <View key={category.value} style={s.section}>
             <Text style={s.sectionTitle}>{category.label}</Text>
             <Text style={s.sectionDescription}>{category.description}</Text>
             <Text style={s.count}>{categoryPhotos.length}/10</Text>
-            {(profile?.merchandise_categories || []).includes(category.value) ? (
-              <TouchableOpacity style={s.add} onPress={() => add(category.value)}>
-                <Text style={s.addText}>Add Photo</Text>
-              </TouchableOpacity>
-            ) : (
-              <Text style={s.notSelected}>Select this category in Profile to add photos.</Text>
-            )}
+            <TouchableOpacity style={s.add} onPress={() => add(category.value)}>
+              <Text style={s.addText}>Add Photo</Text>
+            </TouchableOpacity>
             <FlatList
               scrollEnabled={false}
               data={categoryPhotos}
@@ -199,7 +199,7 @@ export default function EventVendorPhotosScreen({ route }) {
           <Text style={s.addText}>Submit Profile for Review</Text>
         </TouchableOpacity>
       ) : null}
-      {onboardingFlow && !canSubmitReview ? <Text style={s.requirement}>Add a logo and at least one photo for every selected merchandise category before submitting.</Text> : null}
+      {onboardingFlow && !canSubmitReview ? <Text style={s.requirement}>Add a logo and at least 3 portfolio photos in your selected merchandise categories before submitting.</Text> : null}
       <Modal visible={!!preview} transparent onRequestClose={() => setPreview(null)}>
         <TouchableOpacity style={s.previewBackdrop} onPress={() => setPreview(null)}>
           {preview ? <Image source={{ uri: preview.file_url }} style={s.previewImage} resizeMode="contain" /> : null}
@@ -213,6 +213,7 @@ const s = StyleSheet.create({
   content: { padding: 18, paddingBottom: 60 },
   heading: { fontSize: 26, fontWeight: "800", color: "#172033" },
   sub: { color: "#64748b", marginTop: 5 },
+  progress: { color: "#166534", fontWeight: "700", marginTop: 8 },
   add: {
     backgroundColor: AppColor.primary,
     padding: 14,
@@ -245,5 +246,4 @@ const s = StyleSheet.create({
   submitReview: { backgroundColor: "#166534", padding: 15, borderRadius: 12, alignItems: "center", marginTop: 24 },
   disabled: { opacity: 0.5 },
   requirement: { color: "#92400e", marginTop: 8, textAlign: "center" },
-  notSelected: { color: "#64748b", fontStyle: "italic", marginTop: 8 },
 });

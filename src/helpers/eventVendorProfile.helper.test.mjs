@@ -120,6 +120,50 @@ for (const vendorType of ["MERCHANDISE", "SERVICE"]) {
   assert.equal(draft.showSubmitFromProfile, vendorType === "SERVICE");
 }
 assert.equal(helper.MERCHANDISE_CATEGORIES.length, 4);
+const selectedCategoryProfile = {
+  merchandise_categories: ["ARTISANS_CRAFTERS", "APPAREL_ACCESSORIES"],
+};
+assert.deepEqual(
+  helper.getSelectedMerchandiseCategories(selectedCategoryProfile).map((category) => category.value),
+  ["ARTISANS_CRAFTERS", "APPAREL_ACCESSORIES"],
+  "Photos renders selected categories only",
+);
+const repositoryPhoto = (category) => ({ category, source: "REPOSITORY", status: "ACTIVE" });
+assert.deepEqual(
+  helper.getMerchandisePortfolioProgress(selectedCategoryProfile, [
+    repositoryPhoto("ARTISANS_CRAFTERS"),
+    repositoryPhoto("ARTISANS_CRAFTERS"),
+    repositoryPhoto("ARTISANS_CRAFTERS"),
+  ]),
+  { activeCount: 3, required: 3, complete: true },
+  "all three photos may be in one selected category",
+);
+assert.equal(
+  helper.getMerchandisePortfolioProgress(selectedCategoryProfile, [
+    repositoryPhoto("ARTISANS_CRAFTERS"),
+    repositoryPhoto("APPAREL_ACCESSORIES"),
+  ]).complete,
+  false,
+  "two photos keep submission disabled",
+);
+assert.deepEqual(
+  helper.getMerchandisePortfolioProgress(selectedCategoryProfile, [
+    repositoryPhoto("ARTISANS_CRAFTERS"),
+    repositoryPhoto("APPAREL_ACCESSORIES"),
+    repositoryPhoto("APPAREL_ACCESSORIES"),
+    repositoryPhoto("COMMERCIAL_RETAIL"),
+  ]),
+  { activeCount: 3, required: 3, complete: true },
+  "an unselected-category photo does not count",
+);
+assert.equal(
+  helper.getMarketplaceApiErrorMessage(
+    { response: { data: { message: "Add at least 3 portfolio photos" } } },
+    "fallback",
+  ),
+  "Add at least 3 portfolio photos",
+  "backend validation message is shown",
+);
 
 const photos = helper.MERCHANDISE_CATEGORIES.map((category, index) => ({ photo_id: `p-${index}`, category: category.value }));
 const grouped = helper.groupPhotosByCategory(photos);
