@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSelector } from "react-redux";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { getOperationalComplianceForms_API } from "../api/appAPI";
 import { AppColor } from "../utils/theme";
@@ -12,6 +13,8 @@ const TYPES = [
 ];
 
 const OperationsScreen = ({ navigation }) => {
+  const { user } = useSelector((state) => state.userReducer);
+  const isEmployee = user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
   const [loading, setLoading] = useState(true);
   const [submitted, setSubmitted] = useState([]);
   const [archived, setArchived] = useState([]);
@@ -75,14 +78,14 @@ const OperationsScreen = ({ navigation }) => {
           </TouchableOpacity>
         )) : <Text style={styles.empty}>No submitted forms.</Text>}
 
-        <Text style={styles.sectionTitle}>Archive</Text>
-        {!error && archived.map((form) => (
+        {!isEmployee ? <Text style={styles.sectionTitle}>Archive</Text> : null}
+        {!isEmployee && !error && archived.map((form) => (
           <TouchableOpacity key={form._id} style={styles.record} onPress={() => open(form.form_type, form._id)}>
             <View><Text style={styles.recordTitle}>{TYPES.find((x) => x.type === form.form_type)?.title}</Text><Text style={styles.detail}>{new Date(form.archived_at).toLocaleString()}</Text></View>
             <MaterialIcons name="image" size={22} color="#64748B" />
           </TouchableOpacity>
         ))}
-        {!loading && !error && !archived.length ? <Text style={styles.empty}>No archived forms.</Text> : null}
+        {!isEmployee && !loading && !error && !archived.length ? <Text style={styles.empty}>No archived forms.</Text> : null}
       </ScrollView>
     </SafeAreaView>
   );

@@ -34,6 +34,11 @@ import {
   addressStateRegex,
   addressPostalCodeRegex,
 } from "../utils/constants";
+import {
+  buildPaymentMethodPayload,
+  getPaymentMethodFields,
+  hydratePaymentMethodDetails,
+} from "../helpers/paymentMethodDetails.helper";
 import { addBankDetail_API, getBankDetail_API, uploadImage_API } from "../api/appAPI";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
 import { setBankStatus } from "../redux/slices/userSlice";
@@ -76,14 +81,20 @@ const validateCurrency = (text) => {
 };
 
 const validateSwiftCode = (text) => {
-  if (!text.trim()) return "SWIFT code is required";
-  return "";
+  if (!text.trim()) return "";
+  return /^[A-Z0-9]{8}([A-Z0-9]{3})?$/i.test(text.trim())
+    ? ""
+    : "Enter a valid 8 or 11 character SWIFT code";
 };
 
 const validateIban = (text) => {
-  if (!text.trim()) return "IBAN is required";
-  return "";
+  if (!text.trim()) return "";
+  return /^[A-Z0-9]{15,34}$/i.test(text.replace(/\s/g, ""))
+    ? ""
+    : "Enter a valid IBAN";
 };
+const validateWalletPaymentHandle = (text) =>
+  text.trim() ? "" : "Payment handle / account identifier is required";
 
 const validatePaymentMethod = (text) => {
   if (!text.trim()) return "Please select payment method";
@@ -147,6 +158,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
   const [bankData, setBankData] = useState(null);
   const [savedAccountNumber, setSavedAccountNumber] = useState("");
   const [accountHolderName, setAccountHolderName] = useState("");
+  const [walletPaymentHandle, setWalletPaymentHandle] = useState("");
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [routingNumber, setRoutingNumber] = useState("");
@@ -158,8 +170,8 @@ const EditBankDetailScreen = ({ navigation, route }) => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [paymentQrCodeUrl, setPaymentQrCodeUrl] = useState("");
   const [uploadingQr, setUploadingQr] = useState(false);
-  const requiresBankDetails = ["ACH", "CHECK"].includes(selectedPaymentMethod);
-  const requiresQrCode = ["CASHAPP", "PAYPAL", "VENMO"].includes(selectedPaymentMethod);
+  const { requiresBankDetails, requiresQrCode } =
+    getPaymentMethodFields(selectedPaymentMethod);
   const [addressLine1, setAddressLine1] = useState("");
   const [addressLine2, setAddressLine2] = useState("");
   const [city, setCity] = useState("");
@@ -168,6 +180,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
 
   const [errors, setErrors] = useState({
     accountHolderName: "",
+    walletPaymentHandle: "",
     bankName: "",
     accountNumber: "",
     routingNumber: "",
@@ -187,18 +200,23 @@ const EditBankDetailScreen = ({ navigation, route }) => {
   const handleContinueBtnPress = async () => {
     // Validate all required fields
     const newErrors = {
-      accountHolderName: validateAccountHolderName(accountHolderName),
+      accountHolderName: requiresBankDetails
+        ? validateAccountHolderName(accountHolderName)
+        : "",
+      walletPaymentHandle: requiresQrCode
+        ? validateWalletPaymentHandle(walletPaymentHandle)
+        : "",
       bankName: requiresBankDetails ? validateBankName(bankName) : "",
       accountNumber: requiresBankDetails ? validateAccountNumber(accountNumber) : "",
       routingNumber: requiresBankDetails && !validateRoutingNumber(routingNumber) ? "Routing number is required" : "",
       accountType: requiresBankDetails ? validateAccountType(selectedAccountType) : "",
-      remittanceEmail: validateRemittanceEmail(remittanceEmail),
-      // swiftCode: validateSwiftCode(swiftCode),
-      // iban: validateIban(iban),
-      currency: validateCurrency(selectedCurrency),
+      remittanceEmail: requiresQrCode ? validateRemittanceEmail(remittanceEmail) : "",
+      swiftCode: requiresBankDetails ? validateSwiftCode(swiftCode) : "",
+      iban: requiresBankDetails ? validateIban(iban) : "",
+      currency: requiresQrCode ? validateCurrency(selectedCurrency) : "",
       paymentMethod: validatePaymentMethod(selectedPaymentMethod),
       addressLine1: requiresBankDetails ? validateAddressLine1(addressLine1) : "",
-      addressLine2: validateAddressLine2(addressLine2),
+      addressLine2: requiresBankDetails ? validateAddressLine2(addressLine2) : "",
       city: requiresBankDetails ? validateCity(city) : "",
       state: requiresBankDetails ? validateState(state) : "",
       postalCode: requiresBankDetails ? validatePostalcode(postalCode) : "",
@@ -215,26 +233,27 @@ const EditBankDetailScreen = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      const payload = {
+      const payload = buildPaymentMethodPayload(selectedPaymentMethod, {
         accountHolderName,
-        bankName: requiresBankDetails ? bankName : "",
-        accountNumber: requiresBankDetails && isMaskedAccountNumber(accountNumber)
-          ? savedAccountNumber
-          : requiresBankDetails ? accountNumber : "",
-        routingNumber: requiresBankDetails ? routingNumber : "",
-        accountType: requiresBankDetails ? selectedAccountType : "",
+        walletPaymentHandle,
+        bankName,
+        accountNumber:
+          requiresBankDetails && isMaskedAccountNumber(accountNumber)
+            ? savedAccountNumber
+            : accountNumber,
+        routingNumber,
+        accountType: selectedAccountType,
         remittanceEmail,
-        // swiftCode,
-        // iban,
+        swiftCode,
+        iban,
         currency: selectedCurrency,
-        paymentMethod: selectedPaymentMethod,
-        paymentQrCodeUrl: requiresQrCode ? paymentQrCodeUrl : "",
-        bankAddressLine1: requiresBankDetails ? addressLine1 : "",
-        bankAddressLine2: requiresBankDetails ? addressLine2 : "",
-        bankCity: requiresBankDetails ? city : "",
-        bankState: requiresBankDetails ? state : "",
-        bankPostal: requiresBankDetails ? postalCode : "",
-      };
+        paymentQrCodeUrl,
+        bankAddressLine1: addressLine1,
+        bankAddressLine2: addressLine2,
+        bankCity: city,
+        bankState: state,
+        bankPostal: postalCode,
+      });
       const response = await addBankDetail_API(payload);
       console.log("response => ", response);
       if (response?.success && response?.data) {
@@ -256,9 +275,11 @@ const EditBankDetailScreen = ({ navigation, route }) => {
   };
 
   const setAPIDataToLocalState = (data = null) => {
+    data = hydratePaymentMethodDetails(data || {});
     setBankData(data); // keep original data
     setSavedAccountNumber(data?.accountNumber || "");
     setAccountHolderName(data?.accountHolderName || "");
+    setWalletPaymentHandle(data?.walletPaymentHandle || "");
     setBankName(data?.bankName || "");
     setAccountNumber(maskAccountNumber(data?.accountNumber || ""));
     setRoutingNumber(data?.routingNumber || "");
@@ -422,23 +443,51 @@ const EditBankDetailScreen = ({ navigation, route }) => {
                       {!!errors.paymentQrCodeUrl && <HelperText type="error">{errors.paymentQrCodeUrl}</HelperText>}
                     </View>
                   ) : null}
-                  {/* Account Holder Name */}
-                  <View style={styles.section}>
+                  {requiresQrCode ? <View style={styles.section}>
                     <Text style={styles.inputLabel}>
-                      {"Account Holder Name"}
+                      Payment Handle / Account Identifier
                     </Text>
                     <TextInput
                       dense
-                      value={accountHolderName}
+                      value={walletPaymentHandle}
                       onChangeText={(text) => {
-                        setAccountHolderName(text);
-                        if (!validateAccountHolderName(text)) {
+                        setWalletPaymentHandle(text);
+                        if (!validateWalletPaymentHandle(text)) {
                           setErrors((prev) => ({
                             ...prev,
-                            accountHolderName: "",
+                            walletPaymentHandle: "",
                           }));
                         }
                       }}
+                      style={styles.inputStyle}
+                      contentStyle={styles.inputText}
+                      placeholder="Enter payment handle or account identifier"
+                      placeholderTextColor={AppColor.placeholderTextColor}
+                      mode="outlined"
+                      error={!!errors.walletPaymentHandle}
+                      outlineColor={AppColor.border}
+                      activeOutlineColor={AppColor.primary}
+                      outlineStyle={{ borderRadius: 8 }}
+                      theme={{ colors: { onSurfaceVariant: "#777" } }}
+                    />
+                    {!!errors.walletPaymentHandle && (
+                      <HelperText
+                        type="error"
+                        visible={!!errors.walletPaymentHandle}
+                        style={styles.helper}
+                      >
+                        {errors.walletPaymentHandle}
+                      </HelperText>
+                    )}
+                  </View> : null}
+
+                  {requiresBankDetails ? <>
+                  <View style={styles.section}>
+                    <Text style={styles.inputLabel}>Account Holder Name</Text>
+                    <TextInput
+                      dense
+                      value={accountHolderName}
+                      onChangeText={setAccountHolderName}
                       style={styles.inputStyle}
                       contentStyle={styles.inputText}
                       placeholder="Name on the bank account"
@@ -448,20 +497,9 @@ const EditBankDetailScreen = ({ navigation, route }) => {
                       outlineColor={AppColor.border}
                       activeOutlineColor={AppColor.primary}
                       outlineStyle={{ borderRadius: 8 }}
-                      theme={{ colors: { onSurfaceVariant: "#777" } }}
                     />
-                    {!!errors.accountHolderName && (
-                      <HelperText
-                        type="error"
-                        visible={!!errors.accountHolderName}
-                        style={styles.helper}
-                      >
-                        {errors.accountHolderName}
-                      </HelperText>
-                    )}
+                    {!!errors.accountHolderName ? <HelperText type="error">{errors.accountHolderName}</HelperText> : null}
                   </View>
-
-                  {requiresBankDetails ? <>
                   {/* Bank Name */}
                   <View style={styles.section}>
                     <Text style={styles.inputLabel}>{"Bank Name"}</Text>
@@ -620,7 +658,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
                   </View>
 
                   {/* Remittance Email */}
-                  <View style={styles.section}>
+                  <View style={[styles.section, { display: "none" }]}>
                     <Text style={styles.inputLabel}>{"Remittance Email"}</Text>
                     <TextInput
                       dense
@@ -657,7 +695,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
                   </View>
 
                   {/* Currency */}
-                  <View style={styles.section}>
+                  <View style={[styles.section, { display: "none" }]}>
                     <Text style={styles.inputLabel}>{"Currency"}</Text>
                     <Dropdown
                       data={bankCurrencyList}
@@ -691,9 +729,8 @@ const EditBankDetailScreen = ({ navigation, route }) => {
                     )}
                   </View>
 
-                  {/* Swift Code */}
-                  {/* <View style={styles.section}>
-                    <Text style={styles.inputLabel}>{"Swift Code"}</Text>
+                  <View style={styles.section}>
+                    <Text style={styles.inputLabel}>SWIFT Code (Optional)</Text>
                     <TextInput
                       dense
                       value={swiftCode}
@@ -726,11 +763,10 @@ const EditBankDetailScreen = ({ navigation, route }) => {
                         {errors.swiftCode}
                       </HelperText>
                     )}
-                  </View> */}
+                  </View>
 
-                  {/* IBAN */}
-                  {/* <View style={styles.section}>
-                    <Text style={styles.inputLabel}>{"IBAN"}</Text>
+                  <View style={styles.section}>
+                    <Text style={styles.inputLabel}>IBAN (Optional)</Text>
                     <TextInput
                       dense
                       value={iban}
@@ -763,7 +799,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
                         {errors.iban}
                       </HelperText>
                     )}
-                  </View> */}
+                  </View>
 
                   {/* Divider with address title */}
                   <View
@@ -964,6 +1000,68 @@ const EditBankDetailScreen = ({ navigation, route }) => {
                     )}
                   </View>
                   </> : null}
+
+                  {requiresQrCode ? (
+                    <>
+                      <View style={styles.section}>
+                        <Text style={styles.inputLabel}>Remittance Email</Text>
+                        <TextInput
+                          dense
+                          value={remittanceEmail}
+                          onChangeText={(text) => {
+                            setRemittanceEmail(text);
+                            if (!validateRemittanceEmail(text)) {
+                              setErrors((previous) => ({
+                                ...previous,
+                                remittanceEmail: "",
+                              }));
+                            }
+                          }}
+                          style={styles.inputStyle}
+                          contentStyle={styles.inputText}
+                          placeholder="Enter Remittance Email"
+                          placeholderTextColor={AppColor.placeholderTextColor}
+                          mode="outlined"
+                          error={!!errors.remittanceEmail}
+                          outlineColor={AppColor.border}
+                          activeOutlineColor={AppColor.primary}
+                          outlineStyle={{ borderRadius: 8 }}
+                        />
+                        {!!errors.remittanceEmail && (
+                          <HelperText type="error">
+                            {errors.remittanceEmail}
+                          </HelperText>
+                        )}
+                      </View>
+                      <View style={styles.section}>
+                        <Text style={styles.inputLabel}>Currency</Text>
+                        <Dropdown
+                          data={bankCurrencyList}
+                          labelField="label"
+                          valueField="type"
+                          value={selectedCurrency}
+                          onChange={(selected) => {
+                            setSelectedCurrency(selected.type);
+                            setErrors((previous) => ({
+                              ...previous,
+                              currency: "",
+                            }));
+                          }}
+                          placeholder="Select Currency"
+                          style={styles.dropdown}
+                          placeholderStyle={{
+                            fontFamily: Mulish400,
+                            color: AppColor.textHighlighter,
+                          }}
+                          itemTextStyle={{ fontFamily: Mulish400 }}
+                          selectedTextStyle={{ fontFamily: Mulish400 }}
+                        />
+                        {!!errors.currency && (
+                          <HelperText type="error">{errors.currency}</HelperText>
+                        )}
+                      </View>
+                    </>
+                  ) : null}
                 </View>
               </View>
             </ScrollView>

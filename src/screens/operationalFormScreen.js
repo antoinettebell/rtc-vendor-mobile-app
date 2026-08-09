@@ -247,17 +247,17 @@ const OperationalFormScreen = ({ navigation, route }) => {
         <View style={styles.headerCopy}><Text style={styles.title}>{TITLES[type]}</Text><Text style={styles.status}>{form.status}</Text></View>
         <View style={styles.headerActions}>
           <TouchableOpacity accessibilityLabel="Print form" onPress={print}><MaterialIcons name="print" size={25} color={AppColor.primary} /></TouchableOpacity>
-          {form.status === "SUBMITTED" ? <TouchableOpacity onPress={unlock}><MaterialIcons name="edit" size={25} color={AppColor.primary} /></TouchableOpacity> : null}
+          {form.status === "SUBMITTED" && !isEmployee ? <TouchableOpacity onPress={unlock}><MaterialIcons name="edit" size={25} color={AppColor.primary} /></TouchableOpacity> : null}
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         {archived ? <View style={styles.archiveBanner}><MaterialIcons name="image" size={20} color="#475569" /><Text style={styles.archiveText}>Archived read-only snapshot</Text></View> : null}
         <View style={styles.card}>
-          <OperationalTextField editable={editable} label="Employee / Vendor Name" value={form.prepared_by_name} onChangeText={(value) => updateHeader("prepared_by_name", value)} />
+          <OperationalTextField editable={editable && !isEmployee} label="Employee / Vendor Name" value={form.prepared_by_name} onChangeText={(value) => updateHeader("prepared_by_name", value)} />
           {!inventory ? <OperationalTextField editable={editable} label="Initials" value={form.initials} maxLength={10} onChangeText={(value) => updateHeader("initials", value)} /> : null}
           <DateField label="Date" value={form.form_date} onSelect={(value) => updateHeader("form_date", value)} />
           <TouchableOpacity
-            disabled={!editable}
+            disabled={!editable || isEmployee}
             style={styles.field}
             onPress={() => setTruckUnitPickerVisible(true)}
           >
@@ -266,9 +266,17 @@ const OperationalFormScreen = ({ navigation, route }) => {
               <Text style={styles.selectText}>
                 {form.truck_unit || "Select truck unit"}
               </Text>
-              {editable ? <MaterialIcons name="expand-more" size={22} color="#64748B" /> : null}
+              {editable && !isEmployee ? <MaterialIcons name="expand-more" size={22} color="#64748B" /> : null}
             </View>
           </TouchableOpacity>
+          {isEmployee ? (
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Assigned Location</Text>
+              <View style={[styles.select, styles.readonly]}>
+                <Text style={styles.selectText}>{form.location_label}</Text>
+              </View>
+            </View>
+          ) : null}
         </View>
 
         {inventory ? (form.inventory_items || []).map((item, index) => (

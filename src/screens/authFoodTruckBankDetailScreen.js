@@ -29,6 +29,10 @@ import {
   bankCurrencyList,
   emailRegex,
 } from "../utils/constants";
+import {
+  buildPaymentMethodPayload,
+  getPaymentMethodFields,
+} from "../helpers/paymentMethodDetails.helper";
 import { addBankDetail_API, registerComplete_API, uploadImage_API } from "../api/appAPI";
 import {
   onUnderReview,
@@ -74,14 +78,21 @@ const validateCurrency = (text) => {
 };
 
 const validateSwiftCode = (text) => {
-  if (!text.trim()) return "SWIFT code is required";
-  return "";
+  if (!text.trim()) return "";
+  return /^[A-Z0-9]{8}([A-Z0-9]{3})?$/i.test(text.trim())
+    ? ""
+    : "Enter a valid 8 or 11 character SWIFT code";
 };
 
 const validateIban = (text) => {
-  if (!text.trim()) return "IBAN is required";
-  return "";
+  if (!text.trim()) return "";
+  return /^[A-Z0-9]{15,34}$/i.test(text.replace(/\s/g, ""))
+    ? ""
+    : "Enter a valid IBAN";
 };
+
+const validateWalletPaymentHandle = (text) =>
+  text.trim() ? "" : "Payment handle / account identifier is required";
 
 const validatePaymentMethod = (text) => {
   if (!text.trim()) return "Please select payment method";
@@ -98,6 +109,7 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
 
   const [loading, setLoading] = useState(false);
   const [accountHolderName, setAccountHolderName] = useState("");
+  const [walletPaymentHandle, setWalletPaymentHandle] = useState("");
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [routingNumber, setRoutingNumber] = useState("");
@@ -114,11 +126,12 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
   const [bankPostal, setBankPostal] = useState("");
   const [paymentQrCodeUrl, setPaymentQrCodeUrl] = useState("");
   const [uploadingQr, setUploadingQr] = useState(false);
-  const requiresBankDetails = ["ACH", "CHECK"].includes(selectedPaymentMethod);
-  const requiresQrCode = ["CASHAPP", "PAYPAL", "VENMO"].includes(selectedPaymentMethod);
+  const { requiresBankDetails, requiresQrCode } =
+    getPaymentMethodFields(selectedPaymentMethod);
 
   const [errors, setErrors] = useState({
     accountHolderName: "",
+    walletPaymentHandle: "",
     bankName: "",
     accountNumber: "",
     routingNumber: "",
@@ -133,17 +146,22 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
   const handleContinueBtnPress = async () => {
     // Validate all required fields
     const newErrors = {
-      accountHolderName: validateAccountHolderName(accountHolderName),
+      accountHolderName: requiresBankDetails
+        ? validateAccountHolderName(accountHolderName)
+        : "",
+      walletPaymentHandle: requiresQrCode
+        ? validateWalletPaymentHandle(walletPaymentHandle)
+        : "",
       bankName: requiresBankDetails ? validateBankName(bankName) : "",
       accountNumber: requiresBankDetails ? validateAccountNumber(accountNumber) : "",
       routingNumber: requiresBankDetails && !validateRoutingNumber(routingNumber)
         ? "Routing number is required"
         : "",
       accountType: requiresBankDetails ? validateAccountType(selectedAccountType) : "",
-      remittanceEmail: validateRemittanceEmail(remittanceEmail),
+      remittanceEmail: requiresQrCode ? validateRemittanceEmail(remittanceEmail) : "",
       swiftCode: requiresBankDetails ? validateSwiftCode(swiftCode) : "",
       iban: requiresBankDetails ? validateIban(iban) : "",
-      currency: validateCurrency(selectedCurrency),
+      currency: requiresQrCode ? validateCurrency(selectedCurrency) : "",
       paymentMethod: validatePaymentMethod(selectedPaymentMethod),
       paymentQrCodeUrl: requiresQrCode && !paymentQrCodeUrl ? "QR code is required" : "",
       bankAddressLine1: requiresBankDetails && !bankAddressLine1.trim() ? "Bank address is required" : "",
@@ -162,24 +180,24 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      const payload = {
+      const payload = buildPaymentMethodPayload(selectedPaymentMethod, {
         accountHolderName,
-        bankName: requiresBankDetails ? bankName : "",
-        accountNumber: requiresBankDetails ? accountNumber : "",
-        routingNumber: requiresBankDetails ? routingNumber : "",
-        accountType: requiresBankDetails ? selectedAccountType : "",
+        walletPaymentHandle,
+        bankName,
+        accountNumber,
+        routingNumber,
+        accountType: selectedAccountType,
         remittanceEmail,
         swiftCode,
         iban,
         currency: selectedCurrency,
-        paymentMethod: selectedPaymentMethod,
-        paymentQrCodeUrl: requiresQrCode ? paymentQrCodeUrl : "",
-        bankAddressLine1: requiresBankDetails ? bankAddressLine1 : "",
-        bankAddressLine2: requiresBankDetails ? bankAddressLine2 : "",
-        bankCity: requiresBankDetails ? bankCity : "",
-        bankState: requiresBankDetails ? bankState : "",
-        bankPostal: requiresBankDetails ? bankPostal : "",
-      };
+        paymentQrCodeUrl,
+        bankAddressLine1,
+        bankAddressLine2,
+        bankCity,
+        bankState,
+        bankPostal,
+      });
       const response = await addBankDetail_API(payload);
       console.log("response => ", response);
       if (response?.success && response?.data) {
@@ -367,21 +385,51 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
                 </View>
               ) : null}
 
-              {/* Account Holder Name */}
-              <View style={styles.section}>
-                <Text style={styles.inputLabel}>{"Account Holder Name"}</Text>
+              {requiresQrCode ? <View style={styles.section}>
+                <Text style={styles.inputLabel}>
+                  Payment Handle / Account Identifier
+                </Text>
                 <TextInput
                   dense
-                  value={accountHolderName}
+                  value={walletPaymentHandle}
                   onChangeText={(text) => {
-                    setAccountHolderName(text);
-                    if (!validateAccountHolderName(text)) {
+                    setWalletPaymentHandle(text);
+                    if (!validateWalletPaymentHandle(text)) {
                       setErrors((prev) => ({
                         ...prev,
-                        accountHolderName: "",
+                        walletPaymentHandle: "",
                       }));
                     }
                   }}
+                  style={styles.inputStyle}
+                  contentStyle={styles.inputText}
+                  placeholder="Enter payment handle or account identifier"
+                  placeholderTextColor={AppColor.placeholderTextColor}
+                  mode="outlined"
+                  error={!!errors.walletPaymentHandle}
+                  outlineColor={AppColor.border}
+                  activeOutlineColor={AppColor.primary}
+                  outlineStyle={{ borderRadius: 8 }}
+                  theme={{ colors: { onSurfaceVariant: "#777" } }}
+                />
+                {!!errors.walletPaymentHandle && (
+                  <HelperText
+                    type="error"
+                    visible={!!errors.walletPaymentHandle}
+                    style={styles.helper}
+                  >
+                    {errors.walletPaymentHandle}
+                  </HelperText>
+                )}
+              </View> : null}
+
+              <View style={{ display: requiresBankDetails ? "flex" : "none" }}>
+              <View style={styles.section}>
+                <Text style={styles.inputLabel}>Account Holder Name</Text>
+                <TextInput
+                  dense
+                  value={accountHolderName}
+                  onChangeText={setAccountHolderName}
                   style={styles.inputStyle}
                   contentStyle={styles.inputText}
                   placeholder="Name on the bank account"
@@ -391,20 +439,9 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
                   outlineColor={AppColor.border}
                   activeOutlineColor={AppColor.primary}
                   outlineStyle={{ borderRadius: 8 }}
-                  theme={{ colors: { onSurfaceVariant: "#777" } }}
                 />
-                {!!errors.accountHolderName && (
-                  <HelperText
-                    type="error"
-                    visible={!!errors.accountHolderName}
-                    style={styles.helper}
-                  >
-                    {errors.accountHolderName}
-                  </HelperText>
-                )}
+                {!!errors.accountHolderName ? <HelperText type="error">{errors.accountHolderName}</HelperText> : null}
               </View>
-
-              <View style={{ display: requiresBankDetails ? "flex" : "none" }}>
               {/* Bank Name */}
               <View style={styles.section}>
                 <Text style={styles.inputLabel}>{"Bank Name"}</Text>
@@ -587,7 +624,7 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
               ))}
               </View>
               {/* Remittance Email */}
-              <View style={styles.section}>
+              <View style={[styles.section, !requiresQrCode && { display: "none" }]}>
                 <Text style={styles.inputLabel}>{"Remittance Email"}</Text>
                 <TextInput
                   dense
@@ -624,7 +661,7 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
               </View>
 
               {/* Currency */}
-              <View style={styles.section}>
+              <View style={[styles.section, !requiresQrCode && { display: "none" }]}>
                 <Text style={styles.inputLabel}>{"Currency"}</Text>
                 <Dropdown
                   data={bankCurrencyList}
@@ -659,8 +696,8 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
               </View>
 
               {/* Swift Code */}
-              <View style={styles.section}>
-                <Text style={styles.inputLabel}>{"Swift Code"}</Text>
+              <View style={[styles.section, !requiresBankDetails && { display: "none" }]}>
+                <Text style={styles.inputLabel}>SWIFT Code (Optional)</Text>
                 <TextInput
                   dense
                   value={swiftCode}
@@ -696,8 +733,8 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
               </View>
 
               {/* IBAN */}
-              <View style={styles.section}>
-                <Text style={styles.inputLabel}>{"IBAN"}</Text>
+              <View style={[styles.section, !requiresBankDetails && { display: "none" }]}>
+                <Text style={styles.inputLabel}>IBAN (Optional)</Text>
                 <TextInput
                   dense
                   value={iban}

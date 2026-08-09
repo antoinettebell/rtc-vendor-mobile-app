@@ -32,6 +32,10 @@ import {
 } from "../api/appAPI";
 import { printOrderTickets } from "../helpers/print.helper";
 import { getVendorOrderTotal } from "../helpers/order.helper";
+import {
+  canEmployeeOperate,
+  getEmployeeOperationalBlock,
+} from "../helpers/employeeOperationalAccess.helper";
 import { orderStatusStrings } from "../utils/constants";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 
@@ -91,29 +95,6 @@ const POST_PICKUP_STATUSES = [
   orderStatusStrings.completed,
 ];
 const TEN_MINUTES_MS = 10 * 60 * 1000;
-const SHIFT_ENDED_MESSAGE =
-  "Your shift has ended. Please see your manager to be clocked back in.";
-const SHIFT_NOT_STARTED_MESSAGE =
-  "You are not currently clocked in. Please start your shift to continue.";
-const SHIFT_ON_BREAK_MESSAGE =
-  "Your shift is paused for break. Please resume your shift to log back in.";
-const SCHEDULE_DAY_LABELS = {
-  sun: "Sunday",
-  mon: "Monday",
-  tue: "Tuesday",
-  wed: "Wednesday",
-  thu: "Thursday",
-  fri: "Friday",
-  sat: "Saturday",
-};
-
-const formatScheduleTime = (value) => {
-  const [hours, minutes] = String(value || "00:00").split(":").map(Number);
-  const date = new Date();
-  date.setHours(hours || 0, minutes || 0, 0, 0);
-  return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-};
-
 const isCashPayment = (order) =>
   ["CASH", "COD"].includes(
     String(order?.paymentMethod || order?.payment_method || "").toUpperCase(),
@@ -191,6 +172,10 @@ const EmployeeSessionScreen = ({ navigation }) => {
         location?.locationId?.toString() === assignedLocation?._id?.toString() &&
         location?.isOrderingOpen,
     );
+  const displayedLocationOpen =
+    dashboard?.location?.is_open !== undefined
+      ? dashboard.location.is_open
+      : locationIsOpen;
 
   const employeeName = useMemo(
     () =>
@@ -239,7 +224,8 @@ const EmployeeSessionScreen = ({ navigation }) => {
       const nextDashboard = await loadDashboard();
       if (
         nextDashboard?.shift?.is_active &&
-        nextDashboard?.shift?.shift_status !== "ON_BREAK"
+        nextDashboard?.shift?.shift_status !== "ON_BREAK" &&
+        nextDashboard?.location?.is_open === true
       ) {
         await Promise.all([loadOrders(), loadRequests()]);
       } else {
@@ -256,24 +242,26 @@ const EmployeeSessionScreen = ({ navigation }) => {
     }
   }, [loadDashboard, loadOrders, loadRequests]);
 
-  const runShiftProtectedAction = useCallback(
+  const runOperationalProtectedAction = useCallback(
     (action) => {
-      if (!isShiftActive || isOnBreak) {
-        if (isOnBreak) {
-          Alert.alert("Shift paused", SHIFT_ON_BREAK_MESSAGE);
-          return;
-        }
-        Alert.alert(
-          hasEndedCurrentOperationalDayShift ? "Shift ended" : "Shift not started",
-          hasEndedCurrentOperationalDayShift
-            ? SHIFT_ENDED_MESSAGE
-            : SHIFT_NOT_STARTED_MESSAGE,
-        );
+      const block = getEmployeeOperationalBlock({
+        isShiftActive,
+        isOnBreak,
+        isAssignedLocationOpen: displayedLocationOpen,
+        hasEndedCurrentOperationalDayShift,
+      });
+      if (block) {
+        Alert.alert(block.title, block.message);
         return;
       }
       action();
     },
-    [hasEndedCurrentOperationalDayShift, isOnBreak, isShiftActive],
+    [
+      displayedLocationOpen,
+      hasEndedCurrentOperationalDayShift,
+      isOnBreak,
+      isShiftActive,
+    ],
   );
 
   useFocusEffect(
@@ -319,6 +307,16 @@ const EmployeeSessionScreen = ({ navigation }) => {
 
   const updateOrderStatus = async (order, nextStatus) => {
     if (!nextStatus) return;
+    const block = getEmployeeOperationalBlock({
+      isShiftActive,
+      isOnBreak,
+      isAssignedLocationOpen: displayedLocationOpen,
+      hasEndedCurrentOperationalDayShift,
+    });
+    if (block) {
+      Alert.alert(block.title, block.message);
+      return;
+    }
     setActionLoadingId(order?._id);
     try {
       const response = await updateOrderStatusByID_API({
@@ -547,10 +545,6 @@ const EmployeeSessionScreen = ({ navigation }) => {
   const displayedLocation = dashboard?.assignedLocation || assignedLocation;
   const displayedTruckName =
     assignedTruckUnit?.name || foodTruck?.name || "Food truck";
-  const displayedLocationOpen =
-    dashboard?.location?.is_open !== undefined
-      ? dashboard.location.is_open
-      : locationIsOpen;
   const selectedOrderBucketConfig =
     ORDER_BUCKETS.find((bucket) => bucket.value === selectedOrderBucket) ||
     ORDER_BUCKETS[0];
@@ -568,7 +562,12 @@ const EmployeeSessionScreen = ({ navigation }) => {
     (request) =>
       String(request.request_status || "").toUpperCase() === selectedRefundBucket,
   );
-  const employeeSchedule = dashboard?.employee_schedule || [];
+  const employeeCanOperate = canEmployeeOperate({
+    isShiftActive,
+    isOnBreak,
+    isAssignedLocationOpen: displayedLocationOpen,
+    hasEndedCurrentOperationalDayShift,
+  });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -725,10 +724,10 @@ const EmployeeSessionScreen = ({ navigation }) => {
                   activeOpacity={0.8}
                   style={[
                     styles.takeoutButton,
-                    (!isShiftActive || isOnBreak) && styles.disabledButton,
+                    !employeeCanOperate && styles.disabledButton,
                   ]}
                   onPress={() =>
-                    runShiftProtectedAction(() =>
+                    runOperationalProtectedAction(() =>
                       navigation.navigate("employeePosBoardScreen"),
                     )
                   }
@@ -753,45 +752,6 @@ const EmployeeSessionScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.panel}>
-              <Text style={styles.panelTitle}>My Employee Schedule</Text>
-              <Text style={styles.scheduleHelp}>
-                This schedule is read-only. Contact the vendor to request changes.
-              </Text>
-              {employeeSchedule.length ? (
-                employeeSchedule.map((assignment, assignmentIndex) => {
-                  const enabledDays = (assignment.days || []).filter(
-                    (day) => day.enabled,
-                  );
-                  return (
-                    <View
-                      key={assignment._id || `${assignment.truck_unit_id}-${assignmentIndex}`}
-                      style={styles.scheduleCard}
-                    >
-                      <Text style={styles.scheduleAssignmentTitle}>
-                        {assignment.truck_unit_name || "Food truck"}
-                      </Text>
-                      <Text style={styles.scheduleLocation}>
-                        {assignment.location_name || "Assigned location"}
-                      </Text>
-                      {enabledDays.map((day) => (
-                        <View key={day.day} style={styles.scheduleDayRow}>
-                          <Text style={styles.scheduleDayName}>
-                            {SCHEDULE_DAY_LABELS[day.day] || day.day}
-                          </Text>
-                          <Text style={styles.scheduleDayTime}>
-                            {formatScheduleTime(day.clock_in)} – {formatScheduleTime(day.clock_out)}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  );
-                })
-              ) : (
-                <Text style={styles.scheduleHelp}>No employee schedule is assigned.</Text>
-              )}
-            </View>
-
-            <View style={styles.panel}>
               <Text style={styles.panelTitle}>Order Management</Text>
               <View style={styles.bucketRow}>
                 {ORDER_BUCKETS.map((bucket) => {
@@ -803,10 +763,10 @@ const EmployeeSessionScreen = ({ navigation }) => {
                       key={bucket.value}
                       style={[
                         styles.bucketCard,
-                        (!isShiftActive || isOnBreak) && styles.disabledButton,
+                        !employeeCanOperate && styles.disabledButton,
                       ]}
                       onPress={() =>
-                        runShiftProtectedAction(() =>
+                        runOperationalProtectedAction(() =>
                           navigation.navigate("employeeOrderManagementScreen", {
                             bucket: bucket.value,
                           }),
@@ -834,10 +794,10 @@ const EmployeeSessionScreen = ({ navigation }) => {
                       key={bucket.value}
                       style={[
                         styles.bucketCard,
-                        (!isShiftActive || isOnBreak) && styles.disabledButton,
+                        !employeeCanOperate && styles.disabledButton,
                       ]}
                       onPress={() =>
-                        runShiftProtectedAction(() =>
+                        runOperationalProtectedAction(() =>
                           navigation.navigate("employeeRefundRequestsScreen", {
                             bucket: bucket.value,
                           }),
@@ -861,10 +821,10 @@ const EmployeeSessionScreen = ({ navigation }) => {
                 activeOpacity={0.8}
                 style={[
                   styles.secondaryButton,
-                  (!isShiftActive || isOnBreak) && styles.disabledButton,
+                  !employeeCanOperate && styles.disabledButton,
                 ]}
                 onPress={() =>
-                  runShiftProtectedAction(() =>
+                  runOperationalProtectedAction(() =>
                     navigation.navigate("operationsScreen"),
                   )
                 }
@@ -951,40 +911,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginBottom: 8,
   },
-  scheduleHelp: {
-    color: AppColor.textHighlighter,
-    fontFamily: Mulish400,
-    fontSize: 13,
-    marginBottom: 10,
-  },
-  scheduleCard: {
-    borderColor: AppColor.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginTop: 8,
-    padding: 12,
-  },
-  scheduleAssignmentTitle: {
-    color: AppColor.black,
-    fontFamily: Mulish700,
-    fontSize: 15,
-  },
-  scheduleLocation: {
-    color: AppColor.textHighlighter,
-    fontFamily: Mulish400,
-    fontSize: 13,
-    marginBottom: 8,
-    marginTop: 2,
-  },
-  scheduleDayRow: {
-    borderTopColor: AppColor.border,
-    borderTopWidth: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-  },
-  scheduleDayName: { color: AppColor.black, fontFamily: Mulish600, fontSize: 13 },
-  scheduleDayTime: { color: AppColor.black, fontFamily: Mulish400, fontSize: 13 },
   panelHeaderRow: {
     alignItems: "center",
     flexDirection: "row",

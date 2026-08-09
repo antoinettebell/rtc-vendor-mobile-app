@@ -69,6 +69,21 @@ const formatShiftHours = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? `${parsed.toFixed(2)} hrs` : "0.00 hrs";
 };
+const SCHEDULE_DAY_LABELS = {
+  sun: "Sunday",
+  mon: "Monday",
+  tue: "Tuesday",
+  wed: "Wednesday",
+  thu: "Thursday",
+  fri: "Friday",
+  sat: "Saturday",
+};
+const formatScheduleTime = (value) => {
+  const [hours, minutes] = String(value || "00:00").split(":").map(Number);
+  const date = new Date();
+  date.setHours(hours || 0, minutes || 0, 0, 0);
+  return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+};
 const compactText = (...parts) =>
   parts
     .map((part) => String(part || "").trim())
@@ -133,6 +148,7 @@ const UserProfileScreen = ({ navigation }) => {
     employeeProfile.employee_rate !== null
       ? employeeProfile.employee_rate
       : user?.employee_rate;
+  const employeeSchedule = employeeDashboard?.employee_schedule || [];
 
   const updateStateOnDataFetch = (USER_DATA, FOOD_TRUCK_DATA) => {
     setSocialMedia(FOOD_TRUCK_DATA?.socialMedia || []);
@@ -508,6 +524,43 @@ const UserProfileScreen = ({ navigation }) => {
                     <Text style={styles.employeeProfileValue}>
                       {employeePhoneText || "Not set"}
                     </Text>
+                  </View>
+                  <View style={styles.employeeProfileRow}>
+                    <Text style={styles.employeeProfileLabel}>Schedule</Text>
+                    {employeeSchedule.length ? (
+                      employeeSchedule.map((assignment, assignmentIndex) => (
+                        <View
+                          key={
+                            assignment._id ||
+                            `${assignment.truck_unit_id}-${assignmentIndex}`
+                          }
+                          style={styles.employeeScheduleCard}
+                        >
+                          <Text style={styles.employeeProfileValue}>
+                            {assignment.truck_unit_name || "Food truck"}
+                          </Text>
+                          <Text style={styles.employeeScheduleLocation}>
+                            {assignment.location_name || "Assigned location"}
+                          </Text>
+                          {(assignment.days || [])
+                            .filter((day) => day.enabled)
+                            .map((day) => (
+                              <Text
+                                key={day.day}
+                                style={styles.employeeScheduleDay}
+                              >
+                                {SCHEDULE_DAY_LABELS[day.day] || day.day}: {" "}
+                                {formatScheduleTime(day.clock_in)} – {" "}
+                                {formatScheduleTime(day.clock_out)}
+                              </Text>
+                            ))}
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={styles.employeeProfileValue}>
+                        No employee schedule is assigned.
+                      </Text>
+                    )}
                   </View>
                 </View>
               </View>
@@ -896,6 +949,21 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
     fontSize: 14,
     lineHeight: 20,
+  },
+  employeeScheduleCard: {
+    marginTop: 6,
+  },
+  employeeScheduleLocation: {
+    color: AppColor.subText,
+    fontFamily: Mulish400,
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  employeeScheduleDay: {
+    color: AppColor.black,
+    fontFamily: Mulish400,
+    fontSize: 13,
+    lineHeight: 19,
   },
   accessCodeIconContainer: {
     alignItems: "center",

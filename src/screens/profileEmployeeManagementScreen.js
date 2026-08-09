@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 import { Dropdown } from "react-native-element-dropdown";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
+import FiveMinuteWheelPicker from "../components/FiveMinuteWheelPicker";
 import StatusBarManager from "../components/StatusBarManager";
 import StatePickerModal from "../components/StatePickerModal";
 import usePermission from "../hooks/usePermission";
@@ -41,6 +42,18 @@ import {
   uploadImage_API,
 } from "../api/appAPI";
 import { updateFoodTruck } from "../redux/slices/userSlice";
+import {
+  beginScheduleEdit,
+  cancelScheduleEdit,
+  isScheduleControlEnabled,
+} from "../helpers/employeeScheduleEdit.helper";
+import {
+  formatShiftEditDate,
+  formatShiftEditTime,
+  isValidShiftRange,
+  mergeShiftDatePart,
+  mergeShiftTimePart,
+} from "../helpers/shiftHistoryEdit.helper";
 
 const initialForm = {
   first_name: "",
@@ -148,44 +161,18 @@ const formatShiftDateTime = (value) => {
     return "Not available";
   }
 
-  return date.toLocaleString([], {
+  return date.toLocaleString("en-US", {
     month: "2-digit",
     day: "2-digit",
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    hour12: true,
   });
 };
 const formatShiftHours = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? `${parsed.toFixed(2)} hrs` : "Pending";
-};
-const formatTimecardInput = (value) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return `${date.toLocaleDateString("en-US", {
-    month: "2-digit",
-    day: "2-digit",
-    year: "numeric",
-  })} ${date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  })}`;
-};
-const parseTimecardInput = (value) => {
-  const match = String(value || "")
-    .trim()
-    .match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s*([AP]M)$/i);
-  if (!match) return new Date(NaN);
-  let hours = Number(match[4]) % 12;
-  if (match[6].toUpperCase() === "PM") hours += 12;
-  return new Date(
-    Number(match[3]),
-    Number(match[1]) - 1,
-    Number(match[2]),
-    hours,
-    Number(match[5]),
-  );
 };
 const formatOperationalDay = (value) => {
   const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -223,8 +210,11 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const [shiftHistoryExpanded, setShiftHistoryExpanded] = useState({});
   const [editingShiftId, setEditingShiftId] = useState(null);
   const [shiftEditDraft, setShiftEditDraft] = useState(null);
+  const [shiftPickerTarget, setShiftPickerTarget] = useState(null);
+  const [breakPickerVisible, setBreakPickerVisible] = useState(false);
   const [employeeIdUploading, setEmployeeIdUploading] = useState(false);
   const [scheduleExpandedId, setScheduleExpandedId] = useState(null);
+  const [scheduleEditingId, setScheduleEditingId] = useState(null);
   const [scheduleDrafts, setScheduleDrafts] = useState({});
   const [timePickerTarget, setTimePickerTarget] = useState(null);
   const [missingTruckPromptVisible, setMissingTruckPromptVisible] = useState(false);
@@ -497,22 +487,29 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const beginShiftEdit = (session) => {
     setEditingShiftId(session.employee_session_id);
     setShiftEditDraft({
-      started_at: formatTimecardInput(session.started_at),
-      ended_at: formatTimecardInput(session.ended_at),
+      started_at: new Date(session.started_at),
+      ended_at: new Date(session.ended_at),
       total_break_minutes: String(session.total_break_minutes || 0),
       reason: "",
     });
   };
 
   const saveShiftEdit = async (employee, session) => {
-    const startedAt = parseTimecardInput(shiftEditDraft?.started_at);
-    const endedAt = parseTimecardInput(shiftEditDraft?.ended_at);
+    const startedAt = new Date(shiftEditDraft?.started_at);
+    const endedAt = new Date(shiftEditDraft?.ended_at);
     if (
       Number.isNaN(startedAt.getTime()) ||
       Number.isNaN(endedAt.getTime()) ||
       !shiftEditDraft?.reason?.trim()
     ) {
       Alert.alert("Timecard incomplete", "Enter valid start/end times and an edit reason.");
+      return;
+    }
+    if (!isValidShiftRange(startedAt, endedAt)) {
+      Alert.alert(
+        "End time must follow start time",
+        "For an overnight shift, select the following calendar date for the end time.",
+      );
       return;
     }
     try {
@@ -533,6 +530,19 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
     } catch (error) {
       Alert.alert("Update failed", error?.message || "Could not update this timecard.");
     }
+  };
+
+  const confirmShiftPicker = (selectedValue) => {
+    if (!shiftPickerTarget) return;
+    const { field, mode } = shiftPickerTarget;
+    setShiftEditDraft((draft) => ({
+      ...draft,
+      [field]:
+        mode === "date"
+          ? mergeShiftDatePart(draft[field], selectedValue)
+          : mergeShiftTimePart(draft[field], selectedValue),
+    }));
+    setShiftPickerTarget(null);
   };
 
   const archiveShiftHistory = async (employee) => {
@@ -786,10 +796,33 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
       setMissingTruckPromptVisible(true);
       return;
     }
-    setScheduleExpandedId((current) => current === employee._id ? null : employee._id);
-    setScheduleDrafts((current) => current[employee._id]
-      ? current
-      : { ...current, [employee._id]: getScheduleDraft(employee) });
+    const willCollapse = scheduleExpandedId === employee._id;
+    setScheduleExpandedId(willCollapse ? null : employee._id);
+    if (willCollapse) setScheduleEditingId(null);
+    setScheduleDrafts((current) => ({
+      ...current,
+      [employee._id]: cancelScheduleEdit(getScheduleDraft(employee)),
+    }));
+  };
+
+  const startScheduleEdit = (employee) => {
+    setScheduleExpandedId(employee._id);
+    setScheduleDrafts((current) => ({
+      ...current,
+      [employee._id]: beginScheduleEdit(getScheduleDraft(employee)),
+    }));
+    setScheduleEditingId(employee._id);
+  };
+
+  const cancelScheduleEditing = (employee) => {
+    setScheduleDrafts((current) => ({
+      ...current,
+      [employee._id]: cancelScheduleEdit(getScheduleDraft(employee)),
+    }));
+    if (timePickerTarget?.employeeId === employee._id) {
+      setTimePickerTarget(null);
+    }
+    setScheduleEditingId(null);
   };
 
   const createMissingPrimaryTruck = async () => {
@@ -874,7 +907,10 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
       return;
     }
     const saved = await updateEmployee(employee, { schedule_assignments: assignments, is_working: false });
-    if (saved) setScheduleExpandedId(null);
+    if (saved) {
+      setScheduleEditingId(null);
+      setScheduleExpandedId(null);
+    }
   };
 
   const archiveEmployeeSchedule = (employee) => {
@@ -1663,15 +1699,31 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 
 	              {isManageMode && activeTab === "current" ? (
                 <View style={styles.scheduleSection}>
-                  <TouchableOpacity style={styles.scheduleHeader} onPress={() => toggleEmployeeSchedule(employee)}>
+                  <View style={styles.scheduleHeader}>
+                    <TouchableOpacity
+                      style={styles.scheduleHeaderSummary}
+                      onPress={() => toggleEmployeeSchedule(employee)}
+                    >
                     <View>
                       <Text style={styles.toggleLabel}>Employee Schedule</Text>
                       <Text style={styles.employeeMeta}>
                         {employee.is_working ? "Inside scheduled working window" : "Outside scheduled working window"}
                       </Text>
                     </View>
-                    <Text style={styles.scheduleChevron}>{scheduleExpandedId === employee._id ? "▲" : "▼"}</Text>
-                  </TouchableOpacity>
+                    </TouchableOpacity>
+                    <View style={styles.scheduleHeaderActions}>
+                      <IconButton
+                        icon="pencil"
+                        iconColor={AppColor.primary}
+                        size={20}
+                        onPress={() => startScheduleEdit(employee)}
+                        accessibilityLabel={`Edit ${employee.first_name} schedule`}
+                      />
+                      <TouchableOpacity onPress={() => toggleEmployeeSchedule(employee)}>
+                        <Text style={styles.scheduleChevron}>{scheduleExpandedId === employee._id ? "▲" : "▼"}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                   {scheduleExpandedId === employee._id ? (
                     <View style={styles.scheduleBody}>
                       <Text style={styles.employeeMeta}>Employees may clock in 15 minutes early. Access ends and active shifts close 15 minutes after the scheduled clock-out time.</Text>
@@ -1679,7 +1731,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                         <View key={`${employee._id}-${assignmentIndex}`} style={styles.scheduleAssignmentCard}>
                           <View style={styles.scheduleCardHeader}>
                             <Text style={styles.submenuTitle}>Truck / Location {assignmentIndex + 1}</Text>
-                            {assignmentIndex > 0 ? (
+                            {assignmentIndex > 0 && scheduleEditingId === employee._id ? (
                               <TouchableOpacity onPress={() => removeScheduleAssignment(employee._id, assignmentIndex)}>
                                 <Text style={styles.removeScheduleText}>Remove</Text>
                               </TouchableOpacity>
@@ -1691,9 +1743,13 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                             labelField="label"
                             valueField="value"
                             value={assignment.truck_unit_id}
+                            disable={!isScheduleControlEnabled({ editingEmployeeId: scheduleEditingId, employeeId: employee._id })}
                             onChange={(item) => updateScheduleAssignment(employee._id, assignmentIndex, "truck_unit_id", item.value)}
                             placeholder="Select food truck"
-                            style={styles.dropdown}
+                            style={[
+                              styles.dropdown,
+                              scheduleEditingId !== employee._id && styles.scheduleControlDisabled,
+                            ]}
                             selectedTextStyle={styles.dropdownText}
                             placeholderStyle={styles.placeholderText}
                             itemTextStyle={styles.dropdownText}
@@ -1704,9 +1760,13 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                             labelField="label"
                             valueField="value"
                             value={assignment.location_id}
+                            disable={!isScheduleControlEnabled({ editingEmployeeId: scheduleEditingId, employeeId: employee._id })}
                             onChange={(item) => updateScheduleAssignment(employee._id, assignmentIndex, "location_id", item.value)}
                             placeholder="Select location"
-                            style={styles.dropdown}
+                            style={[
+                              styles.dropdown,
+                              scheduleEditingId !== employee._id && styles.scheduleControlDisabled,
+                            ]}
                             selectedTextStyle={styles.dropdownText}
                             placeholderStyle={styles.placeholderText}
                             itemTextStyle={styles.dropdownText}
@@ -1717,6 +1777,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                               <View key={row.day} style={styles.scheduleRow}>
                                 <TouchableOpacity
                                   style={styles.scheduleDayBlock}
+                                  disabled={scheduleEditingId !== employee._id}
                                   onPress={() => updateScheduleRow(employee._id, assignmentIndex, row.day, "enabled", !row.enabled)}
                                 >
                                   <View style={[styles.dayCheckbox, row.enabled && styles.dayCheckboxChecked]}>
@@ -1726,11 +1787,19 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                                 </TouchableOpacity>
                                 {row.enabled ? (
                                   <View style={styles.scheduleTimeRow}>
-                                    <TouchableOpacity style={styles.scheduleTimeInput} onPress={() => setTimePickerTarget({ employeeId: employee._id, assignmentIndex, day: row.day, field: "clock_in", value: row.clock_in })}>
+                                    <TouchableOpacity
+                                      style={[styles.scheduleTimeInput, scheduleEditingId !== employee._id && styles.scheduleControlDisabled]}
+                                      disabled={scheduleEditingId !== employee._id}
+                                      onPress={() => setTimePickerTarget({ employeeId: employee._id, assignmentIndex, day: row.day, field: "clock_in", value: row.clock_in })}
+                                    >
                                       <Text style={styles.scheduleTimeText}>{formatScheduleTime(row.clock_in)}</Text>
                                     </TouchableOpacity>
                                     <Text style={styles.employeeMeta}>to</Text>
-                                    <TouchableOpacity style={styles.scheduleTimeInput} onPress={() => setTimePickerTarget({ employeeId: employee._id, assignmentIndex, day: row.day, field: "clock_out", value: row.clock_out })}>
+                                    <TouchableOpacity
+                                      style={[styles.scheduleTimeInput, scheduleEditingId !== employee._id && styles.scheduleControlDisabled]}
+                                      disabled={scheduleEditingId !== employee._id}
+                                      onPress={() => setTimePickerTarget({ employeeId: employee._id, assignmentIndex, day: row.day, field: "clock_out", value: row.clock_out })}
+                                    >
                                       <Text style={styles.scheduleTimeText}>{formatScheduleTime(row.clock_out)}</Text>
                                     </TouchableOpacity>
                                   </View>
@@ -1740,15 +1809,24 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                           })}
                         </View>
                       ))}
-                      <TouchableOpacity style={styles.secondaryButton} onPress={() => addScheduleAssignment(employee._id)}>
-                        <Text style={styles.secondaryButtonText}>Add Food Truck</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.primaryButton} onPress={() => saveEmployeeSchedule(employee)}>
-                        <Text style={styles.primaryButtonText}>Save Employee Schedule</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.archiveHistoryButton} onPress={() => archiveEmployeeSchedule(employee)}>
-                        <Text style={styles.archiveHistoryButtonText}>Archive Schedule</Text>
-                      </TouchableOpacity>
+                      {scheduleEditingId === employee._id ? (
+                        <>
+                          <TouchableOpacity style={styles.secondaryButton} onPress={() => addScheduleAssignment(employee._id)}>
+                            <Text style={styles.secondaryButtonText}>Add Food Truck</Text>
+                          </TouchableOpacity>
+                          <View style={styles.scheduleEditActions}>
+                            <TouchableOpacity style={styles.secondaryButton} onPress={() => cancelScheduleEditing(employee)}>
+                              <Text style={styles.secondaryButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.primaryButton} onPress={() => saveEmployeeSchedule(employee)}>
+                              <Text style={styles.primaryButtonText}>Save</Text>
+                            </TouchableOpacity>
+                          </View>
+                          <TouchableOpacity style={styles.archiveHistoryButton} onPress={() => archiveEmployeeSchedule(employee)}>
+                            <Text style={styles.archiveHistoryButtonText}>Archive Schedule</Text>
+                          </TouchableOpacity>
+                        </>
+                      ) : null}
                     </View>
                   ) : null}
                 </View>
@@ -1854,25 +1932,43 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                         </View>
                         {editingShiftId === session.employee_session_id ? (
                           <View style={styles.timecardEditor}>
-                            <Text style={styles.label}>Start (MM/DD/YYYY h:mm AM/PM)</Text>
-                            <TextInput
+                            <Text style={styles.label}>Start date</Text>
+                            <TouchableOpacity
                               style={styles.input}
-                              value={shiftEditDraft?.started_at || ""}
-                              onChangeText={(value) => setShiftEditDraft((draft) => ({ ...draft, started_at: value }))}
-                            />
-                            <Text style={styles.label}>End (MM/DD/YYYY h:mm AM/PM)</Text>
-                            <TextInput
+                              onPress={() => setShiftPickerTarget({ field: "started_at", mode: "date" })}
+                            >
+                              <Text>{formatShiftEditDate(shiftEditDraft?.started_at)}</Text>
+                            </TouchableOpacity>
+                            <Text style={styles.label}>Start time</Text>
+                            <TouchableOpacity
                               style={styles.input}
-                              value={shiftEditDraft?.ended_at || ""}
-                              onChangeText={(value) => setShiftEditDraft((draft) => ({ ...draft, ended_at: value }))}
-                            />
+                              onPress={() => setShiftPickerTarget({ field: "started_at", mode: "time" })}
+                            >
+                              <Text>{formatShiftEditTime(shiftEditDraft?.started_at)}</Text>
+                            </TouchableOpacity>
+                            <Text style={styles.label}>End date</Text>
+                            <TouchableOpacity
+                              style={styles.input}
+                              onPress={() => setShiftPickerTarget({ field: "ended_at", mode: "date" })}
+                            >
+                              <Text>{formatShiftEditDate(shiftEditDraft?.ended_at)}</Text>
+                            </TouchableOpacity>
+                            <Text style={styles.label}>End time</Text>
+                            <TouchableOpacity
+                              style={styles.input}
+                              onPress={() => setShiftPickerTarget({ field: "ended_at", mode: "time" })}
+                            >
+                              <Text>{formatShiftEditTime(shiftEditDraft?.ended_at)}</Text>
+                            </TouchableOpacity>
                             <Text style={styles.label}>Break minutes</Text>
-                            <TextInput
+                            <TouchableOpacity
                               style={styles.input}
-                              keyboardType="number-pad"
-                              value={shiftEditDraft?.total_break_minutes || ""}
-                              onChangeText={(value) => setShiftEditDraft((draft) => ({ ...draft, total_break_minutes: value.replace(/\D/g, "") }))}
-                            />
+                              onPress={() => setBreakPickerVisible(true)}
+                            >
+                              <Text>
+                                {shiftEditDraft?.total_break_minutes || "0"} minutes
+                              </Text>
+                            </TouchableOpacity>
                             <Text style={styles.label}>Reason for edit</Text>
                             <TextInput
                               style={styles.input}
@@ -1880,7 +1976,12 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                               onChangeText={(value) => setShiftEditDraft((draft) => ({ ...draft, reason: value }))}
                             />
                             <View style={styles.buttonRow}>
-                              <TouchableOpacity style={styles.secondaryButton} onPress={() => setEditingShiftId(null)}>
+                              <TouchableOpacity style={styles.secondaryButton} onPress={() => {
+                                setEditingShiftId(null);
+                                setShiftEditDraft(null);
+                                setShiftPickerTarget(null);
+                                setBreakPickerVisible(false);
+                              }}>
                                 <Text style={styles.secondaryButtonText}>Cancel</Text>
                               </TouchableOpacity>
                               <TouchableOpacity style={styles.smallPrimaryButton} onPress={() => saveShiftEdit(employee, session)}>
@@ -1987,6 +2088,29 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
         date={timeToDate(timePickerTarget?.value)}
         onConfirm={confirmScheduleTime}
         onCancel={() => setTimePickerTarget(null)}
+        is24Hour={false}
+      />
+      <FiveMinuteWheelPicker
+        visible={breakPickerVisible}
+        value={shiftEditDraft?.total_break_minutes || "0"}
+        onChange={(value) =>
+          setShiftEditDraft((draft) => ({
+            ...draft,
+            total_break_minutes: value,
+          }))
+        }
+        onClose={() => setBreakPickerVisible(false)}
+      />
+      <DateTimePickerModal
+        isVisible={!!shiftPickerTarget}
+        mode={shiftPickerTarget?.mode || "date"}
+        date={
+          new Date(
+            shiftEditDraft?.[shiftPickerTarget?.field] || Date.now(),
+          )
+        }
+        onConfirm={confirmShiftPicker}
+        onCancel={() => setShiftPickerTarget(null)}
         is24Hour={false}
       />
     </View>
@@ -2372,8 +2496,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 8,
   },
+  scheduleHeaderSummary: {
+    flex: 1,
+  },
+  scheduleHeaderActions: {
+    alignItems: "center",
+    flexDirection: "row",
+  },
   scheduleChevron: { color: AppColor.primary, fontSize: 16 },
   scheduleBody: { gap: 8, paddingBottom: 10 },
+  scheduleControlDisabled: { opacity: 0.65 },
+  scheduleEditActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
   scheduleAssignmentCard: {
     backgroundColor: AppColor.white,
     borderColor: AppColor.border,

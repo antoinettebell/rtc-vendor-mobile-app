@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Alert,
   Image,
-  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,16 +13,14 @@ import {
 import {
   getEventVendorPhotos_API,
   getEventVendorProfile_API,
-  returnMarketplaceVendorAgreement_API,
-  startMarketplaceVendorAgreementSigning_API,
   submitEventVendorApplication_API,
 } from "../api/appAPI";
+import { useMarketplaceAgreementCompletion } from "../hooks/useMarketplaceAgreementCompletion";
 import { AppColor } from "../utils/theme";
 export default function EventVendorApplicationScreen({ navigation, route }) {
   const event = route.params.event;
   const [profile, setProfile] = useState(null);
   const [photos, setPhotos] = useState([]);
-  const pendingAgreementRef = useRef(null);
   const [selected, setSelected] = useState([]);
   const [types, setTypes] = useState([]);
   const [bullets, setBullets] = useState("");
@@ -30,6 +28,8 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
   const [notes, setNotes] = useState("");
   const [electricity, setElectricity] = useState(null);
   const [feeAck, setFeeAck] = useState(false);
+  const [hasPendingAgreement, setHasPendingAgreement] = useState(false);
+  const draftKey = `event-vendor-application-draft:${event.event_id}`;
   useEffect(() => {
     Promise.all([
       getEventVendorProfile_API(),
@@ -39,6 +39,22 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
       setPhotos(x?.data?.photoList || []);
     });
   }, []);
+  useEffect(() => {
+    AsyncStorage.getItem(draftKey)
+      .then((value) => {
+        if (!value) return;
+        const draft = JSON.parse(value);
+        setSelected(Array.isArray(draft.selected) ? draft.selected : []);
+        setTypes(Array.isArray(draft.types) ? draft.types : []);
+        setBullets(draft.bullets || "");
+        setPrice(draft.price || "");
+        setNotes(draft.notes || "");
+        setElectricity(draft.electricity ?? null);
+        setFeeAck(draft.feeAck === true);
+        setHasPendingAgreement(draft.pendingAgreement === true);
+      })
+      .catch(() => {});
+  }, [draftKey]);
   const eligible = (event.event_vendor_needs || []).filter((n) =>
     profile?.vendor_types?.includes(n.vendor_type),
   );
@@ -58,6 +74,8 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
         electricity_required: electricity,
         electricity_fee_acknowledged: feeAck,
       });
+      await AsyncStorage.removeItem(draftKey);
+      setHasPendingAgreement(false);
       Alert.alert(
         "Application Submitted",
         "Your application was submitted to the coordinator.",
@@ -67,44 +85,47 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
       Alert.alert("Application", e?.message || "Unable to submit application.");
     }
   };
+  const { beginSigning } = useMarketplaceAgreementCompletion({
+    enabled: !!event?.event_id && hasPendingAgreement,
+    getSigningPayload: () => ({
+      event_id: event.event_id,
+      return_url: "rounddacornervendor://docusign/return?status=completed",
+    }),
+    finalizeSubmission: submitApplication,
+    submissionLabel: "Application",
+    recoveryStorageKey: `docusign-recovery:event-vendor:${event.event_id}`,
+    onTerminalStatus: async () => {
+      setHasPendingAgreement(false);
+      const value = await AsyncStorage.getItem(draftKey);
+      if (value) {
+        await AsyncStorage.setItem(
+          draftKey,
+          JSON.stringify({ ...JSON.parse(value), pendingAgreement: false }),
+        );
+      }
+    },
+  });
   const startSigningAndSubmit = async () => {
     try {
-      const response = await startMarketplaceVendorAgreementSigning_API({
-        event_id: event.event_id,
-        return_url: "rounddacornervendor://docusign/return?status=completed",
-      });
-      if (response?.data?.already_signed) {
-        await submitApplication();
-        return;
-      }
-      pendingAgreementRef.current = response?.data?.marketplaceVendorAgreement;
-      if (!response?.data?.signing_url) throw new Error("DocuSign signing URL was not returned.");
-      await Linking.openURL(response.data.signing_url);
+      await AsyncStorage.setItem(
+        draftKey,
+        JSON.stringify({
+          selected,
+          types,
+          bullets,
+          price,
+          notes,
+          electricity,
+          feeAck,
+          pendingAgreement: true,
+        }),
+      );
+      setHasPendingAgreement(true);
+      await beginSigning();
     } catch (e) {
       Alert.alert("Marketplace Agreements", e?.message || "Unable to start signing.");
     }
   };
-  useEffect(() => {
-    const handleReturn = async ({ url }) => {
-      const agreement = pendingAgreementRef.current;
-      if (!agreement?.agreement_id) return;
-      const value = String(url || "");
-      const status = value.includes("signing_complete") || value.includes("completed")
-        ? "completed"
-        : value.includes("decline") ? "declined" : value.includes("cancel") ? "cancelled" : "error";
-      try {
-        const response = await returnMarketplaceVendorAgreement_API({ agreement_id: agreement.agreement_id, status });
-        pendingAgreementRef.current = null;
-        if (response?.data?.marketplaceVendorAgreement?.status === "SIGNED") await submitApplication();
-        else Alert.alert("Signature Required", "Both Marketplace agreements must be signed before submission.");
-      } catch (e) {
-        pendingAgreementRef.current = null;
-        Alert.alert("Marketplace Agreements", e?.message || "Unable to confirm signing.");
-      }
-    };
-    const subscription = Linking.addEventListener("url", handleReturn);
-    return () => subscription.remove();
-  });
   return (
     <ScrollView contentContainerStyle={s.page}>
       <Text style={s.heading}>{event.event_name}</Text>

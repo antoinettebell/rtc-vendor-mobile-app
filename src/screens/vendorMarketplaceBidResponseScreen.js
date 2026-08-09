@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
-  Linking,
   Platform,
   ScrollView,
   Text,
@@ -23,11 +22,10 @@ import {
   getMarketplaceEventById_API,
   getVendorComplianceSummary_API,
   deleteMarketplaceBidAttachment_API,
-  returnMarketplaceVendorAgreement_API,
-  startMarketplaceVendorAgreementSigning_API,
   submitMarketplaceBid_API,
   uploadMarketplaceBidAttachment_API,
 } from "../api/appAPI";
+import { useMarketplaceAgreementCompletion } from "../hooks/useMarketplaceAgreementCompletion";
 import usePermission from "../hooks/usePermission";
 import { permission } from "../helpers/permission.helper";
 import {
@@ -45,6 +43,11 @@ import {
   normalizeMarketplaceRequirementLabel,
   styles,
 } from "./vendorMarketplaceShared";
+import {
+  getBidActionAvailability,
+  getBidBlockingReasons,
+  supportsCoordinatorBid,
+} from "../helpers/marketplaceBidEligibility.helper";
 
 const ReadOnlyRow = ({ label, value }) => (
   <View style={{ marginTop: 12 }}>
@@ -116,6 +119,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   );
   const [notes, setNotes] = useState(initialDraft.notes);
   const [savedBid, setSavedBid] = useState(initialBid);
+  const savedBidRef = useRef(initialBid);
   const isRevisionMode = isBidRevisionRequested(initialBid);
   const [requirementFiles, setRequirementFiles] = useState(
     route?.params?.bid?.attachments?.filter(
@@ -137,7 +141,6 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   );
   const [menuPdf, setMenuPdf] = useState(null);
   const [bidImages, setBidImages] = useState([]);
-  const pendingAgreementRef = useRef(null);
   const isLeavingRef = useRef(false);
   const initialDraftRef = useRef(initialDraft);
   const { checkAndRequestPermission: photosPermissionStatus } = usePermission(
@@ -226,7 +229,12 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   const requirementsSatisfied = requiredRequirementLabels.every((label) =>
     uploadedRequirementLabels.has(label),
   );
-  const isCoordinatorPaysEvent = event ? !isVendorPaysToAttendEvent(event) : true;
+  const missingRequirementLabels = requiredRequirementLabels.filter(
+    (label) => !uploadedRequirementLabels.has(label),
+  );
+  const isCoordinatorPaysEvent = event
+    ? supportsCoordinatorBid(event, isVendorPaysToAttendEvent(event))
+    : true;
 
   const applyProfileRequirementFiles = useCallback(
     (profileFiles = []) => {
@@ -269,44 +277,38 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     requiredRequirementLabels,
   ]);
 
-  const canSaveDraft = useMemo(
-    () =>
-      !!eventId &&
-      isCoordinatorPaysEvent &&
-      !notesError &&
-      (!fullBidAmount.trim() ||
-        (!Number.isNaN(fullBidNumber) && fullBidNumber >= 0)) &&
-      (guestCoverage !== "BOTH" ||
-        ((!regularGuestAmount.trim() || regularGuestAmountNumber >= 0) &&
-          (!vipCateringAmount.trim() || vipCateringAmountNumber >= 0))) &&
-      (!pricePerGuest || (!Number.isNaN(pricePerGuestNumber) && pricePerGuestNumber >= 0)) &&
-      (!averagePricePerMeal ||
-        (!Number.isNaN(averagePricePerMealNumber) &&
-          averagePricePerMealNumber >= 0)),
-    [
-      averagePricePerMeal,
-      averagePricePerMealNumber,
-      eventId,
-      fullBidAmount,
-      fullBidNumber,
-      guestCoverage,
-      isCoordinatorPaysEvent,
-      notesError,
-      pricePerGuest,
-      pricePerGuestNumber,
-      regularGuestAmount,
-      regularGuestAmountNumber,
-      vipCateringAmount,
-      vipCateringAmountNumber,
-    ],
-  );
-  const bidFieldsComplete = guestCoverage === "BOTH"
-    ? (fullyCateredEvent
-        ? regularGuestAmount.trim() && regularGuestAmountNumber > 0
-        : true) &&
-      vipCateringAmount.trim() && vipCateringAmountNumber > 0
-    : fullBidAmount.trim() && !Number.isNaN(fullBidNumber) && fullBidNumber > 0;
-  const canSubmit = canSaveDraft && bidFieldsComplete && requirementsSatisfied;
+  const { canSaveDraft, canSubmit } = getBidActionAvailability({
+    eventId,
+    coordinatorBidSupported: isCoordinatorPaysEvent,
+    notesError,
+    guestCoverage,
+    fullyCateredEvent,
+    fullBidAmount,
+    fullBidNumber,
+    regularGuestAmount,
+    regularGuestAmountNumber,
+    vipCateringAmount,
+    vipCateringAmountNumber,
+    pricePerGuest,
+    pricePerGuestNumber,
+    averagePricePerMeal,
+    averagePricePerMealNumber,
+    requirementsSatisfied,
+  });
+  const bidBlockingReasons = getBidBlockingReasons({
+    eventId,
+    coordinatorBidSupported: isCoordinatorPaysEvent,
+    notesError,
+    guestCoverage,
+    fullyCateredEvent,
+    fullBidAmount,
+    fullBidNumber,
+    regularGuestAmount,
+    regularGuestAmountNumber,
+    vipCateringAmount,
+    vipCateringAmountNumber,
+    missingRequirementLabels,
+  });
   const hasUnsavedDraftContent = useMemo(() => {
     const initial = initialDraftRef.current;
     return (
@@ -390,7 +392,9 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       payload: buildBidPayload(bidStatus),
     });
     if (response?.success) {
-      setSavedBid(response.data?.marketplaceBid || null);
+      const marketplaceBid = response.data?.marketplaceBid || null;
+      setSavedBid(marketplaceBid);
+      savedBidRef.current = marketplaceBid;
       initialDraftRef.current = {
         pricePerGuest,
         averagePricePerMeal,
@@ -495,53 +499,18 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleDocuSignReturn = async (url) => {
-    const pendingAgreement = pendingAgreementRef.current;
-    if (!pendingAgreement?.agreement_id) return;
-
-    const statusMatch = String(url || "").match(/[?&]status=([^&]+)/);
-    const eventMatch = String(url || "").match(/[?&]event=([^&]+)/);
-    const rawStatus = decodeURIComponent(
-      statusMatch?.[1] || eventMatch?.[1] || "error",
-    );
-    const status =
-      rawStatus === "signing_complete" || rawStatus === "completed"
-        ? "completed"
-        : rawStatus === "decline" || rawStatus === "declined"
-          ? "declined"
-          : rawStatus === "cancel" || rawStatus === "cancelled"
-            ? "cancelled"
-            : "error";
-
-    try {
-      const response = await returnMarketplaceVendorAgreement_API({
-        agreement_id: pendingAgreement.agreement_id,
-        status,
-      });
-      pendingAgreementRef.current = null;
-      if (response?.data?.marketplaceVendorAgreement?.status === "SIGNED") {
-        await finalizeBidSubmission();
-        return;
-      }
-      Alert.alert(
-        "Signature Required",
-        "The agreements must be signed before submission can continue. Your draft has been saved.",
-      );
-    } catch (error) {
-      pendingAgreementRef.current = null;
-      Alert.alert("Signing Error", error?.message || "Please try again.");
-    }
-  };
-
-  useEffect(() => {
-    const subscription = Linking.addEventListener("url", ({ url }) => {
-      handleDocuSignReturn(url);
+  const { beginSigning: beginAgreementSigning } =
+    useMarketplaceAgreementCompletion({
+      enabled: !!eventId && !!savedBid?.bid_id,
+      getSigningPayload: () => ({
+        event_id: eventId,
+        bid_id: savedBidRef.current?.bid_id,
+        return_url: "rounddacornervendor://docusign/return?status=completed",
+      }),
+      finalizeSubmission: finalizeBidSubmission,
+      submissionLabel: "Bid",
+      recoveryStorageKey: `docusign-recovery:bid:${eventId}`,
     });
-    Linking.getInitialURL().then((url) => {
-      if (url) handleDocuSignReturn(url);
-    });
-    return () => subscription.remove();
-  }, [eventId, savedBid, requirementFiles]);
 
   const submitBid = async () => {
     if (!canSubmit || submitting) return;
@@ -552,23 +521,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       if (!draft?.bid_id) {
         throw new Error("Unable to save bid draft before signing.");
       }
-      const signingResponse = await startMarketplaceVendorAgreementSigning_API({
-        event_id: eventId,
-        bid_id: draft.bid_id,
-        return_url: "rounddacornervendor://docusign/return?status=completed",
-      });
-
-      if (signingResponse?.data?.already_signed) {
-        await finalizeBidSubmission();
-        return;
-      }
-
-      pendingAgreementRef.current =
-        signingResponse?.data?.marketplaceVendorAgreement || null;
-      if (!signingResponse?.data?.signing_url) {
-        throw new Error("DocuSign signing URL was not returned.");
-      }
-      await Linking.openURL(signingResponse.data.signing_url);
+      await beginAgreementSigning();
     } catch (error) {
       Alert.alert("Bid Not Submitted", error?.message || "Please try again.");
     } finally {
@@ -1180,6 +1133,17 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
               >
                 <Text style={styles.secondaryButtonText}>Save Draft</Text>
               </TouchableOpacity>
+            ) : null}
+
+            {!canSubmit && bidBlockingReasons.length ? (
+              <View style={styles.card}>
+                <Text style={styles.sectionHeader}>Before submitting</Text>
+                {bidBlockingReasons.map((reason) => (
+                  <Text key={reason} style={styles.meta}>
+                    • {reason}
+                  </Text>
+                ))}
+              </View>
             ) : null}
 
             <TouchableOpacity

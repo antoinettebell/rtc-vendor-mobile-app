@@ -77,6 +77,7 @@ export const GET_ADD_ONS = "/public/add-ons";
 // Event Marketplace
 export const MARKETPLACE_OPEN_EVENTS = "/marketplace/events/open";
 export const MARKETPLACE_NOTIFICATION_SUMMARY = "/marketplace/notifications/summary";
+export const MARKETPLACE_NOTIFICATION_ACKNOWLEDGE = "/marketplace/notifications/acknowledge";
 export const MARKETPLACE_EVENT_BY_ID = (event_id) =>
   `/marketplace/events/${event_id}`;
 export const MARKETPLACE_EVENT_BIDS = (event_id) =>

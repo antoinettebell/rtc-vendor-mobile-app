@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
-  Linking,
   Platform,
   ScrollView,
   Text,
@@ -23,11 +22,10 @@ import {
   getMarketplaceEventById_API,
   getVendorComplianceSummary_API,
   deleteMarketplaceApplicationAttachment_API,
-  returnMarketplaceVendorAgreement_API,
-  startMarketplaceVendorAgreementSigning_API,
   submitMarketplaceApplication_API,
   uploadMarketplaceApplicationAttachment_API,
 } from "../api/appAPI";
+import { useMarketplaceAgreementCompletion } from "../hooks/useMarketplaceAgreementCompletion";
 import usePermission from "../hooks/usePermission";
 import { permission } from "../helpers/permission.helper";
 import {
@@ -235,7 +233,6 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
   );
   const [menuPdf, setMenuPdf] = useState(null);
   const [foodPhotos, setFoodPhotos] = useState([]);
-  const pendingAgreementRef = useRef(null);
   const isLeavingRef = useRef(false);
   const savedApplicationRef = useRef(initialApplication);
   const initialDraftRef = useRef(initialDraft);
@@ -606,64 +603,18 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleDocuSignReturn = async (url) => {
-    const pendingAgreement = pendingAgreementRef.current;
-    if (!pendingAgreement?.agreement_id) return;
-
-    const statusMatch = String(url || "").match(/[?&]status=([^&]+)/);
-    const eventMatch = String(url || "").match(/[?&]event=([^&]+)/);
-    const rawStatus = decodeURIComponent(
-      statusMatch?.[1] || eventMatch?.[1] || "error",
-    );
-    const status =
-      rawStatus === "signing_complete" || rawStatus === "completed"
-        ? "completed"
-        : rawStatus === "decline" || rawStatus === "declined"
-          ? "declined"
-          : rawStatus === "cancel" || rawStatus === "cancelled"
-            ? "cancelled"
-            : "error";
-
-    try {
-      const response = await returnMarketplaceVendorAgreement_API({
-        agreement_id: pendingAgreement.agreement_id,
-        status,
-      });
-      pendingAgreementRef.current = null;
-      if (response?.data?.marketplaceVendorAgreement?.status === "SIGNED") {
-        await finalizeApplicationSubmission();
-        return;
-      }
-      Alert.alert(
-        "Signature Required",
-        "The agreements must be signed before submission can continue. Your draft has been saved.",
-      );
-    } catch (error) {
-      pendingAgreementRef.current = null;
-      if (isAlreadySubmittedError(error)) {
-        Alert.alert(
-          "Application Already Submitted",
-          error?.message || "Your application is already on file for this event.",
-        );
-        return;
-      }
-
-      Alert.alert(
-        "Application Not Submitted",
-        error?.message || "Please try again.",
-      );
-    }
-  };
-
-  useEffect(() => {
-    const subscription = Linking.addEventListener("url", ({ url }) => {
-      handleDocuSignReturn(url);
+  const { beginSigning: beginAgreementSigning } =
+    useMarketplaceAgreementCompletion({
+      enabled: !!eventId && !!savedApplication?.application_id,
+      getSigningPayload: () => ({
+        event_id: eventId,
+        application_id: savedApplicationRef.current?.application_id,
+        return_url: "rounddacornervendor://docusign/return?status=completed",
+      }),
+      finalizeSubmission: finalizeApplicationSubmission,
+      submissionLabel: "Application",
+      recoveryStorageKey: `docusign-recovery:application:${eventId}`,
     });
-    Linking.getInitialURL().then((url) => {
-      if (url) handleDocuSignReturn(url);
-    });
-    return () => subscription.remove();
-  }, [eventId, savedApplication, requirementFiles]);
 
   const submitApplication = async () => {
     if (!canSubmit || submitting) return;
@@ -679,23 +630,7 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
       if (!draft?.application_id) {
         throw new Error("Unable to save application draft before signing.");
       }
-      const signingResponse = await startMarketplaceVendorAgreementSigning_API({
-        event_id: eventId,
-        application_id: draft.application_id,
-        return_url: "rounddacornervendor://docusign/return?status=completed",
-      });
-
-      if (signingResponse?.data?.already_signed) {
-        await finalizeApplicationSubmission();
-        return;
-      }
-
-      pendingAgreementRef.current =
-        signingResponse?.data?.marketplaceVendorAgreement || null;
-      if (!signingResponse?.data?.signing_url) {
-        throw new Error("DocuSign signing URL was not returned.");
-      }
-      await Linking.openURL(signingResponse.data.signing_url);
+      await beginAgreementSigning();
     } catch (error) {
       if (isAlreadySubmittedError(error)) {
         Alert.alert(

@@ -53,6 +53,7 @@ import {
   MARKETPLACE_MY_APPLICATIONS,
   MARKETPLACE_MY_BIDS,
   MARKETPLACE_NOTIFICATION_SUMMARY,
+  MARKETPLACE_NOTIFICATION_ACKNOWLEDGE,
   MARKETPLACE_OPEN_EVENTS,
   MARKETPLACE_PAYMENT_BY_ID,
   MARKETPLACE_PAYMENT_CALL,
@@ -257,6 +258,19 @@ export const getMarketplaceNotificationSummary_API = async () => {
     const response = await apiClient.get(MARKETPLACE_NOTIFICATION_SUMMARY, {
       skipToken: false,
     });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const acknowledgeMarketplaceNotifications_API = async (notificationIds) => {
+  try {
+    const response = await apiClient.post(
+      MARKETPLACE_NOTIFICATION_ACKNOWLEDGE,
+      { notification_ids: notificationIds },
+      { skipToken: false },
+    );
     return response?.data;
   } catch (error) {
     throw error?.response?.data || error;

@@ -46,6 +46,10 @@ import {
   getNestedSelectionError,
   mergeMenuItemWithSavedSelections,
 } from "../helpers/menuSelection.helper";
+import {
+  canEmployeeOperate,
+  getEmployeeOperationalBlock,
+} from "../helpers/employeeOperationalAccess.helper";
 import { foodTypeStrings, orderStatusStrings } from "../utils/constants";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 
@@ -292,6 +296,8 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
   const canTapToPay = !!capabilities.tapToPay;
   const canUsePos = !!capabilities.employeeWalkUpPos;
   const isWorking = !!dashboard?.shift?.is_active;
+  const isOnBreak = dashboard?.shift?.shift_status === "ON_BREAK";
+  const isAssignedLocationOpen = dashboard?.location?.is_open === true;
 
   const displayedLocation = dashboard?.assignedLocation || assignedLocation;
   const employeeName =
@@ -339,7 +345,9 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
     const response = await getEmployeeDashboard_API();
     if (response?.success && response?.data?.dashboard) {
       setDashboard(response.data.dashboard);
+      return response.data.dashboard;
     }
+    return null;
   }, []);
 
   const loadMenu = useCallback(async () => {
@@ -372,12 +380,18 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
   const refreshBoard = useCallback(async () => {
     setLoading(true);
     try {
-      await Promise.all([
-        loadDashboard(),
-        loadMenu(),
-        loadOrders(),
-        loadRequests(),
-      ]);
+      const nextDashboard = await loadDashboard();
+      const canOperate = canEmployeeOperate({
+        isShiftActive: !!nextDashboard?.shift?.is_active,
+        isOnBreak: nextDashboard?.shift?.shift_status === "ON_BREAK",
+        isAssignedLocationOpen: nextDashboard?.location?.is_open === true,
+      });
+      if (!canOperate) {
+        setOrders([]);
+        setRequests([]);
+        return;
+      }
+      await Promise.all([loadMenu(), loadOrders(), loadRequests()]);
     } catch (error) {
       Alert.alert(
         "POS unavailable",
@@ -387,6 +401,22 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
       setLoading(false);
     }
   }, [loadDashboard, loadMenu, loadOrders, loadRequests]);
+
+  const operationalBlock = useMemo(
+    () =>
+      getEmployeeOperationalBlock({
+        isShiftActive: isWorking,
+        isOnBreak,
+        isAssignedLocationOpen,
+      }),
+    [isAssignedLocationOpen, isOnBreak, isWorking],
+  );
+
+  const requireOperationalAccess = useCallback(() => {
+    if (!operationalBlock) return true;
+    Alert.alert(operationalBlock.title, operationalBlock.message);
+    return false;
+  }, [operationalBlock]);
 
   useFocusEffect(
     useCallback(() => {
@@ -403,6 +433,13 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
       );
     }
   }, [canUsePos, handleBack]);
+
+  useEffect(() => {
+    if (!dashboard || !operationalBlock) return;
+    Alert.alert(operationalBlock.title, operationalBlock.message, [
+      { text: "OK", onPress: handleBack },
+    ]);
+  }, [dashboard, handleBack, operationalBlock]);
 
   useEffect(() => {
     if (!categories.includes(selectedCategory)) {
@@ -425,10 +462,7 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
   };
 
   const addItem = (item) => {
-    if (!isWorking) {
-      Alert.alert("Off duty", "Go on duty before creating walk-up orders.");
-      return;
-    }
+    if (!requireOperationalAccess()) return;
     if (!item.available) {
       Alert.alert(
         "Item unavailable",
@@ -463,6 +497,7 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
   };
 
   const openOptions = (item, options = {}) => {
+    if (!requireOperationalAccess()) return;
     const existing = item._cartLineId ? item : cartItemById[item._id];
     const addAnother = options.addAnother === true;
     setSelectedItem(
@@ -561,10 +596,7 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
   };
 
   const goToCheckout = () => {
-    if (!isWorking) {
-      Alert.alert("Off duty", "Go on duty before checkout.");
-      return;
-    }
+    if (!requireOperationalAccess()) return;
     if (order.items.length === 0) {
       Alert.alert("Empty cart", "Add at least one item.");
       return;
@@ -679,6 +711,7 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
   );
 
   const updateOrderStatus = async (orderItem, nextStatus) => {
+    if (!requireOperationalAccess()) return;
     setActionLoadingId(orderItem?._id);
     try {
       const response = await updateOrderStatusByID_API({

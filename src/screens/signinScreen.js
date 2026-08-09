@@ -46,6 +46,7 @@ import {
 } from "../helpers/notification.helper";
 import { setFcmToken_API } from "../api/appAPI";
 import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
+import { restoreSavedEmployeeLogin } from "../helpers/savedEmployeeLogin.helper";
 
 const SignInScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -55,6 +56,7 @@ const SignInScreen = ({ navigation, route }) => {
   const { vendorOnboardingStep } = useSelector(
     (state) => state.authReducer
   );
+  const { allSigninUsers } = useSelector((state) => state.userInfoReducer);
 
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -306,10 +308,14 @@ const SignInScreen = ({ navigation, route }) => {
   useEffect(() => {
     if (route?.params?.savedUser) {
       if (route.params.savedUser.loginMode === "EMPLOYEE") {
-        const savedAccessCode = route.params.savedUser.vendorAccessCode || "";
-        const savedLoginId = route.params.savedUser.employeeLoginId || "";
-        const savedPin =
-          route.params.savedUser.pin || route.params.savedUser.password || "";
+        const {
+          vendorAccessCode: savedAccessCode,
+          employeeLoginId: savedLoginId,
+          pin: savedPin,
+        } = restoreSavedEmployeeLogin({
+          savedUser: route.params.savedUser,
+          savedUsers: allSigninUsers,
+        });
         setLoginMode("EMPLOYEE");
         setVendorAccessCode(savedAccessCode);
         setEmployeeLoginId(savedLoginId);
@@ -327,6 +333,21 @@ const SignInScreen = ({ navigation, route }) => {
       );
     }
   }, [route]);
+
+  useEffect(() => {
+    if (loginMode !== "EMPLOYEE" || vendorAccessCode || !employeeLoginId.trim()) {
+      return;
+    }
+    const savedCredentials = restoreSavedEmployeeLogin({
+      savedUser: { employeeLoginId, pin },
+      savedUsers: allSigninUsers,
+    });
+    if (!savedCredentials.vendorAccessCode) return;
+    setVendorAccessCode(savedCredentials.vendorAccessCode);
+    if (!pin && savedCredentials.pin) {
+      setPin(savedCredentials.pin);
+    }
+  }, [allSigninUsers, employeeLoginId, loginMode, pin, vendorAccessCode]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -654,7 +675,8 @@ const SignInScreen = ({ navigation, route }) => {
                           />
                         }
                         keyboardType="number-pad"
-                        textContentType="oneTimeCode"
+                        autoComplete="password"
+                        textContentType="password"
                         theme={{ colors: { onSurfaceVariant: "#777" } }}
                       />
                       {!!pinError && (

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  acknowledgeMarketplaceNotifications_API,
   StyleSheet,
   Text,
   View,
@@ -155,7 +156,9 @@ const HomeScreen = ({ navigation }) => {
   const notificationCount = useMemo(() => {
     const acknowledgedIds = new Set(acknowledgedMarketplaceNotificationIds);
     const marketplaceUnreadCount = marketplaceNotifications.filter(
-      (item) => !acknowledgedIds.has(getMarketplaceNotificationId(item)),
+      (item) =>
+        item.acknowledged !== true &&
+        !acknowledgedIds.has(getMarketplaceNotificationId(item)),
     ).length;
     return pendingNotificationOrders.length + marketplaceUnreadCount;
   }, [
@@ -709,6 +712,31 @@ const HomeScreen = ({ navigation }) => {
       console.log("Marketplace notification storage error => ", error);
     }
 
+    const operationalNotificationIds = marketplaceNotifications
+      .filter(
+        (item) =>
+          item.type === "OPERATIONAL_COMPLIANCE" &&
+          !item.acknowledged &&
+          item.notification_id,
+      )
+      .map((item) => item.notification_id);
+    if (operationalNotificationIds.length) {
+      try {
+        await acknowledgeMarketplaceNotifications_API(
+          operationalNotificationIds,
+        );
+        setMarketplaceNotifications((items) =>
+          items.map((item) =>
+            operationalNotificationIds.includes(item.notification_id)
+              ? { ...item, acknowledged: true }
+              : item,
+          ),
+        );
+      } catch (error) {
+        console.log("Operations notification acknowledge error => ", error);
+      }
+    }
+
     const messageEventIds = [
       ...new Set(
         marketplaceNotifications
@@ -750,6 +778,14 @@ const HomeScreen = ({ navigation }) => {
     if (item.type === "MARKETPLACE_MESSAGE") {
       navigation.navigate("vendorMarketplaceMessagesScreen", {
         eventId: item.event_id,
+      });
+      return;
+    }
+
+    if (item.type === "OPERATIONAL_COMPLIANCE") {
+      navigation.navigate("operationalFormScreen", {
+        type: item.form_type,
+        formId: item.form_id,
       });
       return;
     }
