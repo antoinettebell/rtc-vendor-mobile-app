@@ -27,6 +27,27 @@ assert.equal(event.needs[0].remaining, 2);
 assert.deepEqual(event.images, [{ image_id: "image-1", image_url: "https://public/event.jpg" }]);
 assert.equal(event.tax_exemption_certificate, undefined);
 assert.equal(event.eventCoordinatorPaymentQrCodeUrl, undefined);
+assert.equal(helper.formatMarketplaceEventDate("2026-08-20"), "08/20/2026");
+assert.equal(helper.formatMarketplaceEventTime("00:00"), "12:00 AM");
+assert.equal(helper.formatMarketplaceEventTime("12:00"), "12:00 PM");
+assert.equal(helper.formatMarketplaceEventTime("16:00pm"), "4:00 PM");
+assert.equal(helper.formatMarketplaceEventTime("23:30"), "11:30 PM");
+assert.equal(helper.formatMarketplaceEventTime("01:15"), "1:15 AM");
+assert.equal(
+  helper.formatMarketplaceEventTime("2026-08-21T00:00:00.000Z", "America/New_York"),
+  "8:00 PM",
+  "absolute event times use the event timezone",
+);
+assert.deepEqual(
+  helper.getPublicEventImages({
+    public_images: [{ image_id: "public", image_url: "https://public/image.jpg" }],
+    tax_exemption_certificate: { image_url: "https://private/tax.jpg" },
+    coordinator_payment_qr_code_url: "https://private/qr.jpg",
+    agreements: [{ image_url: "https://private/agreement.jpg" }],
+  }),
+  [{ image_id: "public", image_url: "https://public/image.jpg" }],
+  "the viewer receives public event images only",
+);
 
 assert.deepEqual(helper.getApprovedProfilePresentation({ review_status: "APPROVED" }, false), {
   approved: true, readOnly: true, primaryAction: "Edit Profile", showCancel: false,
@@ -58,5 +79,13 @@ assert.match(profileScreen, /Save Changes/);
 assert.match(profileScreen, /categoryDescriptionOn/);
 const photoScreen = await readFile(new URL("../screens/eventVendorPhotosScreen.js", import.meta.url), "utf8");
 assert.match(photoScreen, /Save Photos/);
+assert.match(photoScreen, /Edit Photos/);
+assert.match(photoScreen, /isEditingPhotos/);
+assert.match(photoScreen, /cancelPhotoEdits/);
+const viewer = await readFile(new URL("../components/MarketplaceImageViewer.js", import.meta.url), "utf8");
+assert.match(viewer, /maximumZoomScale=\{4\}/);
+assert.match(viewer, /Previous/);
+assert.match(viewer, /Next/);
+assert.match(viewer, /onRequestClose=\{onClose\}/);
 
 console.log("Marketplace Vendor UI presentation tests passed");

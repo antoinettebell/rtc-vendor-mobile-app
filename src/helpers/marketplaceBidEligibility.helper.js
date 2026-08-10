@@ -7,6 +7,27 @@ export const supportsCoordinatorBid = (event, vendorPaysToAttend) =>
   !!event &&
   (isBothPaymentArrangement(event) || !vendorPaysToAttend);
 
+export const getApplicationActionAvailability = ({
+  eventId,
+  notesError,
+  businessName,
+  foodTypeCuisine,
+  missingRequirementLabels = [],
+}) => {
+  const canSaveDraft = !!eventId && !notesError;
+  const reasons = [];
+  if (!eventId) reasons.push("Event details are unavailable.");
+  if (notesError) reasons.push(notesError);
+  if (!String(businessName || "").trim()) reasons.push("Enter the Business Name.");
+  if (!String(foodTypeCuisine || "").trim()) reasons.push("Enter the Food Type / Cuisine.");
+  missingRequirementLabels.forEach((label) => reasons.push(`Upload: ${label}.`));
+  return {
+    canSaveDraft,
+    canSubmit: canSaveDraft && reasons.length === 0,
+    reasons,
+  };
+};
+
 export const getBidActionAvailability = ({
   eventId,
   coordinatorBidSupported,

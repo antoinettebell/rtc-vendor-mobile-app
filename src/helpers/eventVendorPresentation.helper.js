@@ -12,13 +12,53 @@ export const getPublicEventImages = (event = {}) => {
     .filter((image) => image.image_url);
 };
 
+const eventTimeZone = (event = {}) =>
+  event.event_timezone || event.time_zone || event.timezone || "America/New_York";
+
+export const formatMarketplaceEventDate = (value, timeZone = "America/New_York") => {
+  if (!value) return null;
+  const plainDate = String(value).match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T)/);
+  if (plainDate && !String(value).includes("T")) {
+    return `${plainDate[2]}/${plainDate[3]}/${plainDate[1]}`;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  }).format(date);
+};
+
+export const formatMarketplaceEventTime = (value, timeZone = "America/New_York") => {
+  if (!value) return null;
+  const match = String(value).trim().match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)?$/i);
+  if (match) {
+    let hour = Number(match[1]);
+    const suffix = match[3]?.toLowerCase();
+    if (suffix === "pm" && hour < 12) hour += 12;
+    if (suffix === "am" && hour === 12) hour = 0;
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${match[2]} ${hour >= 12 ? "PM" : "AM"}`;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
+};
+
 export const getMarketplaceVendorEventPresentation = (event = {}) => ({
   eventId: event.event_id,
   name: event.event_name || "Marketplace Event",
   description: event.event_description || "No description provided.",
-  date: event.event_date || event.event_start_date || null,
-  startTime: event.event_start_time || event.event_time || event.start_time || null,
-  endTime: event.event_end_time || event.event_close_time || event.end_time || null,
+  date: formatMarketplaceEventDate(event.event_date || event.event_start_date, eventTimeZone(event)),
+  startTime: formatMarketplaceEventTime(event.event_start_time || event.event_time || event.start_time, eventTimeZone(event)),
+  endTime: formatMarketplaceEventTime(event.event_end_time || event.event_close_time || event.end_time, eventTimeZone(event)),
   location:
     event.event_address || event.formatted_address ||
     [event.event_city, event.event_state].filter(Boolean).join(", ") ||

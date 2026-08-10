@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -38,14 +38,38 @@ import {
   onUnderReview,
   setVendorOnboardingStep,
 } from "../redux/slices/authSlice";
+import {
+  executeEventVendorPhotoEdits,
+  runPhotoEditSaveOnce,
+} from "../helpers/eventVendorPhotoEdits.helper";
 
 export default function EventVendorPhotosScreen({ route }) {
   const dispatch = useDispatch();
   const [photos, setPhotos] = useState([]);
   const [preview, setPreview] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isEditingPhotos, setIsEditingPhotos] = useState(false);
+  const [pendingAdds, setPendingAdds] = useState([]);
+  const [pendingReplacements, setPendingReplacements] = useState({});
+  const [pendingRemovals, setPendingRemovals] = useState([]);
+  const [savingPhotos, setSavingPhotos] = useState(false);
+  const saveInProgressRef = useRef(false);
   const onboardingFlow = route?.params?.onboardingFlow === true;
-  const groupedPhotos = groupPhotosByCategory(photos);
+  const displayedPhotos = [
+    ...photos
+      .filter((photo) => !pendingRemovals.includes(photo.photo_id))
+      .map((photo) => pendingReplacements[photo.photo_id]
+        ? { ...photo, file_url: pendingReplacements[photo.photo_id].path }
+        : photo),
+    ...pendingAdds.map((entry) => ({
+      photo_id: entry.localId,
+      category: entry.category,
+      file_url: entry.image.path,
+      _pending: true,
+    })),
+  ];
+  const groupedPhotos = groupPhotosByCategory(displayedPhotos);
   const selectedCategories = getSelectedMerchandiseCategories(profile);
   const portfolioProgress = getMerchandisePortfolioProgress(profile, photos);
   const canSubmitReview = !!profile?.logo_url && portfolioProgress.complete;
@@ -65,14 +89,19 @@ export default function EventVendorPhotosScreen({ route }) {
     );
   };
   const load = useCallback(async () => {
-    const [response, profileResponse] = await Promise.all([
-      getEventVendorPhotos_API(),
-      getEventVendorProfile_API(),
-    ]);
-    setPhotos(response?.data?.photoList || []);
-    const loadedProfile = profileResponse?.data?.eventVendorProfile || null;
-    setProfile(loadedProfile);
-    if (loadedProfile) dispatch(updateUser({ eventVendorProfile: loadedProfile }));
+    setLoading(true);
+    try {
+      const [response, profileResponse] = await Promise.all([
+        getEventVendorPhotos_API(),
+        getEventVendorProfile_API(),
+      ]);
+      setPhotos(response?.data?.photoList || []);
+      const loadedProfile = profileResponse?.data?.eventVendorProfile || null;
+      setProfile(loadedProfile);
+      if (loadedProfile) dispatch(updateUser({ eventVendorProfile: loadedProfile }));
+    } finally {
+      setLoading(false);
+    }
   }, [dispatch]);
   useFocusEffect(
     useCallback(() => {
@@ -81,12 +110,29 @@ export default function EventVendorPhotosScreen({ route }) {
   );
   const add = async (category, replacingPhoto = null) => {
     try {
-      if (!replacingPhoto && photos.filter((photo) => photo.category === category).length >= 10)
+      if (!replacingPhoto && displayedPhotos.filter((photo) => photo.category === category).length >= 10)
         return Alert.alert(
           "Photos",
           "This category already contains 10 photos.",
         );
       const image = await ImagePicker.openPicker({ mediaType: "photo" });
+      if (repositoryPresentation.approved) {
+        if (replacingPhoto) {
+          if (replacingPhoto._pending) {
+            setPendingAdds((current) => current.map((entry) =>
+              entry.localId === replacingPhoto.photo_id ? { ...entry, image } : entry));
+          } else {
+            setPendingReplacements((current) => ({ ...current, [replacingPhoto.photo_id]: image }));
+          }
+        } else {
+          setPendingAdds((current) => [...current, {
+            localId: `pending-${Date.now()}-${current.length}`,
+            category,
+            image,
+          }]);
+        }
+        return;
+      }
       const form = new FormData();
       form.append("file", {
         uri: image.path,
@@ -146,6 +192,19 @@ export default function EventVendorPhotosScreen({ route }) {
           text: "Remove",
           style: "destructive",
           onPress: async () => {
+            if (repositoryPresentation.approved) {
+              if (photo._pending) {
+                setPendingAdds((current) => current.filter((entry) => entry.localId !== photo.photo_id));
+              } else {
+                setPendingRemovals((current) => [...new Set([...current, photo.photo_id])]);
+                setPendingReplacements((current) => {
+                  const next = { ...current };
+                  delete next[photo.photo_id];
+                  return next;
+                });
+              }
+              return;
+            }
             const response = await removeEventVendorPhoto_API(photo.photo_id);
             handleReapproval(response);
             await load();
@@ -153,6 +212,73 @@ export default function EventVendorPhotosScreen({ route }) {
         },
       ],
     );
+  const formForImage = (image, category) => {
+    const form = new FormData();
+    form.append("file", {
+      uri: image.path,
+      name: image.filename || `product-${Date.now()}.jpg`,
+      type: image.mime || "image/jpeg",
+    });
+    form.append("category", category);
+    return form;
+  };
+  const clearPhotoEdits = () => {
+    setPendingAdds([]);
+    setPendingReplacements({});
+    setPendingRemovals([]);
+    setIsEditingPhotos(false);
+  };
+  const savePhotoEdits = async () => {
+    await runPhotoEditSaveOnce(saveInProgressRef, async () => {
+      setSavingPhotos(true);
+      try {
+        await executeEventVendorPhotoEdits({
+          photos,
+          replacements: pendingReplacements,
+          removals: pendingRemovals,
+          additions: pendingAdds,
+          replacePhoto: ({ photoId, image, category }) =>
+            replaceEventVendorPhoto_API(photoId, formForImage(image, category)),
+          removePhoto: removeEventVendorPhoto_API,
+          addPhoto: (entry) =>
+            uploadEventVendorPhoto_API(formForImage(entry.image, entry.category)),
+        });
+        clearPhotoEdits();
+        await load();
+        Alert.alert("Photos Saved", "Your photo repository is up to date.");
+      } catch (error) {
+        const remaining = error.remainingPhotoEdits || {
+          replacements: pendingReplacements,
+          additions: pendingAdds,
+          removals: pendingRemovals,
+        };
+        setPendingReplacements(remaining.replacements);
+        setPendingAdds(remaining.additions);
+        setPendingRemovals(remaining.removals);
+        Alert.alert(
+          "Some Photos Saved",
+          `Completed photo changes remain saved. Only the unsaved changes remain pending. ${getMarketplaceApiErrorMessage(
+            error,
+            "Review them and try Save Photos again.",
+          )}`,
+        );
+        await load().catch(() => {});
+      } finally {
+        setSavingPhotos(false);
+      }
+    });
+  };
+  const cancelPhotoEdits = () => {
+    clearPhotoEdits();
+    load().catch(() => {});
+  };
+  if (loading) {
+    return (
+      <MarketplaceVendorScreenLayout title="Photo Repository">
+        <View style={s.loading}><Text style={s.sub}>Loading photo repository…</Text></View>
+      </MarketplaceVendorScreenLayout>
+    );
+  }
   return (
     <MarketplaceVendorScreenLayout title="Photo Repository">
     <ScrollView style={s.page} contentContainerStyle={s.content}>
@@ -163,6 +289,11 @@ export default function EventVendorPhotosScreen({ route }) {
       </Text>
       {!repositoryPresentation.approved ? (
         <Text style={s.progress}>{repositoryPresentation.progressLabel}</Text>
+      ) : null}
+      {repositoryPresentation.approved && !isEditingPhotos ? (
+        <TouchableOpacity style={s.submitReview} onPress={() => setIsEditingPhotos(true)}>
+          <Text style={s.addText}>Edit Photos</Text>
+        </TouchableOpacity>
       ) : null}
       {onboardingFlow && !repositoryPresentation.approved ? (
         <View style={s.onboardingCard}>
@@ -179,9 +310,9 @@ export default function EventVendorPhotosScreen({ route }) {
             <Text style={s.sectionTitle}>{category.label}</Text>
             <Text style={s.sectionDescription}>{category.description}</Text>
             <Text style={s.count}>{categoryPhotos.length}/10</Text>
-            <TouchableOpacity style={s.add} onPress={() => add(category.value)}>
+            {(!repositoryPresentation.approved || isEditingPhotos) ? <TouchableOpacity style={s.add} onPress={() => add(category.value)}>
               <Text style={s.addText}>Add Photo</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> : null}
             <FlatList
               scrollEnabled={false}
               data={categoryPhotos}
@@ -192,23 +323,25 @@ export default function EventVendorPhotosScreen({ route }) {
                   <TouchableOpacity onPress={() => setPreview(item)}>
                     <Image source={{ uri: item.file_url }} style={s.image} />
                   </TouchableOpacity>
-                  <View style={s.actions}>
+                  {(!repositoryPresentation.approved || isEditingPhotos) ? <View style={s.actions}>
                     <TouchableOpacity onPress={() => add(category.value, item)}><Text style={s.action}>Replace</Text></TouchableOpacity>
                     <TouchableOpacity onPress={() => remove(item)}><Text style={[s.action, s.delete]}>Remove</Text></TouchableOpacity>
-                  </View>
+                  </View> : null}
                 </View>
               )}
             />
           </View>
         );
       })}
-      {repositoryPresentation.approved ? (
-        <TouchableOpacity
-          style={s.submitReview}
-          onPress={() => Alert.alert("Photos Saved", "Your photo repository is up to date.")}
-        >
-          <Text style={s.addText}>Save Photos</Text>
-        </TouchableOpacity>
+      {repositoryPresentation.approved && isEditingPhotos ? (
+        <View style={s.editActions}>
+          <TouchableOpacity style={[s.submitReview, s.editButton, savingPhotos && s.disabled]} onPress={savePhotoEdits} disabled={savingPhotos}>
+            <Text style={s.addText}>{savingPhotos ? "Saving Photos…" : "Save Photos"}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[s.cancelButton, s.editButton, savingPhotos && s.disabled]} onPress={cancelPhotoEdits} disabled={savingPhotos}>
+            <Text style={s.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
       ) : onboardingFlow ? (
         <TouchableOpacity style={[s.submitReview, !canSubmitReview && s.disabled]} onPress={submitForReview} disabled={!canSubmitReview}>
           <Text style={s.addText}>Submit Profile for Review</Text>
@@ -262,4 +395,9 @@ const s = StyleSheet.create({
   submitReview: { backgroundColor: "#166534", padding: 15, borderRadius: 12, alignItems: "center", marginTop: 24 },
   disabled: { opacity: 0.5 },
   requirement: { color: "#92400e", marginTop: 8, textAlign: "center" },
+  editActions: { flexDirection: "row", gap: 10 },
+  editButton: { flex: 1 },
+  cancelButton: { padding: 15, borderRadius: 12, alignItems: "center", marginTop: 24, borderWidth: 1, borderColor: "#64748b" },
+  cancelText: { color: "#334155", fontWeight: "800" },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
 });

@@ -14,12 +14,14 @@ import {
 } from "../api/appAPI";
 import { AppColor } from "../utils/theme";
 import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
+import MarketplaceImageViewer from "../components/MarketplaceImageViewer";
 import { getMarketplaceVendorEventPresentation } from "../helpers/eventVendorPresentation.helper";
 
 export default function EventVendorMarketplaceScreen({ navigation }) {
   const [events, setEvents] = useState([]);
   const [applications, setApplications] = useState([]);
   const [message, setMessage] = useState("");
+  const [viewer, setViewer] = useState(null);
   const load = useCallback(async () => {
     try {
       const [r, applicationResponse] = await Promise.all([
@@ -88,7 +90,11 @@ export default function EventVendorMarketplaceScreen({ navigation }) {
               })
             }
           >
-            {event.images[0] ? <Image source={{ uri: event.images[0].image_url }} style={s.eventImage} /> : null}
+            {event.images[0] ? (
+              <TouchableOpacity onPress={() => setViewer({ images: event.images, index: 0 })}>
+                <Image source={{ uri: event.images[0].image_url }} style={s.eventImage} />
+              </TouchableOpacity>
+            ) : null}
             <Text style={s.title}>{event.name}</Text>
             <Text style={s.meta}>{event.location}</Text>
             {event.date ? <Text style={s.meta}>{String(event.date)}{event.startTime ? ` · ${event.startTime}` : ""}</Text> : null}
@@ -104,6 +110,12 @@ export default function EventVendorMarketplaceScreen({ navigation }) {
           </TouchableOpacity>
           );
         }}
+      />
+      <MarketplaceImageViewer
+        images={viewer?.images || []}
+        initialIndex={viewer?.index || 0}
+        visible={!!viewer}
+        onClose={() => setViewer(null)}
       />
       </View>
     </MarketplaceVendorScreenLayout>

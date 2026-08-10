@@ -23,10 +23,12 @@ import { useMarketplaceAgreementCompletion } from "../hooks/useMarketplaceAgreem
 import { AppColor } from "../utils/theme";
 import {
   MERCHANDISE_CATEGORIES,
+  getMarketplaceApiErrorMessage,
   toggleApplicationPhoto,
 } from "../helpers/eventVendorProfile.helper";
 import {
   buildEventVendorApplicationDraft,
+  buildEligibleEventVendorApplicationDraft,
   clearEventVendorApplicationRecovery,
   getEventVendorApplicationDraftKey,
   getEventVendorApplicationReturnKey,
@@ -42,6 +44,7 @@ import {
   formatApplicationCurrency,
   applicationCurrencyNumber,
   getApprovedApplicationUploadCategories,
+  normalizeEventVendorApplicationTypes,
 } from "../helpers/eventVendorApplicationDraft.helper";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -52,13 +55,15 @@ import {
   setPendingEventVendorApplication,
 } from "../redux/slices/authSlice";
 import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
+import MarketplaceImageViewer from "../components/MarketplaceImageViewer";
 import { getMarketplaceVendorEventPresentation } from "../helpers/eventVendorPresentation.helper";
 export default function EventVendorApplicationScreen({ navigation, route }) {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.userReducer.user);
   const vendorId = String(user?._id || user?.id || "");
   const event = route.params.event;
-  const eventPresentation = getMarketplaceVendorEventPresentation(event);
+  const [hydratedEvent, setHydratedEvent] = useState(event);
+  const eventPresentation = getMarketplaceVendorEventPresentation(hydratedEvent);
   const [profile, setProfile] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [selected, setSelected] = useState([]);
@@ -73,6 +78,7 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
   const [uploadCategory, setUploadCategory] = useState("");
   const [saveUploadToRepository, setSaveUploadToRepository] = useState(false);
   const [hydrationAttempt, setHydrationAttempt] = useState(0);
+  const [eventImageIndex, setEventImageIndex] = useState(null);
   const draftKey = vendorId
     ? getEventVendorApplicationDraftKey(vendorId, event.event_id)
     : null;
@@ -92,18 +98,38 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
       loadEvent: getEventVendorEvents_API,
       eventId: event.event_id,
     }))
-      .then(async ({ profile: hydratedProfile, photos: hydratedPhotos, draft }) => {
+      .then(async ({
+        profile: hydratedProfile,
+        photos: hydratedPhotos,
+        event: currentEvent,
+        draft,
+      }) => {
+        setHydratedEvent(currentEvent);
         setProfile(hydratedProfile);
         setPhotos(hydratedPhotos);
+        const normalizedTypeState = normalizeEventVendorApplicationTypes({
+          profile: hydratedProfile,
+          event: currentEvent,
+          selectedTypes: draft?.types,
+        });
+        setTypes(normalizedTypeState.selectedTypes);
         if (draft) {
           setSelected(Array.isArray(draft.selected) ? draft.selected : []);
-          setTypes(Array.isArray(draft.types) ? draft.types : []);
           setBullets(normalizeApplicationBullets(draft.bullets));
           setPrice(sanitizeApplicationCurrency(draft.price));
           setNotes(draft.notes || "");
           setElectricity(draft.electricity ?? null);
           setFeeAck(draft.feeAck === true);
           setHasPendingAgreement(draft.pendingAgreement === true);
+          const originalTypes = Array.isArray(draft.types) ? draft.types : [];
+          if (JSON.stringify(originalTypes) !== JSON.stringify(normalizedTypeState.selectedTypes)) {
+            await AsyncStorage.setItem(
+              draftKey,
+              JSON.stringify(buildEventVendorApplicationDraft(draft, {
+                types: normalizedTypeState.selectedTypes,
+              })),
+            );
+          }
         }
         await clearEventVendorApplicationRecovery({
           storage: AsyncStorage,
@@ -127,14 +153,20 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
         );
       });
   }, [dispatch, draftKey, event.event_id, hydrationAttempt, navigation, returnKey, vendorId]);
-  const eligible = (event.event_vendor_needs || []).filter((n) =>
+  const eligible = (hydratedEvent.event_vendor_needs || []).filter((n) =>
     profile?.vendor_types?.includes(n.vendor_type),
   );
   const toggle = (v, setter, list) =>
     setter(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
-  const currentDraft = (overrides = {}) =>
-    buildEventVendorApplicationDraft(
-      {
+  const normalizedTypeState = (selectedTypes = types) =>
+    normalizeEventVendorApplicationTypes({
+      profile,
+      event: hydratedEvent,
+      selectedTypes,
+    });
+  const currentDraft = (overrides = {}) => {
+    return buildEligibleEventVendorApplicationDraft({
+      state: {
         selected,
         types,
         bullets,
@@ -145,10 +177,16 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
         pendingAgreement: hasPendingAgreement,
         vendor_user_id: vendorId,
       },
+      profile,
+      event: hydratedEvent,
       overrides,
-    );
+    });
+  };
   const persistDraft = async (overrides = {}) => {
-    await AsyncStorage.setItem(draftKey, JSON.stringify(currentDraft(overrides)));
+    const draft = currentDraft(overrides);
+    setTypes(draft.types);
+    await AsyncStorage.setItem(draftKey, JSON.stringify(draft));
+    return draft;
   };
   const saveDraft = async () => {
     try {
@@ -244,9 +282,20 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
     }
   };
   const submitApplication = async () => {
+    const normalized = normalizedTypeState();
+    if (!normalized.eligibleTypes.length) {
+      Alert.alert("Application Unavailable", "This event is no longer requesting a vendor type approved for your profile.");
+      return;
+    }
+    if (!normalized.selectedTypes.length) {
+      Alert.alert("Application", "Select at least one eligible vendor type before submitting.");
+      return;
+    }
     try {
+      setTypes(normalized.selectedTypes);
+      await persistDraft({ types: normalized.selectedTypes });
       await submitEventVendorApplication_API(event.event_id, {
-        vendor_types: types,
+        vendor_types: normalized.selectedTypes,
         photo_ids: selected,
         offering_bullets: applicationBulletItems(bullets),
         average_price: applicationCurrencyNumber(price),
@@ -267,7 +316,10 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
         [{ text: "Done", onPress: returnToMarketplace }],
       );
     } catch (e) {
-      Alert.alert("Application", e?.message || "Unable to submit application.");
+      Alert.alert(
+        "Application",
+        getMarketplaceApiErrorMessage(e, "Unable to submit application."),
+      );
     }
   };
   const applicationDraftId = `event-vendor:${profile?.profile_id || "profile"}:${event.event_id}`;
@@ -293,30 +345,32 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
     },
   });
   const startSigningAndSubmit = async () => {
+    const normalized = normalizedTypeState();
+    if (!normalized.eligibleTypes.length) {
+      Alert.alert("Application Unavailable", "This event is no longer requesting a vendor type approved for your profile.");
+      return;
+    }
+    if (!normalized.selectedTypes.length) {
+      Alert.alert("Marketplace Agreements", "Select at least one eligible vendor type before signing.");
+      return;
+    }
     try {
       await AsyncStorage.setItem(
         returnKey,
         JSON.stringify({ event, vendor_user_id: vendorId }),
       );
       dispatch(setPendingEventVendorApplication({ event }));
-      await AsyncStorage.setItem(
-        draftKey,
-        JSON.stringify({
-          selected,
-          types,
-          bullets,
-          price,
-          notes,
-          electricity,
-          feeAck,
-          pendingAgreement: true,
-          vendor_user_id: vendorId,
-        }),
-      );
+      await persistDraft({
+        types: normalized.selectedTypes,
+        pendingAgreement: true,
+      });
       setHasPendingAgreement(true);
       await beginSigning();
     } catch (e) {
-      Alert.alert("Marketplace Agreements", e?.message || "Unable to start signing.");
+      Alert.alert(
+        "Marketplace Agreements",
+        getMarketplaceApiErrorMessage(e, "Unable to start signing."),
+      );
     }
   };
   return (
@@ -327,8 +381,10 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
     <ScrollView contentContainerStyle={s.page}>
       {eventPresentation.images.length ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.eventImages}>
-          {eventPresentation.images.map((image) => (
-            <Image key={image.image_id} source={{ uri: image.image_url }} style={s.eventPhoto} />
+          {eventPresentation.images.map((image, index) => (
+            <TouchableOpacity key={image.image_id} onPress={() => setEventImageIndex(index)}>
+              <Image source={{ uri: image.image_url }} style={s.eventPhoto} />
+            </TouchableOpacity>
           ))}
         </ScrollView>
       ) : null}
@@ -465,6 +521,12 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
         <Text style={s.submitText}>Sign Agreements &amp; Submit</Text>
       </TouchableOpacity>
     </ScrollView>
+    <MarketplaceImageViewer
+      images={eventPresentation.images}
+      initialIndex={eventImageIndex || 0}
+      visible={eventImageIndex !== null}
+      onClose={() => setEventImageIndex(null)}
+    />
     </MarketplaceVendorScreenLayout>
   );
 }

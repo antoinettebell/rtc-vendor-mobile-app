@@ -42,6 +42,7 @@ import {
   normalizeMarketplaceRequirementLabel,
   styles,
 } from "./vendorMarketplaceShared";
+import { getApplicationActionAvailability } from "../helpers/marketplaceBidEligibility.helper";
 
 const ReadOnlyRow = ({ label, value }) => (
   <View style={{ marginTop: 12 }}>
@@ -176,16 +177,11 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
     initialApplication?.marketplaceEvent ||
     initialApplication?.event ||
     null;
-  const eventId = route?.params?.eventId || initialApplication?.event_id;
-  const defaultContactName = [user?.firstName, user?.lastName]
-    .filter(Boolean)
-    .join(" ");
+  const eventId =
+    route?.params?.eventId || initialApplication?.event_id || initialEvent?.event_id;
   const defaultCuisineText = foodTruckCuisineText(foodTruck);
   const initialDraft = {
     businessName: initialApplication?.business_name || foodTruck?.name || "",
-    contactName: initialApplication?.contact_name || defaultContactName,
-    phone: initialApplication?.phone || user?.phone || foodTruck?.phone || "",
-    email: initialApplication?.email || user?.email || "",
     foodTypeCuisine:
       initialApplication?.food_type_cuisine || defaultCuisineText,
     menuDescription: initialApplication?.menu_description || "",
@@ -195,9 +191,6 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [businessName, setBusinessName] = useState(initialDraft.businessName);
-  const [contactName, setContactName] = useState(initialDraft.contactName);
-  const [phone, setPhone] = useState(initialDraft.phone);
-  const [email, setEmail] = useState(initialDraft.email);
   const [foodTypeCuisine, setFoodTypeCuisine] = useState(
     initialDraft.foodTypeCuisine,
   );
@@ -331,27 +324,24 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
     requiredRequirementLabels,
   ]);
 
-  const canSaveDraft = useMemo(
-    () =>
-      !!eventId &&
-      !notesError,
-    [eventId, notesError],
+  const missingRequirementLabels = requiredRequirementLabels.filter(
+    (label) => !uploadedRequirementLabels.has(label),
   );
-  const applicationFieldsComplete =
-    businessName.trim() &&
-    contactName.trim() &&
-    phone.trim() &&
-    email.trim() &&
-    foodTypeCuisine.trim();
-  const canSubmit =
-    canSaveDraft && applicationFieldsComplete && requirementsSatisfied;
+  const {
+    canSaveDraft,
+    canSubmit,
+    reasons: applicationBlockingReasons,
+  } = getApplicationActionAvailability({
+    eventId,
+    notesError,
+    businessName,
+    foodTypeCuisine,
+    missingRequirementLabels,
+  });
   const hasUnsavedDraftContent = useMemo(() => {
     const initial = initialDraftRef.current;
     return (
       businessName !== initial.businessName ||
-      contactName !== initial.contactName ||
-      phone !== initial.phone ||
-      email !== initial.email ||
       foodTypeCuisine !== initial.foodTypeCuisine ||
       menuDescription !== initial.menuDescription ||
       notes !== initial.notes ||
@@ -360,21 +350,15 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
     );
   }, [
     businessName,
-    contactName,
-    email,
     foodPhotos.length,
     foodTypeCuisine,
     menuDescription,
     menuPdf,
     notes,
-    phone,
   ]);
 
   const buildApplicationPayload = (applicationStatus) => ({
     business_name: businessName.trim(),
-    contact_name: contactName.trim(),
-    phone: phone.trim(),
-    email: email.trim(),
     food_type_cuisine: foodTypeCuisine.trim(),
     menu_description: menuDescription.trim(),
     notes: notes.trim(),
@@ -424,9 +408,6 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
       savedApplicationRef.current = marketplaceApplication;
       initialDraftRef.current = {
         businessName,
-        contactName,
-        phone,
-        email,
         foodTypeCuisine,
         menuDescription,
         notes,
@@ -921,30 +902,6 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
                     style={styles.input}
                   />
                 </FormField>
-                <FormField label="Contact Name *">
-                  <TextInput
-                    value={contactName}
-                    onChangeText={setContactName}
-                    style={styles.input}
-                  />
-                </FormField>
-                <FormField label="Phone *">
-                  <TextInput
-                    value={phone}
-                    onChangeText={setPhone}
-                    keyboardType="phone-pad"
-                    style={styles.input}
-                  />
-                </FormField>
-                <FormField label="Email *">
-                  <TextInput
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    style={styles.input}
-                  />
-                </FormField>
                 <FormField label="Food Type / Cuisine *" full>
                   <TextInput
                     value={foodTypeCuisine}
@@ -1089,6 +1046,15 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
               >
                 <Text style={styles.secondaryButtonText}>Save Draft</Text>
               </TouchableOpacity>
+            ) : null}
+
+            {!canSubmit && applicationBlockingReasons.length ? (
+              <View style={styles.card}>
+                <Text style={styles.sectionHeader}>Complete before submitting</Text>
+                {applicationBlockingReasons.map((reason) => (
+                  <Text key={reason} style={styles.meta}>• {reason}</Text>
+                ))}
+              </View>
             ) : null}
 
             <TouchableOpacity

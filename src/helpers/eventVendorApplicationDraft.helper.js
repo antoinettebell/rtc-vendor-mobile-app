@@ -100,6 +100,56 @@ export const buildEventVendorApplicationDraft = (state, overrides = {}) => ({
   ...overrides,
 });
 
+export const getEligibleEventVendorTypes = (profile, event) => {
+  const approvedTypes = new Set(
+    (profile?.vendor_types || []).map((value) => String(value).toUpperCase()),
+  );
+  return [
+    ...new Set(
+      (event?.event_vendor_needs || [])
+        .map((need) => String(need?.vendor_type || "").toUpperCase())
+        .filter((value) => value && approvedTypes.has(value)),
+    ),
+  ];
+};
+
+export const normalizeEventVendorApplicationTypes = ({
+  profile,
+  event,
+  selectedTypes = [],
+}) => {
+  const eligibleTypes = getEligibleEventVendorTypes(profile, event);
+  const eligibleSet = new Set(eligibleTypes);
+  const validSelections = [
+    ...new Set(
+      (selectedTypes || [])
+        .map((value) => String(value).toUpperCase())
+        .filter((value) => eligibleSet.has(value)),
+    ),
+  ];
+  return {
+    eligibleTypes,
+    selectedTypes: eligibleTypes.length === 1 ? eligibleTypes : validSelections,
+  };
+};
+
+export const buildEligibleEventVendorApplicationDraft = ({
+  state,
+  profile,
+  event,
+  overrides = {},
+}) => {
+  const normalized = normalizeEventVendorApplicationTypes({
+    profile,
+    event,
+    selectedTypes: overrides.types ?? state.types,
+  });
+  return buildEventVendorApplicationDraft(state, {
+    ...overrides,
+    types: normalized.selectedTypes,
+  });
+};
+
 const BULLET_PREFIX = "• ";
 
 export const normalizeApplicationBullets = (value = "") => {
@@ -237,14 +287,19 @@ export const hydrateEventVendorApplication = async ({
     const profile = profileResponse?.data?.eventVendorProfile;
     if (!profile) throw new Error("This event application is no longer available.");
     const availableEvent = (eventResponse?.data?.marketplaceEventList || [])
-      .some((item) => item.event_id === eventId);
+      .find((item) => item.event_id === eventId);
     if (!availableEvent) {
       const error = new Error("This event is closed or no longer accepting applications.");
       error.authoritativeApplicationUnavailable = true;
       throw error;
     }
     const draft = storedDraft ? JSON.parse(storedDraft) : null;
-    return { profile, photos: photoResponse?.data?.photoList || [], draft };
+    return {
+      profile,
+      photos: photoResponse?.data?.photoList || [],
+      event: availableEvent,
+      draft,
+    };
   } catch (error) {
     if (isAuthoritativeApplicationUnavailable(error)) {
       await storage.removeItem(returnKey).catch(() => {});

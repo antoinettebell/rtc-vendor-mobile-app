@@ -4,6 +4,69 @@ import { readFile } from "node:fs/promises";
 const source = await readFile(new URL("./eventVendorApplicationDraft.helper.js", import.meta.url), "utf8");
 const helper = await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`);
 
+const eligibleProfile = {
+  vendor_types: ["MERCHANDISE", "SERVICE", "OTHER"],
+};
+const merchandiseEvent = {
+  event_vendor_needs: [{ vendor_type: "MERCHANDISE" }],
+};
+assert.deepEqual(
+  helper.normalizeEventVendorApplicationTypes({
+    profile: eligibleProfile,
+    event: merchandiseEvent,
+    selectedTypes: ["MERCHANDISE", "SERVICE", "OTHER"],
+  }),
+  { eligibleTypes: ["MERCHANDISE"], selectedTypes: ["MERCHANDISE"] },
+  "stale hidden vendor types are removed",
+);
+assert.deepEqual(
+  helper.normalizeEventVendorApplicationTypes({
+    profile: { vendor_types: ["MERCHANDISE"] },
+    event: merchandiseEvent,
+    selectedTypes: [],
+  }).selectedTypes,
+  ["MERCHANDISE"],
+  "the single eligible vendor type is selected automatically",
+);
+assert.deepEqual(
+  helper.normalizeEventVendorApplicationTypes({
+    profile: eligibleProfile,
+    event: {
+      event_vendor_needs: [
+        { vendor_type: "MERCHANDISE" },
+        { vendor_type: "SERVICE" },
+      ],
+    },
+    selectedTypes: ["SERVICE"],
+  }).selectedTypes,
+  ["SERVICE"],
+  "valid selections remain selected when multiple types are eligible",
+);
+assert.deepEqual(
+  helper.normalizeEventVendorApplicationTypes({
+    profile: { vendor_types: ["SERVICE"] },
+    event: merchandiseEvent,
+    selectedTypes: ["SERVICE"],
+  }),
+  { eligibleTypes: [], selectedTypes: [] },
+  "an event with no eligible profile type is unavailable",
+);
+
+const normalizedOutboundDraft = helper.buildEligibleEventVendorApplicationDraft({
+  state: {
+    vendor_user_id: "vendor-1",
+    selected: [],
+    types: ["MERCHANDISE", "SERVICE", "OTHER"],
+  },
+  profile: { vendor_types: ["MERCHANDISE"] },
+  event: merchandiseEvent,
+});
+assert.deepEqual(
+  normalizedOutboundDraft.types,
+  ["MERCHANDISE"],
+  "Save Draft and signing persistence cannot contain hidden stale types",
+);
+
 const state = {
   vendor_user_id: "vendor-1",
   selected: ["repo-1"],
@@ -74,6 +137,7 @@ const hydrated = await helper.hydrateEventVendorApplication({
   eventId: "event-1",
 });
 assert.deepEqual(hydrated.draft.selected, ["repo-1", "uploaded-1"]);
+assert.equal(hydrated.event.event_id, "event-1", "hydration returns the current eligible event record");
 assert.equal(memory.has(returnKey), true, "hydration does not consume the intent prematurely");
 await helper.clearEventVendorApplicationRecovery({
   storage, returnKey,
@@ -203,4 +267,8 @@ assert.match(screenSource, /navigation\.navigate\("bottomRoot", \{ screen: "even
 assert.doesNotMatch(screenSource, /navigation\.goBack\(\)/);
 assert.match(screenSource, /getApprovedApplicationUploadCategories/);
 assert.match(screenSource, /Select the merchandise category for this photo\./);
+assert.match(screenSource, /buildEligibleEventVendorApplicationDraft/);
+assert.match(screenSource, /vendor_types: normalized\.selectedTypes/);
+assert.match(screenSource, /Application Unavailable/);
+assert.match(screenSource, /getMarketplaceApiErrorMessage\(e, "Unable to submit application\."\)/);
 console.log("Marketplace Vendor application draft recovery tests passed.");

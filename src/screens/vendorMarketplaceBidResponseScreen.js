@@ -86,7 +86,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     initialBid?.marketplaceEvent ||
     initialBid?.event ||
     null;
-  const eventId = route?.params?.eventId || initialBid?.event_id;
+  const eventId = route?.params?.eventId || initialBid?.event_id || initialEvent?.event_id;
   const initialDraft = {
     pricePerGuest: currencyDraftValue(initialBid?.price_per_guest),
     averagePricePerMeal: currencyDraftValue(initialBid?.average_price_per_meal),

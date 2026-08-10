@@ -28,6 +28,7 @@ const {
   getBidBlockingReasons,
   isBothPaymentArrangement,
   supportsCoordinatorBid,
+  getApplicationActionAvailability,
 } = await loadHelper(
   "./marketplaceBidEligibility.helper.js",
 );
@@ -50,6 +51,68 @@ assert.deepEqual(
   getBreakMinuteOptions(15).slice(0, 4).map((option) => option.value),
   ["0", "5", "10", "15"],
 );
+assert.deepEqual(
+  getApplicationActionAvailability({
+    eventId: "event-1",
+    notesError: "",
+    businessName: "Food Truck",
+    foodTypeCuisine: "Soul Food",
+    missingRequirementLabels: [],
+  }),
+  { canSaveDraft: true, canSubmit: true, reasons: [] },
+  "a complete application enables Save Draft and Submit Application without phone/email",
+);
+assert.deepEqual(
+  getApplicationActionAvailability({
+    eventId: "event-1",
+    notesError: "",
+    businessName: "Food Truck",
+    foodTypeCuisine: "",
+    missingRequirementLabels: ["Insurance"],
+  }).reasons,
+  ["Enter the Food Type / Cuisine.", "Upload: Insurance."],
+  "application blockers are visible and specific",
+);
+
+for (const scenario of [
+  { guestCoverage: "REGULAR", fullBidAmount: "500", fullBidNumber: 500, fullyCateredEvent: false },
+  { guestCoverage: "VIP", fullBidAmount: "500", fullBidNumber: 500, fullyCateredEvent: false },
+  { guestCoverage: "BOTH", fullBidAmount: "", fullBidNumber: 500, fullyCateredEvent: false, vipCateringAmount: "500", vipCateringAmountNumber: 500 },
+  { guestCoverage: "BOTH", fullBidAmount: "", fullBidNumber: 900, fullyCateredEvent: true, regularGuestAmount: "400", regularGuestAmountNumber: 400, vipCateringAmount: "500", vipCateringAmountNumber: 500 },
+]) {
+  const availability = getBidActionAvailability({
+    eventId: "event-1",
+    coordinatorBidSupported: true,
+    notesError: "",
+    guestCoverage: scenario.guestCoverage,
+    fullyCateredEvent: scenario.fullyCateredEvent,
+    fullBidAmount: scenario.fullBidAmount,
+    fullBidNumber: scenario.fullBidNumber,
+    regularGuestAmount: scenario.regularGuestAmount || "",
+    regularGuestAmountNumber: scenario.regularGuestAmountNumber || 0,
+    vipCateringAmount: scenario.vipCateringAmount || "",
+    vipCateringAmountNumber: scenario.vipCateringAmountNumber || 0,
+    pricePerGuest: "",
+    pricePerGuestNumber: null,
+    averagePricePerMeal: "",
+    averagePricePerMealNumber: null,
+    requirementsSatisfied: true,
+  });
+  assert.equal(availability.canSaveDraft, true, `${scenario.guestCoverage} permits Save Draft`);
+  assert.equal(availability.canSubmit, true, `${scenario.guestCoverage} permits Submit Bid`);
+}
+
+const applicationScreenSource = await readFile(new URL("../screens/vendorMarketplaceApplicationScreen.js", import.meta.url), "utf8");
+assert.doesNotMatch(applicationScreenSource, /label="Phone/);
+assert.doesNotMatch(applicationScreenSource, /label="Email/);
+assert.doesNotMatch(applicationScreenSource, /phone:\s*phone\.trim/);
+assert.doesNotMatch(applicationScreenSource, /email:\s*email\.trim/);
+assert.match(applicationScreenSource, /initialEvent\?\.event_id/);
+assert.match(applicationScreenSource, /useMarketplaceAgreementCompletion/);
+const bidScreenSource = await readFile(new URL("../screens/vendorMarketplaceBidResponseScreen.js", import.meta.url), "utf8");
+assert.match(bidScreenSource, /initialEvent\?\.event_id/);
+assert.match(bidScreenSource, /useMarketplaceAgreementCompletion/);
+assert.match(bidScreenSource, /bidBlockingReasons/);
 assert.deepEqual(
   getBidBlockingReasons({
     eventId: "event-1",
