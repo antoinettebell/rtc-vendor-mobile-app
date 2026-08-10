@@ -95,6 +95,7 @@ import EventVendorProfileScreen from "./src/screens/eventVendorProfileScreen";
 import EventVendorPhotosScreen from "./src/screens/eventVendorPhotosScreen";
 import EventVendorMarketplaceScreen from "./src/screens/eventVendorMarketplaceScreen";
 import EventVendorApplicationScreen from "./src/screens/eventVendorApplicationScreen";
+import EventVendorSubmissionDetailsScreen from "./src/screens/eventVendorSubmissionDetailsScreen";
 import MoreMenuScreen from "./src/screens/moreMenuScreen";
 import OperationsScreen from "./src/screens/operationsScreen";
 import OperationalFormScreen from "./src/screens/operationalFormScreen";
@@ -312,6 +313,7 @@ const MainAppNavigator = ({ insets }) => (
     <Stack.Screen name="splash" component={SplashScreen} />
     <Stack.Screen name="eventVendorPhotosScreen" component={EventVendorPhotosScreen} />
     <Stack.Screen name="eventVendorApplicationScreen" component={EventVendorApplicationScreen} />
+    <Stack.Screen name="eventVendorSubmissionDetailsScreen" component={EventVendorSubmissionDetailsScreen} />
     <Stack.Screen name="bottomRoot">
       {() => <BottomTabNavigator insets={insets} />}
     </Stack.Screen>

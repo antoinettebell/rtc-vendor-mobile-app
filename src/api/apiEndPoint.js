@@ -169,6 +169,8 @@ export const EVENT_VENDOR_APPLICATION_PHOTO = (photoId) => `/marketplace/event-v
 export const EVENT_VENDOR_EVENTS = "/marketplace/event-vendor/events";
 export const EVENT_VENDOR_APPLICATIONS = "/marketplace/event-vendor/applications/my";
 export const EVENT_VENDOR_APPLY = (eventId) => `/marketplace/event-vendor/events/${eventId}/applications`;
+export const EVENT_VENDOR_WITHDRAW_APPLICATION = (applicationId) =>
+  `/marketplace/event-vendor/applications/${applicationId}/withdraw`;
 
 // Diet
 export const GET_DIET_LIST = "/public/diet";

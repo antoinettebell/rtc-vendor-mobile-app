@@ -118,6 +118,19 @@ export const getEventVendorStatusFailureTransition = ({ error, existingProfile }
   };
 };
 
+export const isAlreadySubmittedProfileResponse = (error) => {
+  const status = Number(error?.response?.status || error?.status || error?.code);
+  const message = String(error?.message || error?.response?.data?.message || "").toLowerCase();
+  return status === 409 && /(already|submitted|state changed|pending)/.test(message);
+};
+
+export const getPendingReviewProfile = (response) => {
+  const profile = response?.data?.eventVendorProfile || response?.eventVendorProfile || null;
+  return String(profile?.review_status || "").toUpperCase() === "PENDING_REVIEW"
+    ? profile
+    : null;
+};
+
 export const getEventVendorStatusFailureUserAction = (action) => ({
   retry: action === "RETRY",
   clearSession: action === "SIGN_OUT",

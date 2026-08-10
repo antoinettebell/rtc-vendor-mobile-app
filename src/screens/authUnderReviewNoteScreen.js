@@ -12,21 +12,25 @@ import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   onOnBoard,
   onUnderReview,
   setVendorOnboardingStep,
   onSignin,
   setEventVendorOnboardingSessionActive,
+  onSignOut,
+  setPendingEventVendorApplication,
 } from "../redux/slices/authSlice";
 import StatusBarManager from "../components/StatusBarManager";
 import { getUserDetail_API } from "../api/appAPI";
-import { setUser } from "../redux/slices/userSlice";
+import { clearUserSlice, setUser } from "../redux/slices/userSlice";
 import {
   getEventVendorResumeDestination,
   getEventVendorSignInTransition,
 } from "../helpers/eventVendorProfile.helper";
 import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
+import { getEventVendorSignOutKeys } from "../helpers/eventVendorApplicationDraft.helper";
 
 export default function AuthUnderReviewNoteScreen() {
   const insets = useSafeAreaInsets();
@@ -36,6 +40,28 @@ export default function AuthUnderReviewNoteScreen() {
 
   const [loading, setLoading] = useState(false);
   const approvalHandledRef = useRef(false);
+  const isEventVendor = user?.vendorSubtype === "EVENT_VENDOR";
+  const confirmSignOut = () => Alert.alert(
+    "Sign Out",
+    "Sign out of this Marketplace Vendor account? Your submitted profile will not be deleted.",
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign Out",
+        style: "destructive",
+        onPress: async () => {
+          const keys = await AsyncStorage.getAllKeys();
+          const vendorId = String(user?._id || user?.id || "");
+          const transient = getEventVendorSignOutKeys(keys, vendorId);
+          if (transient.length) await AsyncStorage.multiRemove(transient);
+          dispatch(setPendingEventVendorApplication(null));
+          dispatch(onSignOut());
+          dispatch(clearUserSlice());
+          navigation.reset({ index: 0, routes: [{ name: "splash" }] });
+        },
+      },
+    ],
+  );
 
   const checkApprovalStatus = useCallback(async ({ silent = false } = {}) => {
     if (!silent) {
@@ -47,7 +73,6 @@ export default function AuthUnderReviewNoteScreen() {
         return;
       }
       const response = await getUserDetail_API(user_id);
-      console.log("response => ", response);
       if (response?.success && response?.data) {
         const refreshedUser = response.data.user;
         dispatch(setUser(refreshedUser));
@@ -124,6 +149,12 @@ export default function AuthUnderReviewNoteScreen() {
       }
     } catch (error) {
       console.log("error => ", error);
+      if (!silent) {
+        Alert.alert(
+          "Unable to Check Approval Status",
+          error?.message || "Check your connection and try again. Your submitted profile is unchanged.",
+        );
+      }
     } finally {
       if (!silent) {
         setLoading(false);
@@ -153,7 +184,9 @@ export default function AuthUnderReviewNoteScreen() {
         />
 
         <Text style={styles.title}>
-          Your business details have been sent for approval.
+          {isEventVendor
+            ? "Your account is currently being reviewed for approval."
+            : "Your business details have been sent for approval."}
         </Text>
 
         <View style={{ width: "85%" }}>
@@ -174,9 +207,9 @@ export default function AuthUnderReviewNoteScreen() {
           <View style={{ flexDirection: "row", marginTop: 8 }}>
             <Text style={styles.subTitle}>{".  "}</Text>
             <Text style={styles.subTitle}>
-              {
-                "After approval, complete your compliance, profile requirements, and payment details. Menu setup is included for every vendor; employee features are available according to your selected tier."
-              }
+              {isEventVendor
+                ? "After approval, sign in to enter the Event Marketplace."
+                : "After approval, complete your compliance, profile requirements, and payment details. Menu setup is included for every vendor; employee features are available according to your selected tier."}
             </Text>
           </View>
         </View>
@@ -194,9 +227,19 @@ export default function AuthUnderReviewNoteScreen() {
           <Text style={styles.continueButtonText}>{"Check Approval Status"}</Text>
         )}
       </TouchableOpacity>
+      {isEventVendor ? (
+        <TouchableOpacity
+          style={styles.signOutButton}
+          activeOpacity={0.7}
+          disabled={loading}
+          onPress={confirmSignOut}
+        >
+          <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
-  return user?.vendorSubtype === "EVENT_VENDOR" ? (
+  return isEventVendor ? (
     <MarketplaceVendorScreenLayout title="Marketplace Vendor Approval Status">
       {content}
     </MarketplaceVendorScreenLayout>
@@ -258,4 +301,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: AppColor.white,
   },
+  signOutButton: {
+    height: 48,
+    borderRadius: 5,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: AppColor.primary,
+    marginBottom: 20,
+    marginHorizontal: 16,
+  },
+  signOutText: { fontFamily: Mulish700, fontSize: 16, color: AppColor.primary },
 });

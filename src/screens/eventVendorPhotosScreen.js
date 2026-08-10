@@ -29,6 +29,8 @@ import {
   getMarketplaceApiErrorMessage,
   getMerchandisePortfolioProgress,
   getSelectedMerchandiseCategories,
+  getPendingReviewProfile,
+  isAlreadySubmittedProfileResponse,
 } from "../helpers/eventVendorProfile.helper";
 import { useDispatch } from "react-redux";
 import { updateUser } from "../redux/slices/userSlice";
@@ -37,18 +39,21 @@ import {
   onSignin,
   onUnderReview,
   setVendorOnboardingStep,
+  setEventVendorOnboardingSessionActive,
 } from "../redux/slices/authSlice";
 import {
   executeEventVendorPhotoEdits,
   runPhotoEditSaveOnce,
 } from "../helpers/eventVendorPhotoEdits.helper";
 
-export default function EventVendorPhotosScreen({ route }) {
+export default function EventVendorPhotosScreen({ route, navigation }) {
   const dispatch = useDispatch();
   const [photos, setPhotos] = useState([]);
   const [preview, setPreview] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const submitReviewRef = useRef(false);
   const [isEditingPhotos, setIsEditingPhotos] = useState(false);
   const [pendingAdds, setPendingAdds] = useState([]);
   const [pendingReplacements, setPendingReplacements] = useState({});
@@ -171,15 +176,42 @@ export default function EventVendorPhotosScreen({ route }) {
     }
   };
   const submitForReview = async () => {
-    try {
-      const response = await submitEventVendorProfile_API();
-      const submittedProfile = response?.data?.eventVendorProfile;
-      dispatch(updateUser({ eventVendorProfile: submittedProfile }));
+    if (submitReviewRef.current) return;
+    submitReviewRef.current = true;
+    setSubmittingReview(true);
+    const routePendingApproval = (submittedProfile) => {
+      dispatch(updateUser({
+        eventVendorProfile: submittedProfile,
+        requestStatus: "PENDING",
+        reasonForRejection: null,
+      }));
+      dispatch(onSignin(false));
       dispatch(onOnBoard(true));
       dispatch(onUnderReview(true));
       dispatch(setVendorOnboardingStep("AWAITING_APPROVAL"));
+      dispatch(setEventVendorOnboardingSessionActive(false));
+      navigation.reset({ index: 0, routes: [{ name: "authUnderReviewNoteScreen" }] });
+    };
+    try {
+      const response = await submitEventVendorProfile_API();
+      const submittedProfile = getPendingReviewProfile(response);
+      if (!submittedProfile) throw new Error("Profile submission did not return pending review status.");
+      routePendingApproval(submittedProfile);
     } catch (e) {
-      Alert.alert("Submit Profile", getMarketplaceApiErrorMessage(e, "Unable to submit profile."));
+      if (isAlreadySubmittedProfileResponse(e)) {
+        try {
+          const refreshed = await getEventVendorProfile_API();
+          const pendingProfile = getPendingReviewProfile(refreshed);
+          if (pendingProfile) {
+            routePendingApproval(pendingProfile);
+            return;
+          }
+        } catch (_) {}
+      }
+      Alert.alert("Submit Profile", getMarketplaceApiErrorMessage(e, "Unable to submit profile. Please retry."));
+    } finally {
+      submitReviewRef.current = false;
+      setSubmittingReview(false);
     }
   };
   const remove = (photo) =>
@@ -343,8 +375,8 @@ export default function EventVendorPhotosScreen({ route }) {
           </TouchableOpacity>
         </View>
       ) : onboardingFlow ? (
-        <TouchableOpacity style={[s.submitReview, !canSubmitReview && s.disabled]} onPress={submitForReview} disabled={!canSubmitReview}>
-          <Text style={s.addText}>Submit Profile for Review</Text>
+        <TouchableOpacity style={[s.submitReview, (!canSubmitReview || submittingReview) && s.disabled]} onPress={submitForReview} disabled={!canSubmitReview || submittingReview}>
+          <Text style={s.addText}>{submittingReview ? "Submitting…" : "Submit Profile for Review"}</Text>
         </TouchableOpacity>
       ) : null}
       {onboardingFlow && !canSubmitReview ? <Text style={s.requirement}>Add a logo and at least 3 portfolio photos in your selected merchandise categories before submitting.</Text> : null}

@@ -29,11 +29,14 @@ import {
   onUnderReview,
   setVendorOnboardingStep,
   setEventVendorOnboardingSessionActive,
+  setPendingAuthRoute,
 } from "../redux/slices/authSlice";
 import {
   clearUserSlice,
   setAuthToken,
   setUser,
+  setSelectedPlan,
+  setSelectedSignupAddOns,
 } from "../redux/slices/userSlice";
 import StatusBarManager from "../components/StatusBarManager";
 import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlice";
@@ -42,7 +45,7 @@ import { showSnackbar } from "../redux/slices/snackbarSlice";
 import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
 import {
   performAuthNavigation,
-  getOtpCompletionTransition,
+  getConsumedMarketplaceOtpState,
   SIGNIN_ROUTE,
   isMarketplaceVendorSignup,
 } from "../helpers/signupNavigation.helper";
@@ -365,7 +368,7 @@ const OtpVerificationScreen = ({ route }) => {
             activeOpacity={0.7}
             onPress={() => {
               setModalVisible(false);
-              const transition = getOtpCompletionTransition({
+              const transition = getConsumedMarketplaceOtpState({
                 selectedPlan,
                 user: verifiedUser || params?.data?.user,
               });
@@ -376,12 +379,14 @@ const OtpVerificationScreen = ({ route }) => {
               );
               dispatch(
                 setEventVendorOnboardingSessionActive(
-                  isMarketplaceVendorSignup({
-                    selectedPlan,
-                    user: verifiedUser || params?.data?.user,
-                  }) && !transition.isUnderReview,
+                  transition.eventVendorOnboardingSessionActive,
                 ),
               );
+              if (isMarketplaceVendorSignup({ selectedPlan, user: verifiedUser || params?.data?.user })) {
+                dispatch(setSelectedPlan(transition.selectedPlan));
+                dispatch(setSelectedSignupAddOns(transition.selectedSignupAddOns));
+                dispatch(setPendingAuthRoute(transition.pendingAuthRoute));
+              }
             }}
           >
             <Text style={styles.backToLoginText}>{"Next"}</Text>

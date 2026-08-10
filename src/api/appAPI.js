@@ -33,6 +33,7 @@ import {
   EVENT_VENDOR_EVENTS,
   EVENT_VENDOR_APPLICATIONS,
   EVENT_VENDOR_APPLY,
+  EVENT_VENDOR_WITHDRAW_APPLICATION,
   GET_TAX_OF_LOCATION,
   PAYMENT_CHECKOUT,
   PLACE_FOOD_ORDER,
@@ -1860,3 +1861,5 @@ export const removeEventVendorPhoto_API = async (photoId) => (await apiClient.de
 export const getEventVendorEvents_API = async () => (await apiClient.get(EVENT_VENDOR_EVENTS, { skipToken: false }))?.data;
 export const getEventVendorApplications_API = async () => (await apiClient.get(EVENT_VENDOR_APPLICATIONS, { skipToken: false }))?.data;
 export const submitEventVendorApplication_API = async (eventId, payload) => (await apiClient.post(EVENT_VENDOR_APPLY(eventId), payload, { skipToken: false }))?.data;
+export const withdrawEventVendorApplication_API = async (applicationId) =>
+  (await apiClient.patch(EVENT_VENDOR_WITHDRAW_APPLICATION(applicationId), {}, { skipToken: false }))?.data;

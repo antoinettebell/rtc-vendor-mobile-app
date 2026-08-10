@@ -38,6 +38,19 @@ export const consumePendingAuthRoute = (pendingAuthRoute) => ({
   pendingAuthRoute: null,
 });
 
+export const getConsumedMarketplaceOtpState = ({ selectedPlan, user } = {}) => {
+  const transition = getOtpCompletionTransition({ selectedPlan, user });
+  return {
+    ...transition,
+    destination: getFinalSignupDestination({ selectedPlan, user }),
+    selectedPlan: null,
+    selectedSignupAddOns: [],
+    pendingAuthRoute: null,
+    eventVendorOnboardingSessionActive:
+      isMarketplaceVendorSignup({ selectedPlan, user }) && !transition.isUnderReview,
+  };
+};
+
 export const getAvailableRouteNames = (navigation) =>
   navigation?.getState?.()?.routeNames || [];
 

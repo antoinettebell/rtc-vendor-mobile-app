@@ -62,6 +62,7 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
   const user = useSelector((state) => state.userReducer.user);
   const vendorId = String(user?._id || user?.id || "");
   const event = route.params.event;
+  const existingApplication = route.params.application || null;
   const [hydratedEvent, setHydratedEvent] = useState(event);
   const eventPresentation = getMarketplaceVendorEventPresentation(hydratedEvent);
   const [profile, setProfile] = useState(null);
@@ -106,7 +107,11 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
       }) => {
         setHydratedEvent(currentEvent);
         setProfile(hydratedProfile);
-        setPhotos(hydratedPhotos);
+        setPhotos(existingApplication
+          ? [...(existingApplication.photos || []), ...hydratedPhotos].filter(
+              (photo, index, all) => all.findIndex((item) => item.photo_id === photo.photo_id) === index,
+            )
+          : hydratedPhotos);
         const normalizedTypeState = normalizeEventVendorApplicationTypes({
           profile: hydratedProfile,
           event: currentEvent,
@@ -130,6 +135,16 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
               })),
             );
           }
+        } else if (existingApplication) {
+          setSelected((existingApplication.photos || []).map((photo) => photo.photo_id).filter(Boolean));
+          setTypes(normalizedTypeState.selectedTypes.length
+            ? normalizeEventVendorApplicationTypes({ profile: hydratedProfile, event: currentEvent, selectedTypes: existingApplication.vendor_types }).selectedTypes
+            : []);
+          setBullets(normalizeApplicationBullets((existingApplication.offering_bullets || []).map((item) => `• ${item}`).join("\n")));
+          setPrice(sanitizeApplicationCurrency(existingApplication.average_price));
+          setNotes(existingApplication.additional_notes || "");
+          setElectricity(existingApplication.electricity_required === true);
+          setFeeAck(existingApplication.electricity_fee_acknowledged === true);
         }
         await clearEventVendorApplicationRecovery({
           storage: AsyncStorage,
@@ -152,7 +167,7 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
               ],
         );
       });
-  }, [dispatch, draftKey, event.event_id, hydrationAttempt, navigation, returnKey, vendorId]);
+  }, [dispatch, draftKey, event.event_id, existingApplication, hydrationAttempt, navigation, returnKey, vendorId]);
   const eligible = (hydratedEvent.event_vendor_needs || []).filter((n) =>
     profile?.vendor_types?.includes(n.vendor_type),
   );

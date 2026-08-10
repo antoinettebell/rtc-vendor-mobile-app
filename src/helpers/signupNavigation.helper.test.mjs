@@ -12,6 +12,7 @@ const {
   getAuthNavigationAction,
   getFinalSignupDestination,
   getOtpCompletionTransition,
+  getConsumedMarketplaceOtpState,
   consumePendingAuthRoute,
   performAuthNavigation,
   SIGNIN_ROUTE,
@@ -45,6 +46,23 @@ assert.equal(
   }).type,
   "GO_BACK",
   "Back uses legitimate navigation history",
+);
+assert.deepEqual(
+  getConsumedMarketplaceOtpState({
+    selectedPlan: { slug: "SUB_MARKETPLACE_VENDOR" },
+    user: { vendorSubtype: "EVENT_VENDOR" },
+  }),
+  {
+    isOnboarded: true,
+    isUnderReview: false,
+    vendorOnboardingStep: null,
+    destination: "eventVendorProfileScreen",
+    selectedPlan: null,
+    selectedSignupAddOns: [],
+    pendingAuthRoute: null,
+    eventVendorOnboardingSessionActive: true,
+  },
+  "Marketplace OTP consumes plan and pending auth state exactly once",
 );
 
 assert.deepEqual(
@@ -168,7 +186,9 @@ assert.match(appSource, /isEmployeeSession \? \(\s*<EmployeeAppNavigator/);
 assert.match(appSource, /<MainAppNavigator insets=\{insets\} \/>/);
 assert.match(appSource, /isOnboarded \? \(\s*<FinalSignupStepsNavigator/);
 assert.match(splashSource, /consumePendingAuthRoute\(pendingAuthRoute\)/);
-assert.match(otpSource, /getOtpCompletionTransition/);
+assert.match(otpSource, /getConsumedMarketplaceOtpState/);
+assert.match(otpSource, /setSelectedPlan\(transition\.selectedPlan\)/);
+assert.match(otpSource, /setPendingAuthRoute\(transition\.pendingAuthRoute\)/);
 assert.match(planSource, /dispatch\(setSelectedPlan\(temp_plan\)\)/);
 assert.match(planSource, /destination: SIGNUP_ROUTE/);
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -24,6 +24,8 @@ import {
   getEventVendorAccessState,
   getProfileOnboardingDestination,
   getProfileActionPresentation,
+  getPendingReviewProfile,
+  isAlreadySubmittedProfileResponse,
   MERCHANDISE_CATEGORIES,
 } from "../helpers/eventVendorProfile.helper";
 import { updateUser } from "../redux/slices/userSlice";
@@ -35,6 +37,7 @@ import {
   setVendorOnboardingStep,
   onSignOut,
   setPendingEventVendorApplication,
+  setEventVendorOnboardingSessionActive,
 } from "../redux/slices/authSlice";
 import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
 import { getApprovedProfilePresentation } from "../helpers/eventVendorPresentation.helper";
@@ -55,6 +58,7 @@ export default function EventVendorProfileScreen({ navigation }) {
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [savedSnapshot, setSavedSnapshot] = useState(null);
+  const submitReviewRef = useRef(false);
   const applyFields = (value) => {
     setBusinessName(value?.business_name || "");
     setDescription(value?.business_description || "");
@@ -148,18 +152,42 @@ export default function EventVendorProfileScreen({ navigation }) {
     }
   };
   const submitForReview = async () => {
+    if (submitReviewRef.current) return;
+    submitReviewRef.current = true;
     setSaving(true);
-    try {
-      const response = await submitEventVendorProfile_API();
-      const submittedProfile = response?.data?.eventVendorProfile;
+    const routePendingApproval = (submittedProfile) => {
       setProfile(submittedProfile);
-      dispatch(updateUser({ eventVendorProfile: submittedProfile }));
+      dispatch(updateUser({
+        eventVendorProfile: submittedProfile,
+        requestStatus: "PENDING",
+        reasonForRejection: null,
+      }));
+      dispatch(onSignin(false));
       dispatch(onOnBoard(true));
       dispatch(onUnderReview(true));
       dispatch(setVendorOnboardingStep("AWAITING_APPROVAL"));
+      dispatch(setEventVendorOnboardingSessionActive(false));
+      navigation.reset({ index: 0, routes: [{ name: "authUnderReviewNoteScreen" }] });
+    };
+    try {
+      const response = await submitEventVendorProfile_API();
+      const submittedProfile = getPendingReviewProfile(response);
+      if (!submittedProfile) throw new Error("Profile submission did not return pending review status.");
+      routePendingApproval(submittedProfile);
     } catch (e) {
-      Alert.alert("Submit Profile", e?.message || "Unable to submit profile.");
+      if (isAlreadySubmittedProfileResponse(e)) {
+        try {
+          const refreshed = await getEventVendorProfile_API();
+          const pendingProfile = getPendingReviewProfile(refreshed);
+          if (pendingProfile) {
+            routePendingApproval(pendingProfile);
+            return;
+          }
+        } catch (_) {}
+      }
+      Alert.alert("Submit Profile", e?.message || "Unable to submit profile. Please retry.");
     } finally {
+      submitReviewRef.current = false;
       setSaving(false);
     }
   };

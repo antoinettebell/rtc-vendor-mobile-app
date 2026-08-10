@@ -14,6 +14,10 @@ assert.deepEqual(helper.getEventVendorAccessState(null), {
 assert.equal(helper.getEventVendorAccessState({ review_status: "PENDING_REVIEW" }).isAwaitingApproval, true);
 assert.equal(helper.getEventVendorAccessState({ review_status: "APPROVED" }).canUseMarketplace, true);
 assert.equal(helper.getEventVendorAccessState({ review_status: "REJECTED" }).canResubmit, true);
+assert.equal(helper.getPendingReviewProfile({ data: { eventVendorProfile: { review_status: "PENDING_REVIEW" } } }).review_status, "PENDING_REVIEW");
+assert.equal(helper.getPendingReviewProfile({ data: { eventVendorProfile: { review_status: "DRAFT" } } }), null);
+assert.equal(helper.isAlreadySubmittedProfileResponse({ status: 409, message: "Profile state changed before submission" }), true);
+assert.equal(helper.isAlreadySubmittedProfileResponse({ status: 500, message: "temporary" }), false);
 assert.deepEqual(helper.getEventVendorSignInTransition({ review_status: "APPROVED" }), {
   isSignedIn: true,
   isOnboarded: true,
@@ -128,6 +132,22 @@ assert.deepEqual(
   ["ARTISANS_CRAFTERS", "APPAREL_ACCESSORIES"],
   "Photos renders selected categories only",
 );
+
+const [profileScreen, photoScreen, pendingScreen] = await Promise.all([
+  readFile(new URL("../screens/eventVendorProfileScreen.js", import.meta.url), "utf8"),
+  readFile(new URL("../screens/eventVendorPhotosScreen.js", import.meta.url), "utf8"),
+  readFile(new URL("../screens/authUnderReviewNoteScreen.js", import.meta.url), "utf8"),
+]);
+for (const screen of [profileScreen, photoScreen]) {
+  assert.match(screen, /submitReviewRef\.current/);
+  assert.match(screen, /getPendingReviewProfile/);
+  assert.match(screen, /authUnderReviewNoteScreen/);
+  assert.match(screen, /isAlreadySubmittedProfileResponse/);
+}
+assert.match(pendingScreen, /Your account is currently being reviewed for approval/);
+assert.match(pendingScreen, /Check Approval Status/);
+assert.match(pendingScreen, /Sign Out/);
+assert.match(pendingScreen, /getEventVendorSignOutKeys/);
 const repositoryPhoto = (category) => ({ category, source: "REPOSITORY", status: "ACTIVE" });
 assert.deepEqual(
   helper.getMerchandisePortfolioProgress(selectedCategoryProfile, [
