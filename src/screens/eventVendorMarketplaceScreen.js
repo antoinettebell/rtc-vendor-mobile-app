@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from "react";
 import {
   FlatList,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,6 +13,8 @@ import {
   getEventVendorEvents_API,
 } from "../api/appAPI";
 import { AppColor } from "../utils/theme";
+import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
+import { getMarketplaceVendorEventPresentation } from "../helpers/eventVendorPresentation.helper";
 
 export default function EventVendorMarketplaceScreen({ navigation }) {
   const [events, setEvents] = useState([]);
@@ -39,11 +42,11 @@ export default function EventVendorMarketplaceScreen({ navigation }) {
     }, [load]),
   );
   return (
-    <View style={s.page}>
-      <Text style={s.heading}>Event Marketplace</Text>
-      <Text style={s.sub}>
-        Only events requesting your vendor type are shown.
-      </Text>
+    <MarketplaceVendorScreenLayout
+      title="Event Marketplace"
+      subtitle="Only events requesting your vendor type are shown."
+    >
+      <View style={s.page}>
       {message ? <Text style={s.notice}>{message}</Text> : null}
       {applications
         .filter((item) => item.status === "PAYMENT_DUE")
@@ -74,7 +77,9 @@ export default function EventVendorMarketplaceScreen({ navigation }) {
             No matching events are accepting applications.
           </Text>
         }
-        renderItem={({ item }) => (
+        renderItem={({ item }) => {
+          const event = getMarketplaceVendorEventPresentation(item);
+          return (
           <TouchableOpacity
             style={s.card}
             onPress={() =>
@@ -83,27 +88,29 @@ export default function EventVendorMarketplaceScreen({ navigation }) {
               })
             }
           >
-            <Text style={s.title}>{item.event_name}</Text>
+            {event.images[0] ? <Image source={{ uri: event.images[0].image_url }} style={s.eventImage} /> : null}
+            <Text style={s.title}>{event.name}</Text>
+            <Text style={s.meta}>{event.location}</Text>
+            {event.date ? <Text style={s.meta}>{String(event.date)}{event.startTime ? ` · ${event.startTime}` : ""}</Text> : null}
             <Text style={s.meta}>
-              {item.event_city}, {item.event_state}
-            </Text>
-            <Text style={s.meta}>
-              {(item.event_vendor_needs || [])
+              {event.needs
                 .map(
                   (need) =>
-                    `${need.vendor_type}: ${need.quantity} needed · $${Number(need.fee || 0).toFixed(2)}`,
+                    `${need.vendorType}: ${need.remaining} remaining · $${need.fee.toFixed(2)}`,
                 )
                 .join("\n")}
             </Text>
             <Text style={s.apply}>View & Apply</Text>
           </TouchableOpacity>
-        )}
+          );
+        }}
       />
-    </View>
+      </View>
+    </MarketplaceVendorScreenLayout>
   );
 }
 const s = StyleSheet.create({
-  page: { flex: 1, padding: 18, backgroundColor: "#fff" },
+  page: { flex: 1, paddingHorizontal: 18, backgroundColor: "#fff" },
   heading: { fontSize: 26, fontWeight: "800", color: "#172033" },
   sub: { color: "#64748b", marginTop: 5, marginBottom: 14 },
   notice: {
@@ -124,4 +131,5 @@ const s = StyleSheet.create({
   meta: { color: "#64748b", marginTop: 6, lineHeight: 20 },
   apply: { color: AppColor.primary, fontWeight: "800", marginTop: 12 },
   paymentCard: { borderColor: AppColor.primary, backgroundColor: "#fff7ed" },
+  eventImage: { width: "100%", height: 150, borderRadius: 10, marginBottom: 12 },
 });

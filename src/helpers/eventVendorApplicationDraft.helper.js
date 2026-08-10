@@ -1,7 +1,94 @@
-export const EVENT_VENDOR_APPLICATION_RETURN_KEY =
+export const LEGACY_EVENT_VENDOR_APPLICATION_RETURN_KEY =
   "event-vendor-application:return-after-approval";
+export const LEGACY_EVENT_VENDOR_APPLICATION_DRAFT_PREFIX =
+  "event-vendor-application-draft:";
+
+const requireStorageIdentity = (value, label) => {
+  const normalized = String(value || "").trim();
+  if (!normalized) throw new Error(`${label} is required for application storage.`);
+  return normalized;
+};
+
+export const getEventVendorApplicationDraftKey = (vendorId, eventId) =>
+  `${LEGACY_EVENT_VENDOR_APPLICATION_DRAFT_PREFIX}vendor:${requireStorageIdentity(
+    vendorId,
+    "Vendor ID",
+  )}:event:${requireStorageIdentity(eventId, "Event ID")}`;
+
+export const getEventVendorApplicationReturnKey = (vendorId) =>
+  `${LEGACY_EVENT_VENDOR_APPLICATION_RETURN_KEY}:vendor:${requireStorageIdentity(
+    vendorId,
+    "Vendor ID",
+  )}`;
+
+export const isLegacyEventVendorApplicationDraftKey = (key = "") => {
+  if (!String(key).startsWith(LEGACY_EVENT_VENDOR_APPLICATION_DRAFT_PREFIX)) {
+    return false;
+  }
+  return !String(key).slice(LEGACY_EVENT_VENDOR_APPLICATION_DRAFT_PREFIX.length)
+    .startsWith("vendor:");
+};
+
+export const getEventVendorSignOutKeys = (keys = [], vendorId) => {
+  const normalizedVendorId = String(vendorId || "").trim();
+  const scopedDraftPrefix = normalizedVendorId
+    ? `${LEGACY_EVENT_VENDOR_APPLICATION_DRAFT_PREFIX}vendor:${normalizedVendorId}:event:`
+    : null;
+  const scopedReturnKey = normalizedVendorId
+    ? getEventVendorApplicationReturnKey(normalizedVendorId)
+    : null;
+  return keys.filter(
+    (key) =>
+      isLegacyEventVendorApplicationDraftKey(key) ||
+      key === LEGACY_EVENT_VENDOR_APPLICATION_RETURN_KEY ||
+      (scopedDraftPrefix && key.startsWith(scopedDraftPrefix)) ||
+      key === scopedReturnKey ||
+      (normalizedVendorId &&
+        key.startsWith("docusign-recovery:") &&
+        key.endsWith(`:vendor:${normalizedVendorId}`)),
+  );
+};
+
+export const prepareEventVendorApplicationStorage = async ({
+  storage,
+  vendorId,
+  eventId = null,
+}) => {
+  const draftKey = eventId
+    ? getEventVendorApplicationDraftKey(vendorId, eventId)
+    : null;
+  const returnKey = getEventVendorApplicationReturnKey(vendorId);
+  const legacyDraftKey = eventId
+    ? `${LEGACY_EVENT_VENDOR_APPLICATION_DRAFT_PREFIX}${eventId}`
+    : null;
+
+  // Legacy records were not account-scoped. Only migrate records that carry a
+  // matching owner; otherwise remove them so a later account cannot hydrate them.
+  for (const [legacyKey, scopedKey] of [
+    ...(legacyDraftKey ? [[legacyDraftKey, draftKey]] : []),
+    [LEGACY_EVENT_VENDOR_APPLICATION_RETURN_KEY, returnKey],
+  ]) {
+    const legacyValue = await storage.getItem(legacyKey);
+    if (legacyValue != null) {
+      try {
+        const parsed = JSON.parse(legacyValue);
+        const ownerId = String(parsed?.vendor_user_id || parsed?.vendorUserId || "");
+        const scopedValue = await storage.getItem(scopedKey);
+        if (ownerId && ownerId === String(vendorId) && scopedValue == null) {
+          await storage.setItem(scopedKey, legacyValue);
+        }
+      } catch {
+        // A malformed unscoped record cannot be attributed safely; quarantine it.
+      } finally {
+        await storage.removeItem(legacyKey);
+      }
+    }
+  }
+  return { draftKey, returnKey };
+};
 
 export const buildEventVendorApplicationDraft = (state, overrides = {}) => ({
+  vendor_user_id: state.vendor_user_id || state.vendorUserId || null,
   selected: [...(state.selected || [])],
   types: [...(state.types || [])],
   bullets: state.bullets || "",

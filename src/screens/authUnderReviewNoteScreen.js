@@ -26,6 +26,7 @@ import {
   getEventVendorResumeDestination,
   getEventVendorSignInTransition,
 } from "../helpers/eventVendorProfile.helper";
+import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
 
 export default function AuthUnderReviewNoteScreen() {
   const insets = useSafeAreaInsets();
@@ -140,7 +141,7 @@ export default function AuthUnderReviewNoteScreen() {
     return () => clearInterval(interval);
   }, [checkApprovalStatus]);
 
-  return (
+  const content = (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBarManager />
 
@@ -195,6 +196,11 @@ export default function AuthUnderReviewNoteScreen() {
       </TouchableOpacity>
     </View>
   );
+  return user?.vendorSubtype === "EVENT_VENDOR" ? (
+    <MarketplaceVendorScreenLayout title="Marketplace Vendor Approval Status">
+      {content}
+    </MarketplaceVendorScreenLayout>
+  ) : content;
 }
 
 const styles = StyleSheet.create({

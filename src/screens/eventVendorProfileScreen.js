@@ -12,6 +12,7 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import ImagePicker from "react-native-image-crop-picker";
 import { useDispatch, useSelector } from "react-redux";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   getEventVendorProfile_API,
   saveEventVendorProfile_API,
@@ -26,12 +27,18 @@ import {
   MERCHANDISE_CATEGORIES,
 } from "../helpers/eventVendorProfile.helper";
 import { updateUser } from "../redux/slices/userSlice";
+import { clearUserSlice } from "../redux/slices/userSlice";
 import {
   onOnBoard,
   onSignin,
   onUnderReview,
   setVendorOnboardingStep,
+  onSignOut,
+  setPendingEventVendorApplication,
 } from "../redux/slices/authSlice";
+import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
+import { getApprovedProfilePresentation } from "../helpers/eventVendorPresentation.helper";
+import { getEventVendorSignOutKeys } from "../helpers/eventVendorApplicationDraft.helper";
 
 const TYPES = ["MERCHANDISE", "SERVICE", "OTHER"];
 export default function EventVendorProfileScreen({ navigation }) {
@@ -46,6 +53,15 @@ export default function EventVendorProfileScreen({ navigation }) {
   const [links, setLinks] = useState(["", ""]);
   const [merchandiseCategories, setMerchandiseCategories] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [savedSnapshot, setSavedSnapshot] = useState(null);
+  const applyFields = (value) => {
+    setBusinessName(value?.business_name || "");
+    setDescription(value?.business_description || "");
+    setVendorTypes(value?.vendor_types || []);
+    setLinks([...(value?.social_links || []), "", ""].slice(0, 2));
+    setMerchandiseCategories(value?.merchandise_categories || []);
+  };
   const applyProfileState = (nextProfile, wasApproved = false) => {
     setProfile(nextProfile);
     dispatch(updateUser({ eventVendorProfile: nextProfile }));
@@ -65,11 +81,9 @@ export default function EventVendorProfileScreen({ navigation }) {
     const value = response?.data?.eventVendorProfile;
     if (value) {
       setProfile(value);
-      setBusinessName(value.business_name || "");
-      setDescription(value.business_description || "");
-      setVendorTypes(value.vendor_types || []);
-      setLinks([...(value.social_links || []), "", ""].slice(0, 2));
-      setMerchandiseCategories(value.merchandise_categories || []);
+      applyFields(value);
+      setSavedSnapshot(value);
+      setIsEditing(value.review_status !== "APPROVED");
       dispatch(updateUser({ eventVendorProfile: value }));
     }
   }, [dispatch]);
@@ -109,6 +123,11 @@ export default function EventVendorProfileScreen({ navigation }) {
       });
       const savedProfile = response?.data?.eventVendorProfile;
       applyProfileState(savedProfile, access.canUseMarketplace);
+      setSavedSnapshot(savedProfile);
+      if (access.canUseMarketplace) {
+        setIsEditing(false);
+        return;
+      }
       if (
         getProfileOnboardingDestination(vendorTypes) ===
         "EVENT_VENDOR_PHOTOS"
@@ -146,6 +165,8 @@ export default function EventVendorProfileScreen({ navigation }) {
   };
   const access = getEventVendorAccessState(profile);
   const presentation = getProfileActionPresentation(profile, vendorTypes);
+  const approvedPresentation = getApprovedProfilePresentation(profile, isEditing);
+  const fieldsEditable = access.canEdit && !approvedPresentation.readOnly;
   const uploadLogo = async () => {
     try {
       const image = await ImagePicker.openPicker({
@@ -166,14 +187,65 @@ export default function EventVendorProfileScreen({ navigation }) {
         Alert.alert("Logo", e?.message || "Unable to upload logo.");
     }
   };
+  const requestLogoUpload = () => {
+    if (approvedPresentation.approved) {
+      Alert.alert(
+        "Replace Business Logo?",
+        "Changing the approved business logo requires another profile review.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Replace Logo", onPress: uploadLogo },
+        ],
+      );
+      return;
+    }
+    uploadLogo();
+  };
+  const requestSave = () => {
+    if (approvedPresentation.approved && isEditing) {
+      Alert.alert(
+        "Save Profile Changes?",
+        "Material business, type, category, description, or logo changes may require another approval before Marketplace access resumes.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Save Changes", onPress: save },
+        ],
+      );
+      return;
+    }
+    save();
+  };
+  const cancelEdit = () => {
+    applyFields(savedSnapshot || profile);
+    setIsEditing(false);
+  };
+  const confirmSignOut = () =>
+    Alert.alert("Sign Out", "Sign out of this Marketplace Vendor account?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign Out",
+        style: "destructive",
+        onPress: async () => {
+          const keys = await AsyncStorage.getAllKeys();
+          const vendorId = String(user?._id || user?.id || "");
+          const transient = getEventVendorSignOutKeys(keys, vendorId);
+          if (transient.length) await AsyncStorage.multiRemove(transient);
+          dispatch(setPendingEventVendorApplication(null));
+          dispatch(onSignOut());
+          dispatch(clearUserSlice());
+          navigation.reset({ index: 0, routes: [{ name: "splash" }] });
+        },
+      },
+    ]);
   return (
+    <MarketplaceVendorScreenLayout
+      title="Marketplace Vendor Profile"
+      subtitle="Merchandise, artisans, services, nonprofits, and exhibitors."
+      onSignOut={confirmSignOut}
+    >
     <ScrollView contentContainerStyle={s.page}>
-      <Text style={s.heading}>Marketplace Vendor Profile</Text>
-      <Text style={s.sub}>
-        Merchandise, artisans, services, nonprofits, and exhibitors.
-      </Text>
       {profile ? (
-        <TouchableOpacity style={s.logoButton} onPress={uploadLogo} disabled={!access.canEdit}>
+        <TouchableOpacity style={s.logoButton} onPress={requestLogoUpload} disabled={!fieldsEditable}>
           {profile?.logo_url ? (
             <Image source={{ uri: profile.logo_url }} style={s.logo} />
           ) : (
@@ -189,6 +261,7 @@ export default function EventVendorProfileScreen({ navigation }) {
           <TouchableOpacity
             key={type}
             onPress={() => toggleType(type)}
+            disabled={!fieldsEditable}
             style={[s.chip, vendorTypes.includes(type) && s.chipOn]}
           >
             <Text
@@ -205,6 +278,7 @@ export default function EventVendorProfileScreen({ navigation }) {
         value={businessName}
         onChangeText={setBusinessName}
         maxLength={150}
+        editable={fieldsEditable}
       />
       <Text style={s.label}>Brief description of what you sell *</Text>
       <TextInput
@@ -213,6 +287,7 @@ export default function EventVendorProfileScreen({ navigation }) {
         onChangeText={setDescription}
         multiline
         maxLength={300}
+        editable={fieldsEditable}
       />
       <Text style={s.count}>{description.length}/300</Text>
       {[0, 1].map((index) => (
@@ -223,6 +298,7 @@ export default function EventVendorProfileScreen({ navigation }) {
             autoCapitalize="none"
             keyboardType="url"
             value={links[index]}
+            editable={fieldsEditable}
             onChangeText={(value) =>
               setLinks((current) =>
                 current.map((item, i) => (i === index ? value : item)),
@@ -238,13 +314,14 @@ export default function EventVendorProfileScreen({ navigation }) {
             <TouchableOpacity
               key={category.value}
               onPress={() => toggleCategory(category.value)}
+              disabled={!fieldsEditable}
               style={[
                 s.category,
                 merchandiseCategories.includes(category.value) && s.chipOn,
               ]}
             >
               <Text style={merchandiseCategories.includes(category.value) ? s.chipTextOn : s.chipText}>{category.label}</Text>
-              <Text style={s.categoryDescription}>{category.description}</Text>
+              <Text style={[s.categoryDescription, merchandiseCategories.includes(category.value) && s.categoryDescriptionOn]}>{category.description}</Text>
             </TouchableOpacity>
           ))}
         </>
@@ -255,9 +332,18 @@ export default function EventVendorProfileScreen({ navigation }) {
       {presentation.showApprovedStatus ? (
         <Text style={s.approved}>Profile approved. Material changes require another review.</Text>
       ) : null}
-      <TouchableOpacity style={s.primary} onPress={save} disabled={saving || !access.canEdit}>
-        <Text style={s.buttonText}>{saving ? "Saving…" : vendorTypes.includes("MERCHANDISE") ? "Save Profile & Continue to Photos" : "Save Draft / Profile"}</Text>
+      <TouchableOpacity
+        style={s.primary}
+        onPress={approvedPresentation.readOnly ? () => setIsEditing(true) : requestSave}
+        disabled={saving || (!access.canEdit && !approvedPresentation.approved)}
+      >
+        <Text style={s.buttonText}>{saving ? "Saving…" : approvedPresentation.primaryAction}</Text>
       </TouchableOpacity>
+      {approvedPresentation.showCancel ? (
+        <TouchableOpacity style={s.secondary} onPress={cancelEdit}>
+          <Text style={s.secondaryText}>Cancel</Text>
+        </TouchableOpacity>
+      ) : null}
       {presentation.showSubmitFromProfile ? (
         <TouchableOpacity style={[s.submitReview, !profile?.logo_url && s.disabled]} onPress={submitForReview} disabled={saving || !profile?.logo_url}>
           <Text style={s.buttonText}>{access.canResubmit ? "Resubmit Profile for Review" : "Submit Profile for Review"}</Text>
@@ -269,10 +355,11 @@ export default function EventVendorProfileScreen({ navigation }) {
         <Text style={s.setupNotice}>Add the business logo before submitting for review.</Text>
       ) : null}
     </ScrollView>
+    </MarketplaceVendorScreenLayout>
   );
 }
 const s = StyleSheet.create({
-  page: { padding: 20, paddingBottom: 60, backgroundColor: "#fff" },
+  page: { paddingHorizontal: 20, paddingBottom: 60, backgroundColor: "#fff" },
   heading: { fontSize: 26, fontWeight: "800", color: "#172033" },
   sub: { color: "#64748b", marginTop: 6, marginBottom: 18 },
   label: {
@@ -319,6 +406,7 @@ const s = StyleSheet.create({
   buttonText: { color: "#fff", fontWeight: "800" },
   category: { borderWidth: 1, borderColor: "#cbd5e1", borderRadius: 10, padding: 12, marginBottom: 8 },
   categoryDescription: { color: "#64748b", marginTop: 4 },
+  categoryDescriptionOn: { color: "#e2e8f0" },
   submitReview: { backgroundColor: "#166534", padding: 15, borderRadius: 12, alignItems: "center", marginTop: 12 },
   rejection: { color: "#991b1b", backgroundColor: "#fee2e2", padding: 12, borderRadius: 10, marginTop: 14 },
   pending: { color: "#92400e", backgroundColor: "#fef3c7", padding: 12, borderRadius: 10, marginTop: 12, textAlign: "center" },

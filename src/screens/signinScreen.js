@@ -52,7 +52,8 @@ import { setFcmToken_API } from "../api/appAPI";
 import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
 import { restoreSavedEmployeeLogin } from "../helpers/savedEmployeeLogin.helper";
 import {
-  EVENT_VENDOR_APPLICATION_RETURN_KEY,
+  getEventVendorApplicationReturnKey,
+  prepareEventVendorApplicationStorage,
   parseEventVendorApplicationReturn,
 } from "../helpers/eventVendorApplicationDraft.helper";
 
@@ -185,9 +186,20 @@ const SignInScreen = ({ navigation, route }) => {
               ),
             );
             if (transition.isSignedIn) {
-              const returnValue = await AsyncStorage.getItem(
-                EVENT_VENDOR_APPLICATION_RETURN_KEY,
+              const vendorId = String(
+                response?.data?.user?._id || response?.data?.user?.id || "",
               );
+              if (vendorId) {
+                await prepareEventVendorApplicationStorage({
+                  storage: AsyncStorage,
+                  vendorId,
+                }).catch(() => {});
+              }
+              const returnValue = vendorId
+                ? await AsyncStorage.getItem(
+                    getEventVendorApplicationReturnKey(vendorId),
+                  )
+                : null;
               dispatch(
                 setPendingEventVendorApplication(
                   parseEventVendorApplicationReturn(returnValue),

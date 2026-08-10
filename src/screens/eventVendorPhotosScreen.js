@@ -22,6 +22,8 @@ import {
   uploadEventVendorPhoto_API,
 } from "../api/appAPI";
 import { AppColor } from "../utils/theme";
+import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
+import { getPhotoRepositoryPresentation } from "../helpers/eventVendorPresentation.helper";
 import {
   groupPhotosByCategory,
   getMarketplaceApiErrorMessage,
@@ -47,8 +49,12 @@ export default function EventVendorPhotosScreen({ route }) {
   const selectedCategories = getSelectedMerchandiseCategories(profile);
   const portfolioProgress = getMerchandisePortfolioProgress(profile, photos);
   const canSubmitReview = !!profile?.logo_url && portfolioProgress.complete;
+  const repositoryPresentation = getPhotoRepositoryPresentation(
+    profile,
+    portfolioProgress.activeCount,
+  );
   const handleReapproval = (response) => {
-    if (response?.data?.requires_reapproval !== true) return;
+    if (profile?.review_status === "APPROVED" || response?.data?.requires_reapproval !== true) return;
     dispatch(onSignin(false));
     dispatch(onOnBoard(true));
     dispatch(onUnderReview(false));
@@ -148,15 +154,17 @@ export default function EventVendorPhotosScreen({ route }) {
       ],
     );
   return (
+    <MarketplaceVendorScreenLayout title="Photo Repository">
     <ScrollView style={s.page} contentContainerStyle={s.content}>
-      <Text style={s.heading}>Photo Repository</Text>
       <Text style={s.sub}>
-        {photos.length}/40 photos · Up to 10 photos in each category.
+        {repositoryPresentation.approved
+          ? repositoryPresentation.progressLabel
+          : `${photos.length}/40 photos · Up to 10 photos in each category.`}
       </Text>
-      <Text style={s.progress}>
-        Portfolio photos: {portfolioProgress.activeCount} of 3 required.
-      </Text>
-      {onboardingFlow ? (
+      {!repositoryPresentation.approved ? (
+        <Text style={s.progress}>{repositoryPresentation.progressLabel}</Text>
+      ) : null}
+      {onboardingFlow && !repositoryPresentation.approved ? (
         <View style={s.onboardingCard}>
           <Text style={s.sectionTitle}>Business Logo</Text>
           <TouchableOpacity style={s.logoButton} onPress={uploadLogo}>
@@ -194,7 +202,14 @@ export default function EventVendorPhotosScreen({ route }) {
           </View>
         );
       })}
-      {onboardingFlow ? (
+      {repositoryPresentation.approved ? (
+        <TouchableOpacity
+          style={s.submitReview}
+          onPress={() => Alert.alert("Photos Saved", "Your photo repository is up to date.")}
+        >
+          <Text style={s.addText}>Save Photos</Text>
+        </TouchableOpacity>
+      ) : onboardingFlow ? (
         <TouchableOpacity style={[s.submitReview, !canSubmitReview && s.disabled]} onPress={submitForReview} disabled={!canSubmitReview}>
           <Text style={s.addText}>Submit Profile for Review</Text>
         </TouchableOpacity>
@@ -206,6 +221,7 @@ export default function EventVendorPhotosScreen({ route }) {
         </TouchableOpacity>
       </Modal>
     </ScrollView>
+    </MarketplaceVendorScreenLayout>
   );
 }
 const s = StyleSheet.create({

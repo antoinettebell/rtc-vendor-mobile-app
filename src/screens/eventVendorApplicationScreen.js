@@ -11,7 +11,6 @@ import {
   View,
 } from "react-native";
 import ImagePicker from "react-native-image-crop-picker";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   getEventVendorPhotos_API,
   getEventVendorProfile_API,
@@ -29,7 +28,9 @@ import {
 import {
   buildEventVendorApplicationDraft,
   clearEventVendorApplicationRecovery,
-  EVENT_VENDOR_APPLICATION_RETURN_KEY,
+  getEventVendorApplicationDraftKey,
+  getEventVendorApplicationReturnKey,
+  prepareEventVendorApplicationStorage,
   hydrateEventVendorApplication,
   isAuthoritativeApplicationUnavailable,
   getPhotoRemovalPersistenceMessage,
@@ -42,7 +43,7 @@ import {
   applicationCurrencyNumber,
   getApprovedApplicationUploadCategories,
 } from "../helpers/eventVendorApplicationDraft.helper";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   onOnBoard,
   onSignin,
@@ -50,10 +51,14 @@ import {
   setVendorOnboardingStep,
   setPendingEventVendorApplication,
 } from "../redux/slices/authSlice";
+import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
+import { getMarketplaceVendorEventPresentation } from "../helpers/eventVendorPresentation.helper";
 export default function EventVendorApplicationScreen({ navigation, route }) {
-  const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
+  const user = useSelector((state) => state.userReducer.user);
+  const vendorId = String(user?._id || user?.id || "");
   const event = route.params.event;
+  const eventPresentation = getMarketplaceVendorEventPresentation(event);
   const [profile, setProfile] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [selected, setSelected] = useState([]);
@@ -68,17 +73,25 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
   const [uploadCategory, setUploadCategory] = useState("");
   const [saveUploadToRepository, setSaveUploadToRepository] = useState(false);
   const [hydrationAttempt, setHydrationAttempt] = useState(0);
-  const draftKey = `event-vendor-application-draft:${event.event_id}`;
+  const draftKey = vendorId
+    ? getEventVendorApplicationDraftKey(vendorId, event.event_id)
+    : null;
+  const returnKey = vendorId ? getEventVendorApplicationReturnKey(vendorId) : null;
   useEffect(() => {
-    hydrateEventVendorApplication({
+    if (!vendorId || !draftKey || !returnKey) return;
+    prepareEventVendorApplicationStorage({
+      storage: AsyncStorage,
+      vendorId,
+      eventId: event.event_id,
+    }).then(() => hydrateEventVendorApplication({
       storage: AsyncStorage,
       draftKey,
-      returnKey: EVENT_VENDOR_APPLICATION_RETURN_KEY,
+      returnKey,
       loadProfile: getEventVendorProfile_API,
       loadPhotos: () => getEventVendorPhotos_API(event.event_id),
       loadEvent: getEventVendorEvents_API,
       eventId: event.event_id,
-    })
+    }))
       .then(async ({ profile: hydratedProfile, photos: hydratedPhotos, draft }) => {
         setProfile(hydratedProfile);
         setPhotos(hydratedPhotos);
@@ -94,7 +107,7 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
         }
         await clearEventVendorApplicationRecovery({
           storage: AsyncStorage,
-          returnKey: EVENT_VENDOR_APPLICATION_RETURN_KEY,
+          returnKey,
         }).catch(() => {});
         dispatch(setPendingEventVendorApplication(null));
       })
@@ -113,7 +126,7 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
               ],
         );
       });
-  }, [draftKey, event.event_id, hydrationAttempt, navigation]);
+  }, [dispatch, draftKey, event.event_id, hydrationAttempt, navigation, returnKey, vendorId]);
   const eligible = (event.event_vendor_needs || []).filter((n) =>
     profile?.vendor_types?.includes(n.vendor_type),
   );
@@ -130,6 +143,7 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
         electricity,
         feeAck,
         pendingAgreement: hasPendingAgreement,
+        vendor_user_id: vendorId,
       },
       overrides,
     );
@@ -182,8 +196,8 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
       }
       if (response?.data?.requires_reapproval === true) {
         await AsyncStorage.setItem(
-          EVENT_VENDOR_APPLICATION_RETURN_KEY,
-          JSON.stringify({ event }),
+          returnKey,
+          JSON.stringify({ event, vendor_user_id: vendorId }),
         );
         dispatch(onSignin(false));
         dispatch(onOnBoard(true));
@@ -243,7 +257,7 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
       await clearEventVendorApplicationRecovery({
         storage: AsyncStorage,
         draftKey,
-        returnKey: EVENT_VENDOR_APPLICATION_RETURN_KEY,
+        returnKey,
       });
       dispatch(setPendingEventVendorApplication(null));
       setHasPendingAgreement(false);
@@ -281,8 +295,8 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
   const startSigningAndSubmit = async () => {
     try {
       await AsyncStorage.setItem(
-        EVENT_VENDOR_APPLICATION_RETURN_KEY,
-        JSON.stringify({ event }),
+        returnKey,
+        JSON.stringify({ event, vendor_user_id: vendorId }),
       );
       dispatch(setPendingEventVendorApplication({ event }));
       await AsyncStorage.setItem(
@@ -296,6 +310,7 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
           electricity,
           feeAck,
           pendingAgreement: true,
+          vendor_user_id: vendorId,
         }),
       );
       setHasPendingAgreement(true);
@@ -305,11 +320,33 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
     }
   };
   return (
-    <ScrollView contentContainerStyle={[s.page, { paddingTop: insets.top + 12 }]}>
-      <TouchableOpacity style={s.back} onPress={returnToMarketplace}>
-        <Text style={s.backText}>‹ Back to Marketplace</Text>
-      </TouchableOpacity>
-      <Text style={s.heading}>{event.event_name}</Text>
+    <MarketplaceVendorScreenLayout
+      title="Event Details & Application"
+      onBack={returnToMarketplace}
+    >
+    <ScrollView contentContainerStyle={s.page}>
+      {eventPresentation.images.length ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.eventImages}>
+          {eventPresentation.images.map((image) => (
+            <Image key={image.image_id} source={{ uri: image.image_url }} style={s.eventPhoto} />
+          ))}
+        </ScrollView>
+      ) : null}
+      <Text style={s.heading}>{eventPresentation.name}</Text>
+      <Text style={s.description}>{eventPresentation.description}</Text>
+      <View style={s.eventDetails}>
+        <Text style={s.meta}>Date: {eventPresentation.date || "Not provided"}</Text>
+        <Text style={s.meta}>Time: {[eventPresentation.startTime, eventPresentation.endTime].filter(Boolean).join(" – ") || "Not provided"}</Text>
+        <Text style={s.meta}>Location: {eventPresentation.location}</Text>
+        <Text style={s.meta}>Expected guests: {eventPresentation.expectedGuests || "Not provided"}</Text>
+        <Text style={s.meta}>Who pays: {eventPresentation.whoPays}</Text>
+        <Text style={s.meta}>Last date to accept payment: {eventPresentation.paymentDeadline || "Not provided"}</Text>
+        {eventPresentation.needs.map((need) => (
+          <Text key={need.vendorType} style={s.meta}>
+            {need.vendorType}: {need.remaining} remaining · ${need.fee.toFixed(2)} fee
+          </Text>
+        ))}
+      </View>
       <Text style={s.meta}>
         Business: {profile?.business_name || "Complete profile"}
       </Text>
@@ -428,6 +465,7 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
         <Text style={s.submitText}>Sign Agreements &amp; Submit</Text>
       </TouchableOpacity>
     </ScrollView>
+    </MarketplaceVendorScreenLayout>
   );
 }
 const s = StyleSheet.create({
@@ -435,6 +473,10 @@ const s = StyleSheet.create({
   back: { alignSelf: "flex-start", paddingVertical: 8, marginBottom: 4 },
   backText: { color: AppColor.primary, fontWeight: "800", fontSize: 16 },
   heading: { fontSize: 25, fontWeight: "800", color: "#172033" },
+  description: { color: "#475569", marginTop: 6, lineHeight: 20 },
+  eventDetails: { marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: "#f8fafc" },
+  eventImages: { marginBottom: 12 },
+  eventPhoto: { width: 250, height: 160, borderRadius: 12, marginRight: 10 },
   meta: { color: "#64748b", marginTop: 5 },
   label: {
     fontWeight: "800",
