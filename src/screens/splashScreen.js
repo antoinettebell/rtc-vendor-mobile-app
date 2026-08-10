@@ -72,10 +72,16 @@ const SplashScreen = () => {
           dispatch(setVendorOnboardingStep(transition.vendorOnboardingStep));
           if (transition.isSignedIn) {
             if (isSignedIn) {
-              navigation.replace(
-                "bottomRoot",
-                postSignInRoute ? { screen: postSignInRoute } : undefined,
-              );
+              if (pendingEventVendorApplication?.event?.event_id) {
+                navigation.replace("eventVendorApplicationScreen", {
+                  event: pendingEventVendorApplication.event,
+                });
+              } else {
+                navigation.replace(
+                  "bottomRoot",
+                  postSignInRoute ? { screen: postSignInRoute } : undefined,
+                );
+              }
             }
             return;
           }

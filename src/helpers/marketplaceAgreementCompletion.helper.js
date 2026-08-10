@@ -50,3 +50,27 @@ export const createIdempotentAgreementFinalizer = (finalize) => {
     return inFlight;
   };
 };
+
+export const buildAgreementRecoveryRecord = ({ agreement, payload, state = "PENDING" }) => ({
+  agreement_id: agreement?.agreement_id || null,
+  envelope_id: agreement?.envelope_id || null,
+  event_id: payload?.event_id || agreement?.event_id || null,
+  event_vendor_profile_id: agreement?.event_vendor_profile_id || null,
+  application_id: payload?.application_id || agreement?.application_id || null,
+  application_draft_id: payload?.application_draft_id || agreement?.application_draft_id || null,
+  signing_state: state,
+  saved_at: new Date().toISOString(),
+});
+
+export const parseAgreementRecoveryRecord = (value) => {
+  if (!value || value === "stopped") return value === "stopped" ? { signing_state: "STOPPED" } : null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed?.event_id ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+export const getAgreementRetryDelay = (attempt, maximumAttempts = 4) =>
+  attempt >= maximumAttempts ? null : Math.min(8000, 1000 * (2 ** attempt));

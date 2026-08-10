@@ -58,6 +58,16 @@ assert.equal(retries, 2, "a failed finalization may be retried");
 assert.match(helper.getAgreementStatusMessage("DECLINED"), /declined/i);
 assert.match(helper.getAgreementStatusMessage("CANCELLED"), /cancelled/i);
 assert.match(helper.getAgreementStatusMessage("ERROR"), /could not confirm/i);
+const recovery = helper.buildAgreementRecoveryRecord({
+  agreement: { agreement_id: "agreement-1", envelope_id: "envelope-1", event_vendor_profile_id: "profile-1" },
+  payload: { event_id: "event-1", application_draft_id: "draft-1" },
+});
+assert.equal(recovery.agreement_id, "agreement-1");
+assert.equal(recovery.application_draft_id, "draft-1");
+assert.deepEqual(helper.parseAgreementRecoveryRecord(JSON.stringify(recovery)).agreement_id, "agreement-1");
+assert.equal(helper.parseAgreementRecoveryRecord("stopped").signing_state, "STOPPED");
+assert.equal(helper.getAgreementRetryDelay(0), 1000);
+assert.equal(helper.getAgreementRetryDelay(4), null);
 
 const applicationScreen = await readFile(
   new URL("../screens/vendorMarketplaceApplicationScreen.js", import.meta.url),
@@ -87,6 +97,19 @@ assert.match(eventVendorScreen, /clearEventVendorApplicationRecovery/);
 assert.match(agreementHook, /setTerminalRecoveryStopped\(true\)/);
 assert.match(agreementHook, /recoveryStopped/);
 assert.match(agreementHook, /onTerminalRef\.current/);
+assert.match(agreementHook, /persistPendingAgreement/);
+assert.match(agreementHook, /await persistPendingAgreement[\s\S]*await Linking\.openURL/,
+  "pending agreement identity is stored before DocuSign opens");
+assert.match(agreementHook, /returnMarketplaceVendorAgreement_API/,
+  "resume and cold-start recovery reconcile the persisted agreement ID");
+assert.match(agreementHook, /AppState\.addEventListener/);
+assert.match(agreementHook, /getInitialURL/);
+assert.match(agreementHook, /getAgreementRetryDelay/);
+assert.match(agreementHook, /:vendor:\$\{recoveryAccountId\}/,
+  "pending agreement recovery is scoped to the authenticated vendor");
+assert.match(agreementHook, /clearRetryTimer\(\)/,
+  "retry timers are explicitly cleared after completion and during cleanup");
+assert.match(eventVendorScreen, /Confirming your signed agreements…/);
 assert.match(
   eventVendorScreen,
   /pendingAgreement: false/,

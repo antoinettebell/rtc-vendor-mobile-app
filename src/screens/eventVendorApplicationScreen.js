@@ -48,6 +48,7 @@ import {
   onSignin,
   onUnderReview,
   setVendorOnboardingStep,
+  setPendingEventVendorApplication,
 } from "../redux/slices/authSlice";
 export default function EventVendorApplicationScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
@@ -95,6 +96,7 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
           storage: AsyncStorage,
           returnKey: EVENT_VENDOR_APPLICATION_RETURN_KEY,
         }).catch(() => {});
+        dispatch(setPendingEventVendorApplication(null));
       })
       .catch((error) => {
         const unavailable = isAuthoritativeApplicationUnavailable(error);
@@ -243,6 +245,7 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
         draftKey,
         returnKey: EVENT_VENDOR_APPLICATION_RETURN_KEY,
       });
+      dispatch(setPendingEventVendorApplication(null));
       setHasPendingAgreement(false);
       Alert.alert(
         "Application Submitted",
@@ -253,10 +256,12 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
       Alert.alert("Application", e?.message || "Unable to submit application.");
     }
   };
-  const { beginSigning } = useMarketplaceAgreementCompletion({
+  const applicationDraftId = `event-vendor:${profile?.profile_id || "profile"}:${event.event_id}`;
+  const { beginSigning, confirmingAgreement } = useMarketplaceAgreementCompletion({
     enabled: !!event?.event_id && hasPendingAgreement,
     getSigningPayload: () => ({
       event_id: event.event_id,
+      application_draft_id: applicationDraftId,
       return_url: "rounddacornervendor://docusign/return?status=completed",
     }),
     finalizeSubmission: submitApplication,
@@ -275,6 +280,11 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
   });
   const startSigningAndSubmit = async () => {
     try {
+      await AsyncStorage.setItem(
+        EVENT_VENDOR_APPLICATION_RETURN_KEY,
+        JSON.stringify({ event }),
+      );
+      dispatch(setPendingEventVendorApplication({ event }));
       await AsyncStorage.setItem(
         draftKey,
         JSON.stringify({
@@ -408,6 +418,9 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
       <Text style={s.agreementNotice}>
         The Marketplace NDA and Governance Document must be signed in DocuSign before this application is submitted.
       </Text>
+      {confirmingAgreement ? (
+        <Text style={s.confirming}>Confirming your signed agreements…</Text>
+      ) : null}
       <TouchableOpacity style={s.saveDraft} onPress={saveDraft}>
         <Text style={s.saveDraftText}>Save Draft</Text>
       </TouchableOpacity>
@@ -469,4 +482,5 @@ const s = StyleSheet.create({
   saveDraft: { borderWidth: 1, borderColor: AppColor.primary, padding: 14, borderRadius: 12, alignItems: "center", marginTop: 18 },
   saveDraftText: { color: AppColor.primary, fontWeight: "800" },
   agreementNotice: { marginTop: 18, color: "#475569", lineHeight: 20 },
+  confirming: { marginTop: 12, color: AppColor.primary, fontWeight: "700" },
 });
