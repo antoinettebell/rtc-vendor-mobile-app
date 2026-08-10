@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -8,13 +7,15 @@ import {
   View,
 } from "react-native";
 import { useSelector } from "react-redux";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { useFocusEffect } from "@react-navigation/native";
-import StatusBarManager from "../components/StatusBarManager";
 import { getVendorComplianceSummary_API } from "../api/appAPI";
 import { AppColor } from "../utils/theme";
-import { MarketplaceHeader, styles } from "./vendorMarketplaceShared";
+import { styles } from "./vendorMarketplaceShared";
+import VendorMarketplaceLanding, {
+  VENDOR_MARKETPLACE_NAVIGATION,
+} from "../components/VendorMarketplaceLanding";
+import { VendorMarketplaceLoadingState, VendorMarketplacePage } from "../components/VendorMarketplacePrimitives";
 
 const getPlanLabel = (plan) =>
   String(plan?.slug || plan?.name || plan?.title || "").toLowerCase();
@@ -36,47 +37,12 @@ const canAccessMarketplace = (foodTruck, selectedPlan) =>
   isElitePlan(foodTruck?.plan || foodTruck?.planId) ||
   isElitePlan(selectedPlan);
 
-const MARKETPLACE_CARDS = [
-  {
-    title: "Marketplace / Near Me",
-    subtitle: "View sourcing events and food opportunities near you.",
-    icon: "storefront",
-    route: "VendorMarketplaceNearMeScreen",
-  },
-  {
-    title: "My Bids",
-    subtitle: "Track bids submitted for coordinator-paid events.",
-    icon: "receipt-long",
-    route: "VendorMyBidsScreen",
-  },
-  {
-    title: "My Applications",
-    subtitle: "Track applications submitted for vendor-paid events.",
-    icon: "assignment",
-    route: "VendorMyApplicationsScreen",
-  },
-  {
-    title: "Awarded Events",
-    subtitle: "View events you were accepted or awarded for.",
-    icon: "emoji-events",
-    route: "VendorAwardedEventsScreen",
-  },
-];
-
-const MarketplaceCard = ({ item, onPress }) => (
-  <TouchableOpacity activeOpacity={0.8} style={styles.card} onPress={onPress}>
-    <View style={localStyles.cardRow}>
-      <View style={localStyles.iconWrap}>
-        <MaterialIcons name={item.icon} size={24} color={AppColor.primary} />
-      </View>
-      <View style={styles.flex}>
-        <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.subtitle}>{item.subtitle}</Text>
-      </View>
-      <MaterialIcons name="chevron-right" size={26} color={AppColor.gray} />
-    </View>
-  </TouchableOpacity>
-);
+const FOOD_MARKETPLACE_ROUTES = {
+  MARKETPLACE: "VendorMarketplaceNearMeScreen",
+  BIDS: "VendorMyBidsScreen",
+  APPLICATIONS: "VendorMyApplicationsScreen",
+  AWARDED: "VendorAwardedEventsScreen",
+};
 
 const AccessOption = ({ title, details }) => (
   <View style={[styles.card, localStyles.optionCard]}>
@@ -134,7 +100,6 @@ const MarketplaceAccessPrompt = ({ navigation }) => {
 };
 
 const VendorMarketplaceScreen = ({ navigation }) => {
-  const insets = useSafeAreaInsets();
   const { selectedPlan, user } = useSelector((state) => state.userReducer);
   const foodTruck = user?.foodTruck;
   const [compliance, setCompliance] = useState(null);
@@ -175,9 +140,7 @@ const VendorMarketplaceScreen = ({ navigation }) => {
   );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBarManager />
-      <MarketplaceHeader
+    <VendorMarketplacePage
         title="Marketplace"
         navigation={navigation}
         right={
@@ -200,11 +163,9 @@ const VendorMarketplaceScreen = ({ navigation }) => {
             </TouchableOpacity>
           ) : null
         }
-      />
+    >
       {checkingCompliance ? (
-        <View style={localStyles.loadingWrap}>
-          <ActivityIndicator size="large" color={AppColor.primary} />
-        </View>
+        <VendorMarketplaceLoadingState />
       ) : complianceBlocked ? (
         <ScrollView contentContainerStyle={styles.body}>
           <View style={styles.card}>
@@ -236,54 +197,19 @@ const VendorMarketplaceScreen = ({ navigation }) => {
         </ScrollView>
       ) : hasAccess ? (
         <ScrollView contentContainerStyle={styles.body}>
-          <Text style={localStyles.kicker}>ROUND THE CORNER</Text>
-          <Text style={localStyles.heading}>Vendor Event Marketplace</Text>
-          <Text style={styles.screenIntro}>
-            Discover event opportunities, track bids and applications, and manage
-            awarded events.
-          </Text>
-          {MARKETPLACE_CARDS.map((item) => (
-            <MarketplaceCard
-              key={item.title}
-              item={item}
-              onPress={() => navigation.navigate(item.route)}
-            />
-          ))}
+          <VendorMarketplaceLanding
+            cards={VENDOR_MARKETPLACE_NAVIGATION}
+            onSelect={(item) => navigation.navigate(FOOD_MARKETPLACE_ROUTES[item.key])}
+          />
         </ScrollView>
       ) : (
         <MarketplaceAccessPrompt navigation={navigation} />
       )}
-    </View>
+    </VendorMarketplacePage>
   );
 };
 
 const localStyles = StyleSheet.create({
-  cardRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  iconWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFF1E6",
-  },
-  kicker: {
-    fontSize: 11,
-    fontFamily: "Mulish-Bold",
-    color: AppColor.primary,
-    letterSpacing: 0,
-  },
-  heading: {
-    fontSize: 22,
-    fontFamily: "Mulish-Bold",
-    color: AppColor.text,
-    marginTop: 2,
-    marginBottom: 4,
-  },
   optionCard: {
     borderColor: "#F0D5BD",
     backgroundColor: "#FFFDF9",
@@ -295,11 +221,6 @@ const localStyles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 12,
     borderColor: AppColor.border,
-  },
-  loadingWrap: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
   },
   refreshButton: {
     alignItems: "center",

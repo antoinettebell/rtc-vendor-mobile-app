@@ -14,10 +14,21 @@ const {
   getOtpCompletionTransition,
   getConsumedMarketplaceOtpState,
   consumePendingAuthRoute,
+  consumeOtpCompletion,
   performAuthNavigation,
   SIGNIN_ROUTE,
   SIGNUP_ROUTE,
 } = await loadHelper("./signupNavigation.helper.js");
+
+const firstOtpCompletion = consumeOtpCompletion(true);
+assert.deepEqual(firstOtpCompletion, {
+  shouldComplete: true,
+  completionPending: false,
+});
+assert.deepEqual(consumeOtpCompletion(firstOtpCompletion.completionPending), {
+  shouldComplete: false,
+  completionPending: false,
+}, "the OTP success transition is consumed exactly once");
 
 assert.deepEqual(
   getAuthNavigationAction({
@@ -187,6 +198,8 @@ assert.match(appSource, /<MainAppNavigator insets=\{insets\} \/>/);
 assert.match(appSource, /isOnboarded \? \(\s*<FinalSignupStepsNavigator/);
 assert.match(splashSource, /consumePendingAuthRoute\(pendingAuthRoute\)/);
 assert.match(otpSource, /getConsumedMarketplaceOtpState/);
+assert.match(otpSource, /onModalHide=\{completeSignupTransition\}/);
+assert.match(otpSource, /completionPendingRef\.current = true/);
 assert.match(otpSource, /setSelectedPlan\(transition\.selectedPlan\)/);
 assert.match(otpSource, /setPendingAuthRoute\(transition\.pendingAuthRoute\)/);
 assert.match(planSource, /dispatch\(setSelectedPlan\(temp_plan\)\)/);

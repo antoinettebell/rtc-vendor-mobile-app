@@ -64,6 +64,7 @@ import {
   clearAvailabilityPrompt,
   clearCurrentNotificationOrder,
 } from "../redux/slices/pushNotificationSlice";
+import { getWalkUpPosAccess } from "../helpers/vendorPaymentCapabilities.helper";
 
 const QuickStatsComponent = ({ title, subTitle, icon, onPress }) => (
   <Pressable style={styles.quickStatsContainer} onPress={onPress}>
@@ -103,6 +104,7 @@ const HomeScreen = ({ navigation }) => {
     () => getNotificationStorageKey(user?._id),
     [user?._id],
   );
+  const walkUpAccess = getWalkUpPosAccess(user, user?.foodTruck);
 
   const HEADER_HEIGHT = 60;
   const totalHeaderHeight = insets.top + HEADER_HEIGHT;
@@ -1422,12 +1424,12 @@ const HomeScreen = ({ navigation }) => {
                     icon={require("../assets/images/monthlyEarningIcon.png")}
                     onPress={() => navigation.navigate("earningsScreen")}
                   />
-                  <QuickStatsComponent
+                  {walkUpAccess.allowed ? <QuickStatsComponent
                     title={"Takeout POS"}
                     subTitle={"Create walk-up orders"}
                     icon={require("../assets/images/cutlery.png")}
                     onPress={() => navigation.navigate("vendorPosMenuScreen")}
-                  />
+                  /> : null}
                   {/* <QuickStatsComponent
                     title={"Active Customers"}
                     subTitle={"0"}

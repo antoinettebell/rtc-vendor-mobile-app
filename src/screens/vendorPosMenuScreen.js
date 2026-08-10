@@ -31,6 +31,10 @@ import {
   getNestedSelectionError,
   mergeMenuItemWithSavedSelections,
 } from "../helpers/menuSelection.helper";
+import {
+  getWalkUpPosAccess,
+  WALK_UP_PLAN_MESSAGE,
+} from "../helpers/vendorPaymentCapabilities.helper";
 
 const getOptions = (item, type) => {
   const optionsKey = `${type}Options`;
@@ -129,6 +133,7 @@ const VendorPosMenuScreen = ({ navigation, route }) => {
   const foodTruckId = user?.foodTruck?._id;
   const isEmployeeSession =
     user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
+  const walkUpAccess = getWalkUpPosAccess(user, foodTruck);
 
   const cartItemById = useMemo(() => {
     return order.items.reduce((acc, item) => {
@@ -199,7 +204,25 @@ const VendorPosMenuScreen = ({ navigation, route }) => {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (loading || walkUpAccess.allowed) return;
+    Alert.alert("Walk-up ordering unavailable", WALK_UP_PLAN_MESSAGE, [
+      {
+        text: "OK",
+        onPress: () => {
+          dispatch(clearPosOrder());
+          if (navigation.canGoBack()) navigation.goBack();
+          else navigation.navigate(isEmployeeSession ? "employeeSessionScreen" : "bottomRoot");
+        },
+      },
+    ]);
+  }, [dispatch, isEmployeeSession, loading, navigation, walkUpAccess.allowed]);
+
   const addItem = (item) => {
+    if (!walkUpAccess.allowed) {
+      Alert.alert("Walk-up ordering unavailable", WALK_UP_PLAN_MESSAGE);
+      return;
+    }
     const currentQty = cartItemById[item._id]?.quantity || 0;
     const maxQty = item.maxQty ?? 100;
 
@@ -316,6 +339,10 @@ const VendorPosMenuScreen = ({ navigation, route }) => {
   };
 
   const goToCheckout = () => {
+    if (!walkUpAccess.allowed) {
+      Alert.alert("Walk-up ordering unavailable", WALK_UP_PLAN_MESSAGE);
+      return;
+    }
     if (order.items.length === 0) {
       Alert.alert("Empty cart", "Add at least one item.");
       return;

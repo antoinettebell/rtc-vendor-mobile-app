@@ -38,6 +38,11 @@ export const consumePendingAuthRoute = (pendingAuthRoute) => ({
   pendingAuthRoute: null,
 });
 
+export const consumeOtpCompletion = (completionPending) => ({
+  shouldComplete: completionPending === true,
+  completionPending: false,
+});
+
 export const getConsumedMarketplaceOtpState = ({ selectedPlan, user } = {}) => {
   const transition = getOtpCompletionTransition({ selectedPlan, user });
   return {

@@ -29,6 +29,7 @@ import {
   isVendorPaysToAttendEvent,
   styles,
 } from "./vendorMarketplaceShared";
+import { VendorMarketplaceCard, VendorMarketplaceStatusBadge } from "../components/VendorMarketplacePrimitives";
 
 const APPLICATION_STATUS_FILTERS = [
   { label: "All", value: "ALL" },
@@ -203,7 +204,7 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
     };
 
     return (
-      <View style={styles.card}>
+      <VendorMarketplaceCard>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <Text style={[styles.title, { flex: 1, paddingRight: 8 }]}>
             {event?.event_name || item.event_id}
@@ -223,9 +224,7 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
                 <MaterialIcons name="edit" size={22} color={AppColor.primary} />
               </TouchableOpacity>
             ) : null}
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{formatStatusLabel(status)}</Text>
-            </View>
+            <VendorMarketplaceStatusBadge status={status} />
           </View>
         </View>
         <Text style={styles.meta}>
@@ -254,7 +253,10 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
             activeOpacity={0.7}
             style={[styles.secondaryButton, { marginTop: 10 }]}
             onPress={() =>
-              navigation.navigate("vendorMarketplaceMessagesScreen", { eventId })
+              navigation.navigate("vendorMarketplaceMessagesScreen", {
+                eventId,
+                applicationId: item.application_id,
+              })
             }
           >
             <MaterialIcons
@@ -322,7 +324,7 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         ) : null}
-      </View>
+      </VendorMarketplaceCard>
     );
   };
 

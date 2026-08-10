@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   Modal,
@@ -13,9 +12,7 @@ import {
   View,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import StatusBarManager from "../components/StatusBarManager";
 import AppImage from "../components/AppImage";
 import StatePickerModal from "../components/StatePickerModal";
 import { AppColor, Mulish400, Mulish700 } from "../utils/theme";
@@ -27,7 +24,6 @@ import {
 import {
   CUISINE_OPTIONS,
   EVENT_TYPES,
-  MarketplaceHeader,
   formatDate,
   formatMoney,
   formatTimeRange,
@@ -40,6 +36,14 @@ import {
   listText,
   styles,
 } from "./vendorMarketplaceShared";
+import {
+  VendorMarketplaceCard,
+  VendorMarketplaceEmptyState,
+  VendorMarketplaceLoadingState,
+  VendorMarketplacePage,
+  VendorMarketplacePrimaryAction,
+  VendorMarketplaceSecondaryAction,
+} from "../components/VendorMarketplacePrimitives";
 
 const LockedMarketplace = ({ navigation }) => (
   <View style={[styles.body, { justifyContent: "center" }]}>
@@ -62,7 +66,6 @@ const LockedMarketplace = ({ navigation }) => (
 );
 
 const VendorMarketplaceNearMeScreen = ({ navigation }) => {
-  const insets = useSafeAreaInsets();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -211,34 +214,14 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
   const renderEventActions = (item) => {
     if (!isBothPaymentEvent(item)) {
       return (
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={[styles.button, { marginTop: 14 }]}
-          onPress={() => openEventAction(item)}
-        >
-          <Text style={styles.buttonText}>{getPrimaryActionLabel(item)}</Text>
-        </TouchableOpacity>
+        <VendorMarketplacePrimaryAction label={getPrimaryActionLabel(item)} style={{ marginTop: 14 }} onPress={() => openEventAction(item)} />
       );
     }
 
     return (
       <View style={{ gap: 10, marginTop: 14 }}>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={styles.button}
-          onPress={() => openEventAction(item, "application")}
-        >
-          <Text style={styles.buttonText}>Submit Application</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={[styles.secondaryButton, { paddingVertical: 14 }]}
-          onPress={() => openEventAction(item, "bid")}
-        >
-          <Text style={styles.secondaryButtonText}>
-            {item.catered_vip_section_enabled ? "Submit VIP Catering Bid" : "Submit Bid"}
-          </Text>
-        </TouchableOpacity>
+        <VendorMarketplacePrimaryAction label="Submit Application" onPress={() => openEventAction(item, "application")} />
+        <VendorMarketplaceSecondaryAction label={item.catered_vip_section_enabled ? "Submit VIP Catering Bid" : "Submit Bid"} style={{ paddingVertical: 14 }} onPress={() => openEventAction(item, "bid")} />
       </View>
     );
   };
@@ -249,11 +232,7 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
     const bothPay = isBothPaymentEvent(item);
 
     return (
-      <TouchableOpacity
-        activeOpacity={0.8}
-        style={styles.card}
-        onPress={() => openEventDetails(item)}
-      >
+      <VendorMarketplaceCard onPress={() => openEventDetails(item)}>
         <AppImage uri={imageUrl} containerStyle={styles.cardImage} />
         <Text style={styles.title}>{item.event_type || "Event"}</Text>
         <Text style={styles.subtitle} numberOfLines={2}>
@@ -290,14 +269,12 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
           Estimated guests: {item.number_of_guests || "Not set"}
         </Text>
         {renderEventActions(item)}
-      </TouchableOpacity>
+      </VendorMarketplaceCard>
     );
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBarManager />
-      <MarketplaceHeader
+    <VendorMarketplacePage
         title="Marketplace / Near Me"
         navigation={navigation}
         right={
@@ -318,13 +295,11 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
             ) : null}
           </TouchableOpacity>
         }
-      />
+    >
       {locked ? (
         <LockedMarketplace navigation={navigation} />
       ) : loading && !refreshing ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator color={AppColor.primary} size="large" />
-        </View>
+        <VendorMarketplaceLoadingState />
       ) : (
         <FlatList
           data={filteredEvents}
@@ -424,15 +399,7 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
             </View>
           }
           ListEmptyComponent={
-            <View style={styles.card}>
-              <Text style={[styles.title, { textAlign: "center" }]}>
-                No open events found
-              </Text>
-              <Text style={styles.emptyText}>
-                Adjust your filters or check back as coordinators publish new
-                events.
-              </Text>
-            </View>
+            <VendorMarketplaceEmptyState title="No open events found" message="Adjust your filters or check back as coordinators publish new events." />
           }
         />
       )}
@@ -480,7 +447,7 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
-    </View>
+    </VendorMarketplacePage>
   );
 };
 

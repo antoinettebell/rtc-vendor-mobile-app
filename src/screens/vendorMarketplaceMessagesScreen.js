@@ -19,13 +19,15 @@ import {
 } from "../api/appAPI";
 import {
   MarketplaceHeader,
-  getMarketplaceNotesError,
+  getMarketplaceMessageError,
   styles,
 } from "./vendorMarketplaceShared";
 
 const VendorMarketplaceMessagesScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const eventId = route?.params?.eventId;
+  const bidId = route?.params?.bidId || null;
+  const applicationId = route?.params?.applicationId || null;
   const [questions, setQuestions] = useState([]);
   const [qaArchived, setQaArchived] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -38,6 +40,8 @@ const VendorMarketplaceMessagesScreen = ({ navigation, route }) => {
     try {
       const response = await getMarketplaceEventQuestions_API(eventId, {
         markRead: true,
+        bid_id: bidId,
+        application_id: applicationId,
       });
       if (response?.success) {
         setQuestions(response.data?.marketplaceQuestionList || []);
@@ -53,15 +57,16 @@ const VendorMarketplaceMessagesScreen = ({ navigation, route }) => {
   useFocusEffect(
     useCallback(() => {
       loadQuestions();
-    }, [eventId])
+    }, [applicationId, bidId, eventId])
   );
 
-  const questionError = getMarketplaceNotesError(questionText);
+  const questionError = getMarketplaceMessageError(questionText);
+  const questionTooShort = questionText.trim().length < 3;
 
   const handleAskQuestion = async () => {
     const trimmedQuestion = questionText.trim();
-    if (!trimmedQuestion) {
-      Alert.alert("Messages", "Enter a question before posting.");
+    if (trimmedQuestion.length < 3) {
+      Alert.alert("Messages", "Enter at least 3 characters before posting.");
       return;
     }
     if (questionError) {
@@ -74,6 +79,8 @@ const VendorMarketplaceMessagesScreen = ({ navigation, route }) => {
       const response = await askMarketplaceEventQuestion_API({
         event_id: eventId,
         question_text: trimmedQuestion,
+        bid_id: bidId,
+        application_id: applicationId,
       });
       if (response?.success) {
         setQuestionText("");
@@ -173,9 +180,9 @@ const VendorMarketplaceMessagesScreen = ({ navigation, route }) => {
                 style={[
                   styles.button,
                   { marginTop: 10 },
-                  (submitting || !!questionError) && { opacity: 0.6 },
+                  (submitting || questionTooShort || !!questionError) && { opacity: 0.6 },
                 ]}
-                disabled={submitting || !!questionError}
+                disabled={submitting || questionTooShort || !!questionError}
                 onPress={handleAskQuestion}
               >
                 <Text style={styles.buttonText}>

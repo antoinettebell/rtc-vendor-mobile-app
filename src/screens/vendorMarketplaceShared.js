@@ -139,7 +139,13 @@ export const isEventAccessError = (error) =>
   /accept event bookings/i.test(error?.message || "");
 
 export const getMarketplaceNotesError = (value) => {
-  const text = String(value || "");
+  const original = String(value || "").normalize("NFKC");
+  const compact = original
+    .toLowerCase()
+    .replace(/\s+(?:\[\s*)?at(?:\s*\])?\s+/g, "@")
+    .replace(/\s+(?:\[\s*)?dot(?:\s*\])?\s+/g, ".")
+    .replace(/\s+/g, "");
+  const text = `${original} ${compact}`;
   if (!text.trim()) return "";
 
   const hasEmail = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(text);
@@ -164,15 +170,25 @@ export const getMarketplaceNotesError = (value) => {
       text,
     );
   const hasSocialHandle = /(^|\s)@[A-Z0-9_.-]{2,}/i.test(text);
+  const digitCount = original.replace(/\D/g, "").length;
+  const hasObfuscatedNumber = digitCount >= 10 && digitCount <= 19;
+  const hasPaymentHandle = /\$[a-z][a-z0-9_.-]{2,}/i.test(original);
 
   return hasEmail ||
     hasUrl ||
     hasPhone ||
     hasSocialOrPayment ||
     hasContactRequest ||
-    hasSocialHandle
+    hasSocialHandle ||
+    hasObfuscatedNumber ||
+    hasPaymentHandle
     ? "Notes cannot include contact info, social handles, payment handles, or requests to connect outside RTC."
     : "";
+};
+
+export const getMarketplaceMessageError = (value) => {
+  const error = getMarketplaceNotesError(value);
+  return error ? error.replace(/^Notes/, "Messages") : "";
 };
 
 export const normalizeMarketplaceRequirementLabel = (label) => {
@@ -380,13 +396,13 @@ export const getPaymentAmount = (event) =>
 export const getPrimaryActionLabel = (event) =>
   isVendorPaysToAttendEvent(event) ? "Submit Application" : "Submit Bid";
 
-export const MarketplaceHeader = ({ title, navigation, right }) => (
+export const MarketplaceHeader = ({ title, navigation, right, onBack }) => (
   <View style={styles.header}>
-    {navigation?.canGoBack?.() ? (
+    {onBack || navigation?.canGoBack?.() ? (
       <TouchableOpacity
         activeOpacity={0.7}
         style={styles.backButton}
-        onPress={() => navigation.goBack()}
+        onPress={onBack || (() => navigation.goBack())}
       >
         <Entypo name="chevron-left" size={30} color={AppColor.black} />
       </TouchableOpacity>

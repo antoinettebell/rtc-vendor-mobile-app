@@ -2,8 +2,10 @@ import React, { useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
 import MarketplaceImageViewer from "../components/MarketplaceImageViewer";
+import { VendorMarketplaceSectionCard } from "../components/VendorMarketplacePrimitives";
 import { getMarketplaceVendorEventPresentation } from "../helpers/eventVendorPresentation.helper";
 import { AppColor } from "../utils/theme";
+import { styles as marketplaceStyles } from "./vendorMarketplaceShared";
 
 const money = (value) => `$${Number(value || 0).toFixed(2)}`;
 const statusLabel = (value) => String(value || "SUBMITTED").replace(/_/g, " ");
@@ -21,14 +23,14 @@ export default function EventVendorSubmissionDetailsScreen({ navigation, route }
   };
 
   return (
-    <MarketplaceVendorScreenLayout title="Event Submission" onBack={goBack}>
+    <MarketplaceVendorScreenLayout title="Event Submission" onBack={goBack} navigation={navigation} marketplace>
       <ScrollView contentContainerStyle={s.page}>
         <Text style={s.eventName}>{presentation.name || "Event"}</Text>
         <Text style={s.status}>Status: {statusLabel(application.status)}</Text>
         {presentation.description ? <Text style={s.text}>{presentation.description}</Text> : null}
         {presentation.date ? <Text style={s.text}>{String(presentation.date)}{presentation.startTime ? ` · ${presentation.startTime}` : ""}</Text> : null}
         {presentation.location ? <Text style={s.text}>{presentation.location}</Text> : null}
-        <View style={s.section}>
+        <VendorMarketplaceSectionCard style={s.section}>
           <Text style={s.heading}>Submitted vendor types</Text>
           <Text style={s.text}>{(application.vendor_types || []).map(statusLabel).join(", ") || "Not provided"}</Text>
           <Text style={s.heading}>Products / Services Offered</Text>
@@ -41,9 +43,18 @@ export default function EventVendorSubmissionDetailsScreen({ navigation, route }
           <Text style={s.text}>{application.electricity_required ? `Required · ${money(application.electricity_fee)}` : "Not required"}</Text>
           <Text style={s.heading}>Agreement</Text>
           <Text style={s.text}>{application.nda_accepted_at && application.governance_accepted_at ? "Signed" : "Not available"}</Text>
-        </View>
+        </VendorMarketplaceSectionCard>
+        <TouchableOpacity
+          style={marketplaceStyles.secondaryButton}
+          onPress={() => navigation.navigate("vendorMarketplaceMessagesScreen", {
+            eventId: application.event_id || event.event_id,
+            applicationId: application.application_id,
+          })}
+        >
+          <Text style={marketplaceStyles.secondaryButtonText}>Message Coordinator</Text>
+        </TouchableOpacity>
         {photos.length ? (
-          <View style={s.section}>
+          <VendorMarketplaceSectionCard style={s.section}>
             <Text style={s.heading}>Submitted Photos</Text>
             <View style={s.photos}>
               {photos.map((photo, index) => (
@@ -53,11 +64,11 @@ export default function EventVendorSubmissionDetailsScreen({ navigation, route }
                 </TouchableOpacity>
               ))}
             </View>
-          </View>
+          </VendorMarketplaceSectionCard>
         ) : null}
         {paymentDue ? (
-          <TouchableOpacity style={s.primary} onPress={() => navigation.navigate("vendorMarketplacePaymentScreen", { paymentId: application.payment_id, returnScreen: "eventVendorMarketplaceScreen" })}>
-            <Text style={s.primaryText}>Complete Award Checkout</Text>
+          <TouchableOpacity style={marketplaceStyles.button} onPress={() => navigation.navigate("vendorMarketplacePaymentScreen", { paymentId: application.payment_id, returnScreen: "eventVendorMarketplaceScreen" })}>
+            <Text style={marketplaceStyles.buttonText}>Complete Award Checkout</Text>
           </TouchableOpacity>
         ) : null}
         {["AWARDED", "PAID"].includes(application.status) ? (
@@ -81,5 +92,7 @@ const s = StyleSheet.create({
   caption: { width: 104, color: "#64748b", fontSize: 11, marginTop: 3 },
   primary: { backgroundColor: AppColor.primary, padding: 15, borderRadius: 10, alignItems: "center", marginTop: 20 },
   primaryText: { color: "#fff", fontWeight: "800" },
+  secondary: { borderWidth: 1, borderColor: AppColor.primary, padding: 14, borderRadius: 10, alignItems: "center", marginTop: 18 },
+  secondaryText: { color: AppColor.primary, fontWeight: "800" },
   awardNotice: { backgroundColor: "#ecfdf5", color: "#166534", padding: 12, borderRadius: 10, marginTop: 16 },
 });

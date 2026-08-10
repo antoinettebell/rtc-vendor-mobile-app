@@ -39,6 +39,8 @@ import {
   setVendorOnboardingStep,
 } from "../redux/slices/authSlice";
 import { setBankStatus, setProfileStatus } from "../redux/slices/userSlice";
+import StatePickerModal from "../components/StatePickerModal";
+import { getStateCode } from "../utils/usStates";
 
 const validateAccountHolderName = (text) => {
   if (!text.trim()) return "Account holder name is required";
@@ -195,7 +197,7 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
         bankAddressLine1,
         bankAddressLine2,
         bankCity,
-        bankState,
+        bankState: getStateCode(bankState),
         bankPostal,
       });
       const response = await addBankDetail_API(payload);
@@ -602,8 +604,6 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
                 ["Bank Address", bankAddressLine1, setBankAddressLine1, "bankAddressLine1"],
                 ["Bank Address Line 2", bankAddressLine2, setBankAddressLine2, null],
                 ["Bank City", bankCity, setBankCity, "bankCity"],
-                ["Bank State", bankState, setBankState, "bankState"],
-                ["Bank Postal Code", bankPostal, setBankPostal, "bankPostal"],
               ].map(([label, value, setter, errorKey]) => (
                 <View style={styles.section} key={label}>
                   <Text style={styles.inputLabel}>{label}</Text>
@@ -622,6 +622,42 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
                   {errorKey && errors[errorKey] ? <HelperText type="error">{errors[errorKey]}</HelperText> : null}
                 </View>
               ))}
+              <View style={styles.section}>
+                <StatePickerModal
+                  label="Bank State"
+                  value={bankState}
+                  error={errors.bankState}
+                  onChange={(value) => {
+                    setBankState(getStateCode(value));
+                    if (value) {
+                      setErrors((current) => ({ ...current, bankState: "" }));
+                    }
+                  }}
+                />
+                {!!errors.bankState && (
+                  <HelperText type="error">{errors.bankState}</HelperText>
+                )}
+              </View>
+              <View style={styles.section}>
+                <Text style={styles.inputLabel}>Bank Postal Code</Text>
+                <TextInput
+                  dense
+                  value={bankPostal}
+                  onChangeText={(text) => {
+                    setBankPostal(text);
+                    if (text.trim()) {
+                      setErrors((current) => ({ ...current, bankPostal: "" }));
+                    }
+                  }}
+                  placeholder="Bank Postal Code"
+                  mode="outlined"
+                  style={styles.inputStyle}
+                  error={!!errors.bankPostal}
+                />
+                {!!errors.bankPostal && (
+                  <HelperText type="error">{errors.bankPostal}</HelperText>
+                )}
+              </View>
               </View>
               {/* Remittance Email */}
               <View style={[styles.section, !requiresQrCode && { display: "none" }]}>

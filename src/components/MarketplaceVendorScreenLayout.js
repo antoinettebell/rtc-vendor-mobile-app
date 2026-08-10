@@ -2,15 +2,28 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppColor } from "../utils/theme";
+import StatusBarManager from "./StatusBarManager";
+import { MarketplaceHeader, styles as marketplaceStyles } from "../screens/vendorMarketplaceShared";
 
 export default function MarketplaceVendorScreenLayout({
   title,
   subtitle,
   onBack,
   onSignOut,
+  navigation,
+  marketplace = false,
   children,
 }) {
   const insets = useSafeAreaInsets();
+  if (marketplace) {
+    return (
+      <View style={[marketplaceStyles.container, { paddingTop: insets.top }]}>
+        <StatusBarManager />
+        <MarketplaceHeader title={title} navigation={navigation} onBack={onBack} />
+        <View style={[styles.content, { paddingBottom: Math.max(insets.bottom, 4) }]}>{children}</View>
+      </View>
+    );
+  }
   return (
     <View style={[styles.page, { paddingTop: insets.top }]}>
       <View style={styles.header}>

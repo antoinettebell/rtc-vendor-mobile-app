@@ -32,6 +32,11 @@ const {
 } = await loadHelper(
   "./marketplaceBidEligibility.helper.js",
 );
+const { getStateCode, getStateLabel } = await loadHelper("../utils/usStates.js");
+
+assert.equal(getStateCode("South Carolina"), "SC");
+assert.equal(getStateCode("sc"), "SC");
+assert.equal(getStateLabel("SC"), "South Carolina");
 
 const start = new Date(2026, 7, 9, 13, 0);
 const end = new Date(2026, 7, 9, 17, 0);
@@ -113,6 +118,19 @@ const bidScreenSource = await readFile(new URL("../screens/vendorMarketplaceBidR
 assert.match(bidScreenSource, /initialEvent\?\.event_id/);
 assert.match(bidScreenSource, /useMarketplaceAgreementCompletion/);
 assert.match(bidScreenSource, /bidBlockingReasons/);
+
+const [onboardingBankSource, editBankSource, employeeSessionSource] = await Promise.all([
+  readFile(new URL("../screens/authFoodTruckBankDetailScreen.js", import.meta.url), "utf8"),
+  readFile(new URL("../screens/editBankDetailScreen.js", import.meta.url), "utf8"),
+  readFile(new URL("../screens/employeeSessionScreen.js", import.meta.url), "utf8"),
+]);
+assert.match(onboardingBankSource, /<StatePickerModal/);
+assert.match(onboardingBankSource, /bankState: getStateCode\(bankState\)/);
+assert.doesNotMatch(onboardingBankSource, /\["Bank State", bankState, setBankState/);
+assert.match(editBankSource, /<StatePickerModal/);
+assert.match(editBankSource, /setState\(getStateCode\(/);
+assert.match(employeeSessionSource, /!canUseWalkUpPos/);
+assert.match(employeeSessionSource, /WALK_UP_PLAN_MESSAGE/);
 assert.deepEqual(
   getBidBlockingReasons({
     eventId: "event-1",

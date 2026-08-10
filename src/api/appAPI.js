@@ -295,7 +295,11 @@ export const getMarketplaceEventById_API = async (event_id) => {
 
 export const getMarketplaceEventQuestions_API = async (event_id, options = {}) => {
   try {
-    const query = options.markRead ? "?markRead=true" : "";
+    const params = new URLSearchParams();
+    if (options.markRead) params.set("markRead", "true");
+    if (options.bid_id) params.set("bid_id", options.bid_id);
+    if (options.application_id) params.set("application_id", options.application_id);
+    const query = params.toString() ? `?${params.toString()}` : "";
     const response = await apiClient.get(
       `${MARKETPLACE_EVENT_QUESTIONS(event_id)}${query}`,
       {
@@ -308,11 +312,16 @@ export const getMarketplaceEventQuestions_API = async (event_id, options = {}) =
   }
 };
 
-export const askMarketplaceEventQuestion_API = async ({ event_id, question_text }) => {
+export const askMarketplaceEventQuestion_API = async ({
+  event_id,
+  question_text,
+  bid_id = null,
+  application_id = null,
+}) => {
   try {
     const response = await apiClient.post(
       MARKETPLACE_EVENT_QUESTIONS(event_id),
-      { question_text },
+      { question_text, bid_id, application_id },
       { skipToken: false },
     );
     return response?.data;

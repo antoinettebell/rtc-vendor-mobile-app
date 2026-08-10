@@ -46,6 +46,7 @@ import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
 import {
   performAuthNavigation,
   getConsumedMarketplaceOtpState,
+  consumeOtpCompletion,
   SIGNIN_ROUTE,
   isMarketplaceVendorSignup,
 } from "../helpers/signupNavigation.helper";
@@ -58,6 +59,7 @@ const OtpVerificationScreen = ({ route }) => {
   const dispatch = useDispatch();
   const { selectedPlan } = useSelector((state) => state.userReducer);
   const timerRef = useRef(null);
+  const completionPendingRef = useRef(false);
 
   const [resendTimer, setResendTimer] = useState(RESEND_CODE_TIME);
   const [params, setParams] = useState(route.params);
@@ -73,6 +75,34 @@ const OtpVerificationScreen = ({ route }) => {
   const [verifiedUser, setVerifiedUser] = useState(null);
 
   const inputRefs = useRef([]);
+
+  const completeSignupTransition = () => {
+    const completion = consumeOtpCompletion(completionPendingRef.current);
+    completionPendingRef.current = completion.completionPending;
+    if (!completion.shouldComplete) return;
+    const transition = getConsumedMarketplaceOtpState({
+      selectedPlan,
+      user: verifiedUser || params?.data?.user,
+    });
+    dispatch(onOnBoard(transition.isOnboarded));
+    dispatch(onUnderReview(transition.isUnderReview));
+    dispatch(setVendorOnboardingStep(transition.vendorOnboardingStep));
+    dispatch(
+      setEventVendorOnboardingSessionActive(
+        transition.eventVendorOnboardingSessionActive,
+      ),
+    );
+    if (
+      isMarketplaceVendorSignup({
+        selectedPlan,
+        user: verifiedUser || params?.data?.user,
+      })
+    ) {
+      dispatch(setSelectedPlan(transition.selectedPlan));
+      dispatch(setSelectedSignupAddOns(transition.selectedSignupAddOns));
+      dispatch(setPendingAuthRoute(transition.pendingAuthRoute));
+    }
+  };
 
   // Combine digits
   const otp = otpDigits.join("");
@@ -343,6 +373,7 @@ const OtpVerificationScreen = ({ route }) => {
       {/* Success Modal */}
       <Modal
         isVisible={isModalVisible}
+        onModalHide={completeSignupTransition}
         backdropOpacity={0.5}
         useNativeDriverForBackdrop={true}
         useNativeDriver={true}
@@ -367,26 +398,9 @@ const OtpVerificationScreen = ({ route }) => {
             style={styles.backToLoginButton}
             activeOpacity={0.7}
             onPress={() => {
+              if (completionPendingRef.current) return;
+              completionPendingRef.current = true;
               setModalVisible(false);
-              const transition = getConsumedMarketplaceOtpState({
-                selectedPlan,
-                user: verifiedUser || params?.data?.user,
-              });
-              dispatch(onOnBoard(transition.isOnboarded));
-              dispatch(onUnderReview(transition.isUnderReview));
-              dispatch(
-                setVendorOnboardingStep(transition.vendorOnboardingStep),
-              );
-              dispatch(
-                setEventVendorOnboardingSessionActive(
-                  transition.eventVendorOnboardingSessionActive,
-                ),
-              );
-              if (isMarketplaceVendorSignup({ selectedPlan, user: verifiedUser || params?.data?.user })) {
-                dispatch(setSelectedPlan(transition.selectedPlan));
-                dispatch(setSelectedSignupAddOns(transition.selectedSignupAddOns));
-                dispatch(setPendingAuthRoute(transition.pendingAuthRoute));
-              }
             }}
           >
             <Text style={styles.backToLoginText}>{"Next"}</Text>

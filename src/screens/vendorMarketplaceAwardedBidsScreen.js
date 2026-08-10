@@ -29,6 +29,7 @@ import {
   isVendorPaysToAttendEvent,
   styles,
 } from "./vendorMarketplaceShared";
+import { VendorMarketplaceCard, VendorMarketplaceStatusBadge } from "../components/VendorMarketplacePrimitives";
 
 const TIME_FILTERS = [
   { label: "Upcoming", value: "UPCOMING" },
@@ -275,16 +276,10 @@ const VendorMarketplaceAwardedBidsScreen = ({ navigation }) => {
     const isVendorPays =
       item.paymentType === MARKETPLACE_PAYMENT_TYPES.VENDOR_PAYS_TO_ATTEND;
     return (
-      <TouchableOpacity
-        activeOpacity={0.86}
-        style={styles.card}
-        onPress={() => openDetails(item)}
-      >
+      <VendorMarketplaceCard activeOpacity={0.86} onPress={() => openDetails(item)}>
         <View style={styles.rowBetween}>
           <PaymentTypeBadge item={item} />
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{item.statusLabel}</Text>
-          </View>
+          <VendorMarketplaceStatusBadge status={item.statusLabel} />
         </View>
         <Text style={[styles.title, { marginTop: 12 }]}>
           {event.event_name || "Marketplace Event"}
@@ -309,7 +304,11 @@ const VendorMarketplaceAwardedBidsScreen = ({ navigation }) => {
             activeOpacity={0.8}
             style={[styles.secondaryButton, { marginTop: 10 }]}
             onPress={() =>
-              navigation.navigate("vendorMarketplaceMessagesScreen", { eventId })
+              navigation.navigate("vendorMarketplaceMessagesScreen", {
+                eventId,
+                bidId: item.bid?.bid_id || null,
+                applicationId: item.application?.application_id || null,
+              })
             }
           >
             <MaterialIcons
@@ -322,7 +321,7 @@ const VendorMarketplaceAwardedBidsScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         ) : null}
-      </TouchableOpacity>
+      </VendorMarketplaceCard>
     );
   };
 

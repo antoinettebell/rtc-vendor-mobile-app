@@ -62,7 +62,6 @@ assert.match(helper.getPhotoRepositoryPresentation({ review_status: "DRAFT" }, 2
 
 const layout = await readFile(new URL("../components/MarketplaceVendorScreenLayout.js", import.meta.url), "utf8");
 for (const file of [
-  "../screens/eventVendorMarketplaceScreen.js",
   "../screens/eventVendorApplicationScreen.js",
   "../screens/eventVendorPhotosScreen.js",
   "../screens/eventVendorProfileScreen.js",

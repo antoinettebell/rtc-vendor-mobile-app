@@ -56,7 +56,15 @@ import {
 } from "../redux/slices/authSlice";
 import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
 import MarketplaceImageViewer from "../components/MarketplaceImageViewer";
+import { VendorMarketplaceHeroImages, VendorMarketplaceSectionCard } from "../components/VendorMarketplacePrimitives";
 import { getMarketplaceVendorEventPresentation } from "../helpers/eventVendorPresentation.helper";
+import { styles as marketplaceStyles } from "./vendorMarketplaceShared";
+const defaultParticipationPath = (event = {}) => {
+  const responsibility = String(event.payment_responsibility || event.who_pays || "NONE").toUpperCase();
+  if (responsibility === "COORDINATOR") return "BID";
+  if (responsibility === "VENDOR" || responsibility === "NONE") return "APPLICATION";
+  return "";
+};
 export default function EventVendorApplicationScreen({ navigation, route }) {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.userReducer.user);
@@ -69,6 +77,9 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
   const [photos, setPhotos] = useState([]);
   const [selected, setSelected] = useState([]);
   const [types, setTypes] = useState([]);
+  const [participationPath, setParticipationPath] = useState(
+    existingApplication?.participation_path || defaultParticipationPath(event),
+  );
   const [bullets, setBullets] = useState("• ");
   const [price, setPrice] = useState("");
   const [priceFocused, setPriceFocused] = useState(false);
@@ -118,6 +129,11 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
           selectedTypes: draft?.types,
         });
         setTypes(normalizedTypeState.selectedTypes);
+        setParticipationPath(
+          draft?.participationPath ||
+          existingApplication?.participation_path ||
+          defaultParticipationPath(currentEvent),
+        );
         if (draft) {
           setSelected(Array.isArray(draft.selected) ? draft.selected : []);
           setBullets(normalizeApplicationBullets(draft.bullets));
@@ -190,6 +206,7 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
         electricity,
         feeAck,
         pendingAgreement: hasPendingAgreement,
+        participationPath,
         vendor_user_id: vendorId,
       },
       profile,
@@ -297,6 +314,10 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
     }
   };
   const submitApplication = async () => {
+    if (!participationPath && String(hydratedEvent.payment_responsibility || "").toUpperCase() === "BOTH") {
+      Alert.alert("Application", "Choose whether this submission belongs in My Bids or My Applications.");
+      return;
+    }
     const normalized = normalizedTypeState();
     if (!normalized.eligibleTypes.length) {
       Alert.alert("Application Unavailable", "This event is no longer requesting a vendor type approved for your profile.");
@@ -317,6 +338,7 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
         additional_notes: notes,
         electricity_required: electricity,
         electricity_fee_acknowledged: feeAck,
+        participation_path: participationPath || defaultParticipationPath(hydratedEvent),
       });
       await clearEventVendorApplicationRecovery({
         storage: AsyncStorage,
@@ -360,6 +382,10 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
     },
   });
   const startSigningAndSubmit = async () => {
+    if (!participationPath && String(hydratedEvent.payment_responsibility || "").toUpperCase() === "BOTH") {
+      Alert.alert("Marketplace Agreements", "Choose whether this submission belongs in My Bids or My Applications.");
+      return;
+    }
     const normalized = normalizedTypeState();
     if (!normalized.eligibleTypes.length) {
       Alert.alert("Application Unavailable", "This event is no longer requesting a vendor type approved for your profile.");
@@ -392,32 +418,43 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
     <MarketplaceVendorScreenLayout
       title="Event Details & Application"
       onBack={returnToMarketplace}
+      navigation={navigation}
+      marketplace
     >
     <ScrollView contentContainerStyle={s.page}>
-      {eventPresentation.images.length ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.eventImages}>
-          {eventPresentation.images.map((image, index) => (
-            <TouchableOpacity key={image.image_id} onPress={() => setEventImageIndex(index)}>
-              <Image source={{ uri: image.image_url }} style={s.eventPhoto} />
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      ) : null}
-      <Text style={s.heading}>{eventPresentation.name}</Text>
-      <Text style={s.description}>{eventPresentation.description}</Text>
-      <View style={s.eventDetails}>
-        <Text style={s.meta}>Date: {eventPresentation.date || "Not provided"}</Text>
-        <Text style={s.meta}>Time: {[eventPresentation.startTime, eventPresentation.endTime].filter(Boolean).join(" – ") || "Not provided"}</Text>
-        <Text style={s.meta}>Location: {eventPresentation.location}</Text>
-        <Text style={s.meta}>Expected guests: {eventPresentation.expectedGuests || "Not provided"}</Text>
-        <Text style={s.meta}>Who pays: {eventPresentation.whoPays}</Text>
-        <Text style={s.meta}>Last date to accept payment: {eventPresentation.paymentDeadline || "Not provided"}</Text>
+      <VendorMarketplaceHeroImages images={eventPresentation.images} onOpen={setEventImageIndex} />
+      <Text style={marketplaceStyles.title}>{eventPresentation.name}</Text>
+      <Text style={marketplaceStyles.subtitle}>{eventPresentation.description}</Text>
+      <VendorMarketplaceSectionCard>
+        <Text style={marketplaceStyles.meta}>Date: {eventPresentation.date || "Not provided"}</Text>
+        <Text style={marketplaceStyles.meta}>Time: {[eventPresentation.startTime, eventPresentation.endTime].filter(Boolean).join(" – ") || "Not provided"}</Text>
+        <Text style={marketplaceStyles.meta}>Location: {eventPresentation.location}</Text>
+        <Text style={marketplaceStyles.meta}>Expected guests: {eventPresentation.expectedGuests || "Not provided"}</Text>
+        <Text style={marketplaceStyles.meta}>Who pays: {eventPresentation.whoPays}</Text>
+        <Text style={marketplaceStyles.meta}>Last date to accept payment: {eventPresentation.paymentDeadline || "Not provided"}</Text>
         {eventPresentation.needs.map((need) => (
-          <Text key={need.vendorType} style={s.meta}>
+          <Text key={need.vendorType} style={marketplaceStyles.meta}>
             {need.vendorType}: {need.remaining} remaining · ${need.fee.toFixed(2)} fee
           </Text>
         ))}
-      </View>
+      </VendorMarketplaceSectionCard>
+      {String(hydratedEvent.payment_responsibility || "").toUpperCase() === "BOTH" ? (
+        <VendorMarketplaceSectionCard>
+          <Text style={marketplaceStyles.label}>Choose your participation path *</Text>
+          <TouchableOpacity
+            style={[marketplaceStyles.secondaryButton, participationPath === "BID" && s.on]}
+            onPress={() => setParticipationPath("BID")}
+          >
+            <Text style={marketplaceStyles.secondaryButtonText}>My Bid — Coordinator-paid opportunity</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[marketplaceStyles.secondaryButton, { marginTop: 10 }, participationPath === "APPLICATION" && s.on]}
+            onPress={() => setParticipationPath("APPLICATION")}
+          >
+            <Text style={marketplaceStyles.secondaryButtonText}>My Application — Vendor-paid opportunity</Text>
+          </TouchableOpacity>
+        </VendorMarketplaceSectionCard>
+      ) : null}
       <Text style={s.meta}>
         Business: {profile?.business_name || "Complete profile"}
       </Text>
@@ -529,11 +566,11 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
       {confirmingAgreement ? (
         <Text style={s.confirming}>Confirming your signed agreements…</Text>
       ) : null}
-      <TouchableOpacity style={s.saveDraft} onPress={saveDraft}>
-        <Text style={s.saveDraftText}>Save Draft</Text>
+      <TouchableOpacity style={marketplaceStyles.secondaryButton} onPress={saveDraft}>
+        <Text style={marketplaceStyles.secondaryButtonText}>Save Draft</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={s.submit} onPress={startSigningAndSubmit}>
-        <Text style={s.submitText}>Sign Agreements &amp; Submit</Text>
+      <TouchableOpacity style={[marketplaceStyles.button, { marginTop: 12 }]} onPress={startSigningAndSubmit}>
+        <Text style={marketplaceStyles.buttonText}>Sign Agreements &amp; Submit</Text>
       </TouchableOpacity>
     </ScrollView>
     <MarketplaceImageViewer

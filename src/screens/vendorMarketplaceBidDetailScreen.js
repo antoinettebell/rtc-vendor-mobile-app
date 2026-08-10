@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StatusBarManager from "../components/StatusBarManager";
+import MarketplaceImageViewer from "../components/MarketplaceImageViewer";
 import {
   MarketplaceHeader,
   MarketplaceAttachmentPicker,
@@ -52,6 +53,11 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
   const bid = route?.params?.bid || {};
   const event = route?.params?.event || getBidEvent(bid);
   const attachments = Array.isArray(bid.attachments) ? bid.attachments : [];
+  const imageAttachments = attachments.filter((item) =>
+    String(item.mime_type || "").startsWith("image/") || item.attachment_type === "BID_IMAGE",
+  );
+  const documentAttachments = attachments.filter((item) => !imageAttachments.includes(item));
+  const [viewer, setViewer] = useState(null);
   const canRevise = isBidRevisionRequested(bid);
 
   return (
@@ -92,6 +98,16 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
             value={formatMoney(event?.budgeted_amount)}
           />
         </View>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={[styles.secondaryButton, { marginBottom: 14 }]}
+          onPress={() => navigation.navigate("vendorMarketplaceMessagesScreen", {
+            eventId: bid.event_id || event?.event_id,
+            bidId: bid.bid_id,
+          })}
+        >
+          <Text style={styles.secondaryButtonText}>Message Coordinator</Text>
+        </TouchableOpacity>
 
         <View style={styles.card}>
           <Text style={styles.title}>Bid Response</Text>
@@ -151,12 +167,23 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
         <View style={styles.card}>
           <Text style={styles.title}>Uploaded Files</Text>
           <MarketplaceAttachmentPicker
-            attachments={attachments}
+            attachments={documentAttachments}
             getLabel={attachmentPickerLabel}
             emptyText="No files uploaded for this bid."
           />
+          {imageAttachments.map((attachment, index) => (
+            <TouchableOpacity key={attachment.attachment_id || attachment.file_url} onPress={() => setViewer(index)}>
+              <Text style={[styles.secondaryButtonText, { marginTop: 12 }]}>View {attachmentPickerLabel(attachment)}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </ScrollView>
+      <MarketplaceImageViewer
+        images={imageAttachments.map((item) => item.file_url)}
+        initialIndex={viewer || 0}
+        visible={viewer !== null}
+        onClose={() => setViewer(null)}
+      />
     </View>
   );
 };

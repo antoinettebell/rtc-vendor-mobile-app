@@ -29,6 +29,7 @@ import {
   isVendorPaysToAttendEvent,
   styles,
 } from "./vendorMarketplaceShared";
+import { VendorMarketplaceCard, VendorMarketplaceStatusBadge } from "../components/VendorMarketplacePrimitives";
 
 const BID_STATUS_FILTERS = [
   { label: "All", value: "ALL" },
@@ -171,7 +172,7 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
     };
 
     return (
-      <View style={styles.card}>
+      <VendorMarketplaceCard>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <Text style={[styles.title, { flex: 1, paddingRight: 8 }]}>
             {event?.event_name || item.event_id}
@@ -189,11 +190,7 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
                 <MaterialIcons name="edit" size={22} color={AppColor.primary} />
               </TouchableOpacity>
             ) : null}
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>
-                {formatStatusLabel(item.bid_status)}
-              </Text>
-            </View>
+            <VendorMarketplaceStatusBadge status={item.bid_status} />
           </View>
         </View>
         <Text style={styles.meta}>
@@ -227,7 +224,10 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
             activeOpacity={0.7}
             style={[styles.secondaryButton, { marginTop: 10 }]}
             onPress={() =>
-              navigation.navigate("vendorMarketplaceMessagesScreen", { eventId })
+              navigation.navigate("vendorMarketplaceMessagesScreen", {
+                eventId,
+                bidId: item.bid_id,
+              })
             }
           >
             <MaterialIcons
@@ -270,7 +270,7 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         ) : null}
-      </View>
+      </VendorMarketplaceCard>
     );
   };
 

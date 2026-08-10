@@ -3,20 +3,34 @@ import {
   Alert,
   FlatList,
   Image,
+  RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import {
   getEventVendorApplications_API,
   getEventVendorEvents_API,
   withdrawEventVendorApplication_API,
 } from "../api/appAPI";
 import { AppColor } from "../utils/theme";
-import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
 import MarketplaceImageViewer from "../components/MarketplaceImageViewer";
+import VendorMarketplaceLanding, { VENDOR_MARKETPLACE_NAVIGATION } from "../components/VendorMarketplaceLanding";
+import { styles } from "./vendorMarketplaceShared";
+import {
+  VendorMarketplaceCard,
+  VendorMarketplaceActionRow,
+  VendorMarketplaceEmptyState,
+  VendorMarketplaceLoadingState,
+  VendorMarketplacePage,
+  VendorMarketplacePrimaryAction,
+  VendorMarketplaceSecondaryAction,
+  VendorMarketplaceStatusBadge,
+} from "../components/VendorMarketplacePrimitives";
 import { getMarketplaceVendorEventPresentation } from "../helpers/eventVendorPresentation.helper";
 import {
   canEditEventVendorSubmission,
@@ -24,13 +38,15 @@ import {
   splitEventVendorApplications,
 } from "../helpers/eventVendorSubmissionLifecycle.helper";
 
-export default function EventVendorMarketplaceScreen({ navigation }) {
+export default function EventVendorMarketplaceScreen({ navigation, route }) {
   const [events, setEvents] = useState([]);
   const [applications, setApplications] = useState([]);
   const [message, setMessage] = useState("");
   const [viewer, setViewer] = useState(null);
-  const [section, setSection] = useState("MARKETPLACE");
+  const [loading, setLoading] = useState(false);
+  const section = route?.params?.section || null;
   const load = useCallback(async () => {
+    setLoading(true);
     try {
       const [r, applicationResponse] = await Promise.all([
         getEventVendorEvents_API(),
@@ -44,6 +60,8 @@ export default function EventVendorMarketplaceScreen({ navigation }) {
         e?.message ||
           "Complete your Marketplace Vendor profile to see matching events.",
       );
+    } finally {
+      setLoading(false);
     }
   }, []);
   useFocusEffect(
@@ -52,9 +70,11 @@ export default function EventVendorMarketplaceScreen({ navigation }) {
     }, [load]),
   );
   const categorized = useMemo(() => splitEventVendorApplications(applications), [applications]);
-  const withdraw = (application) => Alert.alert(
-    "Withdraw Application",
-    "Withdraw this event submission? It will remain in My Applications as history.",
+  const withdraw = (application) => {
+    const isBid = application.participation_path === "BID";
+    return Alert.alert(
+    isBid ? "Withdraw Bid" : "Withdraw Application",
+    `Withdraw this event submission? It will remain in ${isBid ? "My Bids" : "My Applications"} as history.`,
     [
       { text: "Cancel", style: "cancel" },
       {
@@ -71,72 +91,92 @@ export default function EventVendorMarketplaceScreen({ navigation }) {
       },
     ],
   );
+  };
   const renderApplication = ({ item }) => {
     const event = item.event || {};
     const editable = canEditEventVendorSubmission(item, event);
     const withdrawable = canWithdrawEventVendorSubmission(item, event);
+    const isBidPath = item.participation_path === "BID";
     return (
-      <View style={s.card}>
-        <Text style={s.title}>{event.event_name || "Event Submission"}</Text>
-        <Text style={s.meta}>Status: {String(item.status || "SUBMITTED").replaceAll("_", " ")}</Text>
-        <Text style={s.meta}>{(item.offering_bullets || []).map((value) => `• ${value}`).join("\n")}</Text>
+      <VendorMarketplaceCard style={s.card}>
+        <Text style={styles.title}>{event.event_name || "Event Submission"}</Text>
+        <VendorMarketplaceStatusBadge status={item.status} style={{ alignSelf: "flex-start", marginTop: 8 }} />
+        <Text style={styles.meta}>{(item.offering_bullets || []).map((value) => `• ${value}`).join("\n")}</Text>
         {editable ? (
-          <View style={s.actions}>
+          <VendorMarketplaceActionRow vertical>
             <View>
-              <TouchableOpacity onPress={() => navigation.navigate("eventVendorSubmissionDetailsScreen", { application: item, event })}>
-                <Text style={s.apply}>View Submission</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => navigation.navigate("eventVendorApplicationScreen", { event, application: item })}>
-                <Text style={s.apply}>Edit Event Submission</Text>
-              </TouchableOpacity>
+              <VendorMarketplaceSecondaryAction label={isBidPath ? "View Bid" : "View Submission"} onPress={() => navigation.navigate("eventVendorSubmissionDetailsScreen", { application: item, event })} />
+              <VendorMarketplacePrimaryAction label={isBidPath ? "Edit Bid Submission" : "Edit Event Submission"} style={{ marginTop: 10 }} onPress={() => navigation.navigate("eventVendorApplicationScreen", { event, application: item })} />
             </View>
-            {withdrawable ? <TouchableOpacity onPress={() => withdraw(item)}>
-              <Text style={s.withdraw}>Withdraw</Text>
-            </TouchableOpacity> : null}
-          </View>
+            {withdrawable ? <VendorMarketplaceSecondaryAction label="Withdraw" destructive style={{ marginTop: 10 }} onPress={() => withdraw(item)} /> : null}
+          </VendorMarketplaceActionRow>
         ) : item.status === "PAYMENT_DUE" ? (
           <View>
-            <TouchableOpacity onPress={() => navigation.navigate("eventVendorSubmissionDetailsScreen", { application: item, event })}>
-              <Text style={s.readOnly}>View Awarded Event</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate("vendorMarketplacePaymentScreen", { paymentId: item.payment_id, returnScreen: "eventVendorMarketplaceScreen" })}>
-              <Text style={s.apply}>Complete Award Checkout</Text>
-            </TouchableOpacity>
+            <VendorMarketplaceSecondaryAction label="View Awarded Event" onPress={() => navigation.navigate("eventVendorSubmissionDetailsScreen", { application: item, event })} />
+            <VendorMarketplacePrimaryAction label="Complete Award Checkout" style={{ marginTop: 10 }} onPress={() => navigation.navigate("vendorMarketplacePaymentScreen", { paymentId: item.payment_id, returnScreen: "eventVendorMarketplaceScreen" })} />
           </View>
         ) : (
-          <TouchableOpacity onPress={() => navigation.navigate("eventVendorSubmissionDetailsScreen", { application: item, event })}>
-            <Text style={s.readOnly}>{["AWARDED", "PAYMENT_DUE", "PAID"].includes(item.status) ? "View Awarded Event" : "View Submission"}</Text>
-          </TouchableOpacity>
+          <VendorMarketplaceSecondaryAction label={["AWARDED", "PAYMENT_DUE", "PAID"].includes(item.status) ? "View Awarded Event" : "View Submission"} onPress={() => navigation.navigate("eventVendorSubmissionDetailsScreen", { application: item, event })} />
         )}
-      </View>
+      </VendorMarketplaceCard>
     );
   };
+  const goToLanding = () => navigation.setParams({ section: undefined });
+  const sectionTitle = {
+    MARKETPLACE: "Marketplace / Near Me",
+    BIDS: "My Bids",
+    APPLICATIONS: "My Applications",
+    AWARDED: "Awarded Events",
+  }[section];
+  const data = section === "MARKETPLACE"
+    ? events
+    : section === "BIDS"
+      ? categorized.bids
+    : section === "APPLICATIONS"
+      ? categorized.applications
+      : section === "AWARDED"
+        ? categorized.awarded
+        : [];
   return (
-    <MarketplaceVendorScreenLayout
-      title="Event Marketplace"
-      subtitle="Only events requesting your vendor type are shown."
+    <VendorMarketplacePage
+      title={sectionTitle || "Marketplace"}
+      navigation={navigation}
+      onBack={section ? goToLanding : undefined}
+      right={
+        <TouchableOpacity disabled={loading} onPress={load} style={s.refreshButton}>
+          <MaterialIcons name="refresh" size={25} color={loading ? AppColor.gray : AppColor.primary} />
+        </TouchableOpacity>
+      }
     >
+      {!section ? (
+        <ScrollView contentContainerStyle={styles.body}>
+          <VendorMarketplaceLanding
+            cards={VENDOR_MARKETPLACE_NAVIGATION.map((item) => item.key === "MARKETPLACE"
+              ? { ...item, subtitle: "View sourcing events and Marketplace Vendor opportunities near you." }
+              : item)}
+            onSelect={(item) => navigation.setParams({ section: item.key })}
+          />
+        </ScrollView>
+      ) : loading ? (
+        <VendorMarketplaceLoadingState />
+      ) : message ? (
+        <ScrollView contentContainerStyle={styles.body}>
+          <VendorMarketplaceEmptyState title="No open events found" message={message} />
+        </ScrollView>
+      ) : (
       <View style={s.page}>
-      <View style={s.sections}>
-        {[['MARKETPLACE', 'Marketplace / Near Me'], ['BIDS', 'My Bids'], ['APPLICATIONS', 'My Applications'], ['AWARDED', 'Awarded Events']].map(([value, label]) => (
-          <TouchableOpacity key={value} style={[s.sectionButton, section === value && s.sectionButtonActive]} onPress={() => setSection(value)}>
-            <Text style={[s.sectionText, section === value && s.sectionTextActive]}>{label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      {message ? <Text style={s.notice}>{message}</Text> : null}
       <FlatList
-        data={section === "MARKETPLACE" ? events : section === "APPLICATIONS" ? categorized.applications : section === "AWARDED" ? categorized.awarded : []}
+        data={data}
         keyExtractor={(item) => item.event_id || item.application_id}
+        contentContainerStyle={styles.body}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={AppColor.primary} />}
         ListEmptyComponent={
-          <Text style={s.empty}>
-            {section === "BIDS" ? "Marketplace Vendors submit applications rather than food-vendor bids." : section === "MARKETPLACE" ? "No matching events are accepting applications." : "No submissions in this section."}
-          </Text>
+          <VendorMarketplaceEmptyState title="Nothing here yet" message={section === "BIDS" ? "Coordinator-paid submissions will appear here after you submit." : section === "MARKETPLACE" ? "No matching events are accepting applications." : "No submissions in this section."} />
         }
         renderItem={section !== "MARKETPLACE" ? renderApplication : ({ item }) => {
           const event = getMarketplaceVendorEventPresentation(item);
           return (
-          <TouchableOpacity
+          <VendorMarketplaceCard
             style={s.card}
             onPress={() =>
               navigation.navigate("eventVendorApplicationScreen", {
@@ -149,10 +189,10 @@ export default function EventVendorMarketplaceScreen({ navigation }) {
                 <Image source={{ uri: event.images[0].image_url }} style={s.eventImage} />
               </TouchableOpacity>
             ) : null}
-            <Text style={s.title}>{event.name}</Text>
-            <Text style={s.meta}>{event.location}</Text>
-            {event.date ? <Text style={s.meta}>{String(event.date)}{event.startTime ? ` · ${event.startTime}` : ""}</Text> : null}
-            <Text style={s.meta}>
+            <Text style={styles.title}>{event.name}</Text>
+            <Text style={styles.meta}>{event.location}</Text>
+            {event.date ? <Text style={styles.meta}>{String(event.date)}{event.startTime ? ` · ${event.startTime}` : ""}</Text> : null}
+            <Text style={styles.meta}>
               {event.needs
                 .map(
                   (need) =>
@@ -160,23 +200,26 @@ export default function EventVendorMarketplaceScreen({ navigation }) {
                 )
                 .join("\n")}
             </Text>
-            <Text style={s.apply}>View & Apply</Text>
-          </TouchableOpacity>
+            <Text style={styles.secondaryButtonText}>View & Apply</Text>
+          </VendorMarketplaceCard>
           );
         }}
       />
+      </View>
+      )}
       <MarketplaceImageViewer
         images={viewer?.images || []}
         initialIndex={viewer?.index || 0}
         visible={!!viewer}
         onClose={() => setViewer(null)}
       />
-      </View>
-    </MarketplaceVendorScreenLayout>
+    </VendorMarketplacePage>
   );
 }
 const s = StyleSheet.create({
   page: { flex: 1, paddingHorizontal: 18, backgroundColor: "#fff" },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
+  refreshButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   heading: { fontSize: 26, fontWeight: "800", color: "#172033" },
   sub: { color: "#64748b", marginTop: 5, marginBottom: 14 },
   notice: {
@@ -186,23 +229,12 @@ const s = StyleSheet.create({
     borderRadius: 10,
   },
   empty: { textAlign: "center", color: "#64748b", marginTop: 40 },
-  card: {
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-  },
+  card: { marginBottom: 12 },
   title: { fontSize: 18, fontWeight: "800", color: "#172033" },
   meta: { color: "#64748b", marginTop: 6, lineHeight: 20 },
   apply: { color: AppColor.primary, fontWeight: "800", marginTop: 12 },
   paymentCard: { borderColor: AppColor.primary, backgroundColor: "#fff7ed" },
-  sections: { flexDirection: "row", gap: 6, marginBottom: 14 },
-  sectionButton: { flex: 1, paddingVertical: 9, paddingHorizontal: 4, borderRadius: 8, backgroundColor: "#eef2f7" },
-  sectionButtonActive: { backgroundColor: AppColor.primary },
-  sectionText: { textAlign: "center", fontSize: 11, fontWeight: "700", color: "#475569" },
-  sectionTextActive: { color: "#fff" },
-  actions: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  actions: { marginTop: 12 },
   withdraw: { color: "#b91c1c", fontWeight: "800", marginTop: 12 },
   readOnly: { color: "#64748b", fontWeight: "700", marginTop: 12 },
   eventImage: { width: "100%", height: 150, borderRadius: 10, marginBottom: 12 },

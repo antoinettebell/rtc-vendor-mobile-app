@@ -24,7 +24,11 @@ import {
 import { clearPosOrder } from "../redux/slices/posOrderSlice";
 import { foodTypeStrings } from "../utils/constants";
 import { startTapToPaySale } from "../services/tapToPay-service";
-import { getVendorPaymentCapabilities } from "../helpers/vendorPaymentCapabilities.helper";
+import {
+  getVendorPaymentCapabilities,
+  getWalkUpPosAccess,
+  WALK_UP_PLAN_MESSAGE,
+} from "../helpers/vendorPaymentCapabilities.helper";
 import {
   calculateItemTotalWithDiscount,
   normalizeMenuOptions,
@@ -195,6 +199,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
   const isEmployeeSession =
     user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
   const ownerPaymentCapabilities = getVendorPaymentCapabilities(user, foodTruck);
+  const walkUpAccess = getWalkUpPosAccess(user, foodTruck);
   const canUseTapToPay =
     isEmployeeSession
       ? !!user?.employeeCapabilities?.tapToPay
@@ -323,6 +328,19 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     const loadCheckout = async () => {
+      if (!walkUpAccess.allowed) {
+        Alert.alert("Walk-up ordering unavailable", WALK_UP_PLAN_MESSAGE, [
+          {
+            text: "OK",
+            onPress: () => {
+              dispatch(clearPosOrder());
+              if (navigation.canGoBack()) navigation.goBack();
+              else navigation.navigate(isEmployeeSession ? "employeeSessionScreen" : "bottomRoot");
+            },
+          },
+        ]);
+        return;
+      }
       if (
         !basePayload.foodTruckId ||
         !basePayload.locationId ||
@@ -392,13 +410,19 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
     basePayload.locationId,
     basePayload.truckUnitId,
     canUseTapToPay,
+    dispatch,
+    isEmployeeSession,
     navigation,
     order.items.length,
     order.subtotal,
     tipAmount,
+    walkUpAccess.allowed,
   ]);
 
   const createOrder = async (paymentFields) => {
+    if (!walkUpAccess.allowed) {
+      throw new Error(WALK_UP_PLAN_MESSAGE);
+    }
     const orderPayload = {
       ...basePayload,
       ...paymentFields,

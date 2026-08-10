@@ -1,18 +1,23 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  getMarketplaceImageViewerState,
+  moveMarketplaceImageIndex,
+} from "../helpers/marketplaceImageViewer.helper";
 
 export default function MarketplaceImageViewer({ images = [], initialIndex = 0, visible, onClose }) {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const [index, setIndex] = useState(initialIndex);
   const zoomRef = useRef(null);
+  const { validImages, index: normalizedInitialIndex } = getMarketplaceImageViewerState(images, initialIndex);
   useEffect(() => {
-    if (visible) setIndex(Math.min(Math.max(initialIndex, 0), Math.max(images.length - 1, 0)));
-  }, [images.length, initialIndex, visible]);
+    if (visible) setIndex(normalizedInitialIndex);
+  }, [normalizedInitialIndex, visible]);
   const move = (direction) => {
     zoomRef.current?.scrollTo?.({ x: 0, y: 0, animated: false });
-    setIndex((current) => Math.min(Math.max(current + direction, 0), images.length - 1));
+    setIndex((current) => moveMarketplaceImageIndex(current, direction, validImages.length));
   };
   return (
     <Modal visible={visible} animationType="fade" onRequestClose={onClose} transparent>
@@ -30,9 +35,9 @@ export default function MarketplaceImageViewer({ images = [], initialIndex = 0, 
           bouncesZoom
           centerContent
         >
-          {images[index] ? (
+          {validImages[index] ? (
             <Image
-              source={{ uri: images[index].image_url }}
+              source={{ uri: validImages[index].uri }}
               style={{ width, height: Math.max(240, height - insets.top - insets.bottom - 120) }}
               resizeMode="contain"
             />
@@ -42,9 +47,9 @@ export default function MarketplaceImageViewer({ images = [], initialIndex = 0, 
           <TouchableOpacity disabled={index === 0} onPress={() => move(-1)}>
             <Text style={[s.navText, index === 0 && s.disabled]}>Previous</Text>
           </TouchableOpacity>
-          <Text style={s.count}>{images.length ? `${index + 1} / ${images.length}` : "0 / 0"}</Text>
-          <TouchableOpacity disabled={index >= images.length - 1} onPress={() => move(1)}>
-            <Text style={[s.navText, index >= images.length - 1 && s.disabled]}>Next</Text>
+          <Text style={s.count}>{validImages.length ? `${index + 1} / ${validImages.length}` : "0 / 0"}</Text>
+          <TouchableOpacity disabled={index >= validImages.length - 1} onPress={() => move(1)}>
+            <Text style={[s.navText, index >= validImages.length - 1 && s.disabled]}>Next</Text>
           </TouchableOpacity>
         </View>
       </View>

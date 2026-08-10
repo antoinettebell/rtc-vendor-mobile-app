@@ -50,6 +50,7 @@ import {
   canEmployeeOperate,
   getEmployeeOperationalBlock,
 } from "../helpers/employeeOperationalAccess.helper";
+import { WALK_UP_PLAN_MESSAGE } from "../helpers/vendorPaymentCapabilities.helper";
 import { foodTypeStrings, orderStatusStrings } from "../utils/constants";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 
@@ -428,7 +429,7 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
     if (!canUsePos) {
       Alert.alert(
         "POS unavailable",
-        "This vendor plan does not include employee walk-up POS.",
+        WALK_UP_PLAN_MESSAGE,
         [{ text: "OK", onPress: handleBack }],
       );
     }

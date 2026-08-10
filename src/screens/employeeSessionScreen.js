@@ -36,6 +36,7 @@ import {
   canEmployeeOperate,
   getEmployeeOperationalBlock,
 } from "../helpers/employeeOperationalAccess.helper";
+import { WALK_UP_PLAN_MESSAGE } from "../helpers/vendorPaymentCapabilities.helper";
 import { orderStatusStrings } from "../utils/constants";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 
@@ -161,6 +162,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
   const assignedLocation = user?.assignedLocation;
   const assignedTruckUnit = dashboard?.assignedTruckUnit || user?.assignedTruckUnit;
   const capabilities = user?.employeeCapabilities || {};
+  const canUseWalkUpPos = !!capabilities.employeeWalkUpPos;
   const canTapToPay = !!capabilities.tapToPay;
   const isShiftActive = !!dashboard?.shift?.is_active;
   const isOnBreak = dashboard?.shift?.shift_status === "ON_BREAK";
@@ -724,13 +726,18 @@ const EmployeeSessionScreen = ({ navigation }) => {
                   activeOpacity={0.8}
                   style={[
                     styles.takeoutButton,
-                    !employeeCanOperate && styles.disabledButton,
+                    (!employeeCanOperate || !canUseWalkUpPos) &&
+                      styles.disabledButton,
                   ]}
-                  onPress={() =>
+                  onPress={() => {
+                    if (!canUseWalkUpPos) {
+                      Alert.alert("Upgrade Required", WALK_UP_PLAN_MESSAGE);
+                      return;
+                    }
                     runOperationalProtectedAction(() =>
                       navigation.navigate("employeePosBoardScreen"),
-                    )
-                  }
+                    );
+                  }}
                 >
                   <Text style={styles.takeoutButtonText}>Take-Out Order</Text>
                 </TouchableOpacity>

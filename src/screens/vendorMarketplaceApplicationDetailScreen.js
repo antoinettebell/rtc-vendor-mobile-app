@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StatusBarManager from "../components/StatusBarManager";
+import MarketplaceImageViewer from "../components/MarketplaceImageViewer";
 import {
   MarketplaceHeader,
   MarketplaceAttachmentPicker,
@@ -56,6 +57,11 @@ const VendorMarketplaceApplicationDetailScreen = ({ navigation, route }) => {
   const attachments = Array.isArray(application.attachments)
     ? application.attachments
     : [];
+  const imageAttachments = attachments.filter((item) =>
+    String(item.mime_type || "").startsWith("image/") || item.attachment_type === "APPLICATION_IMAGE",
+  );
+  const documentAttachments = attachments.filter((item) => !imageAttachments.includes(item));
+  const [viewer, setViewer] = useState(null);
   const status = application.application_status || "DRAFT";
   const canPay = status === "ACCEPTED" || status === "PAYMENT_DUE";
   const canRevise = isApplicationRevisionRequested(application);
@@ -94,6 +100,16 @@ const VendorMarketplaceApplicationDetailScreen = ({ navigation, route }) => {
           <DetailRow label="Duration" value={formatDuration(event)} />
           <DetailRow label="Location" value={getEventLocation(event)} />
         </View>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={[styles.secondaryButton, { marginBottom: 14 }]}
+          onPress={() => navigation.navigate("vendorMarketplaceMessagesScreen", {
+            eventId: application.event_id || event?.event_id,
+            applicationId: application.application_id,
+          })}
+        >
+          <Text style={styles.secondaryButtonText}>Message Coordinator</Text>
+        </TouchableOpacity>
 
         <View style={styles.card}>
           <Text style={styles.title}>Vendor Fee</Text>
@@ -169,12 +185,23 @@ const VendorMarketplaceApplicationDetailScreen = ({ navigation, route }) => {
         <View style={styles.card}>
           <Text style={styles.title}>Uploaded Files</Text>
           <MarketplaceAttachmentPicker
-            attachments={attachments}
+            attachments={documentAttachments}
             getLabel={attachmentPickerLabel}
             emptyText="No files uploaded for this application."
           />
+          {imageAttachments.map((attachment, index) => (
+            <TouchableOpacity key={attachment.attachment_id || attachment.file_url} onPress={() => setViewer(index)}>
+              <Text style={[styles.secondaryButtonText, { marginTop: 12 }]}>View {attachmentPickerLabel(attachment)}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </ScrollView>
+      <MarketplaceImageViewer
+        images={imageAttachments.map((item) => item.file_url)}
+        initialIndex={viewer || 0}
+        visible={viewer !== null}
+        onClose={() => setViewer(null)}
+      />
     </View>
   );
 };
