@@ -42,6 +42,11 @@ import {
   SIGNIN_ROUTE,
   SIGNUP_ROUTE,
 } from "../helpers/signupNavigation.helper";
+import {
+  getPlanAddOnsForFlow,
+  isFoodVendorPlan,
+  reconcileSelectedAddOnsForPlan,
+} from "../helpers/signupCatalog.helper";
 
 const EVENT_MARKETPLACE_PATTERN = /event|booking|marketplace/i;
 
@@ -62,11 +67,6 @@ const isElitePlan = (plan) => {
     plan?.capabilities?.eventMarketplace === true
   );
 };
-
-const isFoodVendorPlan = (plan) =>
-  ["SUB_BASIC", "SUB_PLATINUM", "SUB_ELITE"].includes(
-    String(plan?.slug || "").toUpperCase(),
-  );
 
 const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -108,7 +108,19 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
         : addOnsData,
     [addOnsData, isEliteSelected],
   );
+  const planAddOns = useMemo(
+    () =>
+      getPlanAddOnsForFlow({
+        isSignupFlow,
+        selectedPlan: selectedPlanObject,
+        addOns: visibleAddOns,
+      }),
+    [isSignupFlow, selectedPlanObject, visibleAddOns],
+  );
   const getSubmittedAddOns = () => {
+    if (!isFoodVendorPlan(selectedPlanObject)) {
+      return [];
+    }
     if (!isEliteSelected) {
       return selectedAddOns;
     }
@@ -170,6 +182,15 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
 
   const onSelectePlan = (item) => {
     setSelectedPlanId(item._id);
+    if (!isFoodVendorPlan(item)) {
+      setSelectedAddOns(
+        reconcileSelectedAddOnsForPlan({
+          selectedPlan: item,
+          selectedAddOns,
+        }),
+      );
+      return;
+    }
     if (isElitePlan(item)) {
       setSelectedAddOns((prevSelectedAddOns) =>
         prevSelectedAddOns.filter((id) => {
@@ -557,7 +578,7 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
                 </View>
               ) : null}
 
-              {!isSignupFlow && visibleAddOns?.length ? (
+              {planAddOns.length ? (
                 <View>
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Select Add-Ons</Text>
@@ -570,7 +591,7 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
 
                   <FlatList
                     bounces={false}
-                    data={visibleAddOns}
+                    data={planAddOns}
                     renderItem={renderAddOnCard}
                     keyExtractor={(item) => item._id}
                     contentContainerStyle={{

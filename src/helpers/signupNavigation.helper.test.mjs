@@ -15,6 +15,8 @@ const {
   getConsumedMarketplaceOtpState,
   consumePendingAuthRoute,
   consumeOtpCompletion,
+  getPostOtpStackReset,
+  getAbandonedOtpSessionTransition,
   performAuthNavigation,
   SIGNIN_ROUTE,
   SIGNUP_ROUTE,
@@ -37,6 +39,16 @@ assert.deepEqual(
   }),
   { type: "NAVIGATE", destination: "signup" },
   "the normal food-vendor and merchandise-vendor auth flow stays in AuthNavigator",
+);
+assert.deepEqual(
+  getAbandonedOtpSessionTransition({ otpSignupCompletionPending: true }),
+  { shouldClear: true, destination: SIGNIN_ROUTE },
+  "a verified OTP abandoned before Next clears local signup state and returns to Sign In",
+);
+assert.deepEqual(
+  getAbandonedOtpSessionTransition(),
+  { shouldClear: false, destination: SIGNIN_ROUTE },
+  "normal Food and Marketplace onboarding is not treated as an abandoned OTP session",
 );
 
 assert.deepEqual(
@@ -61,6 +73,8 @@ assert.equal(
 assert.deepEqual(
   getConsumedMarketplaceOtpState({
     selectedPlan: { slug: "SUB_MARKETPLACE_VENDOR" },
+    selectedSignupAddOns: ["existing-add-on"],
+    pendingAuthRoute: "authFoodTruckPlansScreen",
     user: { vendorSubtype: "EVENT_VENDOR" },
   }),
   {
@@ -68,12 +82,23 @@ assert.deepEqual(
     isUnderReview: false,
     vendorOnboardingStep: null,
     destination: "eventVendorProfileScreen",
-    selectedPlan: null,
-    selectedSignupAddOns: [],
+    selectedPlan: { slug: "SUB_MARKETPLACE_VENDOR" },
+    selectedSignupAddOns: ["existing-add-on"],
     pendingAuthRoute: null,
     eventVendorOnboardingSessionActive: true,
   },
-  "Marketplace OTP consumes plan and pending auth state exactly once",
+  "Marketplace OTP consumes only the stale plan route while retaining onboarding context",
+);
+
+assert.equal(
+  getConsumedMarketplaceOtpState({
+    selectedPlan: { slug: "SUB_BASIC" },
+    selectedSignupAddOns: ["printer"],
+    pendingAuthRoute: "some-legitimate-auth-route",
+    user: { vendorSubtype: "FOOD_VENDOR" },
+  }).pendingAuthRoute,
+  "some-legitimate-auth-route",
+  "OTP does not discard non-plan intents while food onboarding still needs its selected plan and add-ons",
 );
 
 assert.deepEqual(
@@ -111,6 +136,11 @@ performAuthNavigation({
   destination: SIGNUP_ROUTE,
   switchAuthRoot: (route) => calls.push(`root:${route}`),
 });
+assert.deepEqual(
+  getPostOtpStackReset(),
+  { index: 0, routes: [{ name: "splash" }] },
+  "OTP resets the auth history to Splash so Select Plan and OTP cannot be revealed by Back or swipe",
+);
 assert.deepEqual(calls, ["root:signup"]);
 
 assert.deepEqual(
@@ -183,10 +213,12 @@ assert.deepEqual(
   },
 );
 
-const [appSource, splashSource, otpSource, planSource] = await Promise.all([
+const [appSource, splashSource, otpSource, signinSource, authSliceSource, planSource] = await Promise.all([
   readFile(new URL("../../App.js", import.meta.url), "utf8"),
   readFile(new URL("../screens/splashScreen.js", import.meta.url), "utf8"),
   readFile(new URL("../screens/otpVerificationScreen.js", import.meta.url), "utf8"),
+  readFile(new URL("../screens/signinScreen.js", import.meta.url), "utf8"),
+  readFile(new URL("../redux/slices/authSlice.js", import.meta.url), "utf8"),
   readFile(
     new URL("../screens/authFoodTruckPlansScreen.js", import.meta.url),
     "utf8",
@@ -201,7 +233,28 @@ assert.match(otpSource, /getConsumedMarketplaceOtpState/);
 assert.match(otpSource, /onModalHide=\{completeSignupTransition\}/);
 assert.match(otpSource, /completionPendingRef\.current = true/);
 assert.match(otpSource, /setSelectedPlan\(transition\.selectedPlan\)/);
-assert.match(otpSource, /setPendingAuthRoute\(transition\.pendingAuthRoute\)/);
+assert.match(otpSource, /completeOtpSignupTransition\(transition\)/);
+assert.match(otpSource, /navigation\.reset\(getPostOtpStackReset\(\)\)/);
+assert.ok(
+  otpSource.indexOf("dispatch(setOtpSignupCompletionPending(true))") <
+    otpSource.indexOf("dispatch(setUser(response.data.user))"),
+  "OTP marks the local session as pending before retaining credentials",
+);
+assert.match(
+  authSliceSource,
+  /completeOtpSignupTransition:[\s\S]*?otpSignupCompletionPending = false/,
+  "the final onboarding state and marker consumption occur in one auth reducer action",
+);
+assert.match(splashSource, /dispatch\(onSignOut\(\)\);\s*dispatch\(clearUserSlice\(\)\);/);
+const ownerSignIn = signinSource.slice(
+  signinSource.indexOf("const handleSignIn"),
+  signinSource.indexOf("const handleEmployeeSignIn"),
+);
+assert.ok(
+  ownerSignIn.indexOf("dispatch(onSignOut())") <
+    ownerSignIn.indexOf("dispatch(setUser(response.data.user))"),
+  "owner Sign In clears an abandoned OTP session before storing the new account",
+);
 assert.match(planSource, /dispatch\(setSelectedPlan\(temp_plan\)\)/);
 assert.match(planSource, /destination: SIGNUP_ROUTE/);
 

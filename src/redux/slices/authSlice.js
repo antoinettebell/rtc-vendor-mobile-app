@@ -9,6 +9,7 @@ const initialState = {
   pendingAuthRoute: null,
   pendingEventVendorApplication: null,
   eventVendorOnboardingSessionActive: false,
+  otpSignupCompletionPending: false,
 };
 
 const authSlice = createSlice({
@@ -39,6 +40,18 @@ const authSlice = createSlice({
     setEventVendorOnboardingSessionActive: (state, { payload }) => {
       state.eventVendorOnboardingSessionActive = payload === true;
     },
+    setOtpSignupCompletionPending: (state, { payload }) => {
+      state.otpSignupCompletionPending = payload === true;
+    },
+    completeOtpSignupTransition: (state, { payload }) => {
+      state.isOnboarded = payload.isOnboarded === true;
+      state.isUnderReview = payload.isUnderReview === true;
+      state.vendorOnboardingStep = payload.vendorOnboardingStep || null;
+      state.pendingAuthRoute = payload.pendingAuthRoute || null;
+      state.eventVendorOnboardingSessionActive =
+        payload.eventVendorOnboardingSessionActive === true;
+      state.otpSignupCompletionPending = false;
+    },
     onSignOut: () => initialState,
   },
 });
@@ -52,6 +65,8 @@ export const {
   setPendingAuthRoute,
   setPendingEventVendorApplication,
   setEventVendorOnboardingSessionActive,
+  setOtpSignupCompletionPending,
+  completeOtpSignupTransition,
   onSignOut,
 } = authSlice.actions;
 export default authSlice.reducer;

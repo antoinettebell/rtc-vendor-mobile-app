@@ -29,7 +29,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { emailRegex, passwordRegex } from "../utils/constants";
 import { employeeLogin_API, login_API } from "../api/authAPI";
 import { useDispatch, useSelector } from "react-redux";
-import { setAuthToken, setUser } from "../redux/slices/userSlice";
+import { clearUserSlice, setAuthToken, setUser } from "../redux/slices/userSlice";
 import {
   onOnBoard,
   onSignin,
@@ -37,6 +37,7 @@ import {
   setVendorOnboardingStep,
   setPendingEventVendorApplication,
   setEventVendorOnboardingSessionActive,
+  onSignOut,
 } from "../redux/slices/authSlice";
 import StatusBarManager from "../components/StatusBarManager";
 import { getEventVendorSignInTransition } from "../helpers/eventVendorProfile.helper";
@@ -62,7 +63,7 @@ const SignInScreen = ({ navigation, route }) => {
   const { width } = useWindowDimensions();
   const isWideLayout = width >= 760;
   const dispatch = useDispatch();
-  const { vendorOnboardingStep } = useSelector(
+  const { vendorOnboardingStep, otpSignupCompletionPending } = useSelector(
     (state) => state.authReducer
   );
   const { allSigninUsers } = useSelector((state) => state.userInfoReducer);
@@ -135,6 +136,12 @@ const SignInScreen = ({ navigation, route }) => {
     }
 
     if (isValid) {
+      if (otpSignupCompletionPending) {
+        // A verified account left before Next is intentionally returned to
+        // Sign In. Do not let its token, plan, or add-ons bleed into this one.
+        dispatch(onSignOut());
+        dispatch(clearUserSlice());
+      }
       console.log("✨ Logging in with:", currentEmail);
       // Trigger login logic here
       setLoading(true);

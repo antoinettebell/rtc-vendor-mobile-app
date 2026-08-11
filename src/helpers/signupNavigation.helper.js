@@ -43,14 +43,39 @@ export const consumeOtpCompletion = (completionPending) => ({
   completionPending: false,
 });
 
-export const getConsumedMarketplaceOtpState = ({ selectedPlan, user } = {}) => {
+// Both auth navigators register Splash. Resetting to it removes the OTP and
+// Select Plan history before the root switches to final onboarding.
+export const getPostOtpStackReset = () => ({
+  index: 0,
+  routes: [{ name: "splash" }],
+});
+
+export const getAbandonedOtpSessionTransition = ({
+  otpSignupCompletionPending = false,
+} = {}) => ({
+  shouldClear: otpSignupCompletionPending === true,
+  destination: SIGNIN_ROUTE,
+});
+
+const isSelectPlanRoute = (route) => route === "authFoodTruckPlansScreen";
+
+export const getConsumedMarketplaceOtpState = ({
+  selectedPlan,
+  selectedSignupAddOns = [],
+  pendingAuthRoute,
+  user,
+} = {}) => {
   const transition = getOtpCompletionTransition({ selectedPlan, user });
   return {
     ...transition,
     destination: getFinalSignupDestination({ selectedPlan, user }),
-    selectedPlan: null,
-    selectedSignupAddOns: [],
-    pendingAuthRoute: null,
+    // The profile/payment onboarding screens still need the chosen plan and
+    // add-ons.  Only the stale Select Plan intent is consumed after OTP.
+    selectedPlan,
+    selectedSignupAddOns,
+    pendingAuthRoute: isSelectPlanRoute(pendingAuthRoute)
+      ? null
+      : pendingAuthRoute || null,
     eventVendorOnboardingSessionActive:
       isMarketplaceVendorSignup({ selectedPlan, user }) && !transition.isUnderReview,
   };

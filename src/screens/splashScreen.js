@@ -15,11 +15,13 @@ import {
   onSignOut,
   setVendorOnboardingStep,
   setEventVendorOnboardingSessionActive,
+  setOtpSignupCompletionPending,
 } from "../redux/slices/authSlice";
 import StatusBarManager from "../components/StatusBarManager";
 import {
   consumePendingAuthRoute,
   getFinalSignupDestination,
+  getAbandonedOtpSessionTransition,
 } from "../helpers/signupNavigation.helper";
 import { getEventVendorProfile_API } from "../api/appAPI";
 import {
@@ -43,6 +45,7 @@ const SplashScreen = () => {
     pendingAuthRoute,
     pendingEventVendorApplication,
     eventVendorOnboardingSessionActive,
+    otpSignupCompletionPending,
   } = useSelector(
     (state) => state.authReducer
   );
@@ -55,6 +58,15 @@ const SplashScreen = () => {
 
   useEffect(() => {
     const timeout = setTimeout(async () => {
+      const abandonedOtp = getAbandonedOtpSessionTransition({
+        otpSignupCompletionPending,
+      });
+      if (abandonedOtp.shouldClear) {
+        dispatch(onSignOut());
+        dispatch(clearUserSlice());
+        navigation.replace(abandonedOtp.destination);
+        return;
+      }
       if (user?.vendorSubtype === "EVENT_VENDOR" && !eventVendorCheckRef.current) {
         eventVendorCheckRef.current = true;
         try {
@@ -181,6 +193,7 @@ const SplashScreen = () => {
     pendingAuthRoute,
     pendingEventVendorApplication,
     eventVendorOnboardingSessionActive,
+    otpSignupCompletionPending,
     statusCheckAttempt,
     dispatch,
     navigation,

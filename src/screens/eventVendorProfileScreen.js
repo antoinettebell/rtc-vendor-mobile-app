@@ -42,6 +42,7 @@ import {
 import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
 import { getApprovedProfilePresentation } from "../helpers/eventVendorPresentation.helper";
 import { getEventVendorSignOutKeys } from "../helpers/eventVendorApplicationDraft.helper";
+import { normalizeExternalWebLink } from "../helpers/externalWebLink.helper";
 
 const TYPES = ["MERCHANDISE", "SERVICE", "OTHER"];
 export default function EventVendorProfileScreen({ navigation }) {
@@ -116,17 +117,26 @@ export default function EventVendorProfileScreen({ navigation }) {
       );
     setSaving(true);
     try {
+      const submittedLinks = links.map((item) => item.trim()).filter(Boolean);
+      const socialLinks = submittedLinks.map(normalizeExternalWebLink);
+      if (socialLinks.some((link) => !link)) {
+        return Alert.alert(
+          "Profile",
+          "Enter a valid website or social-media address.",
+        );
+      }
       const response = await saveEventVendorProfile_API({
         business_name: businessName.trim(),
         business_description: description.trim(),
         vendor_types: vendorTypes,
-        social_links: links.map((item) => item.trim()).filter(Boolean),
+        social_links: socialLinks,
         merchandise_categories: vendorTypes.includes("MERCHANDISE")
           ? merchandiseCategories
           : [],
       });
       const savedProfile = response?.data?.eventVendorProfile;
       applyProfileState(savedProfile, access.canUseMarketplace);
+      applyFields(savedProfile);
       setSavedSnapshot(savedProfile);
       if (access.canUseMarketplace) {
         setIsEditing(false);

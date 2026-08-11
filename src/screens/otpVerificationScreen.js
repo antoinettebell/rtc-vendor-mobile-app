@@ -24,12 +24,9 @@ import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { resendOTP_API, verifyOTP_API } from "../api/authAPI";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  onOnBoard,
   onSignOut,
-  onUnderReview,
-  setVendorOnboardingStep,
-  setEventVendorOnboardingSessionActive,
-  setPendingAuthRoute,
+  setOtpSignupCompletionPending,
+  completeOtpSignupTransition,
 } from "../redux/slices/authSlice";
 import {
   clearUserSlice,
@@ -47,8 +44,8 @@ import {
   performAuthNavigation,
   getConsumedMarketplaceOtpState,
   consumeOtpCompletion,
+  getPostOtpStackReset,
   SIGNIN_ROUTE,
-  isMarketplaceVendorSignup,
 } from "../helpers/signupNavigation.helper";
 
 const RESEND_CODE_TIME = 120;
@@ -57,7 +54,10 @@ const OtpVerificationScreen = ({ route }) => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const dispatch = useDispatch();
-  const { selectedPlan } = useSelector((state) => state.userReducer);
+  const { selectedPlan, selectedSignupAddOns } = useSelector(
+    (state) => state.userReducer,
+  );
+  const { pendingAuthRoute } = useSelector((state) => state.authReducer);
   const timerRef = useRef(null);
   const completionPendingRef = useRef(false);
 
@@ -82,26 +82,17 @@ const OtpVerificationScreen = ({ route }) => {
     if (!completion.shouldComplete) return;
     const transition = getConsumedMarketplaceOtpState({
       selectedPlan,
+      selectedSignupAddOns,
+      pendingAuthRoute,
       user: verifiedUser || params?.data?.user,
     });
-    dispatch(onOnBoard(transition.isOnboarded));
-    dispatch(onUnderReview(transition.isUnderReview));
-    dispatch(setVendorOnboardingStep(transition.vendorOnboardingStep));
-    dispatch(
-      setEventVendorOnboardingSessionActive(
-        transition.eventVendorOnboardingSessionActive,
-      ),
-    );
-    if (
-      isMarketplaceVendorSignup({
-        selectedPlan,
-        user: verifiedUser || params?.data?.user,
-      })
-    ) {
-      dispatch(setSelectedPlan(transition.selectedPlan));
-      dispatch(setSelectedSignupAddOns(transition.selectedSignupAddOns));
-      dispatch(setPendingAuthRoute(transition.pendingAuthRoute));
-    }
+    dispatch(completeOtpSignupTransition(transition));
+    // Switching isOnboarded replaces AuthNavigator with a fresh final-signup
+    // navigator.  Keeping the selected plan/add-ons avoids losing the food
+    // onboarding context; consuming only a stale plan route prevents a replay.
+    dispatch(setSelectedPlan(transition.selectedPlan));
+    dispatch(setSelectedSignupAddOns(transition.selectedSignupAddOns));
+    navigation.reset(getPostOtpStackReset());
   };
 
   // Combine digits
@@ -154,11 +145,11 @@ const OtpVerificationScreen = ({ route }) => {
       const response = await verifyOTP_API(payload);
       if (response?.success && response?.data) {
         if (params?.verificationFor === "sign-up") {
-          setModalVisible(true); // Success -> show modal
-
+          dispatch(setOtpSignupCompletionPending(true));
           dispatch(setUser(response.data.user));
           dispatch(setAuthToken(response.data.authToken));
           setVerifiedUser(response.data.user);
+          setModalVisible(true); // Success -> show modal
 
           dispatch(
             addOrUpdateUser({
