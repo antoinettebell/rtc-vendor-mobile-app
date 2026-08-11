@@ -16,6 +16,7 @@ import {
   isBidRevisionRequested,
   styles,
 } from "./vendorMarketplaceShared";
+import { getFoodVendorMarketplaceCloseDate, getFoodVendorMarketplaceGuestRows } from "../helpers/foodVendorMarketplaceGuestCounts.helper";
 
 const DetailRow = ({ label, value }) => (
   <View style={{ marginTop: 12 }}>
@@ -87,12 +88,8 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
           <DetailRow label="Event Time" value={formatTimeRange(event?.event_time)} />
           <DetailRow label="Duration" value={formatDuration(event)} />
           <DetailRow label="Location" value={getEventLocation(event)} />
-          <DetailRow
-            label="Estimated Guests"
-            value={
-              event?.number_of_guests ? `${event.number_of_guests}` : "Not provided"
-            }
-          />
+          {getFoodVendorMarketplaceGuestRows({ event, participationPath: bid?.guest_coverage === "BOTH" ? "BOTH" : "BID", coverage: bid?.guest_coverage }).map((row) => <DetailRow key={row.label} label={row.label} value={row.value} />)}
+          <DetailRow label="Application/Bid Deadline" value={formatDate(getFoodVendorMarketplaceCloseDate(event))} />
           <DetailRow
             label="Event Budget"
             value={formatMoney(event?.budgeted_amount)}

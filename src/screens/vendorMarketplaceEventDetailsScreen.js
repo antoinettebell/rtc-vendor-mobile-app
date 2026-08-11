@@ -36,6 +36,7 @@ import {
   listText,
   styles,
 } from "./vendorMarketplaceShared";
+import { getFoodVendorMarketplaceCloseDate, getFoodVendorMarketplaceGuestRows } from "../helpers/foodVendorMarketplaceGuestCounts.helper";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
@@ -580,10 +581,10 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
               label="Location"
               value={getEventLocation(event)}
             />
-            <DetailRow label="Estimated Guests" value={`${event?.number_of_guests || 0}`} />
+            {getFoodVendorMarketplaceGuestRows({ event, participationPath: bothPay ? "BOTH" : vendorPays ? "APPLICATION" : "BID" }).map((row) => <DetailRow key={row.label} label={row.label} value={row.value} />)}
             <DetailRow
               label="Application/Bid Deadline"
-              value={formatDate(event?.event_close_date)}
+              value={formatDate(getFoodVendorMarketplaceCloseDate(event))}
             />
             {isClosed ? (
               <Text style={[styles.meta, { marginTop: 10 }]}>

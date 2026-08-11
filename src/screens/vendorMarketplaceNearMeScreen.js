@@ -44,6 +44,7 @@ import {
   VendorMarketplacePrimaryAction,
   VendorMarketplaceSecondaryAction,
 } from "../components/VendorMarketplacePrimitives";
+import { getFoodVendorMarketplaceCloseDate, getFoodVendorMarketplaceGuestRows } from "../helpers/foodVendorMarketplaceGuestCounts.helper";
 
 const LockedMarketplace = ({ navigation }) => (
   <View style={[styles.body, { justifyContent: "center" }]}>
@@ -265,9 +266,8 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
         <Text style={styles.meta}>
           {formatDate(item.event_date)} {formatTimeRange(item.event_time)}
         </Text>
-        <Text style={styles.meta}>
-          Estimated guests: {item.number_of_guests || "Not set"}
-        </Text>
+        {getFoodVendorMarketplaceGuestRows({ event: item, participationPath: bothPay ? "BOTH" : vendorPays ? "APPLICATION" : "BID" }).map((row) => <Text key={row.label} style={styles.meta}>{row.label}: {row.value}</Text>)}
+        <Text style={styles.meta}>Application/Bid Deadline: {formatDate(getFoodVendorMarketplaceCloseDate(item))}</Text>
         {renderEventActions(item)}
       </VendorMarketplaceCard>
     );

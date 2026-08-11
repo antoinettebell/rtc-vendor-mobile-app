@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile(new URL("./foodVendorMarketplaceGuestCounts.helper.js", import.meta.url), "utf8");
+const helper = await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`);
+const event = { number_of_guests: 125, vip_section_enabled: true, vip_guest_count: 25 };
+assert.deepEqual(helper.getFoodVendorMarketplaceGuestRows({ event, participationPath: "APPLICATION" }), [{ label: "GA Guests", value: "125" }]);
+assert.deepEqual(helper.getFoodVendorMarketplaceGuestRows({ event, participationPath: "BID", coverage: "VIP" }), [{ label: "VIP Guests", value: "25" }]);
+assert.deepEqual(helper.getFoodVendorMarketplaceGuestRows({ event, participationPath: "BID", coverage: "REGULAR" }), [{ label: "Regular Catered Guests", value: "125" }]);
+assert.deepEqual(helper.getFoodVendorMarketplaceGuestRows({ event, participationPath: "BOTH", coverage: "BOTH" }), [{ label: "GA Guests", value: "125" }, { label: "VIP Guests", value: "25" }]);
+console.log("Food Vendor Marketplace guest-count tests passed.");
