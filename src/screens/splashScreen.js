@@ -31,6 +31,7 @@ import {
   getEventVendorStatusFailureUserAction,
 } from "../helpers/eventVendorProfile.helper";
 import { clearUserSlice, updateUser } from "../redux/slices/userSlice";
+import { getEffectiveFoodVendorPlan, getResumableFoodVendorGuidedStep } from "../helpers/foodVendorGuidedSetup.helper";
 
 const SplashScreen = () => {
   const insets = useSafeAreaInsets();
@@ -156,21 +157,23 @@ const SplashScreen = () => {
         }
       } else if (isUnderReview) {
         navigation.replace("authUnderReviewNoteScreen");
-      } else if (vendorOnboardingStep === "COMPLIANCE") {
+      } else if (vendorOnboardingStep && user?.vendorSubtype !== "EVENT_VENDOR") {
+        const effectivePlan = getEffectiveFoodVendorPlan({ user, selectedPlan });
+        const guidedStep = getResumableFoodVendorGuidedStep(effectivePlan, vendorOnboardingStep);
+        if (guidedStep !== vendorOnboardingStep) dispatch(setVendorOnboardingStep(guidedStep));
+        if (guidedStep === "COMPLIANCE") {
         navigation.replace("vendorComplianceScreen", {
           onboardingFlow: true,
         });
-      } else if (vendorOnboardingStep === "PROFILE") {
-        navigation.replace("authFoodTruckProfileScreen", {
-          addOns: selectedSignupAddOns,
-          onboardingFlow: true,
-        });
-      } else if (vendorOnboardingStep === "PAYMENT") {
+        } else if (guidedStep === "PAYMENT") {
         navigation.replace("authFoodTruckBankDetailScreen", {
           onboardingFlow: true,
         });
-      } else if (vendorOnboardingStep === "MENU") {
+        } else if (guidedStep === "MENU") {
         navigation.replace("authMenuSetupPromptScreen");
+        } else if (guidedStep === "EMPLOYEES") {
+        navigation.replace("authMenuSetupPromptScreen", { setupStep: "EMPLOYEES" });
+        }
       } else if (selectedPlan) {
         navigation.replace(
           getFinalSignupDestination({ selectedPlan, user }),

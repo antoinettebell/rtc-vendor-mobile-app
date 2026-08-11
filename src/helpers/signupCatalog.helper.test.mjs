@@ -9,6 +9,7 @@ const {
   shouldShowPlanAddOns,
   getPlanAddOnsForFlow,
   reconcileSelectedAddOnsForPlan,
+  isAdSpaceAddOn,
 } = await import(
   `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`,
 );
@@ -35,6 +36,23 @@ assert.deepEqual(
   }),
   [printer],
   "Food Vendor signup renders the existing Bluetooth Order/Receipt Printing add-on unchanged",
+);
+const adSpace = { _id: "ad-space", name: "Ad Space", priceLabel: "$125/month" };
+assert.deepEqual(
+  getPlanAddOnsForFlow({ isSignupFlow: true, selectedPlan: { slug: "SUB_BASIC" }, addOns: [printer, adSpace] }),
+  [printer],
+  "signup hides Ad Space while retaining Bluetooth printing",
+);
+assert.equal(isAdSpaceAddOn(adSpace), true);
+assert.deepEqual(
+  reconcileSelectedAddOnsForPlan({
+    isSignupFlow: true,
+    selectedPlan: { slug: "SUB_BASIC" },
+    selectedAddOns: [printer._id, adSpace._id],
+    addOns: [printer, adSpace],
+  }),
+  [printer._id],
+  "a stale hidden Ad Space selection cannot be submitted during signup",
 );
 assert.deepEqual(
   getPlanAddOnsForFlow({

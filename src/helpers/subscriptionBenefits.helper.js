@@ -8,8 +8,8 @@ export const normalizeSubscriptionBenefit = (benefit) => {
     return "Delivery/Pickup Ordering Fulfillment";
   }
 
-  if (/walk[ -]?up\s+pos\s+for\s+cash\s+payments?\s+only/i.test(benefitText)) {
-    return "Walk Up Payment Acceptance (Cash/Tap to Pay)";
+  if (/walk[ -]?up\s+(?:pos\s+)?(?:for\s+)?cash\s+payments?\s+only/i.test(benefitText)) {
+    return "Walk-Up Payment Acceptance (Cash Only)";
   }
 
   return benefitText;

@@ -529,8 +529,8 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     navigation.goBack();
   };
 
-  const continueToProfile = () => {
-    if (missingOnboardingDocuments.length > 0) {
+  const continueToPayment = ({ skip = false } = {}) => {
+    if (!skip && missingOnboardingDocuments.length > 0) {
       Alert.alert(
         "Complete Required Documents",
         `Please upload ${missingOnboardingDocuments
@@ -540,15 +540,14 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       return;
     }
 
-    dispatch(setVendorOnboardingStep("PROFILE"));
+    dispatch(setVendorOnboardingStep("PAYMENT"));
     navigation.reset({
       index: 0,
       routes: [
         {
-          name: "authFoodTruckProfileScreen",
+          name: "authFoodTruckBankDetailScreen",
           params: {
             onboardingFlow: true,
-            addOns: selectedSignupAddOns,
           },
         },
       ],
@@ -928,21 +927,17 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	              </>
 	            )}
 	          </TouchableOpacity>
-	          {isOnboardingFlow ? (
-	            <TouchableOpacity
-	              onPress={continueToProfile}
-	              style={styles.onboardingContinueButton}
-	            >
-	              <Text style={styles.onboardingContinueButtonText}>
-	                Next: Complete Profile
-	              </Text>
-	              <Ionicons
-	                name="arrow-forward"
-	                size={18}
-	                color={AppColor.white}
-	              />
-	            </TouchableOpacity>
-	          ) : null}
+          {isOnboardingFlow ? (
+            <>
+              <TouchableOpacity onPress={continueToPayment} style={styles.onboardingContinueButton}>
+                <Text style={styles.onboardingContinueButtonText}>Next: Payment Details</Text>
+                <Ionicons name="arrow-forward" size={18} color={AppColor.white} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => continueToPayment({ skip: true })} style={styles.onboardingSkipButton}>
+                <Text style={styles.onboardingSkipButtonText}>Skip</Text>
+              </TouchableOpacity>
+            </>
+          ) : null}
 	          <DateTimePickerModal
             isVisible={!!datePickerRequirement}
             mode="date"
@@ -1316,6 +1311,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: AppColor.white,
   },
+  onboardingSkipButton: { alignItems: "center", paddingVertical: 14 },
+  onboardingSkipButtonText: { color: AppColor.primary, fontFamily: Mulish700, fontSize: 15 },
   historyRow: {
     borderBottomWidth: 1,
     borderBottomColor: "#E5E5EA",

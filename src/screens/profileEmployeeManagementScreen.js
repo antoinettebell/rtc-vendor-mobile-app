@@ -42,6 +42,7 @@ import {
   uploadImage_API,
 } from "../api/appAPI";
 import { updateFoodTruck } from "../redux/slices/userSlice";
+import { setVendorOnboardingStep } from "../redux/slices/authSlice";
 import {
   beginScheduleEdit,
   cancelScheduleEdit,
@@ -221,6 +222,11 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const [missingTruckName, setMissingTruckName] = useState("");
   const [missingTruckSaving, setMissingTruckSaving] = useState(false);
   const isManageMode = managementMode === "manage";
+  const isGuidedOnboarding = route?.params?.onboardingFlow === true;
+  const continueGuidedOnboarding = () => {
+    dispatch(setVendorOnboardingStep("MENU"));
+    navigation.reset({ index: 0, routes: [{ name: "authMenuSetupPromptScreen" }] });
+  };
 
   const locationOptions = useMemo(
     () =>
@@ -2047,6 +2053,16 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
           ))
         )}
       </ScrollView>
+      {isGuidedOnboarding ? (
+        <View style={styles.guidedActions}>
+          <TouchableOpacity style={styles.guidedNextButton} onPress={continueGuidedOnboarding}>
+            <Text style={styles.primaryButtonText}>Next: Menu Setup</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.guidedSkipButton} onPress={continueGuidedOnboarding}>
+            <Text style={styles.secondaryButtonText}>Skip</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
       <Modal transparent visible={missingTruckPromptVisible} animationType="fade">
         <View style={styles.modalBackdrop}>
           <View style={styles.modalPanel}>
@@ -2121,6 +2137,9 @@ export default ProfileEmployeeManagementScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F9FAFB" },
+  guidedActions: { backgroundColor: AppColor.white, paddingHorizontal: 20, paddingVertical: 12 },
+  guidedNextButton: { backgroundColor: AppColor.primary, alignItems: "center", borderRadius: 8, paddingVertical: 14 },
+  guidedSkipButton: { alignItems: "center", paddingVertical: 12 },
   modalBackdrop: {
     alignItems: "center",
     backgroundColor: "rgba(0,0,0,0.45)",

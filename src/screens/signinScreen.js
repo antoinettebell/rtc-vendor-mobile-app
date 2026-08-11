@@ -57,6 +57,7 @@ import {
   prepareEventVendorApplicationStorage,
   parseEventVendorApplicationReturn,
 } from "../helpers/eventVendorApplicationDraft.helper";
+import { getEffectiveFoodVendorPlan, getResumableFoodVendorGuidedStep } from "../helpers/foodVendorGuidedSetup.helper";
 
 const SignInScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -253,15 +254,10 @@ const SignInScreen = ({ navigation, route }) => {
             }, 1500);
           } else {
             dispatch(onOnBoard(true));
-            dispatch(
-              setVendorOnboardingStep(
-                ["COMPLIANCE", "PROFILE", "PAYMENT"].includes(
-                  vendorOnboardingStep
-                )
-                  ? vendorOnboardingStep
-                  : "COMPLIANCE"
-              )
-            );
+            const effectivePlan = getEffectiveFoodVendorPlan({ user: response?.data?.user });
+            dispatch(setVendorOnboardingStep(
+              getResumableFoodVendorGuidedStep(effectivePlan, vendorOnboardingStep)
+            ));
           }
         }
       } catch (error) {

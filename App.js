@@ -185,6 +185,10 @@ const FinalSignupStepsNavigator = () => (
       name="authMenuSetupPromptScreen"
       component={AuthMenuSetupPromptScreen}
     />
+    <Stack.Screen
+      name="profileEmployeeManagementScreen"
+      component={ProfileEmployeeManagementScreen}
+    />
     <Stack.Screen name="agreementScreen" component={AgreementScreen} />
   </Stack.Navigator>
 );

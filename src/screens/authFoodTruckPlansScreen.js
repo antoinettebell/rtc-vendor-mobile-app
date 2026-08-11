@@ -121,13 +121,16 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
     if (!isFoodVendorPlan(selectedPlanObject)) {
       return [];
     }
-    if (!isEliteSelected) {
-      return selectedAddOns;
-    }
-
+    const allowedIds = new Set(
+      getPlanAddOnsForFlow({
+        isSignupFlow,
+        selectedPlan: selectedPlanObject,
+        addOns: visibleAddOns,
+      }).map((addOn) => String(addOn._id)),
+    );
     return selectedAddOns.filter((id) => {
       const addOn = addOnsData.find((item) => item._id === id);
-      return !isEventMarketplaceAddOn(addOn);
+      return allowedIds.has(String(id)) && (!isEliteSelected || !isEventMarketplaceAddOn(addOn));
     });
   };
 
@@ -187,6 +190,8 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
         reconcileSelectedAddOnsForPlan({
           selectedPlan: item,
           selectedAddOns,
+          addOns: addOnsData,
+          isSignupFlow,
         }),
       );
       return;
@@ -339,6 +344,9 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
             <View style={styles.planTitleWrap}>
               <Text
                 style={[styles.planName, { color: item.titleColor }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.82}
               >
                 {item.name}
               </Text>
@@ -550,7 +558,7 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
                     color={AppColor.primary}
                   />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.allPlansTitle}>All plans include</Text>
+                    <Text style={styles.allPlansTitle}>All Food Vendor Plans Include</Text>
                     <Text style={styles.allPlansText}>
                       Secure payments, customer support, order management, and
                       more.
@@ -806,10 +814,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#F9FAFB",
   },
-  planTitleWrap: { flex: 1 },
+  planTitleWrap: { flex: 1, minWidth: 0 },
   planName: {
-    fontSize: 21,
+    fontSize: 20,
     fontFamily: Mulish700,
+    flexShrink: 1,
   },
   foodVendorBadge: {
     alignSelf: "flex-start",

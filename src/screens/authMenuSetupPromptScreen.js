@@ -13,9 +13,11 @@ import {
 } from "../redux/slices/authSlice";
 import { AppColor, Mulish400, Mulish700 } from "../utils/theme";
 
-const AuthMenuSetupPromptScreen = () => {
+const AuthMenuSetupPromptScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
+  const setupStep = route?.params?.setupStep || "MENU";
+  const isEmployeeStep = setupStep === "EMPLOYEES";
 
   const enterVendorApp = (openMenu) => {
     dispatch(setPostSignInRoute(openMenu ? "menuScreen" : null));
@@ -23,6 +25,11 @@ const AuthMenuSetupPromptScreen = () => {
     dispatch(onUnderReview(false));
     dispatch(onOnBoard(false));
     dispatch(onSignin(true));
+  };
+
+  const continueFromEmployees = () => {
+    dispatch(setVendorOnboardingStep("MENU"));
+    navigation.reset({ index: 0, routes: [{ name: "authMenuSetupPromptScreen", params: { setupStep: "MENU" } }] });
   };
 
   return (
@@ -35,21 +42,32 @@ const AuthMenuSetupPromptScreen = () => {
       <StatusBarManager />
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Ionicons name="restaurant-outline" size={48} color={AppColor.primary} />
+          <Ionicons name={isEmployeeStep ? "people-outline" : "restaurant-outline"} size={48} color={AppColor.primary} />
         </View>
-        <Text style={styles.title}>Now let&apos;s set up your menu.</Text>
+        <Text style={styles.title}>{isEmployeeStep ? "Set up your employees." : "Now let&apos;s set up your menu."}</Text>
         <Text style={styles.subtitle}>
-          Add your categories and food items using the existing Menu page.
+          {isEmployeeStep ? "Add employees now, or continue and manage them later from your profile." : "Add your categories and food items using the existing Menu page."}
         </Text>
       </View>
 
       <View style={styles.actions}>
+        {isEmployeeStep ? (
+          <>
+            <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate("profileEmployeeManagementScreen", { onboardingFlow: true })} style={styles.primaryButton}>
+              <Text style={styles.primaryButtonText}>Next: Set Up Employees</Text><Ionicons name="arrow-forward" size={18} color={AppColor.white} />
+            </TouchableOpacity>
+            <TouchableOpacity activeOpacity={0.7} onPress={continueFromEmployees} style={styles.secondaryButton}>
+              <Text style={styles.secondaryButtonText}>Skip</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => enterVendorApp(true)}
           style={styles.primaryButton}
         >
-          <Text style={styles.primaryButtonText}>Set Up Menu</Text>
+          <Text style={styles.primaryButtonText}>Next: Set Up Menu</Text>
           <Ionicons name="arrow-forward" size={18} color={AppColor.white} />
         </TouchableOpacity>
         <TouchableOpacity
@@ -57,8 +75,10 @@ const AuthMenuSetupPromptScreen = () => {
           onPress={() => enterVendorApp(false)}
           style={styles.secondaryButton}
         >
-          <Text style={styles.secondaryButtonText}>I&apos;ll Do This Later</Text>
+          <Text style={styles.secondaryButtonText}>Skip</Text>
         </TouchableOpacity>
+          </>
+        )}
       </View>
     </View>
   );

@@ -38,6 +38,7 @@ import {
   onUnderReview,
   setVendorOnboardingStep,
 } from "../redux/slices/authSlice";
+import { getEffectiveFoodVendorPlan, getNextFoodVendorGuidedStep } from "../helpers/foodVendorGuidedSetup.helper";
 import { setBankStatus, setProfileStatus } from "../redux/slices/userSlice";
 import StatePickerModal from "../components/StatePickerModal";
 import { getStateCode } from "../utils/usStates";
@@ -104,10 +105,20 @@ const validatePaymentMethod = (text) => {
 const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
-  const { selectedSignupAddOns } = useSelector(
+  const { selectedSignupAddOns, selectedPlan, user } = useSelector(
     (state) => state.userReducer
   );
   const isOnboardingFlow = route?.params?.onboardingFlow === true;
+
+  const skipPaymentSetup = () => {
+    if (!isOnboardingFlow) return;
+    const nextStep = getNextFoodVendorGuidedStep(getEffectiveFoodVendorPlan({ user, selectedPlan }), "PAYMENT") || "MENU";
+    dispatch(setVendorOnboardingStep(nextStep));
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "authMenuSetupPromptScreen", params: { setupStep: nextStep } }],
+    });
+  };
 
   const [loading, setLoading] = useState(false);
   const [accountHolderName, setAccountHolderName] = useState("");
@@ -209,10 +220,11 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
           if (isOnboardingFlow) {
             dispatch(setBankStatus(true));
             dispatch(setProfileStatus("APPROVED"));
-            dispatch(setVendorOnboardingStep("MENU"));
+            const nextStep = getNextFoodVendorGuidedStep(getEffectiveFoodVendorPlan({ user, selectedPlan }), "PAYMENT");
+            dispatch(setVendorOnboardingStep(nextStep || "MENU"));
             navigation.reset({
               index: 0,
-              routes: [{ name: "authMenuSetupPromptScreen" }],
+              routes: [{ name: "authMenuSetupPromptScreen", params: { setupStep: nextStep || "MENU" } }],
             });
           } else {
             dispatch(onUnderReview(true));
@@ -829,10 +841,15 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
             <ActivityIndicator color={AppColor.white} />
           ) : (
             <Text style={styles.continueButtonText}>
-              {isOnboardingFlow ? "Save Payment Details" : "Continue"}
+              {isOnboardingFlow ? "Next: Save Payment Details" : "Continue"}
             </Text>
           )}
         </TouchableOpacity>
+        {isOnboardingFlow ? (
+          <TouchableOpacity onPress={skipPaymentSetup} activeOpacity={0.7} style={styles.onboardingSkipButton}>
+            <Text style={styles.onboardingSkipButtonText}>Skip</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     </View>
   );
@@ -845,6 +862,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F9FAFB",
   },
+  onboardingSkipButton: { alignItems: "center", paddingVertical: 14 },
+  onboardingSkipButtonText: { color: AppColor.primary, fontFamily: Mulish700, fontSize: 15 },
 
   // Header
   header: {
