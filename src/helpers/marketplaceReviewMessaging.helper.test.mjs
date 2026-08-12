@@ -16,6 +16,7 @@ const foodMarketplace = read("screens/vendorMarketplaceNearMeScreen.js");
 const eventVendorMarketplace = read("screens/eventVendorMarketplaceScreen.js");
 const notificationBell = read("components/VendorMarketplaceNotificationBell.js");
 const notificationHelper = read("helpers/marketplaceNotificationCenter.helper.js");
+const api = read("api/appAPI.js");
 
 assert.match(messages, /bid_id: bidId/);
 assert.match(messages, /application_id: applicationId/);
@@ -40,5 +41,7 @@ assert.match(eventVendorMarketplace, /VendorMarketplaceNotificationBell/);
 assert.match(notificationBell, /getMarketplaceNotificationRouteParams/);
 assert.match(notificationHelper, /bidId: notification\?\.bid_id/);
 assert.match(notificationHelper, /applicationId: notification\?\.application_id/);
+assert.doesNotMatch(api, /new URLSearchParams\(\)/);
+assert.match(api, /params,\s*\n\s*\}\);/);
 
 console.log("vendor marketplace review and messaging tests passed");

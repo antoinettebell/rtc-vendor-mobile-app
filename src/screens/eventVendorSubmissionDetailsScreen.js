@@ -30,6 +30,8 @@ export default function EventVendorSubmissionDetailsScreen({ navigation, route }
         {presentation.description ? <Text style={s.text}>{presentation.description}</Text> : null}
         {presentation.date ? <Text style={s.text}>{String(presentation.date)}{presentation.startTime ? ` · ${presentation.startTime}` : ""}</Text> : null}
         {presentation.location ? <Text style={s.text}>{presentation.location}</Text> : null}
+        <Text style={s.text}>GA Guests: {presentation.gaGuests || "Not provided"}</Text>
+        {presentation.vipGuests > 0 ? <Text style={s.text}>VIP Guests: {presentation.vipGuests}</Text> : null}
         <VendorMarketplaceSectionCard style={s.section}>
           <Text style={s.heading}>Submitted vendor types</Text>
           <Text style={s.text}>{(application.vendor_types || []).map(statusLabel).join(", ") || "Not provided"}</Text>

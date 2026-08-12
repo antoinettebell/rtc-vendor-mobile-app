@@ -61,6 +61,9 @@ for (const source of [eventApplication, eventLanding, eventDetails]) {
 }
 assert.match(eventApplication, /MARKETPLACE_VENDOR_PARTICIPATION_PATH = "APPLICATION"/);
 assert.match(eventLanding, /VendorMarketplaceActionRow/);
+assert.match(eventLanding, /item\.key !== "BIDS"/);
+assert.doesNotMatch(eventLanding, /BIDS: "My Bids"/);
+assert.match(eventLanding, /track applications, and manage awarded events/);
 assert.match(sharedLanding, /ROUND THE CORNER/);
 assert.match(sharedLanding, /Vendor Event Marketplace/);
 assert.match(sharedLanding, /chevron-right/);

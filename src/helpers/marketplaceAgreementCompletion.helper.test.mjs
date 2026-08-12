@@ -111,6 +111,8 @@ assert.match(agreementHook, /onTerminalRef\.current/);
 assert.match(agreementHook, /persistPendingAgreement/);
 assert.match(agreementHook, /await persistPendingAgreement[\s\S]*await Linking\.openURL/,
   "pending agreement identity is stored before DocuSign opens");
+assert.match(agreementHook, /response\?\.data\?\.signing_url[\s\S]*await Linking\.openURL/,
+  "an incomplete first template opens the next required DocuSign signing step");
 assert.match(agreementHook, /returnMarketplaceVendorAgreement_API/,
   "resume and cold-start recovery reconcile the persisted agreement ID");
 assert.match(agreementHook, /AppState\.addEventListener/);

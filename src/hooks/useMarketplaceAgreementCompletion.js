@@ -157,6 +157,16 @@ export const useMarketplaceAgreementCompletion = ({
               ...payload,
               reconcile_only: true,
             });
+        if (response?.data?.signing_url) {
+          await persistPendingAgreement(
+            response?.data?.marketplaceVendorAgreement,
+            payload,
+          );
+          clearRetryTimer();
+          setConfirmingAgreement(false);
+          await Linking.openURL(response.data.signing_url);
+          return false;
+        }
         const complete = await handleAgreementResponse(response, { quiet: true });
         if (complete) return true;
         const delay = getAgreementRetryDelay(retryAttemptRef.current);
@@ -188,7 +198,7 @@ export const useMarketplaceAgreementCompletion = ({
         return false;
       }
     },
-    [enabled, handleAgreementResponse, recoveryLoaded, recoveryStopped],
+    [clearRetryTimer, enabled, handleAgreementResponse, persistPendingAgreement, recoveryLoaded, recoveryStopped],
   );
 
   const handleReturnUrl = useCallback(
@@ -205,6 +215,14 @@ export const useMarketplaceAgreementCompletion = ({
           agreement_id: action.agreementId,
           status: action.status,
         });
+        if (response?.data?.signing_url) {
+          await persistPendingAgreement(
+            response?.data?.marketplaceVendorAgreement,
+            payloadRef.current?.(),
+          );
+          await Linking.openURL(response.data.signing_url);
+          return;
+        }
         const complete = await handleAgreementResponse(response, { quiet: true });
         if (!complete) await reconcile({ quiet: true });
       } catch (error) {
@@ -214,14 +232,14 @@ export const useMarketplaceAgreementCompletion = ({
         );
       }
     },
-    [handleAgreementResponse, reconcile, submissionLabel],
+    [handleAgreementResponse, persistPendingAgreement, reconcile, submissionLabel],
   );
 
   const beginSigning = useCallback(async () => {
     await setTerminalRecoveryStopped(false);
     const payload = payloadRef.current?.();
     const response = await startMarketplaceVendorAgreementSigning_API(payload);
-    if (await handleAgreementResponse(response)) return;
+    if (await handleAgreementResponse(response, { quiet: Boolean(response?.data?.signing_url) })) return;
     await persistPendingAgreement(
       response?.data?.marketplaceVendorAgreement || null,
       payload,

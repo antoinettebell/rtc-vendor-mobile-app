@@ -295,17 +295,15 @@ export const getMarketplaceEventById_API = async (event_id) => {
 
 export const getMarketplaceEventQuestions_API = async (event_id, options = {}) => {
   try {
-    const params = new URLSearchParams();
-    if (options.markRead) params.set("markRead", "true");
-    if (options.bid_id) params.set("bid_id", options.bid_id);
-    if (options.application_id) params.set("application_id", options.application_id);
-    const query = params.toString() ? `?${params.toString()}` : "";
-    const response = await apiClient.get(
-      `${MARKETPLACE_EVENT_QUESTIONS(event_id)}${query}`,
-      {
-        skipToken: false,
-      },
-    );
+    const params = {
+      ...(options.markRead ? { markRead: "true" } : {}),
+      ...(options.bid_id ? { bid_id: options.bid_id } : {}),
+      ...(options.application_id ? { application_id: options.application_id } : {}),
+    };
+    const response = await apiClient.get(MARKETPLACE_EVENT_QUESTIONS(event_id), {
+      skipToken: false,
+      params,
+    });
     return response?.data;
   } catch (error) {
     throw error?.response?.data || error;

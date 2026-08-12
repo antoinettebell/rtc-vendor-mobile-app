@@ -26,13 +26,17 @@ export const VendorMarketplaceNavigationCard = ({ item, onPress }) => (
   </TouchableOpacity>
 );
 
-export default function VendorMarketplaceLanding({ onSelect, cards = VENDOR_MARKETPLACE_NAVIGATION }) {
+export default function VendorMarketplaceLanding({
+  onSelect,
+  cards = VENDOR_MARKETPLACE_NAVIGATION,
+  intro = "Discover event opportunities, track bids and applications, and manage awarded events.",
+}) {
   return (
     <>
       <Text style={localStyles.kicker}>ROUND THE CORNER</Text>
       <Text style={localStyles.heading}>Vendor Event Marketplace</Text>
       <Text style={styles.screenIntro}>
-        Discover event opportunities, track bids and applications, and manage awarded events.
+        {intro}
       </Text>
       {cards.map((item) => (
         <VendorMarketplaceNavigationCard key={item.key} item={item} onPress={() => onSelect(item)} />

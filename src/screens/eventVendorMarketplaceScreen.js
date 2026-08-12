@@ -45,7 +45,11 @@ export default function EventVendorMarketplaceScreen({ navigation, route }) {
   const [message, setMessage] = useState("");
   const [viewer, setViewer] = useState(null);
   const [loading, setLoading] = useState(false);
-  const section = route?.params?.section || null;
+  const requestedSection = route?.params?.section || null;
+  const section = requestedSection === "BIDS" ? null : requestedSection;
+  const marketplaceVendorNavigation = VENDOR_MARKETPLACE_NAVIGATION.filter(
+    (item) => item.key !== "BIDS",
+  );
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -134,14 +138,11 @@ export default function EventVendorMarketplaceScreen({ navigation, route }) {
   };
   const sectionTitle = {
     MARKETPLACE: "Marketplace / Near Me",
-    BIDS: "My Bids",
     APPLICATIONS: "My Applications",
     AWARDED: "Awarded Events",
   }[section];
   const data = section === "MARKETPLACE"
     ? events
-    : section === "BIDS"
-      ? categorized.bids
     : section === "APPLICATIONS"
       ? categorized.applications
       : section === "AWARDED"
@@ -167,7 +168,8 @@ export default function EventVendorMarketplaceScreen({ navigation, route }) {
       {!section ? (
         <ScrollView contentContainerStyle={styles.body}>
           <VendorMarketplaceLanding
-            cards={VENDOR_MARKETPLACE_NAVIGATION.map((item) => item.key === "MARKETPLACE"
+            intro="Discover event opportunities, track applications, and manage awarded events."
+            cards={marketplaceVendorNavigation.map((item) => item.key === "MARKETPLACE"
               ? { ...item, subtitle: "View sourcing events and Marketplace Vendor opportunities near you." }
               : item)}
             onSelect={(item) => navigation.setParams({ section: item.key })}
@@ -187,7 +189,7 @@ export default function EventVendorMarketplaceScreen({ navigation, route }) {
         contentContainerStyle={styles.body}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={AppColor.primary} />}
         ListEmptyComponent={
-          <VendorMarketplaceEmptyState title="Nothing here yet" message={section === "BIDS" ? "Coordinator-paid submissions will appear here after you submit." : section === "MARKETPLACE" ? "No matching events are accepting applications." : "No submissions in this section."} />
+          <VendorMarketplaceEmptyState title="Nothing here yet" message={section === "MARKETPLACE" ? "No matching events are accepting applications." : "No submissions in this section."} />
         }
         renderItem={section !== "MARKETPLACE" ? renderApplication : ({ item }) => {
           const event = getMarketplaceVendorEventPresentation(item);

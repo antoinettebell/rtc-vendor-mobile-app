@@ -140,6 +140,15 @@ const hydrated = await helper.hydrateEventVendorApplication({
 assert.deepEqual(hydrated.draft.selected, ["repo-1", "uploaded-1"]);
 assert.equal(hydrated.event.event_id, "event-1", "hydration returns the current eligible event record");
 assert.equal(memory.has(returnKey), true, "hydration does not consume the intent prematurely");
+const editedApplication = await helper.hydrateEventVendorApplication({
+  storage, draftKey, returnKey,
+  loadProfile: async () => ({ data: { eventVendorProfile: { profile_id: "profile-1" } } }),
+  loadPhotos: async () => ({ data: { photoList: [] } }),
+  loadEvent: null,
+  eventId: "event-1",
+  existingEvent: { event_id: "event-1", status: "OPEN", event_close_date: "2099-01-01" },
+});
+assert.equal(editedApplication.event.event_id, "event-1", "an existing submission hydrates from its attached open event instead of the new-opportunity list");
 await helper.clearEventVendorApplicationRecovery({
   storage, returnKey,
 });

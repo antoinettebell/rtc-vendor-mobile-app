@@ -23,6 +23,8 @@ const event = helper.getMarketplaceVendorEventPresentation({
 });
 assert.equal(event.name, "Summer Market");
 assert.equal(event.expectedGuests, 150);
+assert.equal(event.gaGuests, 125);
+assert.equal(event.vipGuests, 25);
 assert.equal(event.needs[0].remaining, 2);
 assert.equal(event.paymentDeadline, "08/15/2026");
 assert.deepEqual(event.images, [{ image_id: "image-1", image_url: "https://public/event.jpg" }]);
@@ -93,7 +95,12 @@ assert.match(viewer, /Previous/);
 assert.match(viewer, /Next/);
 assert.match(viewer, /onRequestClose=\{onClose\}/);
 const applicationScreen = await readFile(new URL("../screens/eventVendorApplicationScreen.js", import.meta.url), "utf8");
+const submissionDetailsScreen = await readFile(new URL("../screens/eventVendorSubmissionDetailsScreen.js", import.meta.url), "utf8");
 assert.match(applicationScreen, /MARKETPLACE_VENDOR_PARTICIPATION_PATH = "APPLICATION"/);
 assert.doesNotMatch(applicationScreen, /My Bid|Coordinator-paid opportunity|Choose your participation path/);
+assert.match(applicationScreen, /GA Guests:/);
+assert.match(applicationScreen, /VIP Guests:/);
+assert.match(submissionDetailsScreen, /GA Guests:/);
+assert.match(submissionDetailsScreen, /VIP Guests:/);
 
 console.log("Marketplace Vendor UI presentation tests passed");

@@ -100,8 +100,9 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
       returnKey,
       loadProfile: getEventVendorProfile_API,
       loadPhotos: () => getEventVendorPhotos_API(event.event_id),
-      loadEvent: getEventVendorEvents_API,
+      loadEvent: existingApplication ? null : getEventVendorEvents_API,
       eventId: event.event_id,
+      existingEvent: existingApplication ? event : null,
     }))
       .then(async ({
         profile: hydratedProfile,
@@ -409,7 +410,10 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
         <Text style={marketplaceStyles.meta}>Date: {eventPresentation.date || "Not provided"}</Text>
         <Text style={marketplaceStyles.meta}>Time: {[eventPresentation.startTime, eventPresentation.endTime].filter(Boolean).join(" – ") || "Not provided"}</Text>
         <Text style={marketplaceStyles.meta}>Location: {eventPresentation.location}</Text>
-        <Text style={marketplaceStyles.meta}>Expected guests: {eventPresentation.expectedGuests || "Not provided"}</Text>
+        <Text style={marketplaceStyles.meta}>GA Guests: {eventPresentation.gaGuests || "Not provided"}</Text>
+        {eventPresentation.vipGuests > 0 ? (
+          <Text style={marketplaceStyles.meta}>VIP Guests: {eventPresentation.vipGuests}</Text>
+        ) : null}
         <Text style={marketplaceStyles.meta}>Who pays: {eventPresentation.whoPays}</Text>
         <Text style={marketplaceStyles.meta}>Last date to accept payment: {eventPresentation.paymentDeadline || "Not provided"}</Text>
         {eventPresentation.needs.map((need) => (

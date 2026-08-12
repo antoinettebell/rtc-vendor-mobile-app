@@ -63,6 +63,8 @@ export const getMarketplaceVendorEventPresentation = (event = {}) => ({
     event.event_address || event.formatted_address ||
     [event.event_city, event.event_state].filter(Boolean).join(", ") ||
     "Location pending",
+  gaGuests: Number(event.expected_ga_guests || event.expected_guest_count || event.number_of_guests || 0),
+  vipGuests: Number(event.expected_vip_guests || event.vip_guest_count || 0),
   expectedGuests:
     Number(event.expected_ga_guests || event.expected_guest_count || event.number_of_guests || 0) +
     Number(event.expected_vip_guests || event.vip_guest_count || 0),

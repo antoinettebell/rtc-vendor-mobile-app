@@ -39,7 +39,8 @@ assert.equal(new Set([...split.bids, ...split.applications, ...split.awarded].ma
 const screen = await readFile(new URL("../screens/eventVendorMarketplaceScreen.js", import.meta.url), "utf8");
 assert.match(screen, /Marketplace \/ Near Me/);
 assert.match(screen, /My Applications/);
-assert.match(screen, /categorized\.bids/);
+assert.doesNotMatch(screen, /categorized\.bids/);
+assert.doesNotMatch(screen, /BIDS: "My Bids"/);
 assert.match(screen, /Awarded Events/);
 assert.match(screen, /Edit Event Submission/);
 assert.match(screen, /Withdraw Application/);
@@ -51,6 +52,7 @@ const details = await readFile(new URL("../screens/eventVendorSubmissionDetailsS
 for (const label of [
   "Submitted vendor types", "Products / Services Offered", "Average Price",
   "Additional Notes", "Electricity", "Agreement", "Submitted Photos",
+  "GA Guests", "VIP Guests",
 ]) assert.match(details, new RegExp(label));
 assert.match(details, /Complete Award Checkout/);
 assert.doesNotMatch(details, /TextInput|submitEventVendorApplication_API/);

@@ -277,19 +277,29 @@ export const hydrateEventVendorApplication = async ({
   loadPhotos,
   loadEvent,
   eventId,
+  existingEvent = null,
 }) => {
   try {
     const [profileResponse, photoResponse, eventResponse, storedDraft] = await Promise.all([
       loadProfile(),
       loadPhotos(),
-      loadEvent(),
+      loadEvent ? loadEvent() : Promise.resolve(null),
       storage.getItem(draftKey),
     ]);
     const profile = profileResponse?.data?.eventVendorProfile;
     if (!profile) throw new Error("This event application is no longer available.");
     const availableEvent = (eventResponse?.data?.marketplaceEventList || [])
-      .find((item) => item.event_id === eventId);
-    if (!availableEvent) {
+      .find((item) => item.event_id === eventId) ||
+      (existingEvent?.event_id === eventId ? existingEvent : null);
+    const applicationDeadline = availableEvent?.event_close_date
+      ? new Date(availableEvent.event_close_date)
+      : null;
+    if (
+      !availableEvent ||
+      (availableEvent.status && !["OPEN", "REOPENED"].includes(availableEvent.status)) ||
+      availableEvent.vendor_applications_closed_at ||
+      (applicationDeadline && !Number.isNaN(applicationDeadline.getTime()) && applicationDeadline <= new Date())
+    ) {
       const error = new Error("This event is closed or no longer accepting applications.");
       error.authoritativeApplicationUnavailable = true;
       throw error;
