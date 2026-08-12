@@ -97,7 +97,7 @@ export const buildEventVendorApplicationDraft = (state, overrides = {}) => ({
   electricity: state.electricity ?? null,
   feeAck: state.feeAck === true,
   pendingAgreement: state.pendingAgreement === true,
-  participationPath: state.participationPath || null,
+  participationPath: "APPLICATION",
   ...overrides,
 });
 

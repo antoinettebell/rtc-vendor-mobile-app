@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -9,16 +9,23 @@ import {
   View,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import StatusBarManager from "../components/StatusBarManager";
 import { AppColor } from "../utils/theme";
 import {
   askMarketplaceEventQuestion_API,
+  getEventVendorApplications_API,
+  getEventVendorEvents_API,
   getMarketplaceEventQuestions_API,
+  getMarketplaceMyApplications_API,
+  getMarketplaceMyBids_API,
 } from "../api/appAPI";
 import {
   MarketplaceHeader,
+  getApplicationEvent,
+  getBidEvent,
   getMarketplaceMessageError,
   styles,
 } from "./vendorMarketplaceShared";
@@ -28,11 +35,13 @@ const VendorMarketplaceMessagesScreen = ({ navigation, route }) => {
   const eventId = route?.params?.eventId;
   const bidId = route?.params?.bidId || null;
   const applicationId = route?.params?.applicationId || null;
+  const user = useSelector((state) => state.userReducer.user);
   const [questions, setQuestions] = useState([]);
   const [qaArchived, setQaArchived] = useState(false);
   const [loading, setLoading] = useState(false);
   const [questionText, setQuestionText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [openingAssociated, setOpeningAssociated] = useState(false);
 
   const loadQuestions = async () => {
     if (!eventId) return;
@@ -62,6 +71,104 @@ const VendorMarketplaceMessagesScreen = ({ navigation, route }) => {
 
   const questionError = getMarketplaceMessageError(questionText);
   const questionTooShort = questionText.trim().length < 3;
+  const groupedQuestions = useMemo(
+    () => ({
+      unread: questions.filter((question) => question.unread),
+      read: questions.filter((question) => !question.unread),
+    }),
+    [questions]
+  );
+
+  const openAssociatedEvent = async () => {
+    if (!eventId || openingAssociated) return;
+    setOpeningAssociated(true);
+    try {
+      if (user?.vendorSubtype !== "EVENT_VENDOR") {
+        if (bidId) {
+          const response = await getMarketplaceMyBids_API();
+          const bid = (response?.data?.marketplaceBidList || []).find(
+            (item) => item.bid_id === bidId
+          );
+          if (bid) {
+            navigation.navigate("VendorBidDetailScreen", {
+              bid,
+              event: getBidEvent(bid),
+            });
+            return;
+          }
+        }
+        if (applicationId) {
+          const response = await getMarketplaceMyApplications_API();
+          const application = (response?.data?.marketplaceApplicationList || []).find(
+            (item) => item.application_id === applicationId
+          );
+          if (application) {
+            navigation.navigate("VendorApplicationDetailScreen", {
+              application,
+              event: getApplicationEvent(application),
+            });
+            return;
+          }
+        }
+        navigation.navigate("vendorMarketplaceEventDetailsScreen", { eventId });
+        return;
+      }
+
+      const [eventsResponse, applicationsResponse] = await Promise.all([
+        getEventVendorEvents_API(),
+        getEventVendorApplications_API(),
+      ]);
+      const applications = applicationsResponse?.data?.applicationList || [];
+      const application = applicationId
+        ? applications.find((item) => item.application_id === applicationId)
+        : null;
+      if (application) {
+        navigation.navigate("eventVendorSubmissionDetailsScreen", {
+          application,
+          event: application.event || {},
+        });
+        return;
+      }
+      const events = eventsResponse?.data?.marketplaceEventList || [];
+      const event = events.find((item) => item.event_id === eventId);
+      if (event) {
+        navigation.navigate("eventVendorApplicationScreen", { event });
+        return;
+      }
+      navigation.navigate("eventVendorMarketplaceScreen", { section: "APPLICATIONS" });
+    } catch (error) {
+      Alert.alert("Messages", error?.message || "Unable to open the associated event.");
+    } finally {
+      setOpeningAssociated(false);
+    }
+  };
+
+  const renderQuestion = (question) => (
+    <View
+      key={question.question_id}
+      style={{
+        borderTopWidth: 1,
+        borderTopColor: "#E7EAEF",
+        marginTop: 14,
+        paddingTop: 14,
+      }}
+    >
+      <Text style={styles.label}>
+        {question.initiated_by_role === "CUSTOMER"
+          ? "Coordinator Message"
+          : question.vendor_display_id}
+      </Text>
+      <Text style={styles.meta}>{question.question_text}</Text>
+      {question.answer_text ? (
+        <>
+          <Text style={styles.label}>Coordinator Response</Text>
+          <Text style={styles.meta}>{question.answer_text}</Text>
+        </>
+      ) : (
+        <Text style={styles.meta}>Awaiting response.</Text>
+      )}
+    </View>
+  );
 
   const handleAskQuestion = async () => {
     const trimmedQuestion = questionText.trim();
@@ -111,6 +218,17 @@ const VendorMarketplaceMessagesScreen = ({ navigation, route }) => {
           <MaterialIcons name="arrow-back" size={18} color={AppColor.primary} />
           <Text style={styles.secondaryButtonText}>Back to Event</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={[styles.secondaryButton, { marginTop: 10 }]}
+          disabled={openingAssociated}
+          onPress={openAssociatedEvent}
+        >
+          <MaterialIcons name="open-in-new" size={18} color={AppColor.primary} />
+          <Text style={styles.secondaryButtonText}>
+            {openingAssociated ? "Opening..." : "Open Associated Event / Submission"}
+          </Text>
+        </TouchableOpacity>
 
         <View style={styles.card}>
           <View style={styles.rowBetween}>
@@ -129,35 +247,16 @@ const VendorMarketplaceMessagesScreen = ({ navigation, route }) => {
               style={{ marginTop: 16 }}
             />
           ) : questions.length ? (
-            questions.map((question) => (
-              <View
-                key={question.question_id}
-                style={{
-                  borderTopWidth: 1,
-                  borderTopColor: "#E7EAEF",
-                  marginTop: 14,
-                  paddingTop: 14,
-                }}
-              >
-                <View style={styles.rowBetween}>
-                  <Text style={styles.label}>
-                    {question.initiated_by_role === "CUSTOMER"
-                      ? "Coordinator Message"
-                      : question.vendor_display_id}
-                  </Text>
-                  <Text style={styles.meta}>{question.unread ? "Unread" : "Read"}</Text>
-                </View>
-                <Text style={styles.meta}>{question.question_text}</Text>
-                {question.answer_text ? (
-                  <>
-                    <Text style={styles.label}>Coordinator Response</Text>
-                    <Text style={styles.meta}>{question.answer_text}</Text>
-                  </>
-                ) : (
-                  <Text style={styles.meta}>Awaiting response.</Text>
-                )}
-              </View>
-            ))
+            <>
+              <Text style={[styles.label, { marginTop: 14 }]}>Unread Messages</Text>
+              {groupedQuestions.unread.length ? groupedQuestions.unread.map(renderQuestion) : (
+                <Text style={styles.meta}>No unread messages.</Text>
+              )}
+              <Text style={[styles.label, { marginTop: 20 }]}>Read Messages</Text>
+              {groupedQuestions.read.length ? groupedQuestions.read.map(renderQuestion) : (
+                <Text style={styles.meta}>No read messages.</Text>
+              )}
+            </>
           ) : (
             <Text style={styles.emptyText}>No messages yet.</Text>
           )}

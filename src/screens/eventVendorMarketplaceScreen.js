@@ -19,6 +19,7 @@ import {
 } from "../api/appAPI";
 import { AppColor } from "../utils/theme";
 import MarketplaceImageViewer from "../components/MarketplaceImageViewer";
+import VendorMarketplaceNotificationBell from "../components/VendorMarketplaceNotificationBell";
 import VendorMarketplaceLanding, { VENDOR_MARKETPLACE_NAVIGATION } from "../components/VendorMarketplaceLanding";
 import { styles } from "./vendorMarketplaceShared";
 import {
@@ -71,10 +72,9 @@ export default function EventVendorMarketplaceScreen({ navigation, route }) {
   );
   const categorized = useMemo(() => splitEventVendorApplications(applications), [applications]);
   const withdraw = (application) => {
-    const isBid = application.participation_path === "BID";
     return Alert.alert(
-    isBid ? "Withdraw Bid" : "Withdraw Application",
-    `Withdraw this event submission? It will remain in ${isBid ? "My Bids" : "My Applications"} as history.`,
+    "Withdraw Application",
+    "Withdraw this event submission? It will remain in My Applications as history.",
     [
       { text: "Cancel", style: "cancel" },
       {
@@ -96,7 +96,6 @@ export default function EventVendorMarketplaceScreen({ navigation, route }) {
     const event = item.event || {};
     const editable = canEditEventVendorSubmission(item, event);
     const withdrawable = canWithdrawEventVendorSubmission(item, event);
-    const isBidPath = item.participation_path === "BID";
     return (
       <VendorMarketplaceCard style={s.card}>
         <Text style={styles.title}>{event.event_name || "Event Submission"}</Text>
@@ -105,8 +104,8 @@ export default function EventVendorMarketplaceScreen({ navigation, route }) {
         {editable ? (
           <VendorMarketplaceActionRow vertical>
             <View>
-              <VendorMarketplaceSecondaryAction label={isBidPath ? "View Bid" : "View Submission"} onPress={() => navigation.navigate("eventVendorSubmissionDetailsScreen", { application: item, event })} />
-              <VendorMarketplacePrimaryAction label={isBidPath ? "Edit Bid Submission" : "Edit Event Submission"} style={{ marginTop: 10 }} onPress={() => navigation.navigate("eventVendorApplicationScreen", { event, application: item })} />
+              <VendorMarketplaceSecondaryAction label="View Submission" onPress={() => navigation.navigate("eventVendorSubmissionDetailsScreen", { application: item, event })} />
+              <VendorMarketplacePrimaryAction label="Edit Event Submission" style={{ marginTop: 10 }} onPress={() => navigation.navigate("eventVendorApplicationScreen", { event, application: item })} />
             </View>
             {withdrawable ? <VendorMarketplaceSecondaryAction label="Withdraw" destructive style={{ marginTop: 10 }} onPress={() => withdraw(item)} /> : null}
           </VendorMarketplaceActionRow>
@@ -122,6 +121,17 @@ export default function EventVendorMarketplaceScreen({ navigation, route }) {
     );
   };
   const goToLanding = () => navigation.setParams({ section: undefined });
+  const openNotification = (item) => {
+    if (["MARKETPLACE_APPLICATION", "MARKETPLACE_EVENT_CLOSED"].includes(item.type)) {
+      navigation.setParams({
+        section: ["AWARDED", "PAYMENT_DUE", "PAID"].includes(item.status)
+          ? "AWARDED"
+          : "APPLICATIONS",
+      });
+      return;
+    }
+    navigation.setParams({ section: "MARKETPLACE" });
+  };
   const sectionTitle = {
     MARKETPLACE: "Marketplace / Near Me",
     BIDS: "My Bids",
@@ -143,9 +153,15 @@ export default function EventVendorMarketplaceScreen({ navigation, route }) {
       navigation={navigation}
       onBack={section ? goToLanding : undefined}
       right={
-        <TouchableOpacity disabled={loading} onPress={load} style={s.refreshButton}>
-          <MaterialIcons name="refresh" size={25} color={loading ? AppColor.gray : AppColor.primary} />
-        </TouchableOpacity>
+        <View style={s.headerActions}>
+          <TouchableOpacity disabled={loading} onPress={load} style={s.refreshButton}>
+            <MaterialIcons name="refresh" size={25} color={loading ? AppColor.gray : AppColor.primary} />
+          </TouchableOpacity>
+          <VendorMarketplaceNotificationBell
+            navigation={navigation}
+            onOpenNotification={openNotification}
+          />
+        </View>
       }
     >
       {!section ? (
@@ -220,6 +236,7 @@ const s = StyleSheet.create({
   page: { flex: 1, paddingHorizontal: 18, backgroundColor: "#fff" },
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   refreshButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  headerActions: { alignItems: "center", flexDirection: "row" },
   heading: { fontSize: 26, fontWeight: "800", color: "#172033" },
   sub: { color: "#64748b", marginTop: 5, marginBottom: 14 },
   notice: {

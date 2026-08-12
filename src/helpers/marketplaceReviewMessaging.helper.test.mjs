@@ -12,6 +12,10 @@ const awarded = read("screens/vendorMarketplaceAwardedBidsScreen.js");
 const bidDetail = read("screens/vendorMarketplaceBidDetailScreen.js");
 const applicationDetail = read("screens/vendorMarketplaceApplicationDetailScreen.js");
 const eventVendorDetail = read("screens/eventVendorSubmissionDetailsScreen.js");
+const foodMarketplace = read("screens/vendorMarketplaceNearMeScreen.js");
+const eventVendorMarketplace = read("screens/eventVendorMarketplaceScreen.js");
+const notificationBell = read("components/VendorMarketplaceNotificationBell.js");
+const notificationHelper = read("helpers/marketplaceNotificationCenter.helper.js");
 
 assert.match(messages, /bid_id: bidId/);
 assert.match(messages, /application_id: applicationId/);
@@ -25,5 +29,16 @@ assert.match(awarded, /bidId: item\.bid\?\.bid_id/);
 assert.match(bidDetail, /MarketplaceImageViewer/);
 assert.match(applicationDetail, /MarketplaceImageViewer/);
 assert.match(eventVendorDetail, /Message Coordinator/);
+assert.match(messages, /Unread Messages/);
+assert.match(messages, /Read Messages/);
+assert.match(messages, /Open Associated Event \/ Submission/);
+assert.match(messages, /getMarketplaceMyBids_API/);
+assert.match(messages, /getMarketplaceMyApplications_API/);
+assert.match(messages, /getEventVendorApplications_API/);
+assert.match(foodMarketplace, /VendorMarketplaceNotificationBell/);
+assert.match(eventVendorMarketplace, /VendorMarketplaceNotificationBell/);
+assert.match(notificationBell, /getMarketplaceNotificationRouteParams/);
+assert.match(notificationHelper, /bidId: notification\?\.bid_id/);
+assert.match(notificationHelper, /applicationId: notification\?\.application_id/);
 
 console.log("vendor marketplace review and messaging tests passed");

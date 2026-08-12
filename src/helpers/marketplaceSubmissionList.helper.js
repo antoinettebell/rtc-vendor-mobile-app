@@ -1,6 +1,9 @@
 export const matchesMarketplaceSubmissionStatus = (
   submissionStatus,
   selectedStatus,
-) =>
-  selectedStatus === "ALL" ||
-  String(submissionStatus || "").toUpperCase() === selectedStatus;
+) => {
+  const normalizedStatus = String(submissionStatus || "").toUpperCase();
+  return selectedStatus === "ALL" ||
+    normalizedStatus === selectedStatus ||
+    (selectedStatus === "NOT_AWARDED" && normalizedStatus === "DECLINED");
+};

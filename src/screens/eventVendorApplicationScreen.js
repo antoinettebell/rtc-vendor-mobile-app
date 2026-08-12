@@ -59,12 +59,7 @@ import MarketplaceImageViewer from "../components/MarketplaceImageViewer";
 import { VendorMarketplaceHeroImages, VendorMarketplaceSectionCard } from "../components/VendorMarketplacePrimitives";
 import { getMarketplaceVendorEventPresentation } from "../helpers/eventVendorPresentation.helper";
 import { styles as marketplaceStyles } from "./vendorMarketplaceShared";
-const defaultParticipationPath = (event = {}) => {
-  const responsibility = String(event.payment_responsibility || event.who_pays || "NONE").toUpperCase();
-  if (responsibility === "COORDINATOR") return "BID";
-  if (responsibility === "VENDOR" || responsibility === "NONE") return "APPLICATION";
-  return "";
-};
+const MARKETPLACE_VENDOR_PARTICIPATION_PATH = "APPLICATION";
 export default function EventVendorApplicationScreen({ navigation, route }) {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.userReducer.user);
@@ -77,9 +72,7 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
   const [photos, setPhotos] = useState([]);
   const [selected, setSelected] = useState([]);
   const [types, setTypes] = useState([]);
-  const [participationPath, setParticipationPath] = useState(
-    existingApplication?.participation_path || defaultParticipationPath(event),
-  );
+  const participationPath = MARKETPLACE_VENDOR_PARTICIPATION_PATH;
   const [bullets, setBullets] = useState("• ");
   const [price, setPrice] = useState("");
   const [priceFocused, setPriceFocused] = useState(false);
@@ -129,11 +122,6 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
           selectedTypes: draft?.types,
         });
         setTypes(normalizedTypeState.selectedTypes);
-        setParticipationPath(
-          draft?.participationPath ||
-          existingApplication?.participation_path ||
-          defaultParticipationPath(currentEvent),
-        );
         if (draft) {
           setSelected(Array.isArray(draft.selected) ? draft.selected : []);
           setBullets(normalizeApplicationBullets(draft.bullets));
@@ -314,10 +302,6 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
     }
   };
   const submitApplication = async () => {
-    if (!participationPath && String(hydratedEvent.payment_responsibility || "").toUpperCase() === "BOTH") {
-      Alert.alert("Application", "Choose whether this submission belongs in My Bids or My Applications.");
-      return;
-    }
     const normalized = normalizedTypeState();
     if (!normalized.eligibleTypes.length) {
       Alert.alert("Application Unavailable", "This event is no longer requesting a vendor type approved for your profile.");
@@ -338,7 +322,7 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
         additional_notes: notes,
         electricity_required: electricity,
         electricity_fee_acknowledged: feeAck,
-        participation_path: participationPath || defaultParticipationPath(hydratedEvent),
+        participation_path: MARKETPLACE_VENDOR_PARTICIPATION_PATH,
       });
       await clearEventVendorApplicationRecovery({
         storage: AsyncStorage,
@@ -382,10 +366,6 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
     },
   });
   const startSigningAndSubmit = async () => {
-    if (!participationPath && String(hydratedEvent.payment_responsibility || "").toUpperCase() === "BOTH") {
-      Alert.alert("Marketplace Agreements", "Choose whether this submission belongs in My Bids or My Applications.");
-      return;
-    }
     const normalized = normalizedTypeState();
     if (!normalized.eligibleTypes.length) {
       Alert.alert("Application Unavailable", "This event is no longer requesting a vendor type approved for your profile.");
@@ -438,23 +418,6 @@ export default function EventVendorApplicationScreen({ navigation, route }) {
           </Text>
         ))}
       </VendorMarketplaceSectionCard>
-      {String(hydratedEvent.payment_responsibility || "").toUpperCase() === "BOTH" ? (
-        <VendorMarketplaceSectionCard>
-          <Text style={marketplaceStyles.label}>Choose your participation path *</Text>
-          <TouchableOpacity
-            style={[marketplaceStyles.secondaryButton, participationPath === "BID" && s.on]}
-            onPress={() => setParticipationPath("BID")}
-          >
-            <Text style={marketplaceStyles.secondaryButtonText}>My Bid — Coordinator-paid opportunity</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[marketplaceStyles.secondaryButton, { marginTop: 10 }, participationPath === "APPLICATION" && s.on]}
-            onPress={() => setParticipationPath("APPLICATION")}
-          >
-            <Text style={marketplaceStyles.secondaryButtonText}>My Application — Vendor-paid opportunity</Text>
-          </TouchableOpacity>
-        </VendorMarketplaceSectionCard>
-      ) : null}
       <Text style={s.meta}>
         Business: {profile?.business_name || "Complete profile"}
       </Text>

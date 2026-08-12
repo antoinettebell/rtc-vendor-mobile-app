@@ -52,6 +52,14 @@ for (const source of [eventApplication, eventDetails]) {
   assert.match(source, /VendorMarketplaceSectionCard/);
 }
 assert.match(eventApplication, /VendorMarketplaceHeroImages/);
+for (const source of [eventApplication, eventLanding, eventDetails]) {
+  assert.doesNotMatch(
+    source,
+    /Submit Bid|VIP Catering|Coordinator-paid opportunity|guest_coverage|price_per_guest|full_bid_amount/,
+    "Marketplace Vendor screens do not expose Food Vendor catering bid behavior",
+  );
+}
+assert.match(eventApplication, /MARKETPLACE_VENDOR_PARTICIPATION_PATH = "APPLICATION"/);
 assert.match(eventLanding, /VendorMarketplaceActionRow/);
 assert.match(sharedLanding, /ROUND THE CORNER/);
 assert.match(sharedLanding, /Vendor Event Marketplace/);

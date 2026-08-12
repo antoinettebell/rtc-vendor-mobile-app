@@ -24,10 +24,16 @@ const event = helper.getMarketplaceVendorEventPresentation({
 assert.equal(event.name, "Summer Market");
 assert.equal(event.expectedGuests, 150);
 assert.equal(event.needs[0].remaining, 2);
+assert.equal(event.paymentDeadline, "08/15/2026");
 assert.deepEqual(event.images, [{ image_id: "image-1", image_url: "https://public/event.jpg" }]);
 assert.equal(event.tax_exemption_certificate, undefined);
 assert.equal(event.eventCoordinatorPaymentQrCodeUrl, undefined);
 assert.equal(helper.formatMarketplaceEventDate("2026-08-20"), "08/20/2026");
+assert.equal(
+  helper.formatMarketplaceEventDate("2026-09-02T00:00:00.000Z"),
+  "09/02/2026",
+  "calendar deadlines do not shift to the prior day when stored as UTC midnight",
+);
 assert.equal(helper.formatMarketplaceEventTime("00:00"), "12:00 AM");
 assert.equal(helper.formatMarketplaceEventTime("12:00"), "12:00 PM");
 assert.equal(helper.formatMarketplaceEventTime("16:00pm"), "4:00 PM");
@@ -86,5 +92,8 @@ assert.match(viewer, /maximumZoomScale=\{4\}/);
 assert.match(viewer, /Previous/);
 assert.match(viewer, /Next/);
 assert.match(viewer, /onRequestClose=\{onClose\}/);
+const applicationScreen = await readFile(new URL("../screens/eventVendorApplicationScreen.js", import.meta.url), "utf8");
+assert.match(applicationScreen, /MARKETPLACE_VENDOR_PARTICIPATION_PATH = "APPLICATION"/);
+assert.doesNotMatch(applicationScreen, /My Bid|Coordinator-paid opportunity|Choose your participation path/);
 
 console.log("Marketplace Vendor UI presentation tests passed");

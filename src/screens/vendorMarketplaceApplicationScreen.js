@@ -43,6 +43,10 @@ import {
   styles,
 } from "./vendorMarketplaceShared";
 import { getApplicationActionAvailability } from "../helpers/marketplaceBidEligibility.helper";
+import {
+  getFoodVendorMarketplaceCloseDate,
+  getFoodVendorMarketplaceGuestRows,
+} from "../helpers/foodVendorMarketplaceGuestCounts.helper";
 
 const ReadOnlyRow = ({ label, value }) => (
   <View style={{ marginTop: 12 }}>
@@ -867,6 +871,16 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
               <ReadOnlyRow label="Event Time" value={formatTimeRange(event?.event_time)} />
               <ReadOnlyRow label="Duration" value={formatDuration(event)} />
               <ReadOnlyRow label="Location" value={getEventLocation(event)} />
+              {getFoodVendorMarketplaceGuestRows({
+                event,
+                participationPath: "APPLICATION",
+              }).map((row) => (
+                <ReadOnlyRow key={row.label} label={row.label} value={row.value} />
+              ))}
+              <ReadOnlyRow
+                label="Application/Bid Deadline"
+                value={formatDate(getFoodVendorMarketplaceCloseDate(event))}
+              />
               <ReadOnlyRow
                 label="Free Food Offered"
                 value={boolText(event?.free_food_offered)}

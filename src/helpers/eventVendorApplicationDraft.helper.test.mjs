@@ -95,7 +95,7 @@ assert.deepEqual(afterColdRestart, {
   electricity: true,
   feeAck: true,
   pendingAgreement: false,
-  participationPath: null,
+  participationPath: "APPLICATION",
 });
 assert.deepEqual(
   helper.parseEventVendorApplicationReturn(

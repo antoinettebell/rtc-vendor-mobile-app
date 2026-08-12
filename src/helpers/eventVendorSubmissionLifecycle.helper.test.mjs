@@ -15,9 +15,9 @@ for (const status of ["AWARDED", "PAYMENT_DUE", "PAID", "WITHDRAWN"]) {
   assert.equal(canWithdrawEventVendorSubmission({ status }, open), false);
 }
 assert.equal(canEditEventVendorSubmission({ status: "SUBMITTED" }, { status: "CLOSED" }), false);
-assert.equal(resolveEventVendorParticipationPath({}, { payment_responsibility: "COORDINATOR" }), "BID");
+assert.equal(resolveEventVendorParticipationPath({}, { payment_responsibility: "COORDINATOR" }), "APPLICATION");
 assert.equal(resolveEventVendorParticipationPath({}, { payment_responsibility: "VENDOR" }), "APPLICATION");
-assert.equal(resolveEventVendorParticipationPath({ participation_path: "BID" }, { payment_responsibility: "BOTH" }), "BID");
+assert.equal(resolveEventVendorParticipationPath({ participation_path: "BID" }, { payment_responsibility: "BOTH" }), "APPLICATION");
 assert.equal(resolveEventVendorParticipationPath({ participation_path: "APPLICATION" }, { payment_responsibility: "BOTH" }), "APPLICATION");
 assert.equal(resolveEventVendorParticipationPath({ category_fee: 25 }, { payment_responsibility: "BOTH" }), "APPLICATION");
 assert.equal(resolveEventVendorParticipationPath({ category_fee: 0 }, { payment_responsibility: "BOTH" }), "APPLICATION");
@@ -32,8 +32,8 @@ const split = splitEventVendorApplications([
   { application_id: "award", status: "PAYMENT_DUE", participation_path: "BID" },
   { application_id: "withdrawn", status: "WITHDRAWN", participation_path: "APPLICATION" },
 ]);
-assert.deepEqual(split.bids.map((item) => item.application_id), ["bid"]);
-assert.deepEqual(split.applications.map((item) => item.application_id), ["application", "withdrawn"]);
+assert.deepEqual(split.bids, []);
+assert.deepEqual(split.applications.map((item) => item.application_id), ["bid", "application", "withdrawn"]);
 assert.equal(split.awarded.length, 1);
 assert.equal(new Set([...split.bids, ...split.applications, ...split.awarded].map((item) => item.application_id)).size, 4);
 const screen = await readFile(new URL("../screens/eventVendorMarketplaceScreen.js", import.meta.url), "utf8");
@@ -46,6 +46,7 @@ assert.match(screen, /Withdraw Application/);
 assert.match(screen, /useFocusEffect/);
 assert.match(screen, /eventVendorSubmissionDetailsScreen/);
 assert.match(screen, /Complete Award Checkout/);
+assert.doesNotMatch(screen, /View Bid|Edit Bid Submission|Withdraw Bid/);
 const details = await readFile(new URL("../screens/eventVendorSubmissionDetailsScreen.js", import.meta.url), "utf8");
 for (const label of [
   "Submitted vendor types", "Products / Services Offered", "Average Price",

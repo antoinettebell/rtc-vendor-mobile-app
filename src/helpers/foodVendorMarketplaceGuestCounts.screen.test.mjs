@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 const screens = {
   nearMe: await readFile(new URL("../screens/vendorMarketplaceNearMeScreen.js", import.meta.url), "utf8"),
   eventDetails: await readFile(new URL("../screens/vendorMarketplaceEventDetailsScreen.js", import.meta.url), "utf8"),
+  application: await readFile(new URL("../screens/vendorMarketplaceApplicationScreen.js", import.meta.url), "utf8"),
   bidResponse: await readFile(new URL("../screens/vendorMarketplaceBidResponseScreen.js", import.meta.url), "utf8"),
   savedBidDetails: await readFile(new URL("../screens/vendorMarketplaceBidDetailScreen.js", import.meta.url), "utf8"),
 };
@@ -16,6 +17,7 @@ for (const [screen, source] of Object.entries(screens)) {
 }
 
 assert.match(screens.eventDetails, /bothPay \? "BOTH" : vendorPays \? "APPLICATION" : "BID"/);
+assert.match(screens.application, /participationPath: "APPLICATION"/);
 assert.match(screens.bidResponse, /coverage: guestCoverage/);
 assert.match(screens.savedBidDetails, /coverage: bid\?\.guest_coverage/);
 console.log("Food Vendor Marketplace guest-count screen-wiring tests passed.");

@@ -18,7 +18,7 @@ const eventTimeZone = (event = {}) =>
 export const formatMarketplaceEventDate = (value, timeZone = "America/New_York") => {
   if (!value) return null;
   const plainDate = String(value).match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T)/);
-  if (plainDate && !String(value).includes("T")) {
+  if (plainDate) {
     return `${plainDate[2]}/${plainDate[3]}/${plainDate[1]}`;
   }
   const date = new Date(value);
@@ -68,7 +68,12 @@ export const getMarketplaceVendorEventPresentation = (event = {}) => ({
     Number(event.expected_vip_guests || event.vip_guest_count || 0),
   whoPays: event.payment_responsibility || event.who_pays || "Not specified",
   paymentDeadline:
-    event.last_date_to_accept_payments || event.vendor_payment_deadline || event.vendor_fee_payment_deadline || null,
+    formatMarketplaceEventDate(
+      event.last_date_to_accept_payments ||
+      event.vendor_payment_deadline ||
+      event.vendor_fee_payment_deadline,
+      eventTimeZone(event),
+    ),
   needs: (event.event_vendor_needs || []).map((need) => ({
     vendorType: need.vendor_type,
     fee: Number(need.fee || 0),
