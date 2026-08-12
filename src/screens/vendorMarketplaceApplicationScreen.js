@@ -26,6 +26,7 @@ import {
   uploadMarketplaceApplicationAttachment_API,
 } from "../api/appAPI";
 import { useMarketplaceAgreementCompletion } from "../hooks/useMarketplaceAgreementCompletion";
+import { getFoodVendorMarketplaceCompletionReset } from "../helpers/marketplaceAgreementCompletion.helper";
 import usePermission from "../hooks/usePermission";
 import { permission } from "../helpers/permission.helper";
 import {
@@ -577,10 +578,7 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
           text: "OK",
             onPress: () => {
               isLeavingRef.current = true;
-              navigation.reset({
-                index: 0,
-                routes: [{ name: "homeScreen" }],
-              });
+              navigation.reset(getFoodVendorMarketplaceCompletionReset());
             },
           },
         ],

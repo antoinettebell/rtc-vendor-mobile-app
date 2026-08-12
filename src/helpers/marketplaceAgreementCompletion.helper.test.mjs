@@ -68,6 +68,10 @@ assert.deepEqual(helper.parseAgreementRecoveryRecord(JSON.stringify(recovery)).a
 assert.equal(helper.parseAgreementRecoveryRecord("stopped").signing_state, "STOPPED");
 assert.equal(helper.getAgreementRetryDelay(0), 1000);
 assert.equal(helper.getAgreementRetryDelay(4), null);
+assert.deepEqual(helper.getFoodVendorMarketplaceCompletionReset(), {
+  index: 0,
+  routes: [{ name: "vendorMarketplaceNearMeScreen" }],
+});
 
 const applicationScreen = await readFile(
   new URL("../screens/vendorMarketplaceApplicationScreen.js", import.meta.url),
@@ -91,6 +95,13 @@ for (const screen of [applicationScreen, bidScreen, eventVendorScreen]) {
 }
 assert.match(applicationScreen, /application_id: savedApplicationRef\.current\?\.application_id/);
 assert.match(bidScreen, /bid_id: savedBidRef\.current\?\.bid_id/);
+for (const foodVendorScreen of [applicationScreen, bidScreen]) {
+  assert.match(foodVendorScreen, /getFoodVendorMarketplaceCompletionReset/);
+  assert.doesNotMatch(
+    foodVendorScreen,
+    /routes:\s*\[\{\s*name:\s*["']homeScreen["']\s*\}\]/,
+  );
+}
 assert.match(eventVendorScreen, /AsyncStorage\.setItem/);
 assert.match(eventVendorScreen, /pendingAgreement: true/);
 assert.match(eventVendorScreen, /clearEventVendorApplicationRecovery/);
