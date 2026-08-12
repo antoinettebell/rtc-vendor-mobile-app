@@ -9,6 +9,9 @@ import {
   Mulish600,
   Mulish700,
 } from "../utils/theme";
+import { normalizeMarketplaceRequirementLabel } from "../helpers/marketplaceRequirementLabels.helper";
+
+export { normalizeMarketplaceRequirementLabel } from "../helpers/marketplaceRequirementLabels.helper";
 
 export const MARKETPLACE_PAYMENT_TYPES = {
   COORDINATOR_PAYS_VENDOR: "COORDINATOR_PAYS_VENDOR",
@@ -189,43 +192,6 @@ export const getMarketplaceNotesError = (value) => {
 export const getMarketplaceMessageError = (value) => {
   const error = getMarketplaceNotesError(value);
   return error ? error.replace(/^Notes/, "Messages") : "";
-};
-
-export const normalizeMarketplaceRequirementLabel = (label) => {
-  const value = String(label || "").trim();
-  const normalized = value.toLowerCase();
-
-  if (!value || normalized === "none") return "";
-  if (
-    normalized === "insurance" ||
-    normalized === "certificate of insurance"
-  ) {
-    return "Insurance";
-  }
-  if (
-    normalized === "sanitation grade" ||
-    normalized === "health permit" ||
-    normalized === "health department" ||
-    normalized === "food handler permit"
-  ) {
-    return "Sanitation Grade";
-  }
-  if (normalized === "alcohol" || normalized === "liquor license") {
-    return "Liquor License";
-  }
-  if (normalized === "fire permit") return "Fire Permit";
-  if (
-    normalized === "business license" ||
-    normalized === "business license/permit" ||
-    normalized === "license" ||
-    normalized === "city permit"
-  ) {
-    return "City Permit";
-  }
-  if (normalized === "food vendor") return "Food Vendor Permit";
-  if (normalized === "other") return "Other";
-
-  return value;
 };
 
 export const getComplianceRequirementLabel = (documentType) => {

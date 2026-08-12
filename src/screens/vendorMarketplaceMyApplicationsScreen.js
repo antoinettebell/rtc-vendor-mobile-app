@@ -26,10 +26,10 @@ import {
   getApplicationEvent,
   getEventLocation,
   isApplicationRevisionRequested,
-  isVendorPaysToAttendEvent,
   styles,
 } from "./vendorMarketplaceShared";
 import { VendorMarketplaceCard, VendorMarketplaceStatusBadge } from "../components/VendorMarketplacePrimitives";
+import { matchesMarketplaceSubmissionStatus } from "../helpers/marketplaceSubmissionList.helper";
 
 const APPLICATION_STATUS_FILTERS = [
   { label: "All", value: "ALL" },
@@ -75,9 +75,6 @@ const canWithdrawApplication = (application) =>
 const canDeleteApplicationDraft = (application) =>
   String(application?.application_status || "").toUpperCase() === "DRAFT";
 
-const hasAttachedEvent = (event) =>
-  !!event && typeof event === "object" && Object.keys(event).length > 0;
-
 const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const [applications, setApplications] = useState([]);
@@ -113,17 +110,12 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
 
   const filteredApplications = useMemo(
     () =>
-      applications.filter((application) => {
-        const event = getApplicationEvent(application);
-        if (hasAttachedEvent(event) && !isVendorPaysToAttendEvent(event)) {
-          return false;
-        }
-        return (
-          statusFilter === "ALL" ||
-          String(application.application_status || "").toUpperCase() ===
-            statusFilter
-        );
-      }),
+      applications.filter((application) =>
+        matchesMarketplaceSubmissionStatus(
+          application.application_status,
+          statusFilter,
+        ),
+      ),
     [applications, statusFilter],
   );
 

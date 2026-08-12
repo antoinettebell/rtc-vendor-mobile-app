@@ -26,10 +26,10 @@ import {
   getBidEvent,
   getEventLocation,
   isBidRevisionRequested,
-  isVendorPaysToAttendEvent,
   styles,
 } from "./vendorMarketplaceShared";
 import { VendorMarketplaceCard, VendorMarketplaceStatusBadge } from "../components/VendorMarketplacePrimitives";
+import { matchesMarketplaceSubmissionStatus } from "../helpers/marketplaceSubmissionList.helper";
 
 const BID_STATUS_FILTERS = [
   { label: "All", value: "ALL" },
@@ -52,9 +52,6 @@ const canWithdrawBid = (bid) =>
 
 const canDeleteBidDraft = (bid) =>
   String(bid?.bid_status || "").toUpperCase() === "DRAFT";
-
-const hasAttachedEvent = (event) =>
-  !!event && typeof event === "object" && Object.keys(event).length > 0;
 
 const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -91,16 +88,9 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
 
   const filteredBids = useMemo(
     () =>
-      bids.filter((bid) => {
-        const event = getBidEvent(bid);
-        if (hasAttachedEvent(event) && isVendorPaysToAttendEvent(event)) {
-          return false;
-        }
-        return (
-          statusFilter === "ALL" ||
-          String(bid.bid_status || "").toUpperCase() === statusFilter
-        );
-      }),
+      bids.filter((bid) =>
+        matchesMarketplaceSubmissionStatus(bid.bid_status, statusFilter),
+      ),
     [bids, statusFilter],
   );
 
