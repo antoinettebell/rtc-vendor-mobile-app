@@ -16,3 +16,45 @@ export const getMarketplaceNotificationRouteParams = (notification) => ({
   bidId: notification?.bid_id || null,
   applicationId: notification?.application_id || null,
 });
+
+const submissionEvent = (submission) =>
+  submission?.marketplaceEvent || submission?.event || null;
+
+export const resolveFoodMarketplaceNotificationDestination = async ({
+  notification,
+  loadBids,
+  loadApplications,
+}) => {
+  if (notification?.type === "MARKETPLACE_BID" && notification?.bid_id) {
+    const response = await loadBids();
+    const bids = response?.data?.marketplaceBidList || [];
+    const bid = bids.find((item) => item?.bid_id === notification.bid_id);
+    if (bid) {
+      return {
+        route: "VendorBidDetailScreen",
+        params: { bid, event: submissionEvent(bid) },
+      };
+    }
+    return { route: "VendorMyBidsScreen", params: {} };
+  }
+
+  if (notification?.type === "MARKETPLACE_APPLICATION" && notification?.application_id) {
+    const response = await loadApplications();
+    const applications = response?.data?.marketplaceApplicationList || [];
+    const application = applications.find(
+      (item) => item?.application_id === notification.application_id
+    );
+    if (application) {
+      return {
+        route: "VendorApplicationDetailScreen",
+        params: { application, event: submissionEvent(application) },
+      };
+    }
+    return { route: "VendorMyApplicationsScreen", params: {} };
+  }
+
+  return {
+    route: "vendorMarketplaceEventDetailsScreen",
+    params: { eventId: notification?.event_id || null },
+  };
+};

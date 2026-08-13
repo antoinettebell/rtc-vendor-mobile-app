@@ -76,8 +76,8 @@ export const formatMoney = (value) => {
 };
 
 export const formatDuration = (event = {}) => {
-  const rawMinutes = Number(event.event_duration_minutes || 0);
-  const legacyHours = Number(event.event_duration_hours || 0);
+  const rawMinutes = Number(event?.event_duration_minutes || 0);
+  const legacyHours = Number(event?.event_duration_hours || 0);
   const totalMinutes = rawMinutes > 59
     ? rawMinutes
     : legacyHours > 0
@@ -312,10 +312,10 @@ export const getEventImageUrl = (event) =>
 
 export const getEventPaymentType = (event = {}) => {
   const explicitType = String(
-    event.paymentType ||
-      event.payment_type ||
-      event.event_payment_type ||
-      event.marketplace_payment_type ||
+    event?.paymentType ||
+      event?.payment_type ||
+      event?.event_payment_type ||
+      event?.marketplace_payment_type ||
       "",
   ).toUpperCase();
 
@@ -336,7 +336,7 @@ export const getEventPaymentType = (event = {}) => {
   }
 
   // TODO: Replace this fallback once backend sends an explicit event payment type.
-  return Number(event.vendor_fee || 0) > 0
+  return Number(event?.vendor_fee || 0) > 0
     ? MARKETPLACE_PAYMENT_TYPES.VENDOR_PAYS_TO_ATTEND
     : MARKETPLACE_PAYMENT_TYPES.COORDINATOR_PAYS_VENDOR;
 };

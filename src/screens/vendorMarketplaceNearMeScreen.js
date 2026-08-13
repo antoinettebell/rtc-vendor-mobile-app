@@ -14,7 +14,11 @@ import VendorMarketplaceNotificationBell from "../components/VendorMarketplaceNo
 import StatePickerModal from "../components/StatePickerModal";
 import { AppColor } from "../utils/theme";
 import { getStateCode } from "../utils/usStates";
-import { getMarketplaceOpenEvents_API } from "../api/appAPI";
+import {
+  getMarketplaceMyApplications_API,
+  getMarketplaceMyBids_API,
+  getMarketplaceOpenEvents_API,
+} from "../api/appAPI";
 import {
   CUISINE_OPTIONS,
   EVENT_TYPES,
@@ -39,6 +43,7 @@ import {
   VendorMarketplaceSecondaryAction,
 } from "../components/VendorMarketplacePrimitives";
 import { getFoodVendorMarketplaceCloseDate, getFoodVendorMarketplaceGuestRows } from "../helpers/foodVendorMarketplaceGuestCounts.helper";
+import { resolveFoodMarketplaceNotificationDestination } from "../helpers/marketplaceNotificationCenter.helper";
 
 const LockedMarketplace = ({ navigation }) => (
   <View style={[styles.body, { justifyContent: "center" }]}>
@@ -120,12 +125,29 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
     setRefreshing(false);
   };
 
-  const openNotificationRow = (item) => {
+  const openNotificationRow = async (item) => {
     if (
       item.type === "MARKETPLACE_BID" ||
-      item.type === "MARKETPLACE_APPLICATION" ||
-      item.type === "MARKETPLACE_EVENT_CLOSED"
+      item.type === "MARKETPLACE_APPLICATION"
     ) {
+      try {
+        const destination = await resolveFoodMarketplaceNotificationDestination({
+          notification: item,
+          loadBids: getMarketplaceMyBids_API,
+          loadApplications: getMarketplaceMyApplications_API,
+        });
+        navigation.navigate(destination.route, destination.params);
+      } catch (error) {
+        navigation.navigate(
+          item.type === "MARKETPLACE_BID"
+            ? "VendorMyBidsScreen"
+            : "VendorMyApplicationsScreen"
+        );
+      }
+      return;
+    }
+
+    if (item.type === "MARKETPLACE_EVENT_CLOSED") {
       navigation.navigate("vendorMarketplaceEventDetailsScreen", {
         eventId: item.event_id,
       });

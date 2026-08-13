@@ -25,6 +25,8 @@ import {
   getBankDetail_API,
   getEarningForHomeByFoodTruckID_API,
   getMarketplaceEventQuestions_API,
+  getMarketplaceMyApplications_API,
+  getMarketplaceMyBids_API,
   getMarketplaceNotificationSummary_API,
   getOrderList_API,
   getUserDetail_API,
@@ -65,6 +67,7 @@ import {
   clearCurrentNotificationOrder,
 } from "../redux/slices/pushNotificationSlice";
 import { getWalkUpPosAccess } from "../helpers/vendorPaymentCapabilities.helper";
+import { resolveFoodMarketplaceNotificationDestination } from "../helpers/marketplaceNotificationCenter.helper";
 
 const QuickStatsComponent = ({ title, subTitle, icon, onPress }) => (
   <Pressable style={styles.quickStatsContainer} onPress={onPress}>
@@ -769,7 +772,7 @@ const HomeScreen = ({ navigation }) => {
     acknowledgeHomeNotifications();
   };
 
-  const openNotificationRow = (item) => {
+  const openNotificationRow = async (item) => {
     setNotificationsVisible(false);
 
     if (item.type === "ORDER") {
@@ -796,9 +799,21 @@ const HomeScreen = ({ navigation }) => {
       item.type === "MARKETPLACE_BID" ||
       item.type === "MARKETPLACE_APPLICATION"
     ) {
-      navigation.navigate("vendorMarketplaceEventDetailsScreen", {
-        eventId: item.event_id,
-      });
+      try {
+        const destination = await resolveFoodMarketplaceNotificationDestination({
+          notification: item,
+          loadBids: getMarketplaceMyBids_API,
+          loadApplications: getMarketplaceMyApplications_API,
+        });
+        navigation.navigate(destination.route, destination.params);
+      } catch (error) {
+        console.log("Marketplace notification submission lookup error => ", error);
+        navigation.navigate(
+          item.type === "MARKETPLACE_BID"
+            ? "VendorMyBidsScreen"
+            : "VendorMyApplicationsScreen"
+        );
+      }
       return;
     }
 

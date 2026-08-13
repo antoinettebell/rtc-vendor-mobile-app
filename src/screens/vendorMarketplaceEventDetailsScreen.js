@@ -101,7 +101,8 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const eventId = route?.params?.eventId;
   const [event, setEvent] = useState(route?.params?.event || null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!route?.params?.event);
+  const [loadError, setLoadError] = useState("");
   const [questions, setQuestions] = useState([]);
   const [primaryActionLoading, setPrimaryActionLoading] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
@@ -126,16 +127,28 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
   };
 
   const loadEvent = async () => {
-    if (!eventId) return;
+    if (!eventId) {
+      setEvent(null);
+      setLoading(false);
+      setLoadError("This Marketplace event is no longer available.");
+      return;
+    }
     setLoading(true);
+    setLoadError("");
     try {
       const response = await getMarketplaceEventById_API(eventId);
-      if (response?.success) {
-        setEvent(response.data?.marketplaceEvent);
+      const marketplaceEvent = response?.data?.marketplaceEvent || null;
+      if (response?.success && marketplaceEvent) {
+        setEvent(marketplaceEvent);
+      } else {
+        setEvent(null);
+        setLoadError("This Marketplace event is no longer available.");
       }
       await loadQuestions();
     } catch (error) {
       console.log("Marketplace event detail error", error);
+      setEvent(null);
+      setLoadError(error?.message || "Unable to load this Marketplace event.");
     } finally {
       setLoading(false);
     }
@@ -461,9 +474,22 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBarManager />
       <MarketplaceHeader title="Event Details" navigation={navigation} />
-      {loading && !event ? (
+      {!event ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator color={AppColor.primary} size="large" />
+          {loading ? (
+            <ActivityIndicator color={AppColor.primary} size="large" />
+          ) : (
+            <>
+              <Text style={styles.emptyText}>{loadError || "This Marketplace event is unavailable."}</Text>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[styles.secondaryButton, { marginTop: 14 }]}
+                onPress={loadEvent}
+              >
+                <Text style={styles.secondaryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.body}>

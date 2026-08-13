@@ -7,4 +7,6 @@ assert.deepEqual(helper.getFoodVendorMarketplaceGuestRows({ event, participation
 assert.deepEqual(helper.getFoodVendorMarketplaceGuestRows({ event, participationPath: "BID", coverage: "VIP" }), [{ label: "VIP Guests", value: "25" }]);
 assert.deepEqual(helper.getFoodVendorMarketplaceGuestRows({ event, participationPath: "BID", coverage: "REGULAR" }), [{ label: "Regular Catered Guests", value: "125" }]);
 assert.deepEqual(helper.getFoodVendorMarketplaceGuestRows({ event, participationPath: "BOTH", coverage: "BOTH" }), [{ label: "GA Guests", value: "125" }, { label: "VIP Guests", value: "25" }]);
+assert.doesNotThrow(() => helper.getFoodVendorMarketplaceGuestRows({ event: null }));
+assert.equal(helper.getFoodVendorMarketplaceCloseDate(null), null);
 console.log("Food Vendor Marketplace guest-count tests passed.");
