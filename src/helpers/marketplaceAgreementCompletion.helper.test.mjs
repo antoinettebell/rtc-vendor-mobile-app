@@ -69,8 +69,11 @@ assert.equal(helper.parseAgreementRecoveryRecord("stopped").signing_state, "STOP
 assert.equal(helper.getAgreementRetryDelay(0), 1000);
 assert.equal(helper.getAgreementRetryDelay(4), null);
 assert.deepEqual(helper.getFoodVendorMarketplaceCompletionReset(), {
-  index: 0,
-  routes: [{ name: "vendorMarketplaceNearMeScreen" }],
+  index: 1,
+  routes: [
+    { name: "vendorMarketplaceScreen" },
+    { name: "vendorMarketplaceNearMeScreen" },
+  ],
 });
 
 const applicationScreen = await readFile(
