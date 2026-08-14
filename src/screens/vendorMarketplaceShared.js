@@ -362,9 +362,9 @@ export const getPaymentAmount = (event) =>
 export const getPrimaryActionLabel = (event) =>
   isVendorPaysToAttendEvent(event) ? "Submit Application" : "Submit Bid";
 
-export const MarketplaceHeader = ({ title, navigation, right, onBack }) => (
+export const MarketplaceHeader = ({ title, navigation, right, onBack, hideBack = false }) => (
   <View style={styles.header}>
-    {onBack || navigation?.canGoBack?.() ? (
+    {!hideBack && (onBack || navigation?.canGoBack?.()) ? (
       <TouchableOpacity
         activeOpacity={0.7}
         style={styles.backButton}

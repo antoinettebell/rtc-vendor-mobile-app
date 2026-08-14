@@ -12,12 +12,12 @@ import { AppColor } from "../utils/theme";
 import StatusBarManager from "./StatusBarManager";
 import { MarketplaceHeader, formatStatusLabel, styles } from "../screens/vendorMarketplaceShared";
 
-export const VendorMarketplacePage = ({ title, navigation, right, onBack, children }) => {
+export const VendorMarketplacePage = ({ title, navigation, right, onBack, hideBack = false, children }) => {
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBarManager />
-      <MarketplaceHeader title={title} navigation={navigation} right={right} onBack={onBack} />
+      <MarketplaceHeader title={title} navigation={navigation} right={right} onBack={onBack} hideBack={hideBack} />
       {children}
     </View>
   );

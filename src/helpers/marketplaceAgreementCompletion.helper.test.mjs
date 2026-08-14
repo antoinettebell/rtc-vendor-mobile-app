@@ -122,6 +122,17 @@ assert.match(agreementHook, /:vendor:\$\{recoveryAccountId\}/,
   "pending agreement recovery is scoped to the authenticated vendor");
 assert.match(agreementHook, /clearRetryTimer\(\)/,
   "retry timers are explicitly cleared after completion and during cleanup");
+assert.match(agreementHook, /const signingInFlightRef = useRef\(false\)/);
+assert.match(
+  agreementHook,
+  /recoveryStopped \|\|[\s\S]*signingInFlightRef\.current \|\|[\s\S]*!payload\?\.event_id/,
+  "automatic recovery cannot race the first signing request for a newly saved draft",
+);
+assert.match(
+  agreementHook,
+  /if \(signingInFlightRef\.current\) return false;[\s\S]*signingInFlightRef\.current = true;[\s\S]*finally \{[\s\S]*signingInFlightRef\.current = false;/,
+  "repeated signing taps share a synchronous in-flight guard",
+);
 assert.match(eventVendorScreen, /Confirming your signed agreements…/);
 assert.match(
   eventVendorScreen,

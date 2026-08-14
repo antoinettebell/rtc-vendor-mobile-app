@@ -40,6 +40,7 @@ export const useMarketplaceAgreementCompletion = ({
   const [confirmingAgreement, setConfirmingAgreement] = useState(false);
   const retryAttemptRef = useRef(0);
   const retryTimerRef = useRef(null);
+  const signingInFlightRef = useRef(false);
   payloadRef.current = getSigningPayload;
   finalizeRef.current = finalizeSubmission;
   onTerminalRef.current = onTerminalStatus;
@@ -143,6 +144,7 @@ export const useMarketplaceAgreementCompletion = ({
         !enabled ||
         !recoveryLoaded ||
         recoveryStopped ||
+        signingInFlightRef.current ||
         !payload?.event_id
       ) return false;
       try {
@@ -236,21 +238,31 @@ export const useMarketplaceAgreementCompletion = ({
   );
 
   const beginSigning = useCallback(async () => {
-    await setTerminalRecoveryStopped(false);
-    const payload = payloadRef.current?.();
-    const response = await startMarketplaceVendorAgreementSigning_API(payload);
-    if (await handleAgreementResponse(response, { quiet: Boolean(response?.data?.signing_url) })) return;
-    await persistPendingAgreement(
-      response?.data?.marketplaceVendorAgreement || null,
-      payload,
-    );
-    if (!response?.data?.signing_url) {
-      throw new Error(
-        getAgreementStatusMessage(pendingAgreementRef.current?.status),
+    if (signingInFlightRef.current) return false;
+    signingInFlightRef.current = true;
+    clearRetryTimer();
+    try {
+      await setTerminalRecoveryStopped(false);
+      const payload = payloadRef.current?.();
+      const response = await startMarketplaceVendorAgreementSigning_API(payload);
+      if (await handleAgreementResponse(response, { quiet: Boolean(response?.data?.signing_url) })) {
+        return true;
+      }
+      await persistPendingAgreement(
+        response?.data?.marketplaceVendorAgreement || null,
+        payload,
       );
+      if (!response?.data?.signing_url) {
+        throw new Error(
+          getAgreementStatusMessage(pendingAgreementRef.current?.status),
+        );
+      }
+      await Linking.openURL(response.data.signing_url);
+      return true;
+    } finally {
+      signingInFlightRef.current = false;
     }
-    await Linking.openURL(response.data.signing_url);
-  }, [handleAgreementResponse, persistPendingAgreement, setTerminalRecoveryStopped]);
+  }, [clearRetryTimer, handleAgreementResponse, persistPendingAgreement, setTerminalRecoveryStopped]);
 
   useEffect(() => {
     if (!enabled || !recoveryLoaded || recoveryStopped) return undefined;

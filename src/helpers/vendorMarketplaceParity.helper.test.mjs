@@ -64,6 +64,12 @@ assert.match(eventLanding, /VendorMarketplaceActionRow/);
 assert.match(eventLanding, /item\.key !== "BIDS"/);
 assert.doesNotMatch(eventLanding, /BIDS: "My Bids"/);
 assert.match(eventLanding, /track applications, and manage awarded events/);
+assert.match(
+  eventLanding,
+  /hideBack=\{!section\}/,
+  "the Marketplace Vendor root never infers a Back action from stack history",
+);
+assert.match(primitives, /hideBack=\{hideBack\}/);
 assert.match(sharedLanding, /ROUND THE CORNER/);
 assert.match(sharedLanding, /Vendor Event Marketplace/);
 assert.match(sharedLanding, /chevron-right/);

@@ -153,6 +153,7 @@ export default function EventVendorMarketplaceScreen({ navigation, route }) {
       title={sectionTitle || "Marketplace"}
       navigation={navigation}
       onBack={section ? goToLanding : undefined}
+      hideBack={!section}
       right={
         <View style={s.headerActions}>
           <TouchableOpacity disabled={loading} onPress={load} style={s.refreshButton}>
