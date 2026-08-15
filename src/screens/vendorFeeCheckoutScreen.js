@@ -1,9 +1,17 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StatusBarManager from "../components/StatusBarManager";
 import { AppColor } from "../utils/theme";
-import { createMarketplaceApplicationVendorFeePayment_API } from "../api/appAPI";
+import {
+  createMarketplaceApplicationVendorFeePayment_API,
+  getMarketplaceMyApplications_API,
+} from "../api/appAPI";
+import {
+  canPayMarketplaceVendorFee,
+  isMarketplaceVendorFeePaid,
+} from "../helpers/marketplaceVendorFeeState.helper";
 import {
   MarketplaceHeader,
   formatDate,
@@ -27,17 +35,38 @@ const SummaryRow = ({ label, value, strong }) => (
 const VendorFeeCheckoutScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
-  const application = route?.params?.application || {};
+  const routeApplication = route?.params?.application || {};
+  const [application, setApplication] = useState(routeApplication);
+  const applicationId = routeApplication.application_id;
   const event = route?.params?.event || getApplicationEvent(application);
-  const applicationStatus = application.application_status;
-  const paymentStatus = application.payment_status;
-  const alreadyPaid =
-    paymentStatus === "PAID" ||
-    (application.transaction_id && paymentStatus === "PAID");
+  const alreadyPaid = isMarketplaceVendorFeePaid(application);
   const canCheckout =
     isVendorPaysToAttendEvent(event) &&
-    ["ACCEPTED", "PAYMENT_DUE"].includes(applicationStatus) &&
-    !alreadyPaid;
+    canPayMarketplaceVendorFee(application);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      const refreshApplication = async () => {
+        if (!applicationId) return;
+        try {
+          const response = await getMarketplaceMyApplications_API();
+          const currentApplication = (
+            response?.data?.marketplaceApplicationList || []
+          ).find((item) => item.application_id === applicationId);
+          if (active && currentApplication) {
+            setApplication(currentApplication);
+          }
+        } catch (_error) {
+          // Retain the last known checkout state if refresh is unavailable.
+        }
+      };
+      refreshApplication();
+      return () => {
+        active = false;
+      };
+    }, [applicationId]),
+  );
 
   const amounts = useMemo(() => {
     const vendorFee = Number(event?.vendor_fee || 0);

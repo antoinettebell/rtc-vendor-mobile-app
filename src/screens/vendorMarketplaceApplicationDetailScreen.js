@@ -1,8 +1,11 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StatusBarManager from "../components/StatusBarManager";
 import MarketplaceImageViewer from "../components/MarketplaceImageViewer";
+import { getMarketplaceMyApplications_API } from "../api/appAPI";
+import { canPayMarketplaceVendorFee } from "../helpers/marketplaceVendorFeeState.helper";
 import {
   MarketplaceHeader,
   MarketplaceAttachmentPicker,
@@ -52,7 +55,9 @@ const attachmentPickerLabel = (attachment) =>
 
 const VendorMarketplaceApplicationDetailScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
-  const application = route?.params?.application || {};
+  const routeApplication = route?.params?.application || {};
+  const [application, setApplication] = useState(routeApplication);
+  const applicationId = routeApplication.application_id;
   const event = route?.params?.event || getApplicationEvent(application);
   const attachments = Array.isArray(application.attachments)
     ? application.attachments
@@ -62,13 +67,37 @@ const VendorMarketplaceApplicationDetailScreen = ({ navigation, route }) => {
   );
   const documentAttachments = attachments.filter((item) => !imageAttachments.includes(item));
   const [viewer, setViewer] = useState(null);
-  const status = application.application_status || "DRAFT";
-  const canPay = status === "ACCEPTED" || status === "PAYMENT_DUE";
+  const status = String(application.application_status || "DRAFT").toUpperCase();
+  const canPay = canPayMarketplaceVendorFee(application);
   const canRevise = isApplicationRevisionRequested(application);
   const canEditBeforeAward = PRE_AWARD_EDIT_STATUSES.includes(
     String(status).toUpperCase(),
   );
   const showEditButton = canRevise || canEditBeforeAward;
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      const refreshApplication = async () => {
+        if (!applicationId) return;
+        try {
+          const response = await getMarketplaceMyApplications_API();
+          const currentApplication = (
+            response?.data?.marketplaceApplicationList || []
+          ).find((item) => item.application_id === applicationId);
+          if (active && currentApplication) {
+            setApplication(currentApplication);
+          }
+        } catch (_error) {
+          // Retain the last known details if a refresh is temporarily unavailable.
+        }
+      };
+      refreshApplication();
+      return () => {
+        active = false;
+      };
+    }, [applicationId]),
+  );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>

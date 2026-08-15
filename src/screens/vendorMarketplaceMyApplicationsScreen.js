@@ -30,6 +30,10 @@ import {
 } from "./vendorMarketplaceShared";
 import { VendorMarketplaceCard, VendorMarketplaceStatusBadge } from "../components/VendorMarketplacePrimitives";
 import { matchesMarketplaceSubmissionStatus } from "../helpers/marketplaceSubmissionList.helper";
+import {
+  canPayMarketplaceVendorFee,
+  isMarketplaceVendorFeePaid,
+} from "../helpers/marketplaceVendorFeeState.helper";
 
 const APPLICATION_STATUS_FILTERS = [
   { label: "All", value: "ALL" },
@@ -44,7 +48,11 @@ const APPLICATION_STATUS_FILTERS = [
   { label: "Withdrawn", value: "WITHDRAWN" },
 ];
 
-const getActionLabel = (status) => {
+const getActionLabel = (application) => {
+  const status = String(application?.application_status || "DRAFT").toUpperCase();
+  if (isMarketplaceVendorFeePaid(application)) {
+    return "View Confirmation";
+  }
   switch (status) {
     case "DRAFT":
       return "Continue Application";
@@ -186,7 +194,7 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
       }
 
       const routeName =
-        status === "ACCEPTED" || status === "PAYMENT_DUE"
+        canPayMarketplaceVendorFee(item)
           ? "VendorFeeCheckoutScreen"
           : "VendorApplicationDetailScreen";
       navigation.navigate(routeName, {
@@ -237,7 +245,7 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
           <Text style={styles.secondaryButtonText}>
             {isApplicationRevisionRequested(item)
               ? "Revise Application"
-              : getActionLabel(status)}
+              : getActionLabel(item)}
           </Text>
         </TouchableOpacity>
         {eventId ? (
