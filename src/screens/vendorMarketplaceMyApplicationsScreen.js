@@ -28,6 +28,7 @@ import {
   isApplicationRevisionRequested,
   styles,
 } from "./vendorMarketplaceShared";
+import { getMarketplaceSubmissionDisplayStatus } from "../helpers/marketplaceSubmissionDisplay.helper";
 import { VendorMarketplaceCard, VendorMarketplaceStatusBadge } from "../components/VendorMarketplacePrimitives";
 import { matchesMarketplaceSubmissionStatus } from "../helpers/marketplaceSubmissionList.helper";
 import {
@@ -224,7 +225,9 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
                 <MaterialIcons name="edit" size={22} color={AppColor.primary} />
               </TouchableOpacity>
             ) : null}
-            <VendorMarketplaceStatusBadge status={status} />
+            <VendorMarketplaceStatusBadge
+              status={getMarketplaceSubmissionDisplayStatus(item, status)}
+            />
           </View>
         </View>
         <Text style={styles.meta}>

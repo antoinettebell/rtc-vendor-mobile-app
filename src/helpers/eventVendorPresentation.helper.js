@@ -60,8 +60,13 @@ export const getMarketplaceVendorEventPresentation = (event = {}) => ({
   startTime: formatMarketplaceEventTime(event.event_start_time || event.event_time || event.start_time, eventTimeZone(event)),
   endTime: formatMarketplaceEventTime(event.event_end_time || event.event_close_time || event.end_time, eventTimeZone(event)),
   location:
-    event.event_address || event.formatted_address ||
-    [event.event_city, event.event_state].filter(Boolean).join(", ") ||
+    event.formatted_address || event.geocoded_address ||
+    [
+      event.event_address,
+      [event.event_city, [event.event_state, event.event_zip].filter(Boolean).join(" ")]
+        .filter(Boolean)
+        .join(", "),
+    ].filter(Boolean).join(", ") ||
     "Location pending",
   gaGuests: Number(event.expected_ga_guests || event.expected_guest_count || event.number_of_guests || 0),
   vipGuests: Number(event.expected_vip_guests || event.vip_guest_count || 0),

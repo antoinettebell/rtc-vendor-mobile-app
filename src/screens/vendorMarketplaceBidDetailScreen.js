@@ -16,6 +16,7 @@ import {
   isBidRevisionRequested,
   styles,
 } from "./vendorMarketplaceShared";
+import { getMarketplaceSubmissionDisplayStatus } from "../helpers/marketplaceSubmissionDisplay.helper";
 import { getFoodVendorMarketplaceCloseDate, getFoodVendorMarketplaceGuestRows } from "../helpers/foodVendorMarketplaceGuestCounts.helper";
 
 const DetailRow = ({ label, value }) => (
@@ -108,7 +109,10 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
 
         <View style={styles.card}>
           <Text style={styles.title}>Bid Response</Text>
-          <DetailRow label="Bid Status" value={formatStatusLabel(bid.bid_status)} />
+          <DetailRow
+            label="Bid Status"
+            value={formatStatusLabel(getMarketplaceSubmissionDisplayStatus(bid, bid.bid_status))}
+          />
           <DetailRow label="Bid Amount" value={formatMoney(bid.full_bid_amount)} />
           <DetailRow
             label="Price Per Guest"

@@ -33,6 +33,7 @@ import {
   VendorMarketplaceStatusBadge,
 } from "../components/VendorMarketplacePrimitives";
 import { getMarketplaceVendorEventPresentation } from "../helpers/eventVendorPresentation.helper";
+import { getMarketplaceSubmissionDisplayStatus } from "../helpers/marketplaceSubmissionDisplay.helper";
 import {
   canEditEventVendorSubmission,
   canWithdrawEventVendorSubmission,
@@ -103,7 +104,10 @@ export default function EventVendorMarketplaceScreen({ navigation, route }) {
     return (
       <VendorMarketplaceCard style={s.card}>
         <Text style={styles.title}>{event.event_name || "Event Submission"}</Text>
-        <VendorMarketplaceStatusBadge status={item.status} style={{ alignSelf: "flex-start", marginTop: 8 }} />
+        <VendorMarketplaceStatusBadge
+          status={getMarketplaceSubmissionDisplayStatus(item, item.status)}
+          style={{ alignSelf: "flex-start", marginTop: 8 }}
+        />
         <Text style={styles.meta}>{(item.offering_bullets || []).map((value) => `• ${value}`).join("\n")}</Text>
         {editable ? (
           <VendorMarketplaceActionRow vertical>

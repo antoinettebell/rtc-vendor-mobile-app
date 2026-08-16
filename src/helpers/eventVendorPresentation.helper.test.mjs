@@ -11,7 +11,10 @@ const event = helper.getMarketplaceVendorEventPresentation({
   event_date: "2026-08-20",
   event_start_time: "10:00 AM",
   event_end_time: "4:00 PM",
-  event_address: "100 Main St, Columbia, SC",
+  event_address: "100 Main St",
+  event_city: "Columbia",
+  event_state: "SC",
+  event_zip: "29201",
   expected_ga_guests: 125,
   expected_vip_guests: 25,
   payment_responsibility: "VENDOR",
@@ -25,6 +28,7 @@ assert.equal(event.name, "Summer Market");
 assert.equal(event.expectedGuests, 150);
 assert.equal(event.gaGuests, 125);
 assert.equal(event.vipGuests, 25);
+assert.equal(event.location, "100 Main St, Columbia, SC 29201");
 assert.equal(event.needs[0].remaining, 2);
 assert.equal(event.paymentDeadline, "08/15/2026");
 assert.deepEqual(event.images, [{ image_id: "image-1", image_url: "https://public/event.jpg" }]);
@@ -102,5 +106,8 @@ assert.match(applicationScreen, /GA Guests:/);
 assert.match(applicationScreen, /VIP Guests:/);
 assert.match(submissionDetailsScreen, /GA Guests:/);
 assert.match(submissionDetailsScreen, /VIP Guests:/);
+assert.match(submissionDetailsScreen, /Coordinator Contact/);
+assert.match(submissionDetailsScreen, /coordinatorContact\.name/);
+assert.match(submissionDetailsScreen, /getMarketplaceSubmissionDisplayStatus/);
 
 console.log("Marketplace Vendor UI presentation tests passed");

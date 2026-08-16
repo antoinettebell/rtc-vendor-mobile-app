@@ -28,6 +28,7 @@ import {
   isBidRevisionRequested,
   styles,
 } from "./vendorMarketplaceShared";
+import { getMarketplaceSubmissionDisplayStatus } from "../helpers/marketplaceSubmissionDisplay.helper";
 import { VendorMarketplaceCard, VendorMarketplaceStatusBadge } from "../components/VendorMarketplacePrimitives";
 import { matchesMarketplaceSubmissionStatus } from "../helpers/marketplaceSubmissionList.helper";
 
@@ -180,7 +181,9 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
                 <MaterialIcons name="edit" size={22} color={AppColor.primary} />
               </TouchableOpacity>
             ) : null}
-            <VendorMarketplaceStatusBadge status={item.bid_status} />
+            <VendorMarketplaceStatusBadge
+              status={getMarketplaceSubmissionDisplayStatus(item, item.bid_status)}
+            />
           </View>
         </View>
         <Text style={styles.meta}>

@@ -10,6 +10,7 @@ import {
   Mulish700,
 } from "../utils/theme";
 import { normalizeMarketplaceRequirementLabel } from "../helpers/marketplaceRequirementLabels.helper";
+import { getMarketplaceEventLocation } from "../helpers/marketplaceEventLocation.helper";
 
 export { normalizeMarketplaceRequirementLabel } from "../helpers/marketplaceRequirementLabels.helper";
 
@@ -104,21 +105,7 @@ export const listText = (value) => {
   return value || "None";
 };
 
-export const getEventLocation = (event) => {
-  if (event?.exact_address_locked) {
-    return (
-      [event?.event_city, event?.event_state].filter(Boolean).join(", ") ||
-      "Exact address unlocks after payment or match"
-    );
-  }
-
-  return (
-    event?.event_address ||
-    event?.formatted_address ||
-    [event?.event_city, event?.event_state].filter(Boolean).join(", ") ||
-    "Location pending"
-  );
-};
+export const getEventLocation = getMarketplaceEventLocation;
 
 export const getBidEvent = (bid) => bid?.marketplaceEvent || bid?.event || {};
 

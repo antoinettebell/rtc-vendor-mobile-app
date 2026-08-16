@@ -5,7 +5,10 @@ import MarketplaceImageViewer from "../components/MarketplaceImageViewer";
 import { VendorMarketplaceSectionCard } from "../components/VendorMarketplacePrimitives";
 import { getMarketplaceVendorEventPresentation } from "../helpers/eventVendorPresentation.helper";
 import { AppColor } from "../utils/theme";
-import { styles as marketplaceStyles } from "./vendorMarketplaceShared";
+import {
+  styles as marketplaceStyles,
+} from "./vendorMarketplaceShared";
+import { getMarketplaceSubmissionDisplayStatus } from "../helpers/marketplaceSubmissionDisplay.helper";
 
 const money = (value) => `$${Number(value || 0).toFixed(2)}`;
 const statusLabel = (value) => String(value || "SUBMITTED").replace(/_/g, " ");
@@ -17,6 +20,7 @@ export default function EventVendorSubmissionDetailsScreen({ navigation, route }
   const [viewer, setViewer] = useState(null);
   const paymentDue = application.status === "PAYMENT_DUE" && application.payment_id;
   const photos = Array.isArray(application.photos) ? application.photos : [];
+  const coordinatorContact = event.coordinator_contact || null;
   const goBack = () => {
     if (navigation.canGoBack()) navigation.goBack();
     else navigation.navigate("bottomRoot", { screen: "eventVendorMarketplaceScreen" });
@@ -26,7 +30,7 @@ export default function EventVendorSubmissionDetailsScreen({ navigation, route }
     <MarketplaceVendorScreenLayout title="Event Submission" onBack={goBack} navigation={navigation} marketplace>
       <ScrollView contentContainerStyle={s.page}>
         <Text style={s.eventName}>{presentation.name || "Event"}</Text>
-        <Text style={s.status}>Status: {statusLabel(application.status)}</Text>
+        <Text style={s.status}>Status: {statusLabel(getMarketplaceSubmissionDisplayStatus(application, application.status))}</Text>
         {presentation.description ? <Text style={s.text}>{presentation.description}</Text> : null}
         {presentation.date ? <Text style={s.text}>{String(presentation.date)}{presentation.startTime ? ` · ${presentation.startTime}` : ""}</Text> : null}
         {presentation.location ? <Text style={s.text}>{presentation.location}</Text> : null}
@@ -46,6 +50,14 @@ export default function EventVendorSubmissionDetailsScreen({ navigation, route }
           <Text style={s.heading}>Agreement</Text>
           <Text style={s.text}>{application.nda_accepted_at && application.governance_accepted_at ? "Signed" : "Not available"}</Text>
         </VendorMarketplaceSectionCard>
+        {coordinatorContact ? (
+          <VendorMarketplaceSectionCard style={s.section}>
+            <Text style={s.heading}>Coordinator Contact</Text>
+            <Text style={s.text}>Name: {coordinatorContact.name || "Not provided"}</Text>
+            <Text style={s.text}>Phone: {coordinatorContact.phone || "Not provided"}</Text>
+            <Text style={s.text}>Email: {coordinatorContact.email || "Not provided"}</Text>
+          </VendorMarketplaceSectionCard>
+        ) : null}
         <TouchableOpacity
           style={marketplaceStyles.secondaryButton}
           onPress={() => navigation.navigate("vendorMarketplaceMessagesScreen", {

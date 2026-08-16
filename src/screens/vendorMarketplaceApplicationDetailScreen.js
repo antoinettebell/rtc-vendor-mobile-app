@@ -19,6 +19,7 @@ import {
   isApplicationRevisionRequested,
   styles,
 } from "./vendorMarketplaceShared";
+import { getMarketplaceSubmissionDisplayStatus } from "../helpers/marketplaceSubmissionDisplay.helper";
 
 const DetailRow = ({ label, value }) => (
   <View style={{ marginTop: 12 }}>
@@ -163,7 +164,10 @@ const VendorMarketplaceApplicationDetailScreen = ({ navigation, route }) => {
 
         <View style={styles.card}>
           <Text style={styles.title}>Application</Text>
-          <DetailRow label="Status" value={formatStatusLabel(status)} />
+          <DetailRow
+            label="Status"
+            value={formatStatusLabel(getMarketplaceSubmissionDisplayStatus(application, status))}
+          />
           <DetailRow label="Business Name" value={application.business_name} />
           <DetailRow label="Contact Name" value={application.contact_name} />
           <DetailRow label="Phone" value={application.phone} />
