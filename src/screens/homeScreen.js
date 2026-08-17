@@ -67,7 +67,10 @@ import {
   clearCurrentNotificationOrder,
 } from "../redux/slices/pushNotificationSlice";
 import { getWalkUpPosAccess } from "../helpers/vendorPaymentCapabilities.helper";
-import { resolveFoodMarketplaceNotificationDestination } from "../helpers/marketplaceNotificationCenter.helper";
+import {
+  getMarketplaceNotificationDismissalId,
+  resolveFoodMarketplaceNotificationDestination,
+} from "../helpers/marketplaceNotificationCenter.helper";
 
 const QuickStatsComponent = ({ title, subTitle, icon, onPress }) => (
   <Pressable style={styles.quickStatsContainer} onPress={onPress}>
@@ -96,6 +99,8 @@ const getMarketplaceNotificationId = (item = {}) =>
 
 const getNotificationStorageKey = (userId) =>
   `vendorHomeAcknowledgedNotifications:${userId || "anonymous"}`;
+const getClearedNotificationStorageKey = (userId) =>
+  `vendorHomeClearedNotifications:${userId || "anonymous"}`;
 
 const HomeScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -105,6 +110,10 @@ const HomeScreen = ({ navigation }) => {
   );
   const notificationStorageKey = useMemo(
     () => getNotificationStorageKey(user?._id),
+    [user?._id],
+  );
+  const clearedNotificationStorageKey = useMemo(
+    () => getClearedNotificationStorageKey(user?._id),
     [user?._id],
   );
   const walkUpAccess = getWalkUpPosAccess(user, user?.foodTruck);
@@ -124,6 +133,8 @@ const HomeScreen = ({ navigation }) => {
     acknowledgedMarketplaceNotificationIds,
     setAcknowledgedMarketplaceNotificationIds,
   ] = useState([]);
+  const [clearedMarketplaceNotificationIds, setClearedMarketplaceNotificationIds] =
+    useState([]);
   const [earningData, setEarningData] = useState(null);
   const [orderRejectBtnLoading, setOrderRejectBtnLoading] = useState(false);
   const [orderAcceptBtnLoading, setOrderAcceptBtnLoading] = useState(false);
@@ -151,23 +162,37 @@ const HomeScreen = ({ navigation }) => {
         subtitle: `Order #${orderId}`,
         orderId,
       })),
-      ...marketplaceNotifications.map((item) => ({
-        ...item,
-        id: getMarketplaceNotificationId(item),
-      })),
+      ...marketplaceNotifications
+        .filter(
+          (item) =>
+            !clearedMarketplaceNotificationIds.includes(
+              getMarketplaceNotificationDismissalId(item),
+            ),
+        )
+        .map((item) => ({
+          ...item,
+          id: getMarketplaceNotificationId(item),
+        })),
     ],
-    [marketplaceNotifications, pendingNotificationOrders],
+    [
+      clearedMarketplaceNotificationIds,
+      marketplaceNotifications,
+      pendingNotificationOrders,
+    ],
   );
   const notificationCount = useMemo(() => {
     const acknowledgedIds = new Set(acknowledgedMarketplaceNotificationIds);
+    const clearedIds = new Set(clearedMarketplaceNotificationIds);
     const marketplaceUnreadCount = marketplaceNotifications.filter(
       (item) =>
         item.acknowledged !== true &&
-        !acknowledgedIds.has(getMarketplaceNotificationId(item)),
+        !acknowledgedIds.has(getMarketplaceNotificationId(item)) &&
+        !clearedIds.has(getMarketplaceNotificationDismissalId(item)),
     ).length;
     return pendingNotificationOrders.length + marketplaceUnreadCount;
   }, [
     acknowledgedMarketplaceNotificationIds,
+    clearedMarketplaceNotificationIds,
     marketplaceNotifications,
     pendingNotificationOrders.length,
   ]);
@@ -664,17 +689,25 @@ const HomeScreen = ({ navigation }) => {
 
     const loadAcknowledgedNotifications = async () => {
       try {
-        const savedValue = await AsyncStorage.getItem(notificationStorageKey);
+        const [savedValue, clearedValue] = await Promise.all([
+          AsyncStorage.getItem(notificationStorageKey),
+          AsyncStorage.getItem(clearedNotificationStorageKey),
+        ]);
         const savedIds = savedValue ? JSON.parse(savedValue) : [];
+        const clearedIds = clearedValue ? JSON.parse(clearedValue) : [];
         if (isMounted) {
           setAcknowledgedMarketplaceNotificationIds(
             Array.isArray(savedIds) ? savedIds : [],
+          );
+          setClearedMarketplaceNotificationIds(
+            Array.isArray(clearedIds) ? clearedIds : [],
           );
         }
       } catch (error) {
         console.log("Marketplace notification storage error => ", error);
         if (isMounted) {
           setAcknowledgedMarketplaceNotificationIds([]);
+          setClearedMarketplaceNotificationIds([]);
         }
       }
     };
@@ -684,7 +717,7 @@ const HomeScreen = ({ navigation }) => {
     return () => {
       isMounted = false;
     };
-  }, [notificationStorageKey]);
+  }, [clearedNotificationStorageKey, notificationStorageKey]);
 
   const acknowledgeHomeNotifications = async () => {
     if (pendingNotificationOrders.length) {
@@ -770,6 +803,23 @@ const HomeScreen = ({ navigation }) => {
   const openNotifications = () => {
     setNotificationsVisible(true);
     acknowledgeHomeNotifications();
+  };
+
+  const clearHomeNotifications = async () => {
+    const nextClearedIds = [
+      ...new Set([
+        ...clearedMarketplaceNotificationIds,
+        ...marketplaceNotifications.map(getMarketplaceNotificationDismissalId),
+      ]),
+    ].slice(-500);
+    setClearedMarketplaceNotificationIds(nextClearedIds);
+    await AsyncStorage.setItem(
+      clearedNotificationStorageKey,
+      JSON.stringify(nextClearedIds),
+    ).catch(() => undefined);
+    await acknowledgeHomeNotifications();
+    setMarketplaceNotifications([]);
+    setNotificationsVisible(false);
   };
 
   const openNotificationRow = async (item) => {
@@ -1004,17 +1054,12 @@ const HomeScreen = ({ navigation }) => {
             ) : (
               <Text style={styles.notificationEmpty}>No notifications right now.</Text>
             )}
-            {pendingNotificationOrders.length ? (
+            {notificationRows.length ? (
               <TouchableOpacity
                 style={styles.acknowledgeButton}
-                onPress={() => {
-                  pendingNotificationOrders.forEach(() =>
-                    dispatch(clearCurrentNotificationOrder()),
-                  );
-                  setNotificationsVisible(false);
-                }}
+                onPress={clearHomeNotifications}
               >
-                <Text style={styles.acknowledgeButtonText}>Acknowledge all</Text>
+                <Text style={styles.acknowledgeButtonText}>Clear Notifications</Text>
               </TouchableOpacity>
             ) : null}
           </View>

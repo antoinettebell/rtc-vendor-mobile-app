@@ -63,14 +63,17 @@ export const getBidActionAvailability = ({
       (!Number.isNaN(averagePricePerMealNumber) &&
         averagePricePerMealNumber >= 0));
   const bidFieldsComplete =
-    guestCoverage === "BOTH"
+    String(pricePerGuest || "").trim() &&
+    !Number.isNaN(pricePerGuestNumber) &&
+    pricePerGuestNumber > 0 &&
+    (guestCoverage === "BOTH"
       ? (!fullyCateredEvent ||
           (String(regularGuestAmount).trim() && regularGuestAmountNumber > 0)) &&
         String(vipCateringAmount).trim() &&
         vipCateringAmountNumber > 0
       : String(fullBidAmount).trim() &&
         !Number.isNaN(fullBidNumber) &&
-        fullBidNumber > 0;
+        fullBidNumber > 0);
 
   return {
     canSaveDraft,
@@ -90,6 +93,8 @@ export const getBidBlockingReasons = ({
   regularGuestAmountNumber,
   vipCateringAmount,
   vipCateringAmountNumber,
+  pricePerGuest,
+  pricePerGuestNumber,
   missingRequirementLabels = [],
 }) => {
   const reasons = [];
@@ -98,6 +103,13 @@ export const getBidBlockingReasons = ({
     reasons.push("This event accepts the vendor-paid application workflow only.");
   }
   if (notesError) reasons.push(notesError);
+  if (
+    !String(pricePerGuest || "").trim() ||
+    Number.isNaN(pricePerGuestNumber) ||
+    pricePerGuestNumber <= 0
+  ) {
+    reasons.push("Enter the Price Per Guest.");
+  }
   if (guestCoverage === "BOTH") {
     if (
       fullyCateredEvent &&

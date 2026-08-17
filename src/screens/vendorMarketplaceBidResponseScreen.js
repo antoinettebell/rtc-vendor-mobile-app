@@ -309,6 +309,8 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     regularGuestAmountNumber,
     vipCateringAmount,
     vipCateringAmountNumber,
+    pricePerGuest,
+    pricePerGuestNumber,
     missingRequirementLabels,
   });
   const hasUnsavedDraftContent = useMemo(() => {
@@ -917,7 +919,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                     ) : null}
                   </>
                 )}
-                <FormField label="Price Per Guest">
+                <FormField label="Price Per Guest *">
                   <TextInput
                     value={pricePerGuest}
                     onChangeText={(value) =>
@@ -927,7 +929,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                       formatCurrencyInput(pricePerGuest, setPricePerGuest)
                     }
                     keyboardType="decimal-pad"
-                    placeholder="Optional"
+                    placeholder="0.00"
                     placeholderTextColor={AppColor.placeholderTextColor}
                     style={styles.input}
                   />

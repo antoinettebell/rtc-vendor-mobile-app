@@ -20,6 +20,8 @@ assert.match(form, /editable && !isEmployee/);
 assert.match(home, /item\.type === "OPERATIONAL_COMPLIANCE"/);
 assert.match(home, /formId: item\.form_id/);
 assert.match(home, /acknowledgeMarketplaceNotifications_API/);
+assert.match(home, /vendorHomeClearedNotifications/);
+assert.match(home, /Clear Notifications/);
 assert.match(home, /item\.acknowledged !== true/);
 
 console.log("operations regression tests passed");

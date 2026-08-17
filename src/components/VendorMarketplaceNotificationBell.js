@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
 import {
+  Alert,
   Modal,
   ScrollView,
   StyleSheet,
@@ -7,10 +8,18 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useSelector } from "react-redux";
 import { useFocusEffect } from "@react-navigation/native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import { getMarketplaceNotificationSummary_API } from "../api/appAPI";
 import {
+  acknowledgeMarketplaceNotifications_API,
+  getMarketplaceEventQuestions_API,
+  getMarketplaceNotificationSummary_API,
+} from "../api/appAPI";
+import {
+  excludeDismissedMarketplaceNotifications,
+  getMarketplaceNotificationDismissalId,
   getMarketplaceNotificationRouteParams,
   splitMarketplaceNotifications,
 } from "../helpers/marketplaceNotificationCenter.helper";
@@ -40,25 +49,34 @@ const NotificationSection = ({ title, items, onPress }) => {
 };
 
 const VendorMarketplaceNotificationBell = ({ navigation, onOpenNotification }) => {
+  const userId = useSelector((state) => state.userReducer.user?._id);
   const [visible, setVisible] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const [counts, setCounts] = useState({ messages: 0, actions: 0, operations: 0 });
+  const [dismissedIds, setDismissedIds] = useState([]);
+  const dismissalStorageKey = `vendorMarketplaceClearedNotifications:${userId || "anonymous"}`;
+
+  React.useEffect(() => {
+    let active = true;
+    AsyncStorage.getItem(dismissalStorageKey)
+      .then((saved) => {
+        const parsed = saved ? JSON.parse(saved) : [];
+        if (active) setDismissedIds(Array.isArray(parsed) ? parsed : []);
+      })
+      .catch(() => {
+        if (active) setDismissedIds([]);
+      });
+    return () => { active = false; };
+  }, [dismissalStorageKey]);
 
   const load = useCallback(async () => {
     try {
       const response = await getMarketplaceNotificationSummary_API();
       if (response?.success) {
         setNotifications(response.data?.marketplaceNotificationList || []);
-        setCounts({
-          messages: Number(response.data?.unread_message_count || 0),
-          actions: Number(response.data?.action_required_count || 0),
-          operations: Number(response.data?.operational_unread_count || 0),
-        });
       }
     } catch (error) {
       console.log("Marketplace notification summary error", error);
       setNotifications([]);
-      setCounts({ messages: 0, actions: 0, operations: 0 });
     }
   }, []);
 
@@ -68,11 +86,69 @@ const VendorMarketplaceNotificationBell = ({ navigation, onOpenNotification }) =
     }, [load])
   );
 
-  const sections = useMemo(
-    () => splitMarketplaceNotifications(notifications),
-    [notifications]
+  const visibleNotifications = useMemo(
+    () => excludeDismissedMarketplaceNotifications(notifications, dismissedIds),
+    [dismissedIds, notifications],
   );
-  const badgeCount = counts.messages + counts.actions + counts.operations;
+  const sections = useMemo(
+    () => splitMarketplaceNotifications(visibleNotifications),
+    [visibleNotifications]
+  );
+  const badgeCount = visibleNotifications.filter(
+    (item) =>
+      (item.type === "MARKETPLACE_MESSAGE" && item.unread) ||
+      (item.type === "OPERATIONAL_COMPLIANCE" && !item.acknowledged) ||
+      !["MARKETPLACE_MESSAGE", "OPERATIONAL_COMPLIANCE"].includes(item.type),
+  ).length;
+
+  const clearNotifications = () => {
+    if (!visibleNotifications.length) return;
+    Alert.alert(
+      "Clear Notifications",
+      "Remove all notifications currently shown? New messages and status updates will still appear.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear",
+          style: "destructive",
+          onPress: async () => {
+            const nextDismissedIds = [
+              ...new Set([
+                ...dismissedIds,
+                ...visibleNotifications.map(getMarketplaceNotificationDismissalId),
+              ]),
+            ].slice(-500);
+            setDismissedIds(nextDismissedIds);
+            await AsyncStorage.setItem(
+              dismissalStorageKey,
+              JSON.stringify(nextDismissedIds),
+            ).catch(() => undefined);
+            const operationalIds = visibleNotifications
+              .filter((item) => item.type === "OPERATIONAL_COMPLIANCE" && item.notification_id)
+              .map((item) => item.notification_id);
+            if (operationalIds.length) {
+              acknowledgeMarketplaceNotifications_API(operationalIds).catch(() => undefined);
+            }
+            const messageEventIds = [
+              ...new Set(
+                visibleNotifications
+                  .filter((item) => item.type === "MARKETPLACE_MESSAGE")
+                  .map((item) => item.event_id)
+                  .filter(Boolean),
+              ),
+            ];
+            if (messageEventIds.length) {
+              Promise.all(
+                messageEventIds.map((eventId) =>
+                  getMarketplaceEventQuestions_API(eventId, { markRead: true }),
+                ),
+              ).catch(() => undefined);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const open = (item) => {
     setVisible(false);
@@ -115,7 +191,7 @@ const VendorMarketplaceNotificationBell = ({ navigation, onOpenNotification }) =
                 <MaterialIcons name="close" size={22} color={AppColor.black} />
               </TouchableOpacity>
             </View>
-            {notifications.length ? (
+            {visibleNotifications.length ? (
               <ScrollView showsVerticalScrollIndicator={false}>
                 <NotificationSection title="Unread Messages" items={sections.unreadMessages} onPress={open} />
                 <NotificationSection title="Read Messages" items={sections.readMessages} onPress={open} />
@@ -124,6 +200,11 @@ const VendorMarketplaceNotificationBell = ({ navigation, onOpenNotification }) =
             ) : (
               <Text style={styles.empty}>No notifications right now.</Text>
             )}
+            {visibleNotifications.length ? (
+              <TouchableOpacity style={styles.clearButton} onPress={clearNotifications}>
+                <Text style={styles.clearButtonText}>Clear Notifications</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         </View>
       </Modal>
@@ -162,6 +243,8 @@ const styles = StyleSheet.create({
   rowTitle: { color: AppColor.black, fontFamily: Mulish700, fontSize: 14 },
   rowMeta: { color: AppColor.textHighlighter, fontFamily: Mulish400, fontSize: 12, marginTop: 3 },
   empty: { color: AppColor.textHighlighter, fontFamily: Mulish400, fontSize: 14, paddingVertical: 18, textAlign: "center" },
+  clearButton: { alignItems: "center", borderColor: AppColor.primary, borderRadius: 8, borderWidth: 1, marginTop: 12, paddingVertical: 11 },
+  clearButtonText: { color: AppColor.primary, fontFamily: Mulish700, fontSize: 14 },
 });
 
 export default VendorMarketplaceNotificationBell;

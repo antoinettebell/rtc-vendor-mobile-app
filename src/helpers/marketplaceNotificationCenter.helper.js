@@ -17,6 +17,30 @@ export const getMarketplaceNotificationRouteParams = (notification) => ({
   applicationId: notification?.application_id || null,
 });
 
+export const getMarketplaceNotificationDismissalId = (notification = {}) =>
+  [
+    notification.id || [
+      notification.type || "marketplace",
+      notification.event_id || "",
+      notification.question_id || "",
+      notification.bid_id || "",
+      notification.application_id || "",
+      notification.status || "",
+    ].join("-"),
+    notification.occurred_at || notification.event_date || "",
+  ].join(":");
+
+export const excludeDismissedMarketplaceNotifications = (
+  notifications = [],
+  dismissedIds = [],
+) => {
+  const dismissed = new Set(dismissedIds);
+  return notifications.filter(
+    (notification) =>
+      !dismissed.has(getMarketplaceNotificationDismissalId(notification)),
+  );
+};
+
 const submissionEvent = (submission) =>
   submission?.marketplaceEvent || submission?.event || null;
 

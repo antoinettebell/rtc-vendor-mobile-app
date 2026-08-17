@@ -39,6 +39,7 @@ assert.match(messages, /getEventVendorApplications_API/);
 assert.match(foodMarketplace, /VendorMarketplaceNotificationBell/);
 assert.match(eventVendorMarketplace, /VendorMarketplaceNotificationBell/);
 assert.match(notificationBell, /getMarketplaceNotificationRouteParams/);
+assert.match(notificationBell, /Clear Notifications/);
 assert.match(notificationHelper, /bidId: notification\?\.bid_id/);
 assert.match(notificationHelper, /applicationId: notification\?\.application_id/);
 assert.doesNotMatch(api, /new URLSearchParams\(\)/);
