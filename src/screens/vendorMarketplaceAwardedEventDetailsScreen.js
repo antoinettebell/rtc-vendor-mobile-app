@@ -682,8 +682,7 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
             </TouchableOpacity>
             {!canVendorCloseEvent ? (
               <Text style={[styles.emptyText, { marginBottom: 12 }]}>
-                The coordinator has one hour after the event ends to close it for
-                payment. You can close it when that window expires.
+                Final payment becomes available when the event starts.
               </Text>
             ) : null}
           </>
