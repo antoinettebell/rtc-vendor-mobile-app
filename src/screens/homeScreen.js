@@ -797,7 +797,8 @@ const HomeScreen = ({ navigation }) => {
 
     if (
       item.type === "MARKETPLACE_BID" ||
-      item.type === "MARKETPLACE_APPLICATION"
+      item.type === "MARKETPLACE_APPLICATION" ||
+      item.type === "MARKETPLACE_EVENT_CLOSED"
     ) {
       try {
         const destination = await resolveFoodMarketplaceNotificationDestination({
@@ -809,7 +810,7 @@ const HomeScreen = ({ navigation }) => {
       } catch (error) {
         console.log("Marketplace notification submission lookup error => ", error);
         navigation.navigate(
-          item.type === "MARKETPLACE_BID"
+          item.bid_id
             ? "VendorMyBidsScreen"
             : "VendorMyApplicationsScreen"
         );

@@ -128,7 +128,8 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
   const openNotificationRow = async (item) => {
     if (
       item.type === "MARKETPLACE_BID" ||
-      item.type === "MARKETPLACE_APPLICATION"
+      item.type === "MARKETPLACE_APPLICATION" ||
+      item.type === "MARKETPLACE_EVENT_CLOSED"
     ) {
       try {
         const destination = await resolveFoodMarketplaceNotificationDestination({
@@ -139,18 +140,11 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
         navigation.navigate(destination.route, destination.params);
       } catch (error) {
         navigation.navigate(
-          item.type === "MARKETPLACE_BID"
+          item.bid_id
             ? "VendorMyBidsScreen"
             : "VendorMyApplicationsScreen"
         );
       }
-      return;
-    }
-
-    if (item.type === "MARKETPLACE_EVENT_CLOSED") {
-      navigation.navigate("vendorMarketplaceEventDetailsScreen", {
-        eventId: item.event_id,
-      });
       return;
     }
 

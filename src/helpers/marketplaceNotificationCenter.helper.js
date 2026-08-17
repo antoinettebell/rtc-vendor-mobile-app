@@ -25,7 +25,7 @@ export const resolveFoodMarketplaceNotificationDestination = async ({
   loadBids,
   loadApplications,
 }) => {
-  if (notification?.type === "MARKETPLACE_BID" && notification?.bid_id) {
+  if (notification?.bid_id) {
     const response = await loadBids();
     const bids = response?.data?.marketplaceBidList || [];
     const bid = bids.find((item) => item?.bid_id === notification.bid_id);
@@ -38,7 +38,7 @@ export const resolveFoodMarketplaceNotificationDestination = async ({
     return { route: "VendorMyBidsScreen", params: {} };
   }
 
-  if (notification?.type === "MARKETPLACE_APPLICATION" && notification?.application_id) {
+  if (notification?.application_id) {
     const response = await loadApplications();
     const applications = response?.data?.marketplaceApplicationList || [];
     const application = applications.find(

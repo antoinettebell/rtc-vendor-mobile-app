@@ -332,8 +332,8 @@ export const isVendorPaysToAttendEvent = (event) =>
   getEventPaymentType(event) === MARKETPLACE_PAYMENT_TYPES.VENDOR_PAYS_TO_ATTEND;
 
 export const isBothPaymentEvent = (event = {}) =>
-  String(event.payment_responsibility || "").toUpperCase() === "BOTH" ||
-  (Number(event.vendor_fee || 0) > 0 && Number(event.budgeted_amount || 0) > 0);
+  String(event?.payment_responsibility || "").toUpperCase() === "BOTH" ||
+  (Number(event?.vendor_fee || 0) > 0 && Number(event?.budgeted_amount || 0) > 0);
 
 export const getPaymentTypeLabel = (event) =>
   isVendorPaysToAttendEvent(event)

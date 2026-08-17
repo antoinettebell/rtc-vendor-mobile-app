@@ -40,6 +40,30 @@ const missingBid = await resolveFoodMarketplaceNotificationDestination({
 });
 assert.equal(missingBid.route, "VendorMyBidsScreen");
 
+const closedBidDestination = await resolveFoodMarketplaceNotificationDestination({
+  notification: {
+    type: "MARKETPLACE_EVENT_CLOSED",
+    event_id: "event-1",
+    bid_id: "bid-rejected",
+  },
+  loadBids: async () => ({ data: { marketplaceBidList: [rejectedBid] } }),
+  loadApplications: async () => { throw new Error("application lookup should not run"); },
+});
+assert.equal(closedBidDestination.route, "VendorBidDetailScreen");
+assert.equal(closedBidDestination.params.bid, rejectedBid);
+
+const closedApplicationDestination = await resolveFoodMarketplaceNotificationDestination({
+  notification: {
+    type: "MARKETPLACE_EVENT_CLOSED",
+    event_id: "event-2",
+    application_id: "application-rejected",
+  },
+  loadBids: async () => { throw new Error("bid lookup should not run"); },
+  loadApplications: async () => ({ data: { marketplaceApplicationList: [rejectedApplication] } }),
+});
+assert.equal(closedApplicationDestination.route, "VendorApplicationDetailScreen");
+assert.equal(closedApplicationDestination.params.application, rejectedApplication);
+
 const [homeScreen, nearMeScreen, marketplaceShared] = await Promise.all([
   readFile(new URL("../screens/homeScreen.js", import.meta.url), "utf8"),
   readFile(new URL("../screens/vendorMarketplaceNearMeScreen.js", import.meta.url), "utf8"),
@@ -49,5 +73,7 @@ assert.match(homeScreen, /resolveFoodMarketplaceNotificationDestination/);
 assert.match(nearMeScreen, /resolveFoodMarketplaceNotificationDestination/);
 assert.match(marketplaceShared, /event\?\.paymentType/);
 assert.doesNotMatch(marketplaceShared, /event\.paymentType/);
+assert.match(marketplaceShared, /event\?\.payment_responsibility/);
+assert.doesNotMatch(marketplaceShared, /event\.payment_responsibility/);
 
 console.log("marketplace notification routing tests passed");
