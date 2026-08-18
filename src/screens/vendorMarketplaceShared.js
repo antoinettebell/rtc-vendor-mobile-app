@@ -11,6 +11,7 @@ import {
 } from "../utils/theme";
 import { normalizeMarketplaceRequirementLabel } from "../helpers/marketplaceRequirementLabels.helper";
 import { getMarketplaceEventLocation } from "../helpers/marketplaceEventLocation.helper";
+import { formatMarketplaceCalendarDate } from "../helpers/marketplaceDate.helper";
 
 export { normalizeMarketplaceRequirementLabel } from "../helpers/marketplaceRequirementLabels.helper";
 
@@ -41,16 +42,7 @@ export const CUISINE_OPTIONS = [
   "Halal",
 ];
 
-export const formatDate = (value) => {
-  if (!value) return "Not set";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleDateString("en-US", {
-    month: "2-digit",
-    day: "2-digit",
-    year: "numeric",
-  });
-};
+export const formatDate = formatMarketplaceCalendarDate;
 
 export const formatTime = (value) => {
   const match = String(value || "").trim().match(/^(\d{1,2}):(\d{2})/);
