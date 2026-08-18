@@ -11,5 +11,8 @@ assert.match(source, /currentTime >= closeAvailableAt/);
 assert.match(source, /Final payment becomes available when the event starts\./);
 assert.match(source, /finalPaymentStatus !== "PAID"/);
 assert.match(source, /!finalPayment\?\.payment_id/);
+assert.match(source, />Collect Event Payment<\/Text>/);
+assert.match(source, /navigation\.navigate\("vendorMarketplacePaymentScreen"/);
+assert.doesNotMatch(source, />Close Event<\/Text>/);
 
 console.log("Vendor final-event payment timing screen tests passed.");

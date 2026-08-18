@@ -389,7 +389,7 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
     return () => clearInterval(interval);
   }, [closeAvailableAt, showVendorCloseEvent]);
 
-  const closeEventForPayment = async () => {
+  const openCoordinatorPaymentCheckout = async () => {
     if (!canVendorCloseEvent || closingEvent) return;
     setClosingEvent(true);
     try {
@@ -410,8 +410,8 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
       });
     } catch (error) {
       Alert.alert(
-        "Close Event",
-        error?.message || "Unable to close this event for payment.",
+        "Event Payment",
+        error?.message || "Unable to open the coordinator payment checkout.",
       );
     } finally {
       setClosingEvent(false);
@@ -671,13 +671,13 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
                 styles.button,
                 { marginBottom: 12, opacity: canVendorCloseEvent ? 1 : 0.5 },
               ]}
-              onPress={closeEventForPayment}
+              onPress={openCoordinatorPaymentCheckout}
               disabled={!canVendorCloseEvent || closingEvent}
             >
               {closingEvent ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.buttonText}>Close Event</Text>
+                <Text style={styles.buttonText}>Collect Event Payment</Text>
               )}
             </TouchableOpacity>
             {!canVendorCloseEvent ? (
