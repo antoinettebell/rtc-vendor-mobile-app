@@ -32,6 +32,7 @@ import { permission } from "../helpers/permission.helper";
 import {
   MarketplaceHeader,
   formatDate,
+  formatEventDeadlineDate,
   formatDuration,
   formatMoney,
   formatTimeRange,
@@ -877,7 +878,7 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
               ))}
               <ReadOnlyRow
                 label="Application/Bid Deadline"
-                value={formatDate(getFoodVendorMarketplaceCloseDate(event))}
+                value={formatEventDeadlineDate(getFoodVendorMarketplaceCloseDate(event), event)}
               />
               <ReadOnlyRow
                 label="Free Food Offered"

@@ -1,8 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-
-const source = await readFile(new URL("./eventVendorPresentation.helper.js", import.meta.url), "utf8");
-const helper = await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`);
+import * as helper from "./eventVendorPresentation.helper.js";
 
 const event = helper.getMarketplaceVendorEventPresentation({
   event_id: "event-1",

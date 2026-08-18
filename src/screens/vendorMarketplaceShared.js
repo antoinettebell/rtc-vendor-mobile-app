@@ -11,7 +11,10 @@ import {
 } from "../utils/theme";
 import { normalizeMarketplaceRequirementLabel } from "../helpers/marketplaceRequirementLabels.helper";
 import { getMarketplaceEventLocation } from "../helpers/marketplaceEventLocation.helper";
-import { formatMarketplaceCalendarDate } from "../helpers/marketplaceDate.helper";
+import {
+  formatMarketplaceCalendarDate,
+  formatMarketplaceZonedDate,
+} from "../helpers/marketplaceDate.helper";
 
 export { normalizeMarketplaceRequirementLabel } from "../helpers/marketplaceRequirementLabels.helper";
 
@@ -43,6 +46,12 @@ export const CUISINE_OPTIONS = [
 ];
 
 export const formatDate = formatMarketplaceCalendarDate;
+
+export const resolveEventTimeZone = (event = {}) =>
+  event?.event_timezone || event?.time_zone || event?.timezone || "America/New_York";
+
+export const formatEventDeadlineDate = (value, event = {}) =>
+  formatMarketplaceZonedDate(value, resolveEventTimeZone(event));
 
 export const formatTime = (value) => {
   const match = String(value || "").trim().match(/^(\d{1,2}):(\d{2})/);

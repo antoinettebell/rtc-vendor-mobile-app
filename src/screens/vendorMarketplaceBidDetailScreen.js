@@ -7,6 +7,7 @@ import {
   MarketplaceHeader,
   MarketplaceAttachmentPicker,
   formatDate,
+  formatEventDeadlineDate,
   formatDuration,
   formatMoney,
   formatTimeRange,
@@ -90,7 +91,7 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
           <DetailRow label="Duration" value={formatDuration(event)} />
           <DetailRow label="Location" value={getEventLocation(event)} />
           {getFoodVendorMarketplaceGuestRows({ event, participationPath: bid?.guest_coverage === "BOTH" ? "BOTH" : "BID", coverage: bid?.guest_coverage }).map((row) => <DetailRow key={row.label} label={row.label} value={row.value} />)}
-          <DetailRow label="Application/Bid Deadline" value={formatDate(getFoodVendorMarketplaceCloseDate(event))} />
+          <DetailRow label="Application/Bid Deadline" value={formatEventDeadlineDate(getFoodVendorMarketplaceCloseDate(event), event)} />
           <DetailRow
             label="Event Budget"
             value={formatMoney(event?.budgeted_amount)}

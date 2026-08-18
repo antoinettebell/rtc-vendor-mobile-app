@@ -23,6 +23,7 @@ import {
   CUISINE_OPTIONS,
   EVENT_TYPES,
   formatDate,
+  formatEventDeadlineDate,
   formatMoney,
   formatTimeRange,
   getEventImageUrl,
@@ -251,7 +252,7 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
           {formatDate(item.event_date)} {formatTimeRange(item.event_time)}
         </Text>
         {getFoodVendorMarketplaceGuestRows({ event: item, participationPath: bothPay ? "BOTH" : vendorPays ? "APPLICATION" : "BID" }).map((row) => <Text key={row.label} style={styles.meta}>{row.label}: {row.value}</Text>)}
-        <Text style={styles.meta}>Application/Bid Deadline: {formatDate(getFoodVendorMarketplaceCloseDate(item))}</Text>
+        <Text style={styles.meta}>Application/Bid Deadline: {formatEventDeadlineDate(getFoodVendorMarketplaceCloseDate(item), item)}</Text>
         {renderEventActions(item)}
       </VendorMarketplaceCard>
     );
