@@ -9,6 +9,7 @@ import {
   styles as marketplaceStyles,
 } from "./vendorMarketplaceShared";
 import { getMarketplaceSubmissionDisplayStatus } from "../helpers/marketplaceSubmissionDisplay.helper";
+import { getMarketplaceEventSupportId } from "../helpers/marketplaceSupportId.helper";
 
 const money = (value) => `$${Number(value || 0).toFixed(2)}`;
 const statusLabel = (value) => String(value || "SUBMITTED").replace(/_/g, " ");
@@ -21,6 +22,7 @@ export default function EventVendorSubmissionDetailsScreen({ navigation, route }
   const paymentDue = application.status === "PAYMENT_DUE" && application.payment_id;
   const photos = Array.isArray(application.photos) ? application.photos : [];
   const coordinatorContact = event.coordinator_contact || null;
+  const supportId = getMarketplaceEventSupportId(event, application);
   const goBack = () => {
     if (navigation.canGoBack()) navigation.goBack();
     else navigation.navigate("bottomRoot", { screen: "eventVendorMarketplaceScreen" });
@@ -30,6 +32,7 @@ export default function EventVendorSubmissionDetailsScreen({ navigation, route }
     <MarketplaceVendorScreenLayout title="Event Submission" onBack={goBack} navigation={navigation} marketplace>
       <ScrollView contentContainerStyle={s.page}>
         <Text style={s.eventName}>{presentation.name || "Event"}</Text>
+        {supportId ? <Text style={s.status}>Event ID: {supportId}</Text> : null}
         <Text style={s.status}>Status: {statusLabel(getMarketplaceSubmissionDisplayStatus(application, application.status))}</Text>
         {presentation.description ? <Text style={s.text}>{presentation.description}</Text> : null}
         {presentation.date ? <Text style={s.text}>{String(presentation.date)}{presentation.startTime ? ` · ${presentation.startTime}` : ""}</Text> : null}

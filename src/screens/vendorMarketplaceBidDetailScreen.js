@@ -19,6 +19,7 @@ import {
 } from "./vendorMarketplaceShared";
 import { getMarketplaceSubmissionDisplayStatus } from "../helpers/marketplaceSubmissionDisplay.helper";
 import { getFoodVendorMarketplaceCloseDate, getFoodVendorMarketplaceGuestRows } from "../helpers/foodVendorMarketplaceGuestCounts.helper";
+import { getMarketplaceEventSupportId } from "../helpers/marketplaceSupportId.helper";
 
 const DetailRow = ({ label, value }) => (
   <View style={{ marginTop: 12 }}>
@@ -62,6 +63,7 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
   const documentAttachments = attachments.filter((item) => !imageAttachments.includes(item));
   const [viewer, setViewer] = useState(null);
   const canRevise = isBidRevisionRequested(bid);
+  const supportId = getMarketplaceEventSupportId(event, bid);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -70,6 +72,7 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.card}>
           <Text style={styles.title}>{event?.event_name || "Marketplace Bid"}</Text>
+          {supportId ? <DetailRow label="Event ID" value={supportId} /> : null}
           {canRevise ? (
             <TouchableOpacity
               activeOpacity={0.7}

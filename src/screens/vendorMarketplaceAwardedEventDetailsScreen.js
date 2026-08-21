@@ -25,6 +25,7 @@ import {
   isVendorPaysToAttendEvent,
   styles,
 } from "./vendorMarketplaceShared";
+import { getMarketplaceEventSupportId } from "../helpers/marketplaceSupportId.helper";
 
 const RTC_EVENT_PROCESSING_RATE = 0.02;
 
@@ -324,6 +325,7 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
     (itemType === "APPLICATION"
       ? getApplicationEvent(application)
       : getBidEvent(bid));
+  const supportId = getMarketplaceEventSupportId(event, bid, application);
   const vendorPays = isVendorPaysToAttendEvent(event);
   const unlockState =
     record?.marketplace_unlock || event?.marketplace_unlock || {};
@@ -428,9 +430,7 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
           <Text style={[styles.title, { marginTop: 12 }]}>
             {event?.event_name || "Marketplace Event"}
           </Text>
-          <Text style={styles.label}>
-            Event ID: {String(event?.event_id || bid?.event_id || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toUpperCase()}
-          </Text>
+          {supportId ? <Text style={styles.label}>Event ID: {supportId}</Text> : null}
           <DetailRow label="Event Date" value={formatDate(event?.event_date)} />
           <DetailRow label="Event Time" value={formatTimeRange(event?.event_time)} />
           <DetailRow label="Duration" value={formatDuration(event)} />

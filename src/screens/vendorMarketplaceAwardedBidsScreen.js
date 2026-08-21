@@ -30,6 +30,7 @@ import {
   styles,
 } from "./vendorMarketplaceShared";
 import { VendorMarketplaceCard, VendorMarketplaceStatusBadge } from "../components/VendorMarketplacePrimitives";
+import { getMarketplaceEventSupportId } from "../helpers/marketplaceSupportId.helper";
 
 const TIME_FILTERS = [
   { label: "Upcoming", value: "UPCOMING" },
@@ -273,6 +274,11 @@ const VendorMarketplaceAwardedBidsScreen = ({ navigation }) => {
     const event = item.event || {};
     const eventId =
       event.event_id || item.bid?.event_id || item.application?.event_id || null;
+    const supportId = getMarketplaceEventSupportId(
+      event,
+      item.bid,
+      item.application,
+    );
     const isVendorPays =
       item.paymentType === MARKETPLACE_PAYMENT_TYPES.VENDOR_PAYS_TO_ATTEND;
     return (
@@ -287,6 +293,7 @@ const VendorMarketplaceAwardedBidsScreen = ({ navigation }) => {
         <Text style={styles.meta}>
           {getEventLocation(event)} | {formatDate(event.event_date)}
         </Text>
+        {supportId ? <Text style={styles.meta}>Event ID: {supportId}</Text> : null}
         <Text style={styles.meta}>
           {isVendorPays
             ? `Vendor Fee: ${formatMoney(event.vendor_fee)}`

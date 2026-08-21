@@ -31,6 +31,7 @@ import {
 import { getMarketplaceSubmissionDisplayStatus } from "../helpers/marketplaceSubmissionDisplay.helper";
 import { VendorMarketplaceCard, VendorMarketplaceStatusBadge } from "../components/VendorMarketplacePrimitives";
 import { matchesMarketplaceSubmissionStatus } from "../helpers/marketplaceSubmissionList.helper";
+import { getMarketplaceEventSupportId } from "../helpers/marketplaceSupportId.helper";
 
 const BID_STATUS_FILTERS = [
   { label: "All", value: "ALL" },
@@ -145,6 +146,7 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
     const event = getBidEvent(item);
     const editable = isEditableBid(item);
     const eventId = item.event_id || event?.event_id;
+    const supportId = getMarketplaceEventSupportId(event, item);
     const openBid = () => {
       if (editable) {
         navigation.navigate("VendorBidResponseScreen", {
@@ -189,6 +191,7 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
         <Text style={styles.meta}>
           {getEventLocation(event)} | {formatDate(event?.event_date)}
         </Text>
+        {supportId ? <Text style={styles.meta}>Event ID: {supportId}</Text> : null}
         <Text style={styles.meta}>
           Event Budget: {formatMoney(event?.budgeted_amount)}
         </Text>
