@@ -518,6 +518,9 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
             <Text style={styles.subtitle}>
               {event?.event_description || "No description provided."}
             </Text>
+            <Text style={styles.label}>
+              Event ID: {String(event?.event_id || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toUpperCase()}
+            </Text>
           </View>
 
           {images.length > 1 ? (

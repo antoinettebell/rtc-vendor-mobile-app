@@ -428,6 +428,9 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
           <Text style={[styles.title, { marginTop: 12 }]}>
             {event?.event_name || "Marketplace Event"}
           </Text>
+          <Text style={styles.label}>
+            Event ID: {String(event?.event_id || bid?.event_id || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toUpperCase()}
+          </Text>
           <DetailRow label="Event Date" value={formatDate(event?.event_date)} />
           <DetailRow label="Event Time" value={formatTimeRange(event?.event_time)} />
           <DetailRow label="Duration" value={formatDuration(event)} />
