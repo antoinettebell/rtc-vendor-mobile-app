@@ -139,10 +139,19 @@ const VendorMarketplaceScreen = ({ navigation }) => {
     }, [loadCompliance]),
   );
 
+  const goToFoodVendorHome = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate("bottomRoot", { screen: "homeScreen" });
+  };
+
   return (
     <VendorMarketplacePage
         title="Marketplace"
         navigation={navigation}
+        onBack={goToFoodVendorHome}
         right={
           hasAccess ? (
             <TouchableOpacity

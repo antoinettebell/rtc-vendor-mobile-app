@@ -78,7 +78,7 @@ export const getAgreementRetryDelay = (attempt, maximumAttempts = 4) =>
 export const getFoodVendorMarketplaceCompletionReset = () => ({
   index: 1,
   routes: [
+    { name: "bottomRoot", params: { screen: "homeScreen" } },
     { name: "vendorMarketplaceScreen" },
-    { name: "vendorMarketplaceNearMeScreen" },
   ],
 });

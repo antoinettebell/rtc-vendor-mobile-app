@@ -71,8 +71,8 @@ assert.equal(helper.getAgreementRetryDelay(4), null);
 assert.deepEqual(helper.getFoodVendorMarketplaceCompletionReset(), {
   index: 1,
   routes: [
+    { name: "bottomRoot", params: { screen: "homeScreen" } },
     { name: "vendorMarketplaceScreen" },
-    { name: "vendorMarketplaceNearMeScreen" },
   ],
 });
 
