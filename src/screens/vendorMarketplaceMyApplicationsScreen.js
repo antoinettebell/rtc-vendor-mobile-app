@@ -35,6 +35,7 @@ import {
   canPayMarketplaceVendorFee,
   isMarketplaceVendorFeePaid,
 } from "../helpers/marketplaceVendorFeeState.helper";
+import { getMarketplaceEventSupportId } from "../helpers/marketplaceSupportId.helper";
 
 const APPLICATION_STATUS_FILTERS = [
   { label: "All", value: "ALL" },
@@ -183,6 +184,7 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
     const status = item.application_status || "DRAFT";
     const editable = isEditableApplication(item);
     const eventId = item.event_id || event?.event_id;
+    const supportId = getMarketplaceEventSupportId(event, item);
     const unreadMessageCount = Number(item.unread_message_count || 0);
     const openApplication = () => {
       if (editable) {
@@ -233,6 +235,7 @@ const VendorMarketplaceMyApplicationsScreen = ({ navigation }) => {
         <Text style={styles.meta}>
           {getEventLocation(event)} | {formatDate(event?.event_date)}
         </Text>
+        {supportId ? <Text style={styles.meta}>Event ID: {supportId}</Text> : null}
         <Text style={styles.meta}>
           Vendor Fee: {formatMoney(event?.vendor_fee)}
         </Text>

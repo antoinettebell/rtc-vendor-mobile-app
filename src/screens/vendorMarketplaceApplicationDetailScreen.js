@@ -20,6 +20,7 @@ import {
   styles,
 } from "./vendorMarketplaceShared";
 import { getMarketplaceSubmissionDisplayStatus } from "../helpers/marketplaceSubmissionDisplay.helper";
+import { getMarketplaceEventSupportId } from "../helpers/marketplaceSupportId.helper";
 
 const DetailRow = ({ label, value }) => (
   <View style={{ marginTop: 12 }}>
@@ -75,6 +76,7 @@ const VendorMarketplaceApplicationDetailScreen = ({ navigation, route }) => {
     String(status).toUpperCase(),
   );
   const showEditButton = canRevise || canEditBeforeAward;
+  const supportId = getMarketplaceEventSupportId(event, application);
 
   useFocusEffect(
     useCallback(() => {
@@ -107,6 +109,7 @@ const VendorMarketplaceApplicationDetailScreen = ({ navigation, route }) => {
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.card}>
           <Text style={styles.title}>{event?.event_name || "Application"}</Text>
+          {supportId ? <DetailRow label="Event ID" value={supportId} /> : null}
           {showEditButton ? (
             <TouchableOpacity
               activeOpacity={0.7}
