@@ -1014,6 +1014,9 @@ const VendorMarketplaceApplicationScreen = ({ navigation, route }) => {
 
             <View style={styles.card}>
               <Text style={styles.sectionHeader}>Menu / Photos</Text>
+              <Text style={styles.meta}>
+                Please make sure you include all menus and images for the various types of services you are offering.
+              </Text>
               <Text style={styles.label}>Sample Menu Upload</Text>
               {uploadedMenuFiles.map((file) => (
                 <Text

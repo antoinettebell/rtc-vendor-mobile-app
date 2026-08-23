@@ -95,6 +95,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     averagePricePerMeal: currencyDraftValue(initialBid?.average_price_per_meal),
     fullBidAmount: currencyDraftValue(initialBid?.full_bid_amount),
     guestCoverage: initialBid?.guest_coverage || "REGULAR",
+    specialtyServices: initialBid?.specialty_services || [],
     regularGuestAmount: currencyDraftValue(initialBid?.regular_guest_amount),
     vipCateringAmount: currencyDraftValue(initialBid?.vip_catering_amount),
     menuDescription: initialBid?.menu_description || "",
@@ -111,6 +112,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   );
   const [fullBidAmount, setFullBidAmount] = useState(initialDraft.fullBidAmount);
   const [guestCoverage, setGuestCoverage] = useState(initialDraft.guestCoverage);
+  const [specialtyServices, setSpecialtyServices] = useState(initialDraft.specialtyServices);
   const [regularGuestAmount, setRegularGuestAmount] = useState(
     initialDraft.regularGuestAmount,
   );
@@ -179,18 +181,18 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   const allowedCoverages = useMemo(() => {
     if (fullyCateredEvent) {
       return Number(event?.number_of_guests || 0) > 0 && Number(event?.vip_guest_count || 0) > 0
-        ? [["REGULAR", "GA Catering"], ["VIP", "VIP Catering"], ["BOTH", "VIP Catering + GA Sales"]]
+        ? [["REGULAR", "GA Catering"], ["VIP", "VIP Catering"], ["BOTH", "VIP Catering + GA Sales"], ...((event?.dessert_caterer_required || event?.drinks_caterer_required) ? [["SPECIALTY", "Desserts / Drinks Specialty"]] : [])]
         : Number(event?.vip_guest_count || 0) > 0
-          ? [["VIP", "VIP Catering"]]
-          : [["REGULAR", "All Guests"]];
+          ? [["VIP", "VIP Catering"], ...((event?.dessert_caterer_required || event?.drinks_caterer_required) ? [["SPECIALTY", "Desserts / Drinks Specialty"]] : [])]
+          : [["REGULAR", "All Guests"], ...((event?.dessert_caterer_required || event?.drinks_caterer_required) ? [["SPECIALTY", "Desserts / Drinks Specialty"]] : [])];
     }
     if (cateredVipEnabled) {
       return event?.ga_food_sales_allowed
-        ? [["VIP", "VIP Catering"], ["BOTH", "VIP Catering + GA Sales"]]
-        : [["VIP", "VIP Catering"]];
+        ? [["VIP", "VIP Catering"], ["BOTH", "VIP Catering + GA Sales"], ...((event?.dessert_caterer_required || event?.drinks_caterer_required) ? [["SPECIALTY", "Desserts / Drinks Specialty"]] : [])]
+        : [["VIP", "VIP Catering"], ...((event?.dessert_caterer_required || event?.drinks_caterer_required) ? [["SPECIALTY", "Desserts / Drinks Specialty"]] : [])];
     }
-    return [["REGULAR", "Event Catering"]];
-  }, [cateredVipEnabled, event?.ga_food_sales_allowed, event?.number_of_guests, event?.vip_guest_count, fullyCateredEvent]);
+    return [["REGULAR", "Event Catering"], ...((event?.dessert_caterer_required || event?.drinks_caterer_required) ? [["SPECIALTY", "Desserts / Drinks Specialty"]] : [])];
+  }, [cateredVipEnabled, event?.ga_food_sales_allowed, event?.number_of_guests, event?.vip_guest_count, event?.dessert_caterer_required, event?.drinks_caterer_required, fullyCateredEvent]);
   useEffect(() => {
     if (!allowedCoverages.some(([value]) => value === guestCoverage)) {
       setGuestCoverage(allowedCoverages[0]?.[0] || "REGULAR");
@@ -347,6 +349,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     full_bid_amount:
       guestCoverage === "BOTH" || fullBidAmount.trim() ? fullBidNumber : null,
     guest_coverage: guestCoverage,
+    specialty_services: specialtyServices,
     regular_guest_amount:
       fullyCateredEvent && guestCoverage === "BOTH"
         ? regularGuestAmountNumber
@@ -963,6 +966,28 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                     style={[styles.input, styles.textarea]}
                   />
                 </FormField>
+                {(event?.dessert_caterer_required || event?.drinks_caterer_required) ? (
+                  <FormField label="Specialty Services You Are Bidding For" full>
+                    <View style={[styles.row, { flexWrap: "wrap", gap: 10 }]}>
+                      {event?.dessert_caterer_required ? (
+                        <TouchableOpacity
+                          style={[styles.chip, specialtyServices.includes("DESSERTS") && styles.chipActive]}
+                          onPress={() => setSpecialtyServices((current) => current.includes("DESSERTS") ? current.filter((item) => item !== "DESSERTS") : [...current, "DESSERTS"])}
+                        >
+                          <Text style={[styles.chipText, specialtyServices.includes("DESSERTS") && styles.chipTextActive]}>Desserts</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                      {event?.drinks_caterer_required ? (
+                        <TouchableOpacity
+                          style={[styles.chip, specialtyServices.includes("DRINKS") && styles.chipActive]}
+                          onPress={() => setSpecialtyServices((current) => current.includes("DRINKS") ? current.filter((item) => item !== "DRINKS") : [...current, "DRINKS"])}
+                        >
+                          <Text style={[styles.chipText, specialtyServices.includes("DRINKS") && styles.chipTextActive]}>Drinks</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  </FormField>
+                ) : null}
                 <FormField label="Special Notes to Event Coordinator" full>
                   <TextInput
                     value={notes}
@@ -1047,6 +1072,9 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
               <Text style={styles.sectionHeader}>Menu / Photos</Text>
               <Text style={styles.meta}>
                 Accepted: PDF, JPG, PNG, HEIC. Maximum file size is 10 MB.
+              </Text>
+              <Text style={styles.meta}>
+                Please make sure you include all menus and images for the various types of services you are offering.
               </Text>
 
               <Text style={styles.label}>Sample Menu Upload</Text>
