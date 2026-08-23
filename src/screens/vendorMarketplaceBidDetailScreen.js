@@ -62,7 +62,7 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
   );
   const documentAttachments = attachments.filter((item) => !imageAttachments.includes(item));
   const [viewer, setViewer] = useState(null);
-  const canRevise = isBidRevisionRequested(bid);
+  const canRevise = isBidRevisionRequested(bid) || !!bid.specialty_update_available_at;
   const supportId = getMarketplaceEventSupportId(event, bid);
 
   return (
@@ -85,7 +85,7 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
                 })
               }
             >
-              <Text style={styles.buttonText}>Revise Bid</Text>
+              <Text style={styles.buttonText}>{isBidRevisionRequested(bid) ? "Revise Bid" : "Update Bid"}</Text>
             </TouchableOpacity>
           ) : null}
           <DetailRow label="Event Type" value={event?.event_type} />
@@ -118,6 +118,10 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
             value={formatStatusLabel(getMarketplaceSubmissionDisplayStatus(bid, bid.bid_status))}
           />
           <DetailRow label="Bid Amount" value={formatMoney(bid.full_bid_amount)} />
+          {bid.dessert_bid_amount != null ? <DetailRow label="Desserts Bid Amount" value={formatMoney(bid.dessert_bid_amount)} /> : null}
+          {bid.dessert_price_per_guest != null ? <DetailRow label="Desserts Price Per Guest" value={formatMoney(bid.dessert_price_per_guest)} /> : null}
+          {bid.drinks_bid_amount != null ? <DetailRow label="Drinks Bid Amount" value={formatMoney(bid.drinks_bid_amount)} /> : null}
+          {bid.drinks_price_per_guest != null ? <DetailRow label="Drinks Price Per Guest" value={formatMoney(bid.drinks_price_per_guest)} /> : null}
           <DetailRow
             label="Price Per Guest"
             value={

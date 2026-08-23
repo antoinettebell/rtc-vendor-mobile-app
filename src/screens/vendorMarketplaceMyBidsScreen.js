@@ -144,7 +144,8 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
 
   const renderBid = ({ item }) => {
     const event = getBidEvent(item);
-    const editable = isEditableBid(item);
+    const specialtyUpdateAvailable = !!item.specialty_update_available_at;
+    const editable = isEditableBid(item) || specialtyUpdateAvailable;
     const eventId = item.event_id || event?.event_id;
     const supportId = getMarketplaceEventSupportId(event, item);
     const openBid = () => {
@@ -175,7 +176,7 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
               <TouchableOpacity
                 activeOpacity={0.7}
                 accessibilityLabel={
-                  isBidRevisionRequested(item) ? "Revise bid" : "Edit draft bid"
+                  isBidRevisionRequested(item) ? "Revise bid" : specialtyUpdateAvailable ? "Update bid" : "Edit draft bid"
                 }
                 style={{ padding: 4, marginRight: 6 }}
                 onPress={openBid}
@@ -198,6 +199,7 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
         <Text style={styles.meta}>
           Bid Amount: {formatMoney(item.full_bid_amount)}
         </Text>
+        {specialtyUpdateAvailable ? <Text style={styles.meta}>Coordinator has made some additional changes: Dessert and Drinks are now needed.</Text> : null}
         <Text style={styles.meta}>
           Submitted Date:{" "}
           {item.submitted_at ? formatDate(item.submitted_at) : "Not submitted"}
@@ -210,6 +212,8 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
           <Text style={styles.secondaryButtonText}>
             {isBidRevisionRequested(item)
               ? "Revise Bid"
+              : specialtyUpdateAvailable
+                ? "Update Bid"
               : editable
                 ? "Edit Draft"
                 : "View Details"}

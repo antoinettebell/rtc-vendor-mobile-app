@@ -45,6 +45,12 @@ export const getBidActionAvailability = ({
   averagePricePerMeal,
   averagePricePerMealNumber,
   requirementsSatisfied,
+  specialtyServices = [],
+  specialtyOnly = false,
+  dessertBidAmountNumber,
+  dessertPricePerGuestNumber,
+  drinksBidAmountNumber,
+  drinksPricePerGuestNumber,
 }) => {
   const canSaveDraft =
     !!eventId &&
@@ -62,7 +68,9 @@ export const getBidActionAvailability = ({
     (!averagePricePerMeal ||
       (!Number.isNaN(averagePricePerMealNumber) &&
         averagePricePerMealNumber >= 0));
-  const bidFieldsComplete =
+  const bidFieldsComplete = specialtyOnly && specialtyServices.length === 2
+    ? true
+    :
     String(pricePerGuest || "").trim() &&
     !Number.isNaN(pricePerGuestNumber) &&
     pricePerGuestNumber > 0 &&
@@ -75,9 +83,13 @@ export const getBidActionAvailability = ({
         !Number.isNaN(fullBidNumber) &&
         fullBidNumber > 0);
 
+  const multipleServices = specialtyServices.length + (specialtyOnly ? 0 : 1) > 1;
+  const specialtyPricingComplete =
+    (!multipleServices || !specialtyServices.includes("DESSERTS") || (dessertBidAmountNumber > 0 && dessertPricePerGuestNumber > 0)) &&
+    (!multipleServices || !specialtyServices.includes("DRINKS") || (drinksBidAmountNumber > 0 && drinksPricePerGuestNumber > 0));
   return {
     canSaveDraft,
-    canSubmit: !!(canSaveDraft && bidFieldsComplete && requirementsSatisfied),
+    canSubmit: !!(canSaveDraft && bidFieldsComplete && specialtyPricingComplete && requirementsSatisfied),
   };
 };
 
@@ -96,6 +108,12 @@ export const getBidBlockingReasons = ({
   pricePerGuest,
   pricePerGuestNumber,
   missingRequirementLabels = [],
+  specialtyServices = [],
+  specialtyOnly = false,
+  dessertBidAmountNumber,
+  dessertPricePerGuestNumber,
+  drinksBidAmountNumber,
+  drinksPricePerGuestNumber,
 }) => {
   const reasons = [];
   if (!eventId) reasons.push("Event details are unavailable.");
@@ -103,11 +121,11 @@ export const getBidBlockingReasons = ({
     reasons.push("This event accepts the vendor-paid application workflow only.");
   }
   if (notesError) reasons.push(notesError);
-  if (
+  if (!(specialtyOnly && specialtyServices.length === 2) && (
     !String(pricePerGuest || "").trim() ||
     Number.isNaN(pricePerGuestNumber) ||
     pricePerGuestNumber <= 0
-  ) {
+  )) {
     reasons.push("Enter the Price Per Guest.");
   }
   if (guestCoverage === "BOTH") {
@@ -123,12 +141,19 @@ export const getBidBlockingReasons = ({
     ) {
       reasons.push("Enter the VIP Catering Amount.");
     }
-  } else if (
+  } else if (!(specialtyOnly && specialtyServices.length === 2) && (
     !String(fullBidAmount || "").trim() ||
     Number.isNaN(fullBidNumber) ||
     fullBidNumber <= 0
-  ) {
+  )) {
     reasons.push("Enter the Bid Amount.");
+  }
+  const multipleServices = specialtyServices.length + (specialtyOnly ? 0 : 1) > 1;
+  if (multipleServices && specialtyServices.includes("DESSERTS") && !(dessertBidAmountNumber > 0 && dessertPricePerGuestNumber > 0)) {
+    reasons.push("Enter Desserts Bid Amount and Price Per Guest.");
+  }
+  if (multipleServices && specialtyServices.includes("DRINKS") && !(drinksBidAmountNumber > 0 && drinksPricePerGuestNumber > 0)) {
+    reasons.push("Enter Drinks Bid Amount and Price Per Guest.");
   }
   if (missingRequirementLabels.length) {
     reasons.push(`Upload: ${missingRequirementLabels.join(", ")}.`);

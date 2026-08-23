@@ -582,8 +582,8 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
             />
             {event?.catered_vip_section_enabled ? (
               <DetailRow
-                label="GA Food Sales"
-                value={event?.ga_food_sales_allowed ? "Allowed" : "Not allowed"}
+                label="VIP Vendors may also setup as a GA Vendor"
+                value={event?.ga_food_sales_allowed ? "Yes" : "No"}
               />
             ) : null}
             {event?.ga_food_sales_allowed ? (

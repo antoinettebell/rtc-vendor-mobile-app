@@ -96,6 +96,10 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     fullBidAmount: currencyDraftValue(initialBid?.full_bid_amount),
     guestCoverage: initialBid?.guest_coverage || "REGULAR",
     specialtyServices: initialBid?.specialty_services || [],
+    dessertBidAmount: currencyDraftValue(initialBid?.dessert_bid_amount),
+    dessertPricePerGuest: currencyDraftValue(initialBid?.dessert_price_per_guest),
+    drinksBidAmount: currencyDraftValue(initialBid?.drinks_bid_amount),
+    drinksPricePerGuest: currencyDraftValue(initialBid?.drinks_price_per_guest),
     regularGuestAmount: currencyDraftValue(initialBid?.regular_guest_amount),
     vipCateringAmount: currencyDraftValue(initialBid?.vip_catering_amount),
     menuDescription: initialBid?.menu_description || "",
@@ -113,6 +117,10 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   const [fullBidAmount, setFullBidAmount] = useState(initialDraft.fullBidAmount);
   const [guestCoverage, setGuestCoverage] = useState(initialDraft.guestCoverage);
   const [specialtyServices, setSpecialtyServices] = useState(initialDraft.specialtyServices);
+  const [dessertBidAmount, setDessertBidAmount] = useState(initialDraft.dessertBidAmount);
+  const [dessertPricePerGuest, setDessertPricePerGuest] = useState(initialDraft.dessertPricePerGuest);
+  const [drinksBidAmount, setDrinksBidAmount] = useState(initialDraft.drinksBidAmount);
+  const [drinksPricePerGuest, setDrinksPricePerGuest] = useState(initialDraft.drinksPricePerGuest);
   const [regularGuestAmount, setRegularGuestAmount] = useState(
     initialDraft.regularGuestAmount,
   );
@@ -206,6 +214,12 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       : vipCateringAmountNumber
     : Number(fullBidAmount);
   const pricePerGuestNumber = pricePerGuest ? Number(pricePerGuest) : null;
+  const dessertBidAmountNumber = dessertBidAmount ? Number(dessertBidAmount) : null;
+  const dessertPricePerGuestNumber = dessertPricePerGuest ? Number(dessertPricePerGuest) : null;
+  const drinksBidAmountNumber = drinksBidAmount ? Number(drinksBidAmount) : null;
+  const drinksPricePerGuestNumber = drinksPricePerGuest ? Number(drinksPricePerGuest) : null;
+  const specialtyOnly = guestCoverage === "SPECIALTY";
+  const needsSpecialtyPricing = specialtyServices.length + (specialtyOnly ? 0 : 1) > 1;
   const averagePricePerMealNumber = averagePricePerMeal
     ? Number(averagePricePerMeal)
     : null;
@@ -299,6 +313,12 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     averagePricePerMeal,
     averagePricePerMealNumber,
     requirementsSatisfied,
+    specialtyServices,
+    specialtyOnly,
+    dessertBidAmountNumber,
+    dessertPricePerGuestNumber,
+    drinksBidAmountNumber,
+    drinksPricePerGuestNumber,
   });
   const bidBlockingReasons = getBidBlockingReasons({
     eventId,
@@ -315,6 +335,12 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     pricePerGuest,
     pricePerGuestNumber,
     missingRequirementLabels,
+    specialtyServices,
+    specialtyOnly,
+    dessertBidAmountNumber,
+    dessertPricePerGuestNumber,
+    drinksBidAmountNumber,
+    drinksPricePerGuestNumber,
   });
   const hasUnsavedDraftContent = useMemo(() => {
     const initial = initialDraftRef.current;
@@ -350,6 +376,10 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       guestCoverage === "BOTH" || fullBidAmount.trim() ? fullBidNumber : null,
     guest_coverage: guestCoverage,
     specialty_services: specialtyServices,
+    dessert_bid_amount: dessertBidAmountNumber,
+    dessert_price_per_guest: dessertPricePerGuestNumber,
+    drinks_bid_amount: drinksBidAmountNumber,
+    drinks_price_per_guest: drinksPricePerGuestNumber,
     regular_guest_amount:
       fullyCateredEvent && guestCoverage === "BOTH"
         ? regularGuestAmountNumber
@@ -882,7 +912,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                 </View>
               ) : null}
               <View style={styles.formGrid}>
-                {guestCoverage !== "BOTH" ? <FormField label="Bid Amount *">
+                {guestCoverage !== "BOTH" && !(specialtyOnly && specialtyServices.length === 2) ? <FormField label="Bid Amount *">
                   <TextInput
                     value={fullBidAmount}
                     onChangeText={(value) =>
@@ -923,7 +953,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                     ) : null}
                   </>
                 )}
-                <FormField label="Price Per Guest *">
+                {!(specialtyOnly && specialtyServices.length === 2) ? <FormField label="Price Per Guest *">
                   <TextInput
                     value={pricePerGuest}
                     onChangeText={(value) =>
@@ -937,7 +967,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                     placeholderTextColor={AppColor.placeholderTextColor}
                     style={styles.input}
                   />
-                </FormField>
+                </FormField> : null}
                 <FormField label="Average Price Per Meal">
                   <TextInput
                     value={averagePricePerMeal}
@@ -988,6 +1018,22 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                     </View>
                   </FormField>
                 ) : null}
+                {needsSpecialtyPricing && specialtyServices.includes("DESSERTS") ? <>
+                  <FormField label="Desserts Bid Amount *">
+                    <TextInput value={dessertBidAmount} onChangeText={(value) => setDessertBidAmount(normalizeCurrencyInput(value))} onBlur={() => formatCurrencyInput(dessertBidAmount, setDessertBidAmount)} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor={AppColor.placeholderTextColor} style={styles.input} />
+                  </FormField>
+                  <FormField label="Desserts Price Per Guest *">
+                    <TextInput value={dessertPricePerGuest} onChangeText={(value) => setDessertPricePerGuest(normalizeCurrencyInput(value))} onBlur={() => formatCurrencyInput(dessertPricePerGuest, setDessertPricePerGuest)} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor={AppColor.placeholderTextColor} style={styles.input} />
+                  </FormField>
+                </> : null}
+                {needsSpecialtyPricing && specialtyServices.includes("DRINKS") ? <>
+                  <FormField label="Drinks Bid Amount *">
+                    <TextInput value={drinksBidAmount} onChangeText={(value) => setDrinksBidAmount(normalizeCurrencyInput(value))} onBlur={() => formatCurrencyInput(drinksBidAmount, setDrinksBidAmount)} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor={AppColor.placeholderTextColor} style={styles.input} />
+                  </FormField>
+                  <FormField label="Drinks Price Per Guest *">
+                    <TextInput value={drinksPricePerGuest} onChangeText={(value) => setDrinksPricePerGuest(normalizeCurrencyInput(value))} onBlur={() => formatCurrencyInput(drinksPricePerGuest, setDrinksPricePerGuest)} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor={AppColor.placeholderTextColor} style={styles.input} />
+                  </FormField>
+                </> : null}
                 <FormField label="Special Notes to Event Coordinator" full>
                   <TextInput
                     value={notes}
