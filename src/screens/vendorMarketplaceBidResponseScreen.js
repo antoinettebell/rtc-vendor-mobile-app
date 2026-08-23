@@ -79,6 +79,24 @@ const formatCurrencyInput = (value, setter) => {
 const currencyDraftValue = (value) =>
   value === null || value === undefined || value === "" ? "" : String(value);
 
+const normalizeBidDraftSnapshot = (draft = {}) => ({
+  pricePerGuest: currencyDraftValue(draft.pricePerGuest),
+  averagePricePerMeal: currencyDraftValue(draft.averagePricePerMeal),
+  fullBidAmount: currencyDraftValue(draft.fullBidAmount),
+  guestCoverage: String(draft.guestCoverage || "REGULAR"),
+  specialtyServices: Array.from(new Set(draft.specialtyServices || []))
+    .map((service) => String(service))
+    .sort(),
+  dessertBidAmount: currencyDraftValue(draft.dessertBidAmount),
+  dessertPricePerGuest: currencyDraftValue(draft.dessertPricePerGuest),
+  drinksBidAmount: currencyDraftValue(draft.drinksBidAmount),
+  drinksPricePerGuest: currencyDraftValue(draft.drinksPricePerGuest),
+  regularGuestAmount: currencyDraftValue(draft.regularGuestAmount),
+  vipCateringAmount: currencyDraftValue(draft.vipCateringAmount),
+  menuDescription: String(draft.menuDescription || "").trim(),
+  notes: String(draft.notes || "").trim(),
+});
+
 const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const user = useSelector((state) => state.userReducer.user);
@@ -155,7 +173,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   const [menuPdf, setMenuPdf] = useState(null);
   const [bidImages, setBidImages] = useState([]);
   const isLeavingRef = useRef(false);
-  const initialDraftRef = useRef(initialDraft);
+  const initialDraftRef = useRef(normalizeBidDraftSnapshot(initialDraft));
   const { checkAndRequestPermission: photosPermissionStatus } = usePermission(
     permission.photos
   );
@@ -343,16 +361,23 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     drinksPricePerGuestNumber,
   });
   const hasUnsavedDraftContent = useMemo(() => {
-    const initial = initialDraftRef.current;
+    const currentDraft = normalizeBidDraftSnapshot({
+      pricePerGuest,
+      averagePricePerMeal,
+      fullBidAmount,
+      guestCoverage,
+      specialtyServices,
+      dessertBidAmount,
+      dessertPricePerGuest,
+      drinksBidAmount,
+      drinksPricePerGuest,
+      regularGuestAmount,
+      vipCateringAmount,
+      menuDescription,
+      notes,
+    });
     return (
-      pricePerGuest !== initial.pricePerGuest ||
-      averagePricePerMeal !== initial.averagePricePerMeal ||
-      fullBidAmount !== initial.fullBidAmount ||
-      guestCoverage !== initial.guestCoverage ||
-      regularGuestAmount !== initial.regularGuestAmount ||
-      vipCateringAmount !== initial.vipCateringAmount ||
-      menuDescription !== initial.menuDescription ||
-      notes !== initial.notes ||
+      JSON.stringify(currentDraft) !== JSON.stringify(initialDraftRef.current) ||
       !!menuPdf ||
       bidImages.length > 0
     );
@@ -361,6 +386,11 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     bidImages.length,
     fullBidAmount,
     guestCoverage,
+    specialtyServices,
+    dessertBidAmount,
+    dessertPricePerGuest,
+    drinksBidAmount,
+    drinksPricePerGuest,
     menuDescription,
     menuPdf,
     notes,
@@ -433,16 +463,21 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
       const marketplaceBid = response.data?.marketplaceBid || null;
       setSavedBid(marketplaceBid);
       savedBidRef.current = marketplaceBid;
-      initialDraftRef.current = {
+      initialDraftRef.current = normalizeBidDraftSnapshot({
         pricePerGuest,
         averagePricePerMeal,
         fullBidAmount,
         guestCoverage,
+        specialtyServices,
+        dessertBidAmount,
+        dessertPricePerGuest,
+        drinksBidAmount,
+        drinksPricePerGuest,
         regularGuestAmount,
         vipCateringAmount,
         menuDescription,
         notes,
-      };
+      });
       return response.data?.marketplaceBid || null;
     }
     return null;
