@@ -152,6 +152,10 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   const [savedBid, setSavedBid] = useState(initialBid);
   const savedBidRef = useRef(initialBid);
   const isRevisionMode = isBidRevisionRequested(initialBid);
+  const isSubmittedBidUpdate = Boolean(
+    initialBid?.bid_id &&
+      (isRevisionMode || initialBid?.specialty_update_available_at),
+  );
   const [requirementFiles, setRequirementFiles] = useState(
     route?.params?.bid?.attachments?.filter(
       (item) => item.attachment_type === "REQUIREMENT_DOCUMENT",
@@ -446,6 +450,13 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   }, [loadProfileRequirementFiles]);
 
   const saveBidDraft = async (bidStatus = "DRAFT") => {
+    if (isSubmittedBidUpdate && bidStatus !== "SUBMITTED") {
+      Alert.alert(
+        "Draft Not Saved",
+        "Submit the revised bid to update your response.",
+      );
+      return null;
+    }
     if (notesError) {
       Alert.alert("Notes Not Allowed", notesError);
       return null;
@@ -587,6 +598,10 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
 
     setSubmitting(true);
     try {
+      if (isSubmittedBidUpdate) {
+        await finalizeBidSubmission();
+        return;
+      }
       const draft = await saveBidDraft("PENDING_SIGNATURE");
       if (!draft?.bid_id) {
         throw new Error("Unable to save bid draft before signing.");
@@ -719,7 +734,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
         },
       ];
 
-      if (canSaveDraft) {
+      if (canSaveDraft && !isSubmittedBidUpdate) {
         actions.push({
           text: "Save Draft",
           onPress: async () => {
@@ -740,6 +755,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   }, [
     canSaveDraft,
     hasUnsavedDraftContent,
+    isSubmittedBidUpdate,
     navigation,
     saveBidDraftWithFiles,
     submitting,
@@ -1229,7 +1245,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
 
             </View>
 
-            {!isRevisionMode ? (
+            {!isSubmittedBidUpdate ? (
               <TouchableOpacity
                 activeOpacity={0.7}
                 style={[styles.secondaryButton, { marginBottom: 12 }]}
@@ -1261,7 +1277,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                 <ActivityIndicator color={AppColor.white} />
               ) : (
                 <Text style={styles.buttonText}>
-                  {isRevisionMode ? "Submit Revised Bid" : "Submit Bid"}
+                  {isSubmittedBidUpdate ? "Submit Revised Bid" : "Submit Bid"}
                 </Text>
               )}
             </TouchableOpacity>
