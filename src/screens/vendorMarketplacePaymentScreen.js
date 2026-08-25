@@ -95,6 +95,22 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
   const returnScreen = route?.params?.returnScreen;
   const successMessage = route?.params?.successMessage;
 
+  const returnAfterPayment = () => {
+    if (!returnScreen) {
+      navigation.goBack();
+      return;
+    }
+    // Marketplace Vendor home is a tab nested inside bottomRoot, while this
+    // payment screen is registered in the parent stack.
+    if (returnScreen === "eventVendorMarketplaceScreen") {
+      navigation.replace("bottomRoot", {
+        screen: "eventVendorMarketplaceScreen",
+      });
+      return;
+    }
+    navigation.replace(returnScreen);
+  };
+
   const loadPayment = async () => {
     if (!paymentId) return;
     setLoading(true);
@@ -107,10 +123,10 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
         if (nextPayment?.payment_status === "PAID" && returnScreen) {
           if (successMessage) {
             Alert.alert("Payment Successful", successMessage, [
-              { text: "OK", onPress: () => navigation.replace(returnScreen) },
+              { text: "OK", onPress: returnAfterPayment },
             ]);
           } else {
-            navigation.replace(returnScreen);
+            returnAfterPayment();
           }
         }
       }
@@ -182,8 +198,7 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
           [
             {
               text: "OK",
-              onPress: () =>
-                returnScreen ? navigation.replace(returnScreen) : navigation.goBack(),
+              onPress: returnAfterPayment,
             },
           ],
         );
@@ -267,8 +282,7 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
           [
             {
               text: "OK",
-              onPress: () =>
-                returnScreen ? navigation.replace(returnScreen) : navigation.goBack(),
+              onPress: returnAfterPayment,
             },
           ],
         );
@@ -317,10 +331,7 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
                   [
                     {
                       text: "OK",
-                      onPress: () =>
-                        returnScreen
-                          ? navigation.replace(returnScreen)
-                          : navigation.goBack(),
+                      onPress: returnAfterPayment,
                     },
                   ],
                 );
