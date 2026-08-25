@@ -242,6 +242,11 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   const drinksPricePerGuestNumber = drinksPricePerGuest ? Number(drinksPricePerGuest) : null;
   const specialtyOnly = guestCoverage === "SPECIALTY";
   const needsSpecialtyPricing = specialtyServices.length + (specialtyOnly ? 0 : 1) > 1;
+  const totalBidNumber = Number((
+    (Number.isFinite(fullBidNumber) ? fullBidNumber : 0) +
+    (specialtyServices.includes("DESSERTS") && Number.isFinite(dessertBidAmountNumber) ? dessertBidAmountNumber : 0) +
+    (specialtyServices.includes("DRINKS") && Number.isFinite(drinksBidAmountNumber) ? drinksBidAmountNumber : 0)
+  ).toFixed(2));
   const averagePricePerMealNumber = averagePricePerMeal
     ? Number(averagePricePerMeal)
     : null;
@@ -987,7 +992,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                     <FormField label="VIP Catering Amount *">
                       <TextInput value={vipCateringAmount} onChangeText={(value) => setVipCateringAmount(normalizeCurrencyInput(value))} onBlur={() => formatCurrencyInput(vipCateringAmount, setVipCateringAmount)} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor={AppColor.placeholderTextColor} style={styles.input} />
                     </FormField>
-                    <FormField label="Total Bid Amount" full>
+                    <FormField label="Bid Amount" full>
                       <Text style={styles.meta}>{formatMoney(fullBidNumber)}</Text>
                     </FormField>
                     {!fullyCateredEvent ? (
@@ -1085,6 +1090,9 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                     <TextInput value={drinksPricePerGuest} onChangeText={(value) => setDrinksPricePerGuest(normalizeCurrencyInput(value))} onBlur={() => formatCurrencyInput(drinksPricePerGuest, setDrinksPricePerGuest)} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor={AppColor.placeholderTextColor} style={styles.input} />
                   </FormField>
                 </> : null}
+                <FormField label="Total Bid Amount" full>
+                  <Text style={styles.meta}>{formatMoney(totalBidNumber)}</Text>
+                </FormField>
                 <FormField label="Special Notes to Event Coordinator" full>
                   <TextInput
                     value={notes}
