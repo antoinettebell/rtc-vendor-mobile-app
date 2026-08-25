@@ -32,6 +32,7 @@ import { getMarketplaceSubmissionDisplayStatus } from "../helpers/marketplaceSub
 import { VendorMarketplaceCard, VendorMarketplaceStatusBadge } from "../components/VendorMarketplacePrimitives";
 import { matchesMarketplaceSubmissionStatus } from "../helpers/marketplaceSubmissionList.helper";
 import { getMarketplaceEventSupportId } from "../helpers/marketplaceSupportId.helper";
+import { getMarketplaceBidTotal } from "../helpers/marketplaceBidTotal.helper";
 
 const BID_STATUS_FILTERS = [
   { label: "All", value: "ALL" },
@@ -198,6 +199,9 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
         </Text>
         <Text style={styles.meta}>
           Bid Amount: {formatMoney(item.full_bid_amount)}
+        </Text>
+        <Text style={styles.meta}>
+          Total Bid Amount: {formatMoney(getMarketplaceBidTotal(item))}
         </Text>
         {specialtyUpdateAvailable ? <Text style={styles.meta}>Coordinator has made some additional changes: Dessert and Drinks are now needed.</Text> : null}
         <Text style={styles.meta}>

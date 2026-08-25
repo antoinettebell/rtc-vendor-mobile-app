@@ -20,6 +20,7 @@ import {
 import { getMarketplaceSubmissionDisplayStatus } from "../helpers/marketplaceSubmissionDisplay.helper";
 import { getFoodVendorMarketplaceCloseDate, getFoodVendorMarketplaceGuestRows } from "../helpers/foodVendorMarketplaceGuestCounts.helper";
 import { getMarketplaceEventSupportId } from "../helpers/marketplaceSupportId.helper";
+import { getMarketplaceBidTotal } from "../helpers/marketplaceBidTotal.helper";
 
 const DetailRow = ({ label, value }) => (
   <View style={{ marginTop: 12 }}>
@@ -122,6 +123,7 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
           {bid.dessert_price_per_guest != null ? <DetailRow label="Desserts Price Per Guest" value={formatMoney(bid.dessert_price_per_guest)} /> : null}
           {bid.drinks_bid_amount != null ? <DetailRow label="Drinks Bid Amount" value={formatMoney(bid.drinks_bid_amount)} /> : null}
           {bid.drinks_price_per_guest != null ? <DetailRow label="Drinks Price Per Guest" value={formatMoney(bid.drinks_price_per_guest)} /> : null}
+          <DetailRow label="Total Bid Amount" value={formatMoney(getMarketplaceBidTotal(bid))} />
           <DetailRow
             label="Price Per Guest"
             value={
