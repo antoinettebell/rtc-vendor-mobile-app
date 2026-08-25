@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { Linking, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StatusBarManager from "../components/StatusBarManager";
 import MarketplaceImageViewer from "../components/MarketplaceImageViewer";
@@ -30,6 +30,58 @@ const DetailRow = ({ label, value }) => (
 );
 
 const boolText = (value) => (value ? "Yes" : "No");
+
+const hasDisplayValue = (value) =>
+  value !== undefined && value !== null && String(value).trim() !== "";
+
+const firstValue = (...values) =>
+  values.find((value) => hasDisplayValue(value)) || null;
+
+const getCoordinatorContact = (record = {}, event = {}) => {
+  const contact =
+    record.coordinator_contact ||
+    record.coordinatorContact ||
+    event.coordinator_contact ||
+    event.coordinatorContact ||
+    null;
+
+  return {
+    businessName: firstValue(
+      record.coordinator_business_name,
+      record.coordinatorBusinessName,
+      event.coordinator_business_name,
+      event.coordinatorBusinessName,
+      contact?.business_name,
+      contact?.businessName,
+    ),
+    name: firstValue(
+      record.coordinator_contact_name,
+      record.coordinatorContactName,
+      event.coordinator_contact_name,
+      event.coordinatorContactName,
+      contact?.name,
+      [contact?.firstName, contact?.lastName].filter(Boolean).join(" "),
+      contact?.full_name,
+    ),
+    phone: firstValue(
+      record.coordinator_phone,
+      record.coordinatorPhone,
+      event.coordinator_phone,
+      event.coordinatorPhone,
+      contact?.phone,
+      contact?.phoneNumber,
+      contact?.mobile,
+    ),
+    email: firstValue(
+      record.coordinator_email,
+      record.coordinatorEmail,
+      event.coordinator_email,
+      event.coordinatorEmail,
+      contact?.email,
+      contact?.emailAddress,
+    ),
+  };
+};
 
 const attachmentLabel = (type) => {
   switch (type) {
@@ -65,6 +117,11 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
   const [viewer, setViewer] = useState(null);
   const canRevise = isBidRevisionRequested(bid) || !!bid.specialty_update_available_at;
   const supportId = getMarketplaceEventSupportId(event, bid);
+  const detailsUnlocked =
+    bid?.marketplace_unlock?.details_unlocked === true ||
+    event?.marketplace_unlock?.details_unlocked === true;
+  const coordinatorContact = getCoordinatorContact(bid, event);
+  const hasCoordinatorContact = Object.values(coordinatorContact).some(hasDisplayValue);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -100,6 +157,52 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
             label="Event Budget"
             value={formatMoney(event?.budgeted_amount)}
           />
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.title}>Event Coordinator</Text>
+          {detailsUnlocked && hasCoordinatorContact ? (
+            <>
+              {hasDisplayValue(coordinatorContact.businessName) ? (
+                <DetailRow label="Business Name" value={coordinatorContact.businessName} />
+              ) : null}
+              {hasDisplayValue(coordinatorContact.name) ? (
+                <DetailRow label="Name" value={coordinatorContact.name} />
+              ) : null}
+              {hasDisplayValue(coordinatorContact.phone) ? (
+                <DetailRow label="Phone" value={coordinatorContact.phone} />
+              ) : null}
+              {hasDisplayValue(coordinatorContact.email) ? (
+                <DetailRow label="Email" value={coordinatorContact.email} />
+              ) : null}
+              <View style={[styles.row, { marginTop: 14 }]}>
+                {hasDisplayValue(coordinatorContact.phone) ? (
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    style={[styles.secondaryButton, styles.flex]}
+                    onPress={() => Linking.openURL(`tel:${coordinatorContact.phone}`)}
+                  >
+                    <Text style={styles.secondaryButtonText}>Call Event Coordinator</Text>
+                  </TouchableOpacity>
+                ) : null}
+                {hasDisplayValue(coordinatorContact.email) ? (
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    style={[styles.secondaryButton, styles.flex]}
+                    onPress={() => Linking.openURL(`mailto:${coordinatorContact.email}`)}
+                  >
+                    <Text style={styles.secondaryButtonText}>Email Event Coordinator</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            </>
+          ) : detailsUnlocked ? (
+            <Text style={styles.emptyText}>Coordinator contact will appear here once available.</Text>
+          ) : (
+            <Text style={styles.emptyText}>
+              Coordinator contact unlocks after the coordinator's booking payment is complete.
+            </Text>
+          )}
         </View>
         <TouchableOpacity
           activeOpacity={0.7}
