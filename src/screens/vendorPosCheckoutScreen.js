@@ -23,7 +23,10 @@ import {
 } from "../api/appAPI";
 import { clearPosOrder } from "../redux/slices/posOrderSlice";
 import { foodTypeStrings } from "../utils/constants";
-import { startTapToPaySale } from "../services/tapToPay-service";
+import {
+  isTapToPayAvailable,
+  startTapToPaySale,
+} from "../services/tapToPay-service";
 import {
   getVendorPaymentCapabilities,
   getWalkUpPosAccess,
@@ -200,10 +203,12 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
     user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
   const ownerPaymentCapabilities = getVendorPaymentCapabilities(user, foodTruck);
   const walkUpAccess = getWalkUpPosAccess(user, foodTruck);
-  const canUseTapToPay =
+  const vendorCanUseTapToPay =
     isEmployeeSession
       ? !!user?.employeeCapabilities?.tapToPay
       : ownerPaymentCapabilities.tapToPay;
+  const canUseTapToPay =
+    vendorCanUseTapToPay && isTapToPayAvailable();
 
   const [loading, setLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState(null);
@@ -430,13 +435,6 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
       tax: taxAmount,
     };
 
-    if (__DEV__) {
-      console.log(
-        "Vendor POS Order Payload:",
-        JSON.stringify(orderPayload, null, 2),
-      );
-    }
-
     const response = await placePosOrder_API(orderPayload);
 
     if (!response?.success || !response?.data?.order) {
@@ -504,9 +502,11 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
     if (!canUseTapToPay) {
       Alert.alert(
         "Tap to Pay unavailable",
-        isEmployeeSession
+        !vendorCanUseTapToPay && isEmployeeSession
           ? "Tap to Pay is only available to employees on the Elite plan."
-          : "Tap to Pay is not enabled for this build yet.",
+          : !vendorCanUseTapToPay
+            ? "Tap to Pay is not available for your current vendor plan."
+            : "Tap to Pay is not enabled in this build or this device is not ready.",
       );
       return;
     }

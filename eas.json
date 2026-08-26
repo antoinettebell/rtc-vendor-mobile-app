@@ -31,12 +31,11 @@
         "API_PREFIX": "/api/v1",
         "APP_ENV": "development",
         "GOOGLE_MAP_API_KEY": "AIzaSyCdjHeKOYBUcpocHw5-NsdfMy2-dHkBoFY",
-        "TAP_TO_PAY_ENABLED": "true",
+        "EXPO_PUBLIC_TAP_TO_PAY_ENABLED": "true",
         "TAP_TO_PAY_PROVIDER": "cybersource",
-        "TAP_TO_PAY_ENVIRONMENT": "sandbox",
+        "EXPO_PUBLIC_TAP_TO_PAY_ENV": "production",
         "TAP_TO_PAY_APPLE_TEAM_ID": "5G26GFF98P",
-        "TAP_TO_PAY_CURRENCY": "USD",
-        "TAP_TO_PAY_ENV": "sandbox"
+        "TAP_TO_PAY_CURRENCY": "USD"
       },
       "ios": {
         "image": "latest",
@@ -52,8 +51,8 @@
         "API_URL": "http://157.245.6.61:3000",
         "API_PREFIX": "/api/v1",
         "APP_ENV": "production",
-        "TAP_TO_PAY_ENABLED": "true",
-        "TAP_TO_PAY_ENVIRONMENT": "production"
+        "EXPO_PUBLIC_TAP_TO_PAY_ENABLED": "false",
+        "EXPO_PUBLIC_TAP_TO_PAY_ENV": "production"
       },
       "ios": {
         "image": "latest",

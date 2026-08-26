@@ -3,6 +3,11 @@ import tapToPayConfig from "./tapToPay-config";
 
 const nativeTapToPay = NativeModules.RTCTapToPay;
 
+export const isTapToPayAvailable = () =>
+  Platform.OS === "ios" &&
+  tapToPayConfig.enabled &&
+  !!nativeTapToPay?.startSale;
+
 const normalizeTapToPayResult = (result = {}) => {
   const dataValue =
     result.opaqueToken?.dataValue ||
@@ -48,6 +53,10 @@ export const startTapToPaySale = async ({
   orderId,
   reference,
 }) => {
+  if (Platform.OS !== "ios") {
+    throw new Error("Tap to Pay is not enabled on Android in this build.");
+  }
+
   if (!tapToPayConfig.enabled && !tapToPayConfig.mockMode) {
     throw new Error(
       "Tap to Pay is included with Elite, but it is not enabled in this app build. Install the Tap to Pay-enabled build or contact RTC support."
@@ -82,15 +91,6 @@ export const startTapToPaySale = async ({
     );
   }
 
-  if (
-    Platform.OS === "android" &&
-    (!tapToPayConfig.merchantId || !tapToPayConfig.merchantSecret)
-  ) {
-    throw new Error(
-      "Android Tap to Pay needs the CyberSource merchant ID and merchant secret in this app build."
-    );
-  }
-
   const result = await nativeTapToPay.startSale({
     amount: Number(amount).toFixed(2),
     currency: currency || tapToPayConfig.currency,
@@ -99,9 +99,6 @@ export const startTapToPaySale = async ({
     platform: Platform.OS,
     provider: tapToPayConfig.provider,
     environment: tapToPayConfig.environment,
-    merchantId: tapToPayConfig.merchantId,
-    merchantSecret: tapToPayConfig.merchantSecret,
-    terminalId: tapToPayConfig.terminalId,
     appleTeamId: tapToPayConfig.appleTeamId,
     sdkConfigId: tapToPayConfig.sdkConfigId,
   });

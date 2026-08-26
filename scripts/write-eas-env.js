@@ -8,21 +8,32 @@ const envKeys = [
   "API_PREFIX",
   "APP_ENV",
   "GOOGLE_MAP_API_KEY",
-  "TAP_TO_PAY_ENABLED",
+  "EXPO_PUBLIC_TAP_TO_PAY_ENABLED",
+  "EXPO_PUBLIC_TAP_TO_PAY_ENV",
   "TAP_TO_PAY_PROVIDER",
-  "TAP_TO_PAY_ENVIRONMENT",
-  "TAP_TO_PAY_MERCHANT_ID",
-  "TAP_TO_PAY_MERCHANT_SECRET",
-  "TAP_TO_PAY_TERMINAL_ID",
   "TAP_TO_PAY_APPLE_TEAM_ID",
   "TAP_TO_PAY_SDK_CONFIG_ID",
   "TAP_TO_PAY_CURRENCY",
-  "TAP_TO_PAY_ENV",
 ];
 
 const lines = envKeys
   .filter((key) => process.env[key] !== undefined)
   .map((key) => `${key}=${process.env[key]}`);
+
+const tapToPayEnabled =
+  process.env.EXPO_PUBLIC_TAP_TO_PAY_ENABLED || process.env.TAP_TO_PAY_ENABLED;
+const tapToPayEnvironment =
+  process.env.EXPO_PUBLIC_TAP_TO_PAY_ENV ||
+  process.env.TAP_TO_PAY_ENVIRONMENT ||
+  process.env.TAP_TO_PAY_ENV;
+
+if (tapToPayEnabled !== undefined) {
+  lines.push(`TAP_TO_PAY_ENABLED=${tapToPayEnabled}`);
+}
+
+if (tapToPayEnvironment !== undefined) {
+  lines.push(`TAP_TO_PAY_ENVIRONMENT=${tapToPayEnvironment}`);
+}
 
 if (!lines.some((line) => line.startsWith("API_URL="))) {
   throw new Error("API_URL is required for EAS builds.");

@@ -40,13 +40,13 @@ import UIKit
       throw NSError(domain: "RTCTapToPay", code: 499, userInfo: [
         NSLocalizedDescriptionKey: "Device activation was cancelled."
       ])
-    case .invalidOTP(let info):
+    case .invalidOTP:
       throw NSError(domain: "RTCTapToPay", code: 401, userInfo: [
-        NSLocalizedDescriptionKey: "The activation code was not accepted: \(info)"
+        NSLocalizedDescriptionKey: "The activation code was not accepted."
       ])
-    case .error(let info):
+    case .error:
       throw NSError(domain: "RTCTapToPay", code: 500, userInfo: [
-        NSLocalizedDescriptionKey: "Device activation failed: \(info)"
+        NSLocalizedDescriptionKey: "Device activation failed."
       ])
     @unknown default:
       throw NSError(domain: "RTCTapToPay", code: 500, userInfo: [
@@ -99,7 +99,7 @@ import UIKit
       ])
     case .failure(let error):
       throw NSError(domain: "RTCTapToPay", code: 502, userInfo: [
-        NSLocalizedDescriptionKey: "Tap to Pay transaction failed: \(error)"
+        NSLocalizedDescriptionKey: "Tap to Pay transaction could not be completed."
       ])
     @unknown default:
       throw NSError(domain: "RTCTapToPay", code: 500, userInfo: [

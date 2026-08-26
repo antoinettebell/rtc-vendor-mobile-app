@@ -64,30 +64,22 @@ This is one way to run your app — you can also build it directly from Android 
 
 ## Vendor POS Tap to Pay
 
-The vendor POS checkout uses the existing backend `/order/payment-checkout` flow for card-present Tap to Pay transactions. With Tap to Pay approval in place, production builds should set `TAP_TO_PAY_ENABLED=true` and use the production gateway environment.
+The vendor POS checkout uses the existing backend `/order/payment-checkout` flow for card-present CyberSource Tap to Pay transactions. A development-server build may use the live CyberSource environment when explicitly configured for live testing.
 
 Required environment values are documented in `.env.example`:
 
 ```sh
-APPLE_PAY_MERCHANT_ID=merchant.roundthecorner.vendor
-ANDROID_PAYMENT_GATEWAY=authorizenet
-ANDROID_PAYMENT_GATEWAY_MERCHANT_ID=2794197
-TAP_TO_PAY_ENABLED=true
+EXPO_PUBLIC_TAP_TO_PAY_ENABLED=true
 TAP_TO_PAY_PROVIDER=CYBERSOURCE
-TAP_TO_PAY_ENVIRONMENT=production
-TAP_TO_PAY_MERCHANT_ID=
-TAP_TO_PAY_MERCHANT_SECRET=
-TAP_TO_PAY_TERMINAL_ID=
+EXPO_PUBLIC_TAP_TO_PAY_ENV=production
 TAP_TO_PAY_APPLE_TEAM_ID=5G26GFF98P
 TAP_TO_PAY_SDK_CONFIG_ID=
 TAP_TO_PAY_CURRENCY=USD
 ```
 
-`TAP_TO_PAY_APPLE_TEAM_ID` is the Apple Developer Team ID approved for Tap to Pay on iPhone. The activation code is entered only in the CyberSource SDK screen on the physical iPhone; never put it in an environment file, source code, or logs. Set `TAP_TO_PAY_ENVIRONMENT=sandbox` for a test activation code or `production` for a live activation code.
+`TAP_TO_PAY_APPLE_TEAM_ID` is the Apple Developer Team ID approved for Tap to Pay on iPhone. The activation code is entered only in the CyberSource SDK screen on the physical iPhone; never put it in an environment file, source code, or logs.
 
-Android uses the same CyberSource merchant account but requires `TAP_TO_PAY_MERCHANT_ID` and `TAP_TO_PAY_MERCHANT_SECRET` as protected EAS environment values. A compatible Android 12+ NFC device must also have Visa's Tap to Pay Ready app installed and developer options disabled.
-
-Android requires an NFC-capable supported device and the Authorize.net/Cybersource Tap to Pay SDK bridge to resolve `RTCTapToPay.startSale`. iOS production builds require the Apple Tap to Pay entitlement in the provisioning profile and `com.apple.developer.proximity-reader.payment.acceptance` in the app entitlements. Keep this entitlement in both `app.json` under `expo.ios.entitlements` for Expo prebuild/EAS config sync and `ios/FoodtruckVendor/FoodtruckVendor.entitlements` for direct Xcode builds.
+Android Tap to Pay is disabled in this stage. iOS production builds require the Apple Tap to Pay entitlement in the provisioning profile and `com.apple.developer.proximity-reader.payment.acceptance` in the app entitlements. Keep this entitlement in both `app.json` under `expo.ios.entitlements` for Expo prebuild/EAS config sync and `ios/FoodtruckVendor/FoodtruckVendor.entitlements` for direct Xcode builds.
 
 React Native calls `NativeModules.RTCTapToPay.startSale(options)` from `src/services/tapToPay-service.js`. iOS routes through CyberSource Acceptance Devices SDK 3.7 (`MposUI`), activates the physical device when needed, presents Apple's merchant education after a new activation, and returns the processed CyberSource transaction identifier to the checkout flow. Merchant education can be reopened from **Profile → How to Accept Tap to Pay**.
 
