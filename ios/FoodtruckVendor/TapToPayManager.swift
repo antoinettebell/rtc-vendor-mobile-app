@@ -55,30 +55,6 @@ import UIKit
     }
   }
 
-  private func chargeFailure(_ error: MposUIError) -> NSError {
-    let message: String
-    let code: Int
-
-    switch error {
-    case .networkError:
-      code = 503
-      message = "Tap to Pay needs an internet connection. Please try again when the iPhone is online."
-    case .authError:
-      code = 401
-      message = "Tap to Pay device authorization failed. Verify the live device activation and merchant setup."
-    case .transactionFailed:
-      code = 402
-      message = "The card transaction was declined before processing could complete."
-    case .inconclusive:
-      code = 409
-      message = "Tap to Pay could not confirm this transaction. Check CyberSource before retrying."
-    }
-
-    return NSError(domain: "RTCTapToPay", code: code, userInfo: [
-      NSLocalizedDescriptionKey: message
-    ])
-  }
-
   @MainActor
   func startSale(amount: Decimal, currency: Currency, environmentName: String, reference: String) async throws -> [String: Any] {
     guard amount > 0 else {
@@ -122,7 +98,9 @@ import UIKit
         NSLocalizedDescriptionKey: "Tap to Pay was unavailable. Please retry when the iPhone is online."
       ])
     case .failure(let error):
-      throw chargeFailure(error)
+      throw NSError(domain: "RTCTapToPay", code: 502, userInfo: [
+        NSLocalizedDescriptionKey: "Tap to Pay transaction could not be completed."
+      ])
     @unknown default:
       throw NSError(domain: "RTCTapToPay", code: 500, userInfo: [
         NSLocalizedDescriptionKey: "Tap to Pay returned an unknown result."
