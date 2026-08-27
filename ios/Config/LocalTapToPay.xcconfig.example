@@ -1,5 +1,0 @@
-// Copy this file to LocalTapToPay.xcconfig. The local file is ignored by Git.
-// Never commit the live Acceptance Devices Secret.
-CYBERSOURCE_TTP_MIGRATION_ENABLED = YES
-CYBERSOURCE_TTP_MERCHANT_ID = replace-with-your-cybersource-merchant-id
-CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET = replace-with-your-acceptance-devices-secret
