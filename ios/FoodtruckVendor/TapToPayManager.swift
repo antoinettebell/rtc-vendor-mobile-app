@@ -55,6 +55,47 @@ import UIKit
     }
   }
 
+  // The SDK stores its activation material in the Apple Keychain. If its local
+  // state becomes unavailable after an SDK or app update, reactivation must use
+  // the same registered device ID and a new, user-entered OTP. Neither value is
+  // persisted or logged by the app.
+  private func reactivate(_ reader: MposUIReader, environment: MposEnvironment) async throws {
+    let deviceId: String?
+    if case .activated(let info) = await reader.activationStatus {
+      deviceId = info.deviceId
+    } else {
+      deviceId = nil
+    }
+
+    let activation = await reader.activation()
+    let result = await activation.activateWithOtp(
+      environment: environment,
+      otp: nil,
+      deviceId: deviceId
+    )
+
+    switch result {
+    case .success:
+      return
+    case .cancelledByUser:
+      throw NSError(domain: "RTCTapToPay", code: 499, userInfo: [
+        NSLocalizedDescriptionKey: "Device reactivation was cancelled."
+      ])
+    case .invalidOTP:
+      throw NSError(domain: "RTCTapToPay", code: 401, userInfo: [
+        NSLocalizedDescriptionKey: "The new activation code was not accepted."
+      ])
+    case .error:
+      throw NSError(domain: "RTCTapToPay", code: 500, userInfo: [
+        NSLocalizedDescriptionKey: "Device reactivation failed."
+      ])
+    @unknown default:
+      throw NSError(domain: "RTCTapToPay", code: 500, userInfo: [
+        NSLocalizedDescriptionKey: "Device reactivation returned an unknown result."
+      ])
+    }
+  }
+
   private func chargeFailure(_ error: MposUIError) -> NSError {
     let message: String
     let code: Int
@@ -75,6 +116,9 @@ import UIKit
     case .inconclusive:
       code = 409
       message = "Tap to Pay could not confirm this transaction. Check CyberSource before retrying."
+    @unknown default:
+      code = 500
+      message = "Tap to Pay returned an unexpected device error. Please try again."
     }
 
     return NSError(domain: "RTCTapToPay", code: code, userInfo: [
@@ -100,9 +144,19 @@ import UIKit
        let viewController = Self.topViewController() {
       try await showMerchantEducation(from: viewController)
     }
-    let online = try await reader.mposUIOnline()
     let parameters = ChargeParameters(amount: amount, currency: currency, customIdentifier: reference)
-    let result = await online.startChargeTransaction(with: parameters)
+    var online = try await reader.mposUIOnline()
+    var result = await online.startChargeTransaction(with: parameters)
+
+    // A Keychain loading failure is an SDK enrollment error, before any
+    // processor transaction exists. Restore the device with the SDK's OTP
+    // reactivation UI, then present one fresh reader attempt.
+    if case .failure(let error) = result,
+       case .enrollmentError = error {
+      try await reactivate(reader, environment: environment(from: environmentName))
+      online = try await reader.mposUIOnline()
+      result = await online.startChargeTransaction(with: parameters)
+    }
 
     switch result {
     case .success(let transaction):
