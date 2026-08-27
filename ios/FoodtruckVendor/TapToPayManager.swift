@@ -126,22 +126,6 @@ import UIKit
     ])
   }
 
-  // `mposUIOnline()` opens the SDK's local secure session before a card is
-  // presented. If the SDK reports that the stored activation is unavailable,
-  // restore it through its OTP UI first. This happens before the backend is
-  // contacted, so no payment can have been created at this point.
-  private func onlineService(
-    _ reader: MposUIReader,
-    environment: MposEnvironment
-  ) async throws -> MposUIOnline {
-    do {
-      return try await reader.mposUIOnline()
-    } catch let error as MposUIReaderError where error == .notActivated {
-      try await reactivate(reader, environment: environment)
-      return try await reader.mposUIOnline()
-    }
-  }
-
   @MainActor
   func startSale(amount: Decimal, currency: Currency, environmentName: String, reference: String) async throws -> [String: Any] {
     guard amount > 0 else {
@@ -151,10 +135,9 @@ import UIKit
     }
 
     let reader = try await configuredReader()
-    let paymentEnvironment = environment(from: environmentName)
     let newlyActivated = try await ensureActivated(
       reader,
-      environment: paymentEnvironment
+      environment: environment(from: environmentName)
     )
     if #available(iOS 18.0, *),
        newlyActivated,
@@ -162,7 +145,7 @@ import UIKit
       try await showMerchantEducation(from: viewController)
     }
     let parameters = ChargeParameters(amount: amount, currency: currency, customIdentifier: reference)
-    var online = try await onlineService(reader, environment: paymentEnvironment)
+    var online = try await reader.mposUIOnline()
     var result = await online.startChargeTransaction(with: parameters)
 
     // A Keychain loading failure is an SDK enrollment error, before any
@@ -170,8 +153,8 @@ import UIKit
     // reactivation UI, then present one fresh reader attempt.
     if case .failure(let error) = result,
        case .enrollmentError = error {
-      try await reactivate(reader, environment: paymentEnvironment)
-      online = try await onlineService(reader, environment: paymentEnvironment)
+      try await reactivate(reader, environment: environment(from: environmentName))
+      online = try await reader.mposUIOnline()
       result = await online.startChargeTransaction(with: parameters)
     }
 
