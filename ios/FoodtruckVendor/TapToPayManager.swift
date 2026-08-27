@@ -76,6 +76,21 @@ import UIKit
     ) && !UserDefaults.standard.bool(forKey: reactivationCompletedKey)
   }
 
+  // CyberSource's device ID identifies its Acceptance Devices terminal record.
+  // It is deliberately read only from the ignored local build configuration;
+  // it is not an Apple hardware serial number and is never logged.
+  private var configuredDeviceId: String? {
+    guard let value = Bundle.main.object(
+      forInfoDictionaryKey: "CybersourceTapToPayDeviceId"
+    ) as? String else {
+      return nil
+    }
+
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty, !trimmed.hasPrefix("$(") else { return nil }
+    return trimmed
+  }
+
   private func ensureActivated(
     _ reader: MposUIReader,
     environment: MposEnvironment,
@@ -84,7 +99,11 @@ import UIKit
     if !forceReactivation, case .activated = await reader.activationStatus { return false }
 
     let activation = await reader.activation()
-    let result = await activation.activateWithOtp(environment: environment, otp: nil)
+    let result = await activation.activateWithOtp(
+      environment: environment,
+      otp: nil,
+      deviceId: configuredDeviceId
+    )
     switch result {
     case .success(_, let isNewDevice):
       if forceReactivation {

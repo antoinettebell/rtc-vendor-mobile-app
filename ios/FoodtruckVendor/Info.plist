@@ -16,6 +16,8 @@
 	<string>$(CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET)</string>
 	<key>CybersourceTapToPayResetEnrollment</key>
 	<string>$(CYBERSOURCE_TTP_RESET_ENROLLMENT)</string>
+	<key>CybersourceTapToPayDeviceId</key>
+	<string>$(CYBERSOURCE_TTP_DEVICE_ID)</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
