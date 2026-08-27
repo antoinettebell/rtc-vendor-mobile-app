@@ -22,6 +22,12 @@
     <string>????</string>
     <key>CFBundleVersion</key>
     <string>$(CURRENT_PROJECT_VERSION)</string>
+    <key>CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET</key>
+    <string>$(CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET)</string>
+    <key>CYBERSOURCE_TTP_MERCHANT_ID</key>
+    <string>$(CYBERSOURCE_TTP_MERCHANT_ID)</string>
+    <key>CYBERSOURCE_TTP_MIGRATION_ENABLED</key>
+    <string>$(CYBERSOURCE_TTP_MIGRATION_ENABLED)</string>
     <key>CFBundleURLTypes</key>
     <array>
       <dict>

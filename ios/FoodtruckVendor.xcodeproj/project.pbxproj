@@ -62,6 +62,8 @@
 		7C3F0A9D2D9B41D58B2A1C6F /* RTCTapToPay.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RTCTapToPay.m; path = FoodtruckVendor/RTCTapToPay.m; sourceTree = "<group>"; };
 		7C3F0AA12D9B41D58B2A1C6F /* RTCTapToPay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RTCTapToPay.swift; path = FoodtruckVendor/RTCTapToPay.swift; sourceTree = "<group>"; };
 		7C3F0AA32D9B41D58B2A1C6F /* TapToPayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TapToPayManager.swift; path = FoodtruckVendor/TapToPayManager.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B5C /* FoodtruckVendor.debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = FoodtruckVendor.debug.xcconfig; path = Config/FoodtruckVendor.debug.xcconfig; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B5D /* FoodtruckVendor.release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = FoodtruckVendor.release.xcconfig; path = Config/FoodtruckVendor.release.xcconfig; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = FoodtruckVendor/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		899C85C7676A4EC78F325C0F /* IMFellEnglish-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "IMFellEnglish-Regular.ttf"; path = "../src/assets/fonts/IMFellEnglish-Regular.ttf"; sourceTree = "<group>"; };
 		95C1DA858A63407A84644FFC /* Inter-Medium.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Medium.otf"; path = "../src/assets/fonts/Inter-Medium.otf"; sourceTree = "<group>"; };
@@ -101,6 +103,8 @@
 				7C3F0A9D2D9B41D58B2A1C6F /* RTCTapToPay.m */,
 				7C3F0AA12D9B41D58B2A1C6F /* RTCTapToPay.swift */,
 				7C3F0AA32D9B41D58B2A1C6F /* TapToPayManager.swift */,
+				A1B2C3D4E5F60718293A4B5C /* FoodtruckVendor.debug.xcconfig */,
+				A1B2C3D4E5F60718293A4B5D /* FoodtruckVendor.release.xcconfig */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
@@ -387,7 +391,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = BD17FEC24DBFDB0A373EBE12 /* Pods-FoodtruckVendor.debug.xcconfig */;
+			baseConfigurationReference = A1B2C3D4E5F60718293A4B5C /* FoodtruckVendor.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -425,7 +429,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 971E7355AA39ADA02334CB86 /* Pods-FoodtruckVendor.release.xcconfig */;
+			baseConfigurationReference = A1B2C3D4E5F60718293A4B5D /* FoodtruckVendor.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

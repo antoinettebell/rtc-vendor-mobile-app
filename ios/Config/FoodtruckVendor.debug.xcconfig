@@ -1,0 +1,7 @@
+#include "../Pods/Target Support Files/Pods-FoodtruckVendor/Pods-FoodtruckVendor.debug.xcconfig"
+
+CYBERSOURCE_TTP_MIGRATION_ENABLED = NO
+CYBERSOURCE_TTP_MERCHANT_ID =
+CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET =
+
+#include? "LocalTapToPay.xcconfig"

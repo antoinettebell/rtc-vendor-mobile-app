@@ -11,7 +11,24 @@ import UIKit
     value.lowercased() == "sandbox" || value.lowercased() == "test" ? .test : .live
   }
 
-  private func configuredReader() async throws -> MposUIReader {
+  private func buildSetting(_ key: String) -> String? {
+    guard let rawValue = Bundle.main.object(forInfoDictionaryKey: key) as? String else {
+      return nil
+    }
+
+    let value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !value.isEmpty, !value.hasPrefix("$(") else {
+      return nil
+    }
+    return value
+  }
+
+  private var migrationEnabled: Bool {
+    buildSetting("CYBERSOURCE_TTP_MIGRATION_ENABLED")?.lowercased() == "yes" ||
+      buildSetting("CYBERSOURCE_TTP_MIGRATION_ENABLED")?.lowercased() == "true"
+  }
+
+  private func configuredReader(environment: MposEnvironment) async throws -> MposUIReader {
     if let reader { return reader }
 
     let configuration = Configuration(
@@ -23,7 +40,23 @@ import UIKit
         confirmationScreenOption: .showWithSerialNumber
       )
     )
-    let newReader = await mposUIReaderBuilder(configuration: configuration)
+    let newReader: MposUIReader
+    if migrationEnabled {
+      guard let merchantId = buildSetting("CYBERSOURCE_TTP_MERCHANT_ID"),
+            let secret = buildSetting("CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET") else {
+        throw NSError(domain: "RTCTapToPay", code: 500, userInfo: [
+          NSLocalizedDescriptionKey: "Tap to Pay device migration is enabled but its local device configuration is incomplete."
+        ])
+      }
+      let credentials = try Credentials(merchantId: merchantId, secret: secret)
+      newReader = await mposUiBuilder(
+        credentials: credentials,
+        environment: environment,
+        configuration: configuration
+      )
+    } else {
+      newReader = await mposUIReaderBuilder(configuration: configuration)
+    }
     reader = newReader
     return newReader
   }
@@ -150,8 +183,8 @@ import UIKit
       ])
     }
 
-    let reader = try await configuredReader()
     let paymentEnvironment = environment(from: environmentName)
+    let reader = try await configuredReader(environment: paymentEnvironment)
     let newlyActivated = try await ensureActivated(
       reader,
       environment: paymentEnvironment
