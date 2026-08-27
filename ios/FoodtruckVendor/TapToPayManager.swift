@@ -60,6 +60,9 @@ import UIKit
     let code: Int
 
     switch error {
+    case .enrollmentError:
+      code = 401
+      message = "Tap to Pay device enrollment failed. Verify the live device activation and merchant setup."
     case .networkError:
       code = 503
       message = "Tap to Pay needs an internet connection. Please try again when the iPhone is online."
