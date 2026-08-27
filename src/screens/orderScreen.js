@@ -667,6 +667,9 @@ const OrderScreen = ({ navigation }) => {
         page,
         limit: 20,
         advance: false,
+        // Keep successfully refunded orders out of the active queue. The past
+        // orders view already includes them and labels them as refunded.
+        orderView: "active",
         status: "PLACED, ACCEPTED, PREPARING, READY_FOR_PICKUP, DRIVER_PICKED_UP",
       };
 

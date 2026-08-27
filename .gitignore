@@ -27,6 +27,7 @@ DerivedData
 *.ipa
 *.xcuserstate
 **/.xcode.env.local
+**/TapToPay.local.xcconfig
 
 # Android/IntelliJ
 #

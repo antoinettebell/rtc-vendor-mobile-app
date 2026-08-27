@@ -1,0 +1,2 @@
+#include "../Pods/Target Support Files/Pods-FoodtruckVendor/Pods-FoodtruckVendor.release.xcconfig"
+#include? "../FoodtruckVendor/TapToPay.local.xcconfig"

@@ -8,8 +8,14 @@
     <string>RTC_DEV_VENDOR</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
-    <key>CFBundleIdentifier</key>
-    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CybersourceTapToPayMerchantId</key>
+	<string>$(CYBERSOURCE_TTP_MERCHANT_ID)</string>
+	<key>CybersourceTapToPayAcceptanceDeviceSecret</key>
+	<string>$(CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET)</string>
+	<key>CybersourceTapToPayResetEnrollment</key>
+	<string>$(CYBERSOURCE_TTP_RESET_ENROLLMENT)</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
