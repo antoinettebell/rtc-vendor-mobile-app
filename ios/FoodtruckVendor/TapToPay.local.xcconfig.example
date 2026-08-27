@@ -3,10 +3,10 @@
 // Obtain both values from CyberSource Business Center > Key Management.
 CYBERSOURCE_TTP_MERCHANT_ID = REPLACE_WITH_ACCEPTANCE_DEVICES_MERCHANT_ID
 CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET = REPLACE_WITH_ACCEPTANCE_DEVICES_SECRET_KEY
-// Optional: a CyberSource Tap to Pay device ID from Acceptance Devices. Use
-// this only to resume/recover enrollment for that exact terminal record.
-// This is not the iPhone serial number from Settings > General > About.
+// Optional: a CyberSource internal device UUID. Do not put the serial shown
+// by the Tap to Pay SDK here. Recovery builds prompt for that serial directly.
+// Leave blank for normal new-device activation.
 CYBERSOURCE_TTP_DEVICE_ID =
-// Set to YES for one local test build to clear stale SDK enrollment. The app
-// records completion locally, so it will not run the reset again.
+// Set to YES only for a one-time recovery build. The SDK will prompt for the
+// serial shown after the failed enrollment. The app records completion locally.
 CYBERSOURCE_TTP_RESET_ENROLLMENT = NO

@@ -36,7 +36,10 @@ import UIKit
     return try Credentials(merchantId: merchantId!, secret: secret!)
   }
 
-  private func configuredReader(environment: MposEnvironment) async throws -> MposUIReader {
+  private func configuredReader(
+    environment: MposEnvironment,
+    forceReactivation: Bool
+  ) async throws -> MposUIReader {
     if let reader { return reader }
 
     let configuration = Configuration(
@@ -44,7 +47,9 @@ import UIKit
       summaryFeatures: [.sendReceiptViaEmail, .refundTransaction, .retryTransaction],
       signatureCapture: .onScreen,
       enrollmentConfiguration: .init(
-        serialNumberInputMethod: .deviceList,
+        // New devices use the SDK's normal activation path. Recovery builds
+        // explicitly prompt for the serial copied from a failed enrollment.
+        serialNumberInputMethod: forceReactivation ? .manualInput : .deviceList,
         confirmationScreenOption: .showWithSerialNumber
       )
     )
@@ -76,9 +81,9 @@ import UIKit
     ) && !UserDefaults.standard.bool(forKey: reactivationCompletedKey)
   }
 
-  // CyberSource's device ID identifies its Acceptance Devices terminal record.
-  // It is deliberately read only from the ignored local build configuration;
-  // it is not an Apple hardware serial number and is never logged.
+  // CyberSource's deviceId parameter is an internal UUID, not the serial
+  // displayed by the SDK after a failed enrollment. The serial is entered in
+  // the SDK's manual reactivation screen instead.
   private var configuredDeviceId: String? {
     guard let value = Bundle.main.object(
       forInfoDictionaryKey: "CybersourceTapToPayDeviceId"
@@ -87,7 +92,11 @@ import UIKit
     }
 
     let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty, !trimmed.hasPrefix("$(") else { return nil }
+    guard !trimmed.isEmpty,
+          !trimmed.hasPrefix("$("),
+          UUID(uuidString: trimmed) != nil else {
+      return nil
+    }
     return trimmed
   }
 
@@ -152,11 +161,15 @@ import UIKit
     }
 
     let environment = environment(from: environmentName)
-    let activeReader = try await configuredReader(environment: environment)
+    let forceReactivation = shouldForceReactivation
+    let activeReader = try await configuredReader(
+      environment: environment,
+      forceReactivation: forceReactivation
+    )
     let newlyActivated = try await ensureActivated(
       activeReader,
       environment: environment,
-      forceReactivation: shouldForceReactivation
+      forceReactivation: forceReactivation
     )
     if #available(iOS 18.0, *),
        newlyActivated,
