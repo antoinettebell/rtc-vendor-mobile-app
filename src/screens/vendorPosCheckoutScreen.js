@@ -42,6 +42,18 @@ const toAmount = (value) => {
   return Number.isFinite(n) ? n.toFixed(2) : "0.00";
 };
 
+const tapToPayDiagnostic = (error) => {
+  const parts = typeof error?.code === "string" ? error.code.split("|") : [];
+  const hasNativeDiagnostic = parts.length === 4 && parts[0] === "TAP_TO_PAY";
+
+  return {
+    stage: hasNativeDiagnostic ? parts[1] : "unavailable",
+    domain: hasNativeDiagnostic ? parts[2] : "unavailable",
+    code: hasNativeDiagnostic ? parts[3] : "unavailable",
+    message: error?.message || "Tap to Pay could not be completed.",
+  };
+};
+
 const toMoneyNumber = (value) => {
   const n = Number(value);
   return Number.isFinite(n) ? Number(n.toFixed(2)) : 0;
@@ -522,9 +534,10 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
 
       await completeTapToPayPayment(tapToPayResult);
     } catch (error) {
+      const diagnostic = tapToPayDiagnostic(error);
       Alert.alert(
-        "Tap to Pay unavailable",
-        error?.message || "Please try again.",
+        "Tap to Pay Diagnostic",
+        `Stage: ${diagnostic.stage}\n\nDomain: ${diagnostic.domain}\n\nCode: ${diagnostic.code}\n\nMessage: ${diagnostic.message}`,
       );
       setPaymentLoading(null);
     }

@@ -37,7 +37,7 @@ final class RTCTapToPay: NSObject {
         )
         resolve(result)
       } catch let error as NSError {
-        reject(String(error.code), error.localizedDescription, error)
+        reject(diagnosticCode(for: error), error.localizedDescription, error)
       } catch {
         reject(
           "E_TAP_TO_PAY_FAILED",
@@ -89,6 +89,16 @@ final class RTCTapToPay: NSObject {
     let string = stringValue(value).trimmingCharacters(in: .whitespacesAndNewlines)
 
     return string.isEmpty ? nil : string
+  }
+
+  private func diagnosticCode(for error: NSError) -> String {
+    guard let stage = error.userInfo["tapToPayStage"] as? String,
+          let domain = error.userInfo["tapToPayErrorDomain"] as? String,
+          let code = error.userInfo["tapToPayErrorCode"] as? Int else {
+      return String(error.code)
+    }
+
+    return "TAP_TO_PAY|\(stage)|\(domain)|\(code)"
   }
 
   private func currencyAmount(from value: String) -> Decimal {
