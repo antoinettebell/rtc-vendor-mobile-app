@@ -9,28 +9,6 @@ export const isTapToPayAvailable = () =>
   !!nativeTapToPay?.startSale;
 
 const normalizeTapToPayResult = (result = {}) => {
-  const dataValue =
-    result.opaqueToken?.dataValue ||
-    result.opaqueData?.dataValue ||
-    result.dataValue ||
-    result.token;
-  const dataDescriptor =
-    result.opaqueToken?.dataDescriptor ||
-    result.opaqueData?.dataDescriptor ||
-    result.dataDescriptor ||
-    null;
-
-  if (dataValue) {
-    return {
-      type: "OPAQUE_TOKEN",
-      opaqueToken: {
-        dataValue,
-        dataDescriptor,
-      },
-      raw: result,
-    };
-  }
-
   if (result.transactionId || result.transId) {
     return {
       type: "PROCESSED_TRANSACTION",

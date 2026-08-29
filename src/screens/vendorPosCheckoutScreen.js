@@ -17,7 +17,6 @@ import StatusBarManager from "../components/StatusBarManager";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 import {
   checkPosTax_API,
-  paymentCheckout_API,
   placePosOrder_API,
   validatePosOrder_API,
 } from "../api/appAPI";
@@ -590,23 +589,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
   const completeTapToPayPayment = async (tapToPayResult) => {
     try {
       const amount = toAmount(tapSummary.total || 0);
-      let payment = tapToPayResult;
-
-      if (tapToPayResult?.type === "OPAQUE_TOKEN") {
-        const paymentResponse = await paymentCheckout_API({
-          paymentMethod: "TAP_TO_PAY",
-          paymentData: tapToPayResult.opaqueToken,
-          amount,
-          taxAmount: String(taxAmount),
-          subTotal: String(tapOrder?.subTotal || order.subtotal),
-        });
-
-        if (!paymentResponse?.success || !paymentResponse?.data?.paymentsData) {
-          throw new Error(paymentResponse?.message || "Payment failed.");
-        }
-
-        payment = paymentResponse.data.paymentsData;
-      }
+      const payment = tapToPayResult;
 
       const createdOrder = await createOrder({
         paymentMethod: "TAP_TO_PAY",
@@ -626,17 +609,6 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
       setPaymentLoading(null);
     }
   };
-
-  useEffect(() => {
-    const opaqueToken = route.params?.tapToPayToken;
-    if (opaqueToken) {
-      setPaymentLoading("tap");
-      completeTapToPayPayment({
-        type: "OPAQUE_TOKEN",
-        opaqueToken: { dataValue: opaqueToken, dataDescriptor: null },
-      });
-    }
-  }, [route.params?.tapToPayToken]);
 
   const summary = cashOrder
     ? {
