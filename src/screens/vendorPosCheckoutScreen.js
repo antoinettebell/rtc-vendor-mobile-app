@@ -44,14 +44,50 @@ const toAmount = (value) => {
 
 const tapToPayDiagnostic = (error) => {
   const parts = typeof error?.code === "string" ? error.code.split("|") : [];
-  const hasNativeDiagnostic = parts.length === 4 && parts[0] === "TAP_TO_PAY";
+  const hasNativeDiagnostic = parts.length >= 5 && parts[0] === "TAP_TO_PAY";
+  let nativeDiagnostic;
+
+  if (hasNativeDiagnostic) {
+    try {
+      nativeDiagnostic = JSON.parse(decodeURIComponent(parts.slice(4).join("|")));
+    } catch (_) {
+      nativeDiagnostic = undefined;
+    }
+  }
 
   return {
     stage: hasNativeDiagnostic ? parts[1] : "unavailable",
-    domain: hasNativeDiagnostic ? parts[2] : "unavailable",
-    code: hasNativeDiagnostic ? parts[3] : "unavailable",
-    message: error?.message || "Tap to Pay could not be completed.",
+    outer: nativeDiagnostic || {
+      domain: hasNativeDiagnostic ? parts[2] : "unavailable",
+      code: hasNativeDiagnostic ? parts[3] : "unavailable",
+      message: error?.message || "Tap to Pay could not be completed.",
+    },
   };
+};
+
+const safeDiagnosticText = (value) =>
+  typeof value === "string" || typeof value === "number"
+    ? String(value)
+    : "Unavailable";
+
+const formatNativeErrorDiagnostic = (label, diagnostic) => {
+  if (!diagnostic) return [];
+
+  const fields = [
+    `${label} domain: ${safeDiagnosticText(diagnostic.domain)}`,
+    `${label} code: ${safeDiagnosticText(diagnostic.code)}`,
+    `${label} message: ${safeDiagnosticText(diagnostic.message)}`,
+  ];
+
+  if (typeof diagnostic.localizedFailureReason === "string") {
+    fields.push(`${label} failure reason: ${diagnostic.localizedFailureReason}`);
+  }
+
+  if (Array.isArray(diagnostic.userInfoKeys)) {
+    fields.push(`${label} userInfo keys: ${diagnostic.userInfoKeys.filter((key) => typeof key === "string").join(", ") || "None"}`);
+  }
+
+  return fields;
 };
 
 const toMoneyNumber = (value) => {
@@ -535,9 +571,17 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
       await completeTapToPayPayment(tapToPayResult);
     } catch (error) {
       const diagnostic = tapToPayDiagnostic(error);
+      const outerDiagnostic = diagnostic.outer;
+      const firstUnderlying = outerDiagnostic?.underlying;
+      const secondUnderlying = firstUnderlying?.underlying;
       Alert.alert(
         "Tap to Pay Diagnostic",
-        `Stage: ${diagnostic.stage}\n\nDomain: ${diagnostic.domain}\n\nCode: ${diagnostic.code}\n\nMessage: ${diagnostic.message}`,
+        [
+          `Stage: ${diagnostic.stage}`,
+          ...formatNativeErrorDiagnostic("Outer", outerDiagnostic),
+          ...formatNativeErrorDiagnostic("Underlying 1", firstUnderlying),
+          ...formatNativeErrorDiagnostic("Underlying 2", secondUnderlying),
+        ].join("\n\n"),
       );
       setPaymentLoading(null);
     }

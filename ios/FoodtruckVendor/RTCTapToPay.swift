@@ -94,11 +94,18 @@ final class RTCTapToPay: NSObject {
   private func diagnosticCode(for error: NSError) -> String {
     guard let stage = error.userInfo["tapToPayStage"] as? String,
           let domain = error.userInfo["tapToPayErrorDomain"] as? String,
-          let code = error.userInfo["tapToPayErrorCode"] as? Int else {
+          let code = error.userInfo["tapToPayErrorCode"] as? Int,
+          let diagnostic = error.userInfo["tapToPayErrorDiagnostic"] as? [String: Any],
+          JSONSerialization.isValidJSONObject(diagnostic),
+          let data = try? JSONSerialization.data(withJSONObject: diagnostic),
+          let json = String(data: data, encoding: .utf8),
+          let encodedDiagnostic = json.addingPercentEncoding(
+            withAllowedCharacters: .alphanumerics
+          ) else {
       return String(error.code)
     }
 
-    return "TAP_TO_PAY|\(stage)|\(domain)|\(code)"
+    return "TAP_TO_PAY|\(stage)|\(domain)|\(code)|\(encodedDiagnostic)"
   }
 
   private func currencyAmount(from value: String) -> Decimal {

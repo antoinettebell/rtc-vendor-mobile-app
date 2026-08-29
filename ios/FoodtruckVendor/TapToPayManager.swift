@@ -7,6 +7,32 @@ import UIKit
 @objc final class TapToPayManager: NSObject {
   private var reader: MposUIReader?
 
+  private func safeNSErrorDiagnostic(
+    _ error: NSError,
+    remainingUnderlyingLevels: Int = 2
+  ) -> [String: Any] {
+    var diagnostic: [String: Any] = [
+      "domain": error.domain,
+      "code": error.code,
+      "message": error.localizedDescription,
+      "userInfoKeys": error.userInfo.keys.compactMap { $0 as? String }.sorted(),
+    ]
+
+    if let failureReason = error.localizedFailureReason {
+      diagnostic["localizedFailureReason"] = failureReason
+    }
+
+    if remainingUnderlyingLevels > 0,
+       let underlyingError = error.userInfo[NSUnderlyingErrorKey] as? NSError {
+      diagnostic["underlying"] = safeNSErrorDiagnostic(
+        underlyingError,
+        remainingUnderlyingLevels: remainingUnderlyingLevels - 1
+      )
+    }
+
+    return diagnostic
+  }
+
   private func diagnosticError(_ error: Error, stage: String) -> NSError {
     let sdkError = error as NSError
     return NSError(domain: "RTCTapToPay", code: sdkError.code, userInfo: [
@@ -14,7 +40,12 @@ import UIKit
       "tapToPayStage": stage,
       "tapToPayErrorDomain": sdkError.domain,
       "tapToPayErrorCode": sdkError.code,
+      "tapToPayErrorDiagnostic": safeNSErrorDiagnostic(sdkError),
     ])
+  }
+
+  private func transactionFailure(_ error: Error) -> NSError {
+    diagnosticError(error, stage: "charge_result")
   }
 
   private func environment(from value: String) -> MposEnvironment {
@@ -200,7 +231,7 @@ import UIKit
         NSLocalizedDescriptionKey: "Tap to Pay was unavailable. Please retry when the iPhone is online."
       ]), stage: "charge_result")
     case .failure(let error):
-      throw diagnosticError(error, stage: "charge_result")
+      throw transactionFailure(error)
     @unknown default:
       throw diagnosticError(NSError(domain: "RTCTapToPay", code: 500, userInfo: [
         NSLocalizedDescriptionKey: "Tap to Pay returned an unknown result."
