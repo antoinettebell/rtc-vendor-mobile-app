@@ -3,6 +3,7 @@ import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StatusBarManager from "../components/StatusBarManager";
+import AppImage from "../components/AppImage";
 import MarketplaceImageViewer from "../components/MarketplaceImageViewer";
 import { getMarketplaceMyApplications_API } from "../api/appAPI";
 import { canPayMarketplaceVendorFee } from "../helpers/marketplaceVendorFeeState.helper";
@@ -21,6 +22,7 @@ import {
 } from "./vendorMarketplaceShared";
 import { getMarketplaceSubmissionDisplayStatus } from "../helpers/marketplaceSubmissionDisplay.helper";
 import { getMarketplaceEventSupportId } from "../helpers/marketplaceSupportId.helper";
+import { getPublicEventImages } from "../helpers/eventVendorPresentation.helper";
 
 const DetailRow = ({ label, value }) => (
   <View style={{ marginTop: 12 }}>
@@ -60,7 +62,9 @@ const VendorMarketplaceApplicationDetailScreen = ({ navigation, route }) => {
   const routeApplication = route?.params?.application || {};
   const [application, setApplication] = useState(routeApplication);
   const applicationId = routeApplication.application_id;
-  const event = route?.params?.event || getApplicationEvent(application);
+  const refreshedEvent = getApplicationEvent(application);
+  const event = refreshedEvent?.event_id ? refreshedEvent : route?.params?.event || {};
+  const eventImages = getPublicEventImages(event);
   const attachments = Array.isArray(application.attachments)
     ? application.attachments
     : [];
@@ -69,6 +73,7 @@ const VendorMarketplaceApplicationDetailScreen = ({ navigation, route }) => {
   );
   const documentAttachments = attachments.filter((item) => !imageAttachments.includes(item));
   const [viewer, setViewer] = useState(null);
+  const [eventImageViewer, setEventImageViewer] = useState(null);
   const status = String(application.application_status || "DRAFT").toUpperCase();
   const canPay = canPayMarketplaceVendorFee(application);
   const canRevise = isApplicationRevisionRequested(application);
@@ -133,6 +138,34 @@ const VendorMarketplaceApplicationDetailScreen = ({ navigation, route }) => {
           <DetailRow label="Duration" value={formatDuration(event)} />
           <DetailRow label="Location" value={getEventLocation(event)} />
         </View>
+        {eventImages.length ? (
+          <View style={styles.card}>
+            <Text style={styles.title}>Event Images</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginTop: 12 }}
+            >
+              {eventImages.map((image, index) => (
+                <TouchableOpacity
+                  key={image.image_id || image.image_url}
+                  activeOpacity={0.85}
+                  onPress={() => setEventImageViewer(index)}
+                >
+                  <AppImage
+                    uri={image.image_url}
+                    containerStyle={{
+                      height: 140,
+                      width: 210,
+                      borderRadius: 10,
+                      marginRight: 12,
+                    }}
+                  />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
         <TouchableOpacity
           activeOpacity={0.7}
           style={[styles.secondaryButton, { marginBottom: 14 }]}
@@ -237,6 +270,12 @@ const VendorMarketplaceApplicationDetailScreen = ({ navigation, route }) => {
         initialIndex={viewer || 0}
         visible={viewer !== null}
         onClose={() => setViewer(null)}
+      />
+      <MarketplaceImageViewer
+        images={eventImages}
+        initialIndex={eventImageViewer ?? 0}
+        visible={eventImageViewer !== null}
+        onClose={() => setEventImageViewer(null)}
       />
     </View>
   );
