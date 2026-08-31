@@ -1,11 +1,20 @@
 import Foundation
 import MposUI
+import OSLog
 import ProximityReader
 import UIKit
 
 @available(iOS 16.0, *)
 @objc final class TapToPayManager: NSObject {
   private var reader: MposUIReader?
+  private let diagnosticLogger = Logger(
+    subsystem: Bundle.main.bundleIdentifier ?? "com.rounddacorner.vendor",
+    category: "TapToPay"
+  )
+
+  private func logStage(_ stage: String) {
+    diagnosticLogger.notice("[TapToPayDiagnostic] stage=\(stage, privacy: .public)")
+  }
 
   private func safeNSErrorDiagnostic(
     _ error: NSError,
@@ -35,6 +44,9 @@ import UIKit
 
   private func diagnosticError(_ error: Error, stage: String) -> NSError {
     let sdkError = error as NSError
+    diagnosticLogger.error(
+      "[TapToPayDiagnostic] stage=\(stage, privacy: .public) domain=\(sdkError.domain, privacy: .public) code=\(sdkError.code, privacy: .public) message=\(sdkError.localizedDescription, privacy: .public)"
+    )
     return NSError(domain: "RTCTapToPay", code: sdkError.code, userInfo: [
       NSLocalizedDescriptionKey: sdkError.localizedDescription,
       "tapToPayStage": stage,
@@ -53,6 +65,7 @@ import UIKit
   }
 
   private func credentials() throws -> Credentials {
+    logStage("credentials")
     let merchantId = Bundle.main.object(
       forInfoDictionaryKey: "CybersourceTapToPayMerchantId"
     ) as? String
@@ -82,6 +95,7 @@ import UIKit
   ) async throws -> MposUIReader {
     if let reader { return reader }
 
+    logStage("reader_configuration")
     let configuration = Configuration(
       resultConfiguration: .displayIndefinitely,
       summaryFeatures: [.sendReceiptViaEmail, .refundTransaction, .retryTransaction],
@@ -101,6 +115,7 @@ import UIKit
       configuration: configuration
     )
     reader = newReader
+    logStage("reader_configuration_ready")
     return newReader
   }
 
@@ -143,8 +158,13 @@ import UIKit
     environment: MposEnvironment,
     forceReactivation: Bool = false
   ) async throws -> Bool {
-    if !forceReactivation, case .activated = await reader.activationStatus { return false }
+    logStage("activation_status")
+    if !forceReactivation, case .activated = await reader.activationStatus {
+      logStage("activation_status_ready")
+      return false
+    }
 
+    logStage("activation")
     let activation = await reader.activation()
     let result = await activation.activateWithOtp(
       environment: environment,
@@ -153,6 +173,7 @@ import UIKit
     )
     switch result {
     case .success(_, let isNewDevice):
+      logStage("activation_ready")
       return isNewDevice
     case .cancelledByUser:
       throw diagnosticError(NSError(domain: "RTCTapToPay", code: 499, userInfo: [
@@ -175,6 +196,7 @@ import UIKit
 
   @MainActor
   func startSale(amount: Decimal, currency: Currency, environmentName: String, reference: String) async throws -> [String: Any] {
+    logStage("charge_start")
     guard amount > 0 else {
       throw diagnosticError(NSError(domain: "RTCTapToPay", code: 400, userInfo: [
         NSLocalizedDescriptionKey: "Transaction amount must be greater than zero."
@@ -203,11 +225,14 @@ import UIKit
     }
     let online: any MposUIOnline
     do {
+      logStage("online_reader")
       online = try await activeReader.mposUIOnline()
+      logStage("online_reader_ready")
     } catch {
       throw diagnosticError(error, stage: "online_reader")
     }
     let parameters = ChargeParameters(amount: amount, currency: currency, customIdentifier: reference)
+    logStage("charge_result")
     let result = await online.startChargeTransaction(with: parameters)
 
     switch result {

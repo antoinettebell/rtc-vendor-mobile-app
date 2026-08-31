@@ -23,6 +23,9 @@ import {
   getMarketplaceMyBids_API,
 } from "../api/appAPI";
 import {
+  getPublicEventImages,
+} from "../helpers/eventVendorPresentation.helper";
+import {
   MarketplaceHeader,
   formatDate,
   formatEventDeadlineDate,
@@ -161,8 +164,8 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
     }, [eventId]),
   );
 
-  const images = Array.isArray(event?.images) ? event.images : [];
-  const primaryImageUrl = getEventImageUrl(event);
+  const images = getPublicEventImages(event);
+  const primaryImageUrl = images[0]?.image_url || getEventImageUrl(event);
   const vendorPays = isVendorPaysToAttendEvent(event);
   const bothPay = isBothPaymentEvent(event);
   const isClosed =
