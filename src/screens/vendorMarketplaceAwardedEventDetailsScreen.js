@@ -10,7 +10,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StatusBarManager from "../components/StatusBarManager";
+import AppImage from "../components/AppImage";
+import MarketplaceImageViewer from "../components/MarketplaceImageViewer";
 import { createMarketplaceFinalPayment_API } from "../api/appAPI";
+import { getPublicEventImages } from "../helpers/eventVendorPresentation.helper";
 import {
   MarketplaceHeader,
   formatDate,
@@ -325,6 +328,7 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
     (itemType === "APPLICATION"
       ? getApplicationEvent(application)
       : getBidEvent(bid));
+  const eventImages = getPublicEventImages(event);
   const supportId = getMarketplaceEventSupportId(event, bid, application);
   const vendorPays = isVendorPaysToAttendEvent(event);
   const unlockState =
@@ -362,6 +366,7 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
       : null,
   );
   const [closingEvent, setClosingEvent] = useState(false);
+  const [imageViewerIndex, setImageViewerIndex] = useState(null);
   const [currentTime, setCurrentTime] = useState(Date.now());
   const closeState = record?.vendor_event_close || {};
   const closeAvailableAt = closeState.available_at
@@ -440,6 +445,35 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
             value={event?.event_description || "Not provided"}
           />
         </View>
+
+        {eventImages.length ? (
+          <View style={styles.card}>
+            <Text style={styles.title}>Event Images</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginTop: 12 }}
+            >
+              {eventImages.map((image, index) => (
+                <TouchableOpacity
+                  key={image.image_id || image.image_url}
+                  activeOpacity={0.85}
+                  onPress={() => setImageViewerIndex(index)}
+                >
+                  <AppImage
+                    uri={image.image_url}
+                    containerStyle={{
+                      height: 140,
+                      width: 210,
+                      borderRadius: 10,
+                      marginRight: 12,
+                    }}
+                  />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
 
         <View
           style={[
@@ -705,6 +739,12 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         ) : null}
       </ScrollView>
+      <MarketplaceImageViewer
+        images={eventImages}
+        initialIndex={imageViewerIndex ?? 0}
+        visible={imageViewerIndex !== null}
+        onClose={() => setImageViewerIndex(null)}
+      />
     </View>
   );
 };
