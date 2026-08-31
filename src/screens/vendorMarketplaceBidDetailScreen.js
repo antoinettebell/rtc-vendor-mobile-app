@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Linking, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StatusBarManager from "../components/StatusBarManager";
+import AppImage from "../components/AppImage";
 import MarketplaceImageViewer from "../components/MarketplaceImageViewer";
 import {
   MarketplaceHeader,
@@ -21,6 +22,7 @@ import { getMarketplaceSubmissionDisplayStatus } from "../helpers/marketplaceSub
 import { getFoodVendorMarketplaceCloseDate, getFoodVendorMarketplaceGuestRows } from "../helpers/foodVendorMarketplaceGuestCounts.helper";
 import { getMarketplaceEventSupportId } from "../helpers/marketplaceSupportId.helper";
 import { getMarketplaceBidTotal } from "../helpers/marketplaceBidTotal.helper";
+import { getPublicEventImages } from "../helpers/eventVendorPresentation.helper";
 
 const DetailRow = ({ label, value }) => (
   <View style={{ marginTop: 12 }}>
@@ -109,12 +111,14 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const bid = route?.params?.bid || {};
   const event = route?.params?.event || getBidEvent(bid);
+  const eventImages = getPublicEventImages(event);
   const attachments = Array.isArray(bid.attachments) ? bid.attachments : [];
   const imageAttachments = attachments.filter((item) =>
     String(item.mime_type || "").startsWith("image/") || item.attachment_type === "BID_IMAGE",
   );
   const documentAttachments = attachments.filter((item) => !imageAttachments.includes(item));
   const [viewer, setViewer] = useState(null);
+  const [eventImageViewer, setEventImageViewer] = useState(null);
   const canRevise = isBidRevisionRequested(bid) || !!bid.specialty_update_available_at;
   const supportId = getMarketplaceEventSupportId(event, bid);
   const detailsUnlocked =
@@ -158,6 +162,35 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
             value={formatMoney(event?.budgeted_amount)}
           />
         </View>
+
+        {eventImages.length ? (
+          <View style={styles.card}>
+            <Text style={styles.title}>Event Coordinator Images</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginTop: 12 }}
+            >
+              {eventImages.map((image, index) => (
+                <TouchableOpacity
+                  key={image.image_id || image.image_url}
+                  activeOpacity={0.85}
+                  onPress={() => setEventImageViewer(index)}
+                >
+                  <AppImage
+                    uri={image.image_url}
+                    containerStyle={{
+                      height: 140,
+                      width: 210,
+                      borderRadius: 10,
+                      marginRight: 12,
+                    }}
+                  />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
 
         <View style={styles.card}>
           <Text style={styles.title}>Event Coordinator</Text>
@@ -297,6 +330,12 @@ const VendorMarketplaceBidDetailScreen = ({ navigation, route }) => {
         initialIndex={viewer || 0}
         visible={viewer !== null}
         onClose={() => setViewer(null)}
+      />
+      <MarketplaceImageViewer
+        images={eventImages}
+        initialIndex={eventImageViewer ?? 0}
+        visible={eventImageViewer !== null}
+        onClose={() => setEventImageViewer(null)}
       />
     </View>
   );
