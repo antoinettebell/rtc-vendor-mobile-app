@@ -197,6 +197,15 @@ import UIKit
   @MainActor
   func startSale(amount: Decimal, currency: Currency, environmentName: String, reference: String) async throws -> [String: Any] {
     logStage("charge_start")
+#if DEBUG
+    // Acceptance Devices' ThinClient rejects debugger-attached processes through
+    // iXGuard before a transaction can start. Do not initialize the SDK in an
+    // Xcode Debug build: it cannot produce a valid live Tap to Pay result and
+    // may trigger the SDK's failed register/void follow-on request.
+    throw diagnosticError(NSError(domain: "RTCTapToPay", code: 403, userInfo: [
+      NSLocalizedDescriptionKey: "Tap to Pay must be tested from the TestFlight Release build."
+    ]), stage: "debug_build")
+#endif
     guard amount > 0 else {
       throw diagnosticError(NSError(domain: "RTCTapToPay", code: 400, userInfo: [
         NSLocalizedDescriptionKey: "Transaction amount must be greater than zero."
