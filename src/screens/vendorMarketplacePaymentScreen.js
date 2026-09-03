@@ -25,6 +25,7 @@ import {
   callMarketplacePayment_API,
   checkoutMarketplacePayment_API,
   getMarketplacePaymentById_API,
+  getVendorComplianceSummary_API,
   updateMarketplaceFinalPaymentTip_API,
 } from "../api/appAPI";
 import { startTapToPaySale } from "../services/tapToPay-service";
@@ -87,6 +88,8 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
   const [payment, setPayment] = useState(route?.params?.payment || null);
   const [loading, setLoading] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(null);
+  const [tapToPayCompliance, setTapToPayCompliance] = useState(null);
+  const [tapToPayComplianceLoading, setTapToPayComplianceLoading] = useState(true);
   const [tipInput, setTipInput] = useState(
     String(route?.params?.payment?.tip_amount || ""),
   );
@@ -94,6 +97,26 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
   const paymentId = route?.params?.paymentId || payment?.payment_id;
   const returnScreen = route?.params?.returnScreen;
   const successMessage = route?.params?.successMessage;
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      getVendorComplianceSummary_API()
+        .then((response) => {
+          if (active) setTapToPayCompliance(response?.data?.compliance || null);
+        })
+        .catch(() => {
+          if (active) setTapToPayCompliance(null);
+        })
+        .finally(() => {
+          if (active) setTapToPayComplianceLoading(false);
+        });
+
+      return () => {
+        active = false;
+      };
+    }, [user?._id]),
+  );
 
   const returnAfterPayment = () => {
     if (!returnScreen) {
@@ -230,10 +253,14 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
   const processing = payment?.payment_status === "PROCESSING";
   const isFinalEventPayment = payment?.payment_type === "FINAL_EVENT_PAYMENT";
   const paymentCapabilities = getVendorPaymentCapabilities(user);
+  const isTapToPayCompliant =
+    !!tapToPayCompliance?.eligible && Number(tapToPayCompliance?.score) === 100;
   const canUseCash =
     isFinalEventPayment && paymentCapabilities.cash;
-  const canUseTapToPay =
+  const tapToPayOptionAvailable =
     isFinalEventPayment && paymentCapabilities.tapToPay;
+  const canUseTapToPay =
+    tapToPayOptionAvailable && isTapToPayCompliant;
 
   const saveTipIfNeeded = async () => {
     const tipAmount = Number(tipInput || 0);
@@ -255,6 +282,15 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
 
   const payWithTapToPay = async () => {
     if (!payment || paymentLoading) return;
+    if (!isTapToPayCompliant) {
+      Alert.alert(
+        "Tap to Pay unavailable",
+        tapToPayComplianceLoading
+          ? "Checking Tap to Pay compliance status."
+          : "Please complete your compliance paperwork to receive Tap to Pay Services.",
+      );
+      return;
+    }
     setPaymentLoading("tapToPay");
     try {
       const paymentToCollect = await saveTipIfNeeded();
@@ -413,7 +449,7 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
 
         {!paid && !processing ? (
           <>
-            {canUseTapToPay ? (
+            {tapToPayOptionAvailable ? (
               <TouchableOpacity
                 activeOpacity={0.7}
                 style={styles.button}

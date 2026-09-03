@@ -17,6 +17,7 @@ import StatusBarManager from "../components/StatusBarManager";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 import {
   checkPosTax_API,
+  getVendorComplianceSummary_API,
   placePosOrder_API,
   validatePosOrder_API,
 } from "../api/appAPI";
@@ -254,16 +255,41 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
     isEmployeeSession
       ? !!user?.employeeCapabilities?.tapToPay
       : ownerPaymentCapabilities.tapToPay;
-  const canUseTapToPay =
-    vendorCanUseTapToPay && isTapToPayAvailable();
-
   const [loading, setLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState(null);
+  const [tapToPayCompliance, setTapToPayCompliance] = useState(null);
+  const [tapToPayComplianceLoading, setTapToPayComplianceLoading] = useState(true);
   const [taxAmount, setTaxAmount] = useState(0);
   const [cashOrder, setCashOrder] = useState(null);
   const [tapOrder, setTapOrder] = useState(null);
   const [selectedTipOption, setSelectedTipOption] = useState("10");
   const [customTipInput, setCustomTipInput] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    getVendorComplianceSummary_API()
+      .then((response) => {
+        if (active) setTapToPayCompliance(response?.data?.compliance || null);
+      })
+      .catch(() => {
+        if (active) setTapToPayCompliance(null);
+      })
+      .finally(() => {
+        if (active) setTapToPayComplianceLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user?._id]);
+
+  const isTapToPayCompliant =
+    !!tapToPayCompliance?.eligible && Number(tapToPayCompliance?.score) === 100;
+  const tapToPayOptionAvailable =
+    vendorCanUseTapToPay && isTapToPayAvailable();
+  const canUseTapToPay =
+    tapToPayOptionAvailable && isTapToPayCompliant;
   const checkoutTruckUnit = useMemo(
     () => resolveCheckoutTruckUnit({ foodTruck, location, truckUnit, user }),
     [foodTruck, location, truckUnit, user]
@@ -549,7 +575,11 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
     if (!canUseTapToPay) {
       Alert.alert(
         "Tap to Pay unavailable",
-        !vendorCanUseTapToPay && isEmployeeSession
+        tapToPayComplianceLoading
+          ? "Checking Tap to Pay compliance status."
+          : !isTapToPayCompliant
+          ? "Please complete your compliance paperwork to receive Tap to Pay Services."
+          : !vendorCanUseTapToPay && isEmployeeSession
           ? "Tap to Pay is only available to employees on the Elite plan."
           : !vendorCanUseTapToPay
             ? "Tap to Pay is not available for your current vendor plan."
@@ -730,7 +760,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
               label="Tip"
               value={`$${toAmount(summary.tipsAmount)}`}
             />
-            {canUseTapToPay ? (
+            {tapToPayOptionAvailable ? (
               <SummaryRow
                 label="Payment Processing Fee"
                 value={`$${toAmount(tapSummary.paymentProcessingFee)}`}
@@ -742,7 +772,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
               value={`$${toAmount(summary.total)}`}
               bold
             />
-            {canUseTapToPay ? (
+            {tapToPayOptionAvailable ? (
               <SummaryRow
                 label="Tap to Pay Total"
                 value={`$${toAmount(tapSummary.total)}`}
@@ -800,7 +830,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
           </View>
 
           <Text style={styles.sectionTitle}>Payment method</Text>
-          {canUseTapToPay ? (
+          {tapToPayOptionAvailable ? (
             <TouchableOpacity
               style={styles.paymentButton}
               onPress={handleTapToPay}

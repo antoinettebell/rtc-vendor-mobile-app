@@ -780,6 +780,13 @@ const ProfileMenuScreen = ({ navigation }) => {
           </Text>
 	        </View>
 
+	        <View style={styles.vendorAccessCodeCard}>
+	          <Text style={styles.vendorAccessCodeLabel}>Vendor Access Code</Text>
+	          <Text style={styles.vendorAccessCodeValue}>
+	            {user?.foodTruck?.tap_to_pay_serial_number || "Not assigned"}
+	          </Text>
+	        </View>
+
 	        <TouchableOpacity
 	          activeOpacity={0.8}
 	          style={styles.complianceCard}
@@ -1144,6 +1151,27 @@ const styles = StyleSheet.create({
     padding: 16,
     marginHorizontal: 16,
     marginTop: 16,
+  },
+  vendorAccessCodeCard: {
+    backgroundColor: AppColor.white,
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
+    borderRadius: 10,
+    marginHorizontal: 16,
+    marginTop: 8,
+    paddingHorizontal: 19,
+    paddingVertical: 14,
+  },
+  vendorAccessCodeLabel: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 14,
+  },
+  vendorAccessCodeValue: {
+    color: AppColor.black,
+    fontFamily: Mulish400,
+    fontSize: 16,
+    marginTop: 4,
   },
   complianceHeader: {
     flexDirection: "row",

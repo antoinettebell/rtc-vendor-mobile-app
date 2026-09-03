@@ -1311,6 +1311,9 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 	                    {employee.role} - {employee.zip_code}
 	                  </Text>
 	                  <Text style={styles.employeeMeta}>
+	                    Serial Number: {employee.tap_to_pay_serial_number || "Not assigned"}
+	                  </Text>
+	                  <Text style={styles.employeeMeta}>
 	                    Rate: {formatEmployeeRate(employee.employee_rate)}
 	                  </Text>
                   <Text style={styles.employeeHoursSummary}>
