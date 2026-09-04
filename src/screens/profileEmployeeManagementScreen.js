@@ -188,6 +188,11 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   );
   const user = useSelector((state) => state.userReducer.user);
   const foodTruck = user?.foodTruck;
+  const canUseEmployeeLogin =
+    !!foodTruck?.plan?.capabilities?.employeeLogin;
+  const vendorAccessCode = foodTruck?._id
+    ? foodTruck._id.toString().slice(-6).toUpperCase()
+    : "";
   const initialMode = route?.params?.mode === "create" ? "create" : "manage";
   const initialEmployeeInternalId = route?.params?.employeeInternalId || null;
 
@@ -1059,6 +1064,16 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
+        {canUseEmployeeLogin && vendorAccessCode ? (
+          <View style={styles.vendorAccessCodeCard}>
+            <Text style={styles.vendorAccessCodeLabel}>Vendor Access Code</Text>
+            <Text style={styles.vendorAccessCodeHelper}>
+              Share this with employees when they log in.
+            </Text>
+            <Text style={styles.vendorAccessCodeValue}>{vendorAccessCode}</Text>
+          </View>
+        ) : null}
+
         {activeTab === "current" && managementMode === "create" ? (
           <View style={styles.formSection}>
             <Text style={styles.sectionTitle}>Create Employee</Text>
@@ -2171,6 +2186,31 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
   },
   content: { padding: 16, gap: 16 },
+  vendorAccessCodeCard: {
+    backgroundColor: "#FFF7ED",
+    borderColor: "#FED7AA",
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  vendorAccessCodeLabel: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 14,
+  },
+  vendorAccessCodeHelper: {
+    color: AppColor.subText,
+    fontFamily: Mulish400,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  vendorAccessCodeValue: {
+    color: AppColor.black,
+    fontFamily: Mulish700,
+    fontSize: 18,
+    marginTop: 8,
+  },
   formSection: {
     backgroundColor: AppColor.white,
     borderWidth: 1,

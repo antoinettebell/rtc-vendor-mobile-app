@@ -781,7 +781,7 @@ const ProfileMenuScreen = ({ navigation }) => {
 	        </View>
 
 	        <View style={styles.vendorAccessCodeCard}>
-	          <Text style={styles.vendorAccessCodeLabel}>Vendor Access Code</Text>
+	          <Text style={styles.vendorAccessCodeLabel}>Tap to Pay Vendor Access Code</Text>
 	          <Text style={styles.vendorAccessCodeValue}>
 	            {user?.foodTruck?.tap_to_pay_serial_number || "Not assigned"}
 	          </Text>

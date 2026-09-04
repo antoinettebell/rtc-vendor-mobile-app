@@ -112,14 +112,9 @@ const UserProfileScreen = ({ navigation }) => {
   const [truckNameInput, setTruckNameInput] = useState("");
   const [truckPhoneInput, setTruckPhoneInput] = useState("");
   const [employeeDashboard, setEmployeeDashboard] = useState(null);
-  const canUseEmployeeLogin =
-    !!user?.foodTruck?.plan?.capabilities?.employeeLogin;
   const canUseMultipleTrucks = canUseMultipleTruckUnits(
     user?.foodTruck?.plan
   );
-  const vendorAccessCode = user?.foodTruck?._id
-    ? user.foodTruck._id.toString().slice(-6).toUpperCase()
-    : "";
   const mainPhoneNumber = formatPhoneNumber(
     `${user?.countryCode || ""}${user?.mobileNumber || ""}`
   );
@@ -563,27 +558,6 @@ const UserProfileScreen = ({ navigation }) => {
                     )}
                   </View>
                 </View>
-              </View>
-            ) : null}
-
-            {!isEmployeeProfile && canUseEmployeeLogin && !!vendorAccessCode ? (
-              <View style={styles.accessCodeBox}>
-                <View style={styles.accessCodeIconContainer}>
-                  <Ionicons
-                    name="key-outline"
-                    size={22}
-                    color={AppColor.primary}
-                  />
-                </View>
-                <View style={styles.accessCodeTextContainer}>
-                  <Text style={styles.accessCodeLabel}>
-                    Vendor Access Code
-                  </Text>
-                  <Text style={styles.accessCodeHelper}>
-                    Share this with employees when they log in.
-                  </Text>
-                </View>
-                <Text style={styles.accessCodeValue}>{vendorAccessCode}</Text>
               </View>
             ) : null}
 
