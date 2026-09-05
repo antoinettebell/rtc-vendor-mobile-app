@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "117353735054",
+    "project_id": "rtcvendormobile",
+    "storage_bucket": "rtcvendormobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:117353735054:android:e679814bfdc33256f5fadf",
+        "android_client_info": {
+          "package_name": "com.ea.rtcvendor"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyChwTOBMrewV8_oGtPk8__NpvjkzfJCPM4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:117353735054:android:aaca0161ec7252aff5fadf",
+        "android_client_info": {
+          "package_name": "com.rounddacorner.dev.vendor"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyChwTOBMrewV8_oGtPk8__NpvjkzfJCPM4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

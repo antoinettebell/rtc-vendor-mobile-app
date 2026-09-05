@@ -41,9 +41,60 @@ const APPLE_PAY_MERCHANT_ID =
   Config.APPLE_PAY_MERCHANT_ID || "merchant.roundthecorner.vendor";
 const PAYMENT_COUNTRY_CODE = Config.PAYMENT_COUNTRY_CODE || "US";
 const PAYMENT_CURRENCY_CODE = Config.PAYMENT_CURRENCY_CODE || "USD";
-const ANDROID_PAYMENT_GATEWAY = Config.ANDROID_PAYMENT_GATEWAY || "authorizenet";
-const ANDROID_PAYMENT_GATEWAY_MERCHANT_ID =
-  Config.ANDROID_PAYMENT_GATEWAY_MERCHANT_ID || "2794197";
+
+const tapToPayDiagnostic = (error) => {
+  const parts = typeof error?.code === "string" ? error.code.split("|") : [];
+  const hasNativeDiagnostic = parts.length >= 5 && parts[0] === "TAP_TO_PAY";
+  let nativeDiagnostic;
+
+  if (hasNativeDiagnostic) {
+    try {
+      nativeDiagnostic = JSON.parse(decodeURIComponent(parts.slice(4).join("|")));
+    } catch (_) {
+      nativeDiagnostic = undefined;
+    }
+  }
+
+  return {
+    stage: hasNativeDiagnostic ? parts[1] : "unavailable",
+    outer: nativeDiagnostic || {
+      domain: hasNativeDiagnostic ? parts[2] : "unavailable",
+      code: hasNativeDiagnostic ? parts[3] : "unavailable",
+      message: error?.message || "Tap to Pay could not be completed.",
+    },
+  };
+};
+
+const safeDiagnosticText = (value) =>
+  typeof value === "string" || typeof value === "number"
+    ? String(value)
+    : "Unavailable";
+
+const formatNativeErrorDiagnostic = (label, diagnostic) => {
+  if (!diagnostic) return [];
+
+  const fields = [
+    `${label} domain: ${safeDiagnosticText(diagnostic.domain)}`,
+    `${label} code: ${safeDiagnosticText(diagnostic.code)}`,
+    `${label} message: ${safeDiagnosticText(diagnostic.message)}`,
+  ];
+
+  if (typeof diagnostic.localizedFailureReason === "string") {
+    fields.push(`${label} failure reason: ${diagnostic.localizedFailureReason}`);
+  }
+
+  if (typeof diagnostic.developerInfo === "string") {
+    fields.push(`${label} developer info: ${diagnostic.developerInfo}`);
+  }
+
+  if (Array.isArray(diagnostic.userInfoKeys)) {
+    fields.push(
+      `${label} userInfo keys: ${diagnostic.userInfoKeys.filter((key) => typeof key === "string").join(", ") || "None"}`,
+    );
+  }
+
+  return fields;
+};
 
 const APPLE_PAY_METHOD_DATA = {
   supportedMethods: PaymentMethodNameEnum.ApplePay,
@@ -68,15 +119,17 @@ const ANDROID_PAY_METHOD_DATA = {
       SupportedNetworkEnum.Visa,
       SupportedNetworkEnum.Mastercard,
     ],
-    environment: EnvironmentEnum.PRODUCTION,
+    environment: String(Config.GOOGLE_PAY_ENVIRONMENT).toUpperCase() === "TEST"
+      ? EnvironmentEnum.TEST
+      : EnvironmentEnum.PRODUCTION,
     countryCode: PAYMENT_COUNTRY_CODE,
     currencyCode: PAYMENT_CURRENCY_CODE,
     requestBillingAddress: false,
     requestPayerEmail: false,
     requestShipping: false,
     gatewayConfig: {
-      gateway: ANDROID_PAYMENT_GATEWAY,
-      gatewayMerchantId: ANDROID_PAYMENT_GATEWAY_MERCHANT_ID,
+      gateway: Config.GOOGLE_PAY_GATEWAY,
+      gatewayMerchantId: Config.CYBERSOURCE_MERCHANT_ID,
     },
   },
 };
@@ -324,7 +377,19 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
         );
       }
     } catch (error) {
-      Alert.alert("Tap to Pay Failed", error?.message || "Please try again.");
+      const diagnostic = tapToPayDiagnostic(error);
+      const outerDiagnostic = diagnostic.outer;
+      const firstUnderlying = outerDiagnostic?.underlying;
+      const secondUnderlying = firstUnderlying?.underlying;
+      Alert.alert(
+        "Tap to Pay Diagnostic",
+        [
+          `Stage: ${diagnostic.stage}`,
+          ...formatNativeErrorDiagnostic("Outer", outerDiagnostic),
+          ...formatNativeErrorDiagnostic("Underlying 1", firstUnderlying),
+          ...formatNativeErrorDiagnostic("Underlying 2", secondUnderlying),
+        ].join("\n\n"),
+      );
     } finally {
       setPaymentLoading(null);
     }

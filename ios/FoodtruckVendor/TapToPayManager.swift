@@ -7,241 +7,188 @@ import UIKit
 @available(iOS 16.0, *)
 @objc final class TapToPayManager: NSObject {
   private var reader: MposUIReader?
+  private var readerEnvironment: MposEnvironment?
   private let diagnosticLogger = Logger(
     subsystem: Bundle.main.bundleIdentifier ?? "com.rounddacorner.vendor",
     category: "TapToPay"
   )
 
-  private func logStage(_ stage: String) {
-    diagnosticLogger.notice("[TapToPayDiagnostic] stage=\(stage, privacy: .public)")
+  private func safeDiagnosticText(_ value: String) -> String {
+    let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    let sensitiveMarkers = [
+      "token", "secret", "authorization", "encrypted", "cryptogram",
+      "cardnumber", "accountnumber", "primaryaccountnumber", " pan ",
+    ]
+    guard !sensitiveMarkers.contains(where: {
+      normalized.lowercased().contains($0)
+    }) else {
+      return "[redacted]"
+    }
+    return String(normalized.prefix(512))
   }
 
   private func safeNSErrorDiagnostic(
     _ error: NSError,
-    remainingUnderlyingLevels: Int = 2
+    includeUnderlying: Bool = true
   ) -> [String: Any] {
     var diagnostic: [String: Any] = [
       "domain": error.domain,
       "code": error.code,
-      "message": error.localizedDescription,
+      "message": safeDiagnosticText(error.localizedDescription),
       "userInfoKeys": error.userInfo.keys.compactMap { $0 as? String }.sorted(),
     ]
 
     if let failureReason = error.localizedFailureReason {
-      diagnostic["localizedFailureReason"] = failureReason
+      diagnostic["localizedFailureReason"] = safeDiagnosticText(failureReason)
     }
 
-    if remainingUnderlyingLevels > 0,
-       let underlyingError = error.userInfo[NSUnderlyingErrorKey] as? NSError {
+    if includeUnderlying,
+       let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError {
       diagnostic["underlying"] = safeNSErrorDiagnostic(
-        underlyingError,
-        remainingUnderlyingLevels: remainingUnderlyingLevels - 1
+        underlying,
+        includeUnderlying: false
       )
     }
 
     return diagnostic
   }
 
-  private func diagnosticError(_ error: Error, stage: String) -> NSError {
-    let sdkError = error as NSError
-    diagnosticLogger.error(
-      "[TapToPayDiagnostic] stage=\(stage, privacy: .public) domain=\(sdkError.domain, privacy: .public) code=\(sdkError.code, privacy: .public) message=\(sdkError.localizedDescription, privacy: .public)"
-    )
-    return NSError(domain: "RTCTapToPay", code: sdkError.code, userInfo: [
-      NSLocalizedDescriptionKey: sdkError.localizedDescription,
-      "tapToPayStage": stage,
-      "tapToPayErrorDomain": sdkError.domain,
-      "tapToPayErrorCode": sdkError.code,
-      "tapToPayErrorDiagnostic": safeNSErrorDiagnostic(sdkError),
-    ])
+  private func safeDeveloperInfo(from error: Error, nativeError: NSError) -> String? {
+    if let value = nativeError.userInfo["developerInfo"] as? String {
+      return safeDiagnosticText(value)
+    }
+
+    let reflected = String(describing: error)
+    guard let range = reflected.range(of: "developerInfo:") else {
+      return nil
+    }
+    return safeDiagnosticText(String(reflected[range.upperBound...]))
   }
 
   private func transactionFailure(_ error: Error) -> NSError {
-    diagnosticError(error, stage: "charge_result")
+    let nativeError = error as NSError
+    var diagnostic = safeNSErrorDiagnostic(nativeError)
+    let developerInfo = safeDeveloperInfo(from: error, nativeError: nativeError)
+    if let developerInfo {
+      diagnostic["developerInfo"] = developerInfo
+    }
+    let developerInfoForLog = developerInfo ?? "unavailable"
+
+    diagnosticLogger.error(
+      "[TapToPayDiagnostic] stage=charge_result domain=\(nativeError.domain, privacy: .public) code=\(nativeError.code, privacy: .public) developer_info=\(developerInfoForLog, privacy: .public)"
+    )
+
+    return NSError(domain: "RTCTapToPay", code: 502, userInfo: [
+      NSLocalizedDescriptionKey: "Tap to Pay transaction failed: \(nativeError.localizedDescription)",
+      "tapToPayStage": "charge_result",
+      "tapToPayErrorDomain": nativeError.domain,
+      "tapToPayErrorCode": nativeError.code,
+      "tapToPayErrorDiagnostic": diagnostic,
+    ])
   }
 
   private func environment(from value: String) -> MposEnvironment {
     value.lowercased() == "sandbox" || value.lowercased() == "test" ? .test : .live
   }
 
-  private func credentials() throws -> Credentials {
-    logStage("credentials")
-    let merchantId = Bundle.main.object(
-      forInfoDictionaryKey: "CybersourceTapToPayMerchantId"
-    ) as? String
-    let secret = Bundle.main.object(
-      forInfoDictionaryKey: "CybersourceTapToPayAcceptanceDeviceSecret"
-    ) as? String
-
-    let isConfigured: (String?) -> Bool = { value in
-      guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines) else {
-        return false
-      }
-      return !value.isEmpty && !value.hasPrefix("$(")
+  private func requiredBuildSetting(_ key: String) throws -> String {
+    let value = (Bundle.main.object(forInfoDictionaryKey: key) as? String)?
+      .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    guard !value.isEmpty, !value.hasPrefix("$(") else {
+      throw NSError(domain: "RTCTapToPay", code: 503, userInfo: [
+        NSLocalizedDescriptionKey: "Tap to Pay is missing the required native configuration: \(key)."
+      ])
     }
-
-    guard isConfigured(merchantId), isConfigured(secret) else {
-      throw diagnosticError(NSError(domain: "RTCTapToPay", code: 503, userInfo: [
-        NSLocalizedDescriptionKey: "Tap to Pay is not configured on this build."
-      ]), stage: "credentials")
-    }
-
-    return try Credentials(merchantId: merchantId!, secret: secret!)
+    return value
   }
 
-  private func configuredReader(
-    environment: MposEnvironment,
-    forceReactivation: Bool
-  ) async throws -> MposUIReader {
-    if let reader { return reader }
+  private func configuredReader(environment: MposEnvironment) async throws -> MposUIReader {
+    if let reader, readerEnvironment == environment { return reader }
 
-    logStage("reader_configuration")
+    let merchantId = try requiredBuildSetting("CybersourceTapToPayMerchantId")
+    let acceptanceDevicesSecret = try requiredBuildSetting(
+      "CybersourceTapToPayAcceptanceDeviceSecret"
+    )
+    let credentials = try Credentials(
+      merchantId: merchantId,
+      secret: acceptanceDevicesSecret
+    )
+
     let configuration = Configuration(
       resultConfiguration: .displayIndefinitely,
       summaryFeatures: [.sendReceiptViaEmail, .refundTransaction, .retryTransaction],
       signatureCapture: .onScreen,
       enrollmentConfiguration: .init(
-        // New devices use the SDK's normal activation path. Recovery builds
-        // explicitly prompt for the serial copied from a failed enrollment.
-        serialNumberInputMethod: forceReactivation ? .manualInput : .deviceList,
+        serialNumberInputMethod: .deviceList,
         confirmationScreenOption: .showWithSerialNumber
       )
     )
-    // SDK 3.6+ requires this migration builder once for devices activated by
-    // an earlier SDK. It migrates the existing activation into Apple Keychain.
+    diagnosticLogger.info(
+      "[TapToPayDiagnostic] stage=reader_builder type=credentials environment=\(String(describing: environment), privacy: .public)"
+    )
     let newReader = await mposUiBuilder(
-      credentials: try credentials(),
+      credentials: credentials,
       environment: environment,
       configuration: configuration
     )
     reader = newReader
-    logStage("reader_configuration_ready")
+    readerEnvironment = environment
     return newReader
   }
 
-  // This deliberately uses the SDK's supported reactivation flow rather than
-  // trying to delete its Keychain state. A locally enabled reset must always
-  // select manual serial entry: a previous failed or unintended activation
-  // must not suppress the recovery flow.
-  private var shouldForceReactivation: Bool {
-    guard let configuredValue = Bundle.main.object(
-      forInfoDictionaryKey: "CybersourceTapToPayResetEnrollment"
-    ) as? String else {
+  private func ensureActivated(_ reader: MposUIReader, environment: MposEnvironment) async throws -> Bool {
+    // The SDK persists activation outside the JavaScript configuration.  A
+    // prior live enrollment must not satisfy a requested sandbox enrollment.
+    if case .activated(let device) = await reader.activationStatus,
+       device.environment == environment {
       return false
     }
 
-    let enabledValues = ["true", "yes", "1"]
-    return enabledValues.contains(
-      configuredValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    )
-  }
-
-  // Leave deviceId unset for the manual recovery flow. The SDK prompts the
-  // merchant to enter the copied serial number itself.
-  private var configuredDeviceId: String? {
-    guard let value = Bundle.main.object(
-      forInfoDictionaryKey: "CybersourceTapToPayDeviceId"
-    ) as? String else {
-      return nil
-    }
-
-    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty,
-          !trimmed.hasPrefix("$(") else {
-      return nil
-    }
-    return trimmed
-  }
-
-  private func ensureActivated(
-    _ reader: MposUIReader,
-    environment: MposEnvironment,
-    forceReactivation: Bool = false
-  ) async throws -> Bool {
-    logStage("activation_status")
-    if !forceReactivation, case .activated = await reader.activationStatus {
-      logStage("activation_status_ready")
-      return false
-    }
-
-    logStage("activation")
     let activation = await reader.activation()
-    let result = await activation.activateWithOtp(
-      environment: environment,
-      otp: nil,
-      deviceId: forceReactivation ? nil : configuredDeviceId
-    )
+    let result = await activation.activateWithOtp(environment: environment, otp: nil)
     switch result {
     case .success(_, let isNewDevice):
-      logStage("activation_ready")
       return isNewDevice
     case .cancelledByUser:
-      throw diagnosticError(NSError(domain: "RTCTapToPay", code: 499, userInfo: [
+      throw NSError(domain: "RTCTapToPay", code: 499, userInfo: [
         NSLocalizedDescriptionKey: "Device activation was cancelled."
-      ]), stage: "activation")
-    case .invalidOTP:
-      throw diagnosticError(NSError(domain: "RTCTapToPay", code: 401, userInfo: [
-        NSLocalizedDescriptionKey: "The activation code was not accepted."
-      ]), stage: "activation")
-    case .error:
-      throw diagnosticError(NSError(domain: "RTCTapToPay", code: 500, userInfo: [
-        NSLocalizedDescriptionKey: "Device activation failed."
-      ]), stage: "activation")
+      ])
+    case .invalidOTP(let info):
+      throw NSError(domain: "RTCTapToPay", code: 401, userInfo: [
+        NSLocalizedDescriptionKey: "The activation code was not accepted: \(info)"
+      ])
+    case .error(let info):
+      throw NSError(domain: "RTCTapToPay", code: 500, userInfo: [
+        NSLocalizedDescriptionKey: "Device activation failed: \(info)"
+      ])
     @unknown default:
-      throw diagnosticError(NSError(domain: "RTCTapToPay", code: 500, userInfo: [
+      throw NSError(domain: "RTCTapToPay", code: 500, userInfo: [
         NSLocalizedDescriptionKey: "Device activation returned an unknown result."
-      ]), stage: "activation")
+      ])
     }
   }
 
   @MainActor
   func startSale(amount: Decimal, currency: Currency, environmentName: String, reference: String) async throws -> [String: Any] {
-    logStage("charge_start")
-#if DEBUG
-    // Acceptance Devices' ThinClient rejects debugger-attached processes through
-    // iXGuard before a transaction can start. Do not initialize the SDK in an
-    // Xcode Debug build: it cannot produce a valid live Tap to Pay result and
-    // may trigger the SDK's failed register/void follow-on request.
-    throw diagnosticError(NSError(domain: "RTCTapToPay", code: 403, userInfo: [
-      NSLocalizedDescriptionKey: "Tap to Pay must be tested from the TestFlight Release build."
-    ]), stage: "debug_build")
-#endif
     guard amount > 0 else {
-      throw diagnosticError(NSError(domain: "RTCTapToPay", code: 400, userInfo: [
+      throw NSError(domain: "RTCTapToPay", code: 400, userInfo: [
         NSLocalizedDescriptionKey: "Transaction amount must be greater than zero."
-      ]), stage: "charge_start")
+      ])
     }
 
-    let environment = environment(from: environmentName)
-    let forceReactivation = shouldForceReactivation
-    let activeReader = try await configuredReader(
-      environment: environment,
-      forceReactivation: forceReactivation
-    )
+    let requestedEnvironment = environment(from: environmentName)
+    let reader = try await configuredReader(environment: requestedEnvironment)
     let newlyActivated = try await ensureActivated(
-      activeReader,
-      environment: environment,
-      forceReactivation: forceReactivation
+      reader,
+      environment: requestedEnvironment
     )
     if #available(iOS 18.0, *),
        newlyActivated,
        let viewController = Self.topViewController() {
-      do {
-        try await showMerchantEducation(from: viewController)
-      } catch {
-        throw diagnosticError(error, stage: "activation")
-      }
+      try await showMerchantEducation(from: viewController)
     }
-    let online: any MposUIOnline
-    do {
-      logStage("online_reader")
-      online = try await activeReader.mposUIOnline()
-      logStage("online_reader_ready")
-    } catch {
-      throw diagnosticError(error, stage: "online_reader")
-    }
+    let online = try await reader.mposUIOnline()
     let parameters = ChargeParameters(amount: amount, currency: currency, customIdentifier: reference)
-    logStage("charge_result")
     let result = await online.startChargeTransaction(with: parameters)
 
     switch result {
@@ -261,15 +208,15 @@ import UIKit
         "offline": true
       ]
     case .payByLinkFallback:
-      throw diagnosticError(NSError(domain: "RTCTapToPay", code: 409, userInfo: [
+      throw NSError(domain: "RTCTapToPay", code: 409, userInfo: [
         NSLocalizedDescriptionKey: "Tap to Pay was unavailable. Please retry when the iPhone is online."
-      ]), stage: "charge_result")
+      ])
     case .failure(let error):
       throw transactionFailure(error)
     @unknown default:
-      throw diagnosticError(NSError(domain: "RTCTapToPay", code: 500, userInfo: [
+      throw NSError(domain: "RTCTapToPay", code: 500, userInfo: [
         NSLocalizedDescriptionKey: "Tap to Pay returned an unknown result."
-      ]), stage: "charge_result")
+      ])
     }
   }
 

@@ -1,12 +1,13 @@
-// Copy this file to TapToPay.local.xcconfig. That local file is ignored by Git.
-// Do not paste these values into .env, JavaScript, source code, or Git.
+// For a direct local-device build, copy this file to TapToPay.local.xcconfig.
+// That file is ignored by Git. Production EAS builds generate the same ignored
+// file from secure CYBERSOURCE_TTP_* build environment variables.
+// Do not put these values in EXPO_PUBLIC variables, JavaScript, source code, or Git.
 // Obtain both values from CyberSource Business Center > Key Management.
 CYBERSOURCE_TTP_MERCHANT_ID = REPLACE_WITH_ACCEPTANCE_DEVICES_MERCHANT_ID
 CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET = REPLACE_WITH_ACCEPTANCE_DEVICES_SECRET_KEY
-// Optional: a CyberSource internal device UUID. Do not put the serial shown
-// by the Tap to Pay SDK here. Recovery builds prompt for that serial directly.
-// Leave blank for normal new-device activation.
+// Keep blank. For a one-time reactivation, the SDK prompts the merchant to
+// enter the serial copied from the failed-enrollment screen.
 CYBERSOURCE_TTP_DEVICE_ID =
-// Set to YES only for a one-time recovery build. The SDK will prompt for the
-// serial shown after the failed enrollment. The app records completion locally.
+// Set to YES only for a recovery build. The SDK will prompt for the copied
+// serial. Set it back to NO after a successful reactivation.
 CYBERSOURCE_TTP_RESET_ENROLLMENT = NO

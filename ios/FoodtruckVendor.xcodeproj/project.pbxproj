@@ -66,9 +66,9 @@
 		899C85C7676A4EC78F325C0F /* IMFellEnglish-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "IMFellEnglish-Regular.ttf"; path = "../src/assets/fonts/IMFellEnglish-Regular.ttf"; sourceTree = "<group>"; };
 		95C1DA858A63407A84644FFC /* Inter-Medium.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Medium.otf"; path = "../src/assets/fonts/Inter-Medium.otf"; sourceTree = "<group>"; };
 		971E7355AA39ADA02334CB86 /* Pods-FoodtruckVendor.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FoodtruckVendor.release.xcconfig"; path = "Target Support Files/Pods-FoodtruckVendor/Pods-FoodtruckVendor.release.xcconfig"; sourceTree = "<group>"; };
-		A1F5B7A9B4D548DFA10E1001 /* FoodtruckVendor.debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "../Config/FoodtruckVendor.debug.xcconfig"; sourceTree = "<group>"; };
-		A1F5B7A9B4D548DFA10E1002 /* FoodtruckVendor.release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "../Config/FoodtruckVendor.release.xcconfig"; sourceTree = "<group>"; };
 		9D588BDEED564795A70B94C2 /* Inter-ExtraBold.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-ExtraBold.otf"; path = "../src/assets/fonts/Inter-ExtraBold.otf"; sourceTree = "<group>"; };
+		A1F5B7A9B4D548DFA10E1001 /* FoodtruckVendor.debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = ../Config/FoodtruckVendor.debug.xcconfig; sourceTree = "<group>"; };
+		A1F5B7A9B4D548DFA10E1002 /* FoodtruckVendor.release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = ../Config/FoodtruckVendor.release.xcconfig; sourceTree = "<group>"; };
 		B7EED414BCE54D7BB62646AD /* BootSplash.storyboard */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = BootSplash.storyboard; path = FoodtruckVendor/BootSplash.storyboard; sourceTree = "<group>"; };
 		BD17FEC24DBFDB0A373EBE12 /* Pods-FoodtruckVendor.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FoodtruckVendor.debug.xcconfig"; path = "Target Support Files/Pods-FoodtruckVendor/Pods-FoodtruckVendor.debug.xcconfig"; sourceTree = "<group>"; };
 		C2BA5A4BE34D4A75ACE1D2F6 /* Inter-Light-BETA.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Light-BETA.otf"; path = "../src/assets/fonts/Inter-Light-BETA.otf"; sourceTree = "<group>"; };
@@ -398,9 +398,10 @@
 				CODE_SIGN_ENTITLEMENTS = FoodtruckVendor/FoodtruckVendor.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = 5G26GFF98P;
 				ENABLE_BITCODE = NO;
+				ENABLE_DEBUG_DYLIB = NO;
 				INFOPLIST_FILE = FoodtruckVendor/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -436,8 +437,9 @@
 				CODE_SIGN_ENTITLEMENTS = FoodtruckVendor/FoodtruckVendor.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = 5G26GFF98P;
+				ENABLE_DEBUG_DYLIB = NO;
 				INFOPLIST_FILE = FoodtruckVendor/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (

@@ -2,6 +2,13 @@ const fs = require("fs");
 const path = require("path");
 
 const envPath = path.resolve(__dirname, "..", ".env");
+const nativeTapToPayConfigPath = path.resolve(
+  __dirname,
+  "..",
+  "ios",
+  "FoodtruckVendor",
+  "TapToPay.local.xcconfig"
+);
 
 const envKeys = [
   "API_URL",
@@ -41,6 +48,30 @@ if (!lines.some((line) => line.startsWith("API_URL="))) {
 
 if (!lines.some((line) => line.startsWith("API_PREFIX="))) {
   lines.push("API_PREFIX=/api/v1");
+}
+
+const acceptanceDevicesMerchantId = process.env.CYBERSOURCE_TTP_MERCHANT_ID;
+const acceptanceDevicesSecret = process.env.CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET;
+
+if (Boolean(acceptanceDevicesMerchantId) !== Boolean(acceptanceDevicesSecret)) {
+  throw new Error(
+    "CYBERSOURCE_TTP_MERCHANT_ID and CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET must be supplied together."
+  );
+}
+
+if (acceptanceDevicesMerchantId && acceptanceDevicesSecret) {
+  fs.writeFileSync(
+    nativeTapToPayConfigPath,
+    [
+      "// Generated during the EAS build. Do not commit this file.",
+      `CYBERSOURCE_TTP_MERCHANT_ID = ${acceptanceDevicesMerchantId}`,
+      `CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET = ${acceptanceDevicesSecret}`,
+      "CYBERSOURCE_TTP_DEVICE_ID =",
+      "CYBERSOURCE_TTP_RESET_ENROLLMENT = NO",
+      "",
+    ].join("\n")
+  );
+  console.log("Wrote native Tap to Pay credential configuration.");
 }
 
 fs.writeFileSync(envPath, `${lines.join("\n")}\n`);

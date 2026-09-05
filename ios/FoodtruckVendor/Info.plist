@@ -69,6 +69,8 @@
     </dict>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>We need your location to show nearby places.</string>
+    <key>NSProximityReaderUsageDescription</key>
+    <string>Round Da' Corner uses Tap to Pay on iPhone to accept contactless payments from customers.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>This permission allows you to select photos from your photo library, such as updating your profile picture or for uploading images for your truck.</string>
     <key>UIAppFonts</key>
