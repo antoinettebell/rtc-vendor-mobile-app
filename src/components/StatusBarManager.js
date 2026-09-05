@@ -18,8 +18,10 @@ const StatusBarManager = ({
     useCallback(() => {
       StatusBar.setBarStyle(barStyle);
       if (Platform.OS === "android") {
-        StatusBar.setBackgroundColor(resolvedBackgroundColor);
-        StatusBar.setTranslucent(translucent);
+        // Android edge-to-edge on newer React Native versions no longer
+        // exposes these legacy imperative status-bar APIs.
+        StatusBar.setBackgroundColor?.(resolvedBackgroundColor);
+        StatusBar.setTranslucent?.(translucent);
       }
     }, [barStyle, resolvedBackgroundColor, translucent])
   );

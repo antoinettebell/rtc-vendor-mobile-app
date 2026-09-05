@@ -12,12 +12,12 @@ import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.ReadableMap
 import io.mpos.accessories.AccessoryFamily
 import io.mpos.accessories.parameters.AccessoryParameters
+import io.mpos.paybutton.ConfirmationScreenOption
 import io.mpos.paybutton.MposUi
+import io.mpos.paybutton.SerialNumberInputMethod
 import io.mpos.paybutton.TapToPhoneConfiguration
 import io.mpos.paybutton.UiConfiguration
 import io.mpos.provider.ProviderMode
-import io.mpos.taptophone.ConfirmationScreenOption
-import io.mpos.taptophone.SerialNumberInputMethod
 import io.mpos.transactions.Currency
 import io.mpos.transactions.parameters.TransactionParameters
 import java.math.BigDecimal
@@ -46,7 +46,7 @@ class RTCTapToPayModule(
       return
     }
 
-    val activity = currentActivity
+    val activity = reactApplicationContext.currentActivity
     if (activity == null) {
       promise.reject("E_TAP_TO_PAY_ACTIVITY", "Tap to Pay requires an active Android screen.")
       return
@@ -100,7 +100,7 @@ class RTCTapToPayModule(
   }
 
   override fun onActivityResult(
-    activity: Activity?,
+    activity: Activity,
     requestCode: Int,
     resultCode: Int,
     data: Intent?
@@ -126,7 +126,7 @@ class RTCTapToPayModule(
     pendingReference = null
   }
 
-  override fun onNewIntent(intent: Intent?) = Unit
+  override fun onNewIntent(intent: Intent) = Unit
 
   private fun requiredString(options: ReadableMap, key: String): String {
     val value = optionalString(options, key)
