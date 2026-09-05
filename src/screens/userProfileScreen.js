@@ -477,6 +477,14 @@ const UserProfileScreen = ({ navigation }) => {
 
                 <View style={styles.employeeProfileGrid}>
                   <View style={styles.employeeProfileRow}>
+                    <Text style={styles.employeeProfileLabel}>
+                      Tap to Pay Serial Number
+                    </Text>
+                    <Text style={styles.employeeProfileValue}>
+                      {employeeProfile.tap_to_pay_serial_number || "Not assigned"}
+                    </Text>
+                  </View>
+                  <View style={styles.employeeProfileRow}>
                     <Text style={styles.employeeProfileLabel}>Hourly Pay</Text>
                     <Text style={styles.employeeProfileValue}>
                       {formatEmployeeRate(employeeRate)}
