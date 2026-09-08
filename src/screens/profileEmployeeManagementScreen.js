@@ -21,6 +21,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 import { Dropdown } from "react-native-element-dropdown";
+import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import FiveMinuteWheelPicker from "../components/FiveMinuteWheelPicker";
 import StatusBarManager from "../components/StatusBarManager";
@@ -28,6 +29,7 @@ import StatePickerModal from "../components/StatePickerModal";
 import usePermission from "../hooks/usePermission";
 import { permission } from "../helpers/permission.helper";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
+import Config from "../config/runtimeConfig";
 import {
   archiveVendorEmployee_API,
   archiveVendorEmployeeShiftHistory_API,
@@ -64,6 +66,7 @@ const initialForm = {
   address_line1: "",
   address_city: "",
   address_state: "",
+  address_zip: "",
   employee_id_photo_url: "",
   employee_tax_identifier_type: "SSN",
   employee_tax_identifier: "",
@@ -154,6 +157,27 @@ const TAX_ID_OPTIONS = [
   { label: "SSN", value: "SSN" },
   { label: "EIN", value: "EIN" },
 ];
+const GOOGLE_MAP_API_KEY = Config.GOOGLE_MAP_API_KEY;
+
+const getAddressPart = (components, type, shortName = false) =>
+  components?.find((component) => component.types?.includes(type))?.[
+    shortName ? "short_name" : "long_name"
+  ] || "";
+
+const toEmployeeAddress = (details) => {
+  const components = details?.address_components || [];
+  const streetNumber = getAddressPart(components, "street_number");
+  const route = getAddressPart(components, "route");
+  return {
+    address_line1: [streetNumber, route].filter(Boolean).join(" ") || details?.formatted_address || "",
+    address_city:
+      getAddressPart(components, "locality") ||
+      getAddressPart(components, "postal_town") ||
+      getAddressPart(components, "sublocality_level_1"),
+    address_state: getAddressPart(components, "administrative_area_level_1", true),
+    address_zip: getAddressPart(components, "postal_code"),
+  };
+};
 
 const formatShiftDateTime = (value) => {
   if (!value) {
@@ -1194,12 +1218,39 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
             />
 
             <Text style={styles.label}>Address</Text>
-            <TextInput
-              value={form.address_line1}
-              onChangeText={(text) => setFormValue("address_line1", text)}
-              placeholder="Street address"
-              style={styles.input}
-            />
+            <View style={styles.addressAutocompleteWrap}>
+              <GooglePlacesAutocomplete
+                placeholder="Start typing the street address"
+                fetchDetails
+                enablePoweredByContainer={false}
+                minLength={2}
+                keyboardShouldPersistTaps="always"
+                query={{
+                  key: GOOGLE_MAP_API_KEY,
+                  language: "en",
+                  types: "address",
+                  components: "country:us",
+                }}
+                textInputProps={{
+                  value: form.address_line1,
+                  onChangeText: (text) => setFormValue("address_line1", text),
+                  placeholderTextColor: AppColor.textPlaceholder,
+                }}
+                onPress={(_, details) => {
+                  if (!details) {
+                    Alert.alert("Address unavailable", "Select an address suggestion with complete details.");
+                    return;
+                  }
+                  setForm((current) => ({ ...current, ...toEmployeeAddress(details) }));
+                }}
+                styles={{
+                  textInput: styles.input,
+                  listView: styles.addressSuggestions,
+                  row: styles.addressSuggestionRow,
+                  description: styles.addressSuggestionText,
+                }}
+              />
+            </View>
 
             <View style={styles.row}>
               <View style={styles.halfField}>
@@ -2489,6 +2540,25 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     minHeight: 48,
     textAlignVertical: "center",
+  },
+  addressAutocompleteWrap: {
+    elevation: 3,
+    position: "relative",
+    zIndex: 20,
+  },
+  addressSuggestions: {
+    backgroundColor: AppColor.white,
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    elevation: 4,
+    marginTop: 2,
+  },
+  addressSuggestionRow: { paddingVertical: 12 },
+  addressSuggestionText: {
+    color: AppColor.text,
+    fontFamily: Mulish400,
+    fontSize: 14,
   },
   readOnlyInput: {
     borderWidth: 1,
