@@ -267,7 +267,7 @@ const EmployeeShiftScreen = ({ navigation }) => {
 
         <View style={styles.panel}>
           <View style={styles.statusRow}>
-            <View>
+            <View style={styles.storeStatusCopy}>
               <Text style={styles.panelTitle}>Duty Status</Text>
               <Text style={styles.caption}>
                 Vendor managed schedule status
@@ -341,7 +341,7 @@ const EmployeeShiftScreen = ({ navigation }) => {
 
         <View style={styles.panel}>
           <View style={styles.toggleRow}>
-            <View>
+            <View style={styles.storeStatusCopy}>
               <Text style={styles.panelTitle}>Open/Close Store</Text>
               <Text style={styles.caption}>
                 {!hasShiftAssignment
@@ -510,6 +510,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  storeStatusCopy: {
+    flex: 1,
+    flexShrink: 1,
+    marginRight: 12,
   },
   statusRow: {
     alignItems: "center",

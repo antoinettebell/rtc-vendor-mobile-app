@@ -101,6 +101,8 @@ import {
   VENDOR_EMPLOYEE,
   VENDOR_EMPLOYEE_BY_ID,
   VENDOR_EMPLOYEE_SESSION_ACTION,
+  MANAGER_EMPLOYEES,
+  MANAGER_EMPLOYEE_SESSION_ACTION,
   VENDOR_EMPLOYEE_SHIFT_HISTORY,
   VENDOR_COMPLIANCE_DOCUMENTS,
   VENDOR_COMPLIANCE_FOOD_TRUCK,
@@ -1621,6 +1623,27 @@ export const vendorEmployeeShiftAction_API = async ({ employee_id, action, reaso
     throw error?.response?.data || error;
   }
 };
+
+export const getManagerEmployees_API = async () => {
+  try {
+    return (await apiClient.get(MANAGER_EMPLOYEES, { skipToken: false }))?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const managerEmployeeShiftAction_API = async ({ employee_id, action, reason = null }) => {
+  try {
+    return (await apiClient.post(
+      MANAGER_EMPLOYEE_SESSION_ACTION(employee_id),
+      { action, reason },
+      { skipToken: false },
+    ))?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
 
 export const getEmployeeDashboard_API = async () => {
   try {

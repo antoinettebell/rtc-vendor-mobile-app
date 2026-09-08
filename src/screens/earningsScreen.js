@@ -729,9 +729,12 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
               {overrideEmployee?.employee_name || "Employee"}
             </Text>
             <Text style={styles.modalMeta}>
-              Most recent clock-out:{" "}
-              {formatShiftDateTime(overrideEmployee?.shift?.ended_at) ||
-                "Not available"}
+              {overrideEmployee?.shift?.ended_at
+                ? `Most recent clock-out: ${
+                    formatShiftDateTime(overrideEmployee.shift.ended_at) ||
+                    "Not available"
+                  }`
+                : "No active shift is recorded for this scheduled employee."}
             </Text>
             <Text style={styles.modalLabel}>Override reason</Text>
             <TextInput
@@ -1235,12 +1238,6 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
 	                                </Text>
 	                              </View>
 	                            </View>
-                            <View style={styles.metaRow}>
-                              <Text style={styles.metaLabel}>Status</Text>
-                              <Text style={styles.metaValue}>
-                                {shiftStatusText}
-                              </Text>
-                            </View>
                             {canEndEmployeeShift || canReopenEmployeeShift ? (
                               <View style={styles.shiftControlRow}>
                                 <Pressable
@@ -1274,9 +1271,15 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
 	                                        : "End Shift"}
 	                                  </Text>
 	                                </Pressable>
-	                              </View>
-	                            ) : null}
-	                          </View>
+                              </View>
+                            ) : null}
+                            <View style={styles.metaRow}>
+                              <Text style={styles.metaLabel}>Status</Text>
+                              <Text style={styles.metaValue}>
+                                {shiftStatusText}
+                              </Text>
+                            </View>
+                          </View>
                         );
                       })
                     ) : (

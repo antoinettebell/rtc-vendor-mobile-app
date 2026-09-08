@@ -69,6 +69,9 @@ const initialForm = {
   employee_tax_identifier: "",
   employee_rate: "",
   pin: "",
+  is_manager: false,
+  manager_scope: "NONE",
+  manager_truck_unit_id: "",
 };
 
 const WEEK_DAYS = [
@@ -259,6 +262,20 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
     ];
   }, [foodTruck]);
 
+  const managerScopeOptions = useMemo(
+    () => [
+      { label: "None", value: "NONE" },
+      ...truckOptions
+        .filter((truck) => truck.value)
+        .map((truck) => ({
+          label: truck.label,
+          value: `TRUCK_UNIT:${truck.value}`,
+        })),
+      { label: "All food trucks", value: "ALL_TRUCKS" },
+    ],
+    [truckOptions]
+  );
+
   const loginPreview = getGeneratedLoginPreview(form);
 
   const getLocationLabel = (locationId) =>
@@ -284,6 +301,42 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 
   const setFormValue = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const setManagerEnabled = (enabled) => {
+    const defaultTruckId = truckOptions.find((truck) => truck.value)?.value || "";
+    setForm((prev) => ({
+      ...prev,
+      is_manager: enabled,
+      manager_scope: enabled ? (defaultTruckId ? "TRUCK_UNIT" : "ALL_TRUCKS") : "NONE",
+      manager_truck_unit_id: enabled && defaultTruckId ? defaultTruckId : "",
+    }));
+  };
+
+  const setManagerScope = (value) => {
+    if (value === "ALL_TRUCKS") {
+      setForm((prev) => ({
+        ...prev,
+        manager_scope: "ALL_TRUCKS",
+        manager_truck_unit_id: "",
+      }));
+      return;
+    }
+    if (value.startsWith("TRUCK_UNIT:")) {
+      setForm((prev) => ({
+        ...prev,
+        manager_scope: "TRUCK_UNIT",
+        manager_truck_unit_id: value.replace("TRUCK_UNIT:", ""),
+      }));
+    }
+  };
+
+  const getManagerScopeValue = (source) => {
+    if (!source?.is_manager && source?.role !== "MANAGER") return "NONE";
+    if (source.manager_scope === "ALL_TRUCKS") return "ALL_TRUCKS";
+    return source.manager_truck_unit_id
+      ? `TRUCK_UNIT:${source.manager_truck_unit_id}`
+      : "NONE";
   };
 
   const fetchEmployees = useCallback(async () => {
@@ -351,6 +404,15 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
       return false;
     }
 
+    if (
+      form.is_manager &&
+      form.manager_scope === "TRUCK_UNIT" &&
+      !form.manager_truck_unit_id
+    ) {
+      Alert.alert("Food truck required", "Select one food truck or All food trucks for this manager.");
+      return false;
+    }
+
     return true;
   };
 
@@ -362,6 +424,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
       const response = await createVendorEmployee_API({
         food_truck_id: foodTruck?._id,
         ...form,
+        role: form.is_manager ? "MANAGER" : "EMPLOYEE",
       });
       if (response?.success) {
         setForm(initialForm);
@@ -1191,6 +1254,54 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 	              </View>
 	            </View>
 
+            <View style={styles.managerAccessCard}>
+              <View style={styles.toggleRow}>
+                <View style={styles.managerAccessCopy}>
+                  <View style={styles.managerLabelRow}>
+                    <Text style={styles.toggleLabel}>Manager</Text>
+                    <IconButton
+                      icon="information-outline"
+                      size={18}
+                      iconColor={AppColor.subText}
+                      style={styles.infoButton}
+                      onPress={() =>
+                        Alert.alert(
+                          "Manager access",
+                          "Managers are assigned by food truck to only employees assigned to the same food truck. Choose all to allow a manager to see all employees across all food trucks."
+                        )
+                      }
+                    />
+                  </View>
+                  <Text style={styles.employeeMeta}>
+                    {form.is_manager ? "Additional management access enabled" : "Standard employee access"}
+                  </Text>
+                </View>
+                <Switch
+                  value={form.is_manager}
+                  onValueChange={setManagerEnabled}
+                  trackColor={{ false: AppColor.border, true: AppColor.primary }}
+                />
+              </View>
+              <Text style={styles.label}>Manager food truck</Text>
+              <Dropdown
+                data={managerScopeOptions}
+                labelField="label"
+                valueField="value"
+                value={getManagerScopeValue(form)}
+                onChange={(item) => setManagerScope(item.value)}
+                disable={!form.is_manager}
+                style={[styles.dropdown, !form.is_manager && styles.readOnlyInput]}
+                placeholderStyle={styles.dropdownText}
+                selectedTextStyle={styles.dropdownText}
+                itemTextStyle={styles.dropdownText}
+              />
+              <Text style={styles.helperText}>
+                {form.is_manager
+                  ? "Choose one food truck, or All food trucks."
+                  : "Turn on Manager to choose a management scope."}
+              </Text>
+            </View>
+
             <View style={styles.idUploadCard}>
               <View style={styles.idUploadCopy}>
                 <Text style={styles.toggleLabel}>Employee ID</Text>
@@ -1315,13 +1426,31 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
           employees.map((employee) => (
             <View key={employee._id} style={styles.employeeCard}>
               <View style={styles.employeeHeader}>
+                <View style={styles.employeeSummary}>
+                  <View style={styles.employeeNameRow}>
+                    <TouchableOpacity
+                      onPress={() => toggleEmployeeDetails(employee)}
+                      style={styles.employeeNameButton}
+                    >
+                      <Text style={styles.employeeName}>
+                        {employee.first_name} {employee.last_name}
+                      </Text>
+                    </TouchableOpacity>
+                    {isManageMode && activeTab === "current" ? (
+                      <TouchableOpacity
+                        onPress={() => setResetEmployeeId(employee._id)}
+                        style={styles.resetPinPill}
+                        accessibilityLabel={`Reset ${employee.first_name} ${employee.last_name} PIN`}
+                      >
+                        <Text style={styles.resetPinPillText}>Reset PIN</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+
 	                <TouchableOpacity
 	                  onPress={() => toggleEmployeeDetails(employee)}
-	                  style={styles.employeeSummary}
+	                  activeOpacity={0.7}
 	                >
-                  <Text style={styles.employeeName}>
-                    {employee.first_name} {employee.last_name}
-                  </Text>
 	                  <Text style={styles.employeeMeta}>
 	                    {employee.role} - {employee.zip_code}
 	                  </Text>
@@ -1352,10 +1481,11 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                       {formatEmployeeAddress(employee)}
                     </Text>
                   ) : null}
-                  <Text style={styles.employeeMeta}>
-                    Schedule cards: {employee.schedule_assignments?.length || (employee.weekly_schedule?.length ? 1 : 0)}
-                  </Text>
-                </TouchableOpacity>
+	                  <Text style={styles.employeeMeta}>
+	                    Schedule cards: {employee.schedule_assignments?.length || (employee.weekly_schedule?.length ? 1 : 0)}
+	                  </Text>
+                    </TouchableOpacity>
+                </View>
                 <View style={styles.employeeActions}>
                   {activeTab === "current" ? (
                     <IconButton
@@ -1408,6 +1538,36 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 	                  <Text style={styles.submenuTitle}>
 	                    Employee Profile {isEmployeeEditing(employee) ? "(Editing)" : ""}
 	                  </Text>
+	              {resetEmployeeId === employee._id ? (
+                <View style={styles.resetBox}>
+                  <Text style={styles.label}>New PIN</Text>
+                  <TextInput
+                    value={resetPin}
+                    onChangeText={(text) => setResetPin(normalizePin(text))}
+                    secureTextEntry
+                    keyboardType="number-pad"
+                    maxLength={4}
+                    style={styles.input}
+                  />
+                  <View style={styles.buttonRow}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setResetEmployeeId(null);
+                        setResetPin("");
+                      }}
+                      style={styles.secondaryButton}
+                    >
+                      <Text style={styles.secondaryButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => resetEmployeePin(employee)}
+                      style={styles.smallPrimaryButton}
+                    >
+                      <Text style={styles.primaryButtonText}>Save PIN</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+	              ) : null}
 	                  <View style={styles.row}>
                     <View style={styles.halfField}>
                       <Text style={styles.label}>First Name</Text>
@@ -1686,6 +1846,77 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 		                      </TouchableOpacity>
 		                    ) : null}
 	                  </View>
+
+                    <View style={styles.subsectionDivider} />
+                    <View style={styles.managerAccessCard}>
+                      <View style={styles.toggleRow}>
+                        <View style={styles.managerAccessCopy}>
+                          <View style={styles.managerLabelRow}>
+                            <Text style={styles.toggleLabel}>Manager</Text>
+                            <IconButton
+                              icon="information-outline"
+                              size={18}
+                              iconColor={AppColor.subText}
+                              style={styles.infoButton}
+                              onPress={() =>
+                                Alert.alert(
+                                  "Manager access",
+                                  "Managers are assigned by food truck to only employees assigned to the same food truck. Choose all to allow a manager to see all employees across all food trucks."
+                                )
+                              }
+                            />
+                          </View>
+                          <Text style={styles.employeeMeta}>
+                            {employee.role === "MANAGER" ? "Additional management access enabled" : "Standard employee access"}
+                          </Text>
+                        </View>
+                        <Switch
+                          value={employee.role === "MANAGER"}
+                          onValueChange={(enabled) => {
+                            const defaultTruckId = truckOptions.find((truck) => truck.value)?.value || "";
+                            updateEmployee(employee, enabled
+                              ? {
+                                  role: "MANAGER",
+                                  manager_scope: defaultTruckId ? "TRUCK_UNIT" : "ALL_TRUCKS",
+                                  manager_truck_unit_id: defaultTruckId || null,
+                                }
+                              : {
+                                  role: "EMPLOYEE",
+                                  manager_scope: "NONE",
+                                  manager_truck_unit_id: null,
+                                });
+                          }}
+                          trackColor={{ false: AppColor.border, true: AppColor.primary }}
+                        />
+                      </View>
+                      <Text style={styles.label}>Manager food truck</Text>
+                      <Dropdown
+                        data={managerScopeOptions}
+                        labelField="label"
+                        valueField="value"
+                        value={getManagerScopeValue(employee)}
+                        disable={employee.role !== "MANAGER"}
+                        onChange={(item) => {
+                          if (item.value === "ALL_TRUCKS") {
+                            updateEmployee(employee, {
+                              role: "MANAGER",
+                              manager_scope: "ALL_TRUCKS",
+                              manager_truck_unit_id: null,
+                            });
+                          } else if (item.value.startsWith("TRUCK_UNIT:")) {
+                            updateEmployee(employee, {
+                              role: "MANAGER",
+                              manager_scope: "TRUCK_UNIT",
+                              manager_truck_unit_id: item.value.replace("TRUCK_UNIT:", ""),
+                            });
+                          }
+                        }}
+                        style={[styles.dropdown, employee.role !== "MANAGER" && styles.readOnlyInput]}
+                        placeholderStyle={styles.dropdownText}
+                        selectedTextStyle={styles.dropdownText}
+                        itemTextStyle={styles.dropdownText}
+                      />
+                    </View>
                 </View>
               ) : null}
 
@@ -1854,46 +2085,6 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                     </View>
                   ) : null}
                 </View>
-              ) : null}
-
-	              {isManageMode &&
-                activeTab === "current" &&
-                resetEmployeeId === employee._id ? (
-                <View style={styles.resetBox}>
-                  <Text style={styles.label}>New PIN</Text>
-                  <TextInput
-                    value={resetPin}
-                    onChangeText={(text) => setResetPin(normalizePin(text))}
-                    secureTextEntry
-                    keyboardType="number-pad"
-                    maxLength={4}
-                    style={styles.input}
-                  />
-                  <View style={styles.buttonRow}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setResetEmployeeId(null);
-                        setResetPin("");
-                      }}
-                      style={styles.secondaryButton}
-                    >
-                      <Text style={styles.secondaryButtonText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => resetEmployeePin(employee)}
-                      style={styles.smallPrimaryButton}
-                    >
-                      <Text style={styles.primaryButtonText}>Save PIN</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-	              ) : isManageMode && activeTab === "current" ? (
-                <TouchableOpacity
-                  onPress={() => setResetEmployeeId(employee._id)}
-                  style={styles.secondaryButton}
-                >
-                  <Text style={styles.secondaryButtonText}>Reset PIN</Text>
-                </TouchableOpacity>
               ) : null}
 
 	              {isManageMode &&
@@ -2398,10 +2589,31 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   employeeSummary: { width: "100%" },
+  employeeNameRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 10,
+    justifyContent: "space-between",
+  },
+  employeeNameButton: { flex: 1, flexShrink: 1 },
   employeeName: {
     color: AppColor.text,
     fontFamily: Mulish700,
     fontSize: 16,
+  },
+  resetPinPill: {
+    alignItems: "center",
+    borderColor: AppColor.primary,
+    borderRadius: 16,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 32,
+    paddingHorizontal: 10,
+  },
+  resetPinPillText: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
+    fontSize: 12,
   },
   employeeMeta: {
     color: AppColor.textHighlighter,
@@ -2474,6 +2686,18 @@ const styles = StyleSheet.create({
     fontFamily: Mulish600,
     fontSize: 14,
   },
+  managerAccessCard: {
+    backgroundColor: "#F9FAFB",
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+  },
+  managerAccessCopy: { flex: 1, paddingRight: 8 },
+  managerLabelRow: { alignItems: "center", flexDirection: "row" },
+  infoButton: { margin: 0, marginLeft: 2 },
   secondaryButton: {
     minHeight: 44,
     borderRadius: 8,

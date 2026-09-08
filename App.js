@@ -75,6 +75,7 @@ import EmployeeOrderManagementScreen from "./src/screens/employeeOrderManagement
 import EmployeeRefundRequestsScreen from "./src/screens/employeeRefundRequestsScreen";
 import EmployeePosBoardScreen from "./src/screens/employeePosBoardScreen";
 import EmployeeShiftScreen from "./src/screens/employeeShiftScreen";
+import ManagerEmployeesScreen from "./src/screens/managerEmployeesScreen";
 import VendorMarketplaceScreen from "./src/screens/vendorMarketplaceScreen";
 import VendorMarketplaceNearMeScreen from "./src/screens/vendorMarketplaceNearMeScreen";
 import VendorMarketplaceEventDetailsScreen from "./src/screens/vendorMarketplaceEventDetailsScreen";
@@ -498,6 +499,53 @@ const EmployeeAppNavigator = () => (
   </Stack.Navigator>
 );
 
+const ManagerHomeNavigator = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="employeeSessionScreen" component={EmployeeSessionScreen} />
+    <Stack.Screen name="employeePosBoardScreen" component={EmployeePosBoardScreen} />
+    <Stack.Screen name="employeeOrderManagementScreen" component={EmployeeOrderManagementScreen} />
+    <Stack.Screen name="employeeRefundRequestsScreen" component={EmployeeRefundRequestsScreen} />
+    <Stack.Screen name="employeeShiftScreen" component={EmployeeShiftScreen} />
+    <Stack.Screen name="operationsScreen" component={OperationsScreen} />
+    <Stack.Screen name="operationalFormScreen" component={OperationalFormScreen} />
+    <Stack.Screen name="userProfileScreen" component={UserProfileScreen} />
+    <Stack.Screen name="vendorPosMenuScreen" component={VendorPosMenuScreen} />
+    <Stack.Screen name="vendorPosCheckoutScreen" component={VendorPosCheckoutScreen} />
+  </Stack.Navigator>
+);
+
+const ManagerAppNavigator = ({ insets }) => (
+  <BottomTab.Navigator
+    screenOptions={{
+      headerShown: false,
+      tabBarActiveTintColor: vendorTheme.navigation.active,
+      tabBarInactiveTintColor: vendorTheme.navigation.inactive,
+      tabBarStyle: { height: insets.bottom + 60 },
+    }}
+  >
+    <BottomTab.Screen
+      name="managerHome"
+      component={ManagerHomeNavigator}
+      options={{ tabBarLabel: "Home", tabBarIcon: ({ color, size }) => <MaterialIcons name="home" size={size || 24} color={color} /> }}
+    />
+    <BottomTab.Screen
+      name="employeeShiftScreen"
+      component={EmployeeShiftScreen}
+      options={{ tabBarLabel: "My Shift", tabBarIcon: ({ color, size }) => <MaterialIcons name="schedule" size={size || 24} color={color} /> }}
+    />
+    <BottomTab.Screen
+      name="userProfileScreen"
+      component={UserProfileScreen}
+      options={{ tabBarLabel: "My Profile", tabBarIcon: ({ color, size }) => <MaterialIcons name="person" size={size || 24} color={color} /> }}
+    />
+    <BottomTab.Screen
+      name="managerEmployeesScreen"
+      component={ManagerEmployeesScreen}
+      options={{ tabBarLabel: "Employees", tabBarIcon: ({ color, size }) => <MaterialIcons name="groups" size={size || 24} color={color} /> }}
+    />
+  </BottomTab.Navigator>
+);
+
 const configureNotification = async () => {
   await requestNotificationPermission();
   if (Platform.OS === "android") {
@@ -540,7 +588,11 @@ const App = () => {
       <GlobalSnackbar />
       {isSignedIn ? (
         isEmployeeSession ? (
-          <EmployeeAppNavigator />
+          currentUser?.role === "MANAGER" ? (
+            <ManagerAppNavigator insets={insets} />
+          ) : (
+            <EmployeeAppNavigator />
+          )
         ) : (
           <MainAppNavigator insets={insets} />
         )

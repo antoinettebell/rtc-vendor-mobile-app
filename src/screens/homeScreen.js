@@ -30,16 +30,20 @@ import {
   getMarketplaceNotificationSummary_API,
   getOrderList_API,
   getUserDetail_API,
+  removeFcmToken_API,
   updateLocationOrdering_API,
   updateFcmToken_API,
   updateOrderStatusByID_API,
 } from "../api/appAPI";
 import {
+  clearUserSlice,
   setBankStatus,
   setProfileStatus,
   setUser,
   updateFoodTruck,
 } from "../redux/slices/userSlice";
+import { onSignOut } from "../redux/slices/authSlice";
+import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlice";
 import LabeledSwitch from "../components/LabeledSwitch";
 import { useSharedValue } from "react-native-reanimated";
 import { Dropdown } from "react-native-element-dropdown";
@@ -65,6 +69,7 @@ import AppImage from "../components/AppImage";
 import {
   clearAvailabilityPrompt,
   clearCurrentNotificationOrder,
+  clearPushNotificationRedux,
 } from "../redux/slices/pushNotificationSlice";
 import { getWalkUpPosAccess } from "../helpers/vendorPaymentCapabilities.helper";
 import {
@@ -143,6 +148,33 @@ const HomeScreen = ({ navigation }) => {
   const { currentOrderId, orderQueue, availabilityPrompt } = useSelector(
     (state) => state.pushNotificationReducer,
   );
+
+  const completeSignOut = async () => {
+    try {
+      const deviceId = await checkInstallationId();
+      if (deviceId) {
+        await removeFcmToken_API(deviceId);
+      }
+    } catch (error) {
+      // Signing out must still clear this device if notification cleanup is unavailable.
+    } finally {
+      dispatch(clearUserSlice());
+      dispatch(clearFoodTruckProfileSlice());
+      dispatch(onSignOut());
+      dispatch(clearPushNotificationRedux());
+    }
+  };
+
+  const confirmSignOut = () => {
+    Alert.alert(
+      "Sign out?",
+      "You will need your vendor login to sign back in.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Sign out", style: "destructive", onPress: completeSignOut },
+      ]
+    );
+  };
   const pendingNotificationOrders = useMemo(
     () => [
       ...new Set(
@@ -981,24 +1013,39 @@ const HomeScreen = ({ navigation }) => {
             {user?.foodTruck?.name || ""}
           </Text>
         </View>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={styles.headerRightContainer}
-          onPress={openNotifications}
-        >
-          <MaterialCommunityIcons
-            name="bell-circle"
-            size={38}
-            color={AppColor.primary}
-          />
-          {notificationCount ? (
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>
-                {notificationCount > 99 ? "99+" : notificationCount}
-              </Text>
-            </View>
-          ) : null}
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.headerIconButton}
+            onPress={confirmSignOut}
+            accessibilityLabel="Sign out"
+          >
+            <MaterialCommunityIcons
+              name="logout-variant"
+              size={30}
+              color={AppColor.primary}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.headerIconButton}
+            onPress={openNotifications}
+            accessibilityLabel="Notifications"
+          >
+            <MaterialCommunityIcons
+              name="bell-circle"
+              size={38}
+              color={AppColor.primary}
+            />
+            {notificationCount ? (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {notificationCount > 99 ? "99+" : notificationCount}
+                </Text>
+              </View>
+            ) : null}
+          </TouchableOpacity>
+        </View>
         {false && (
           <TouchableOpacity
             activeOpacity={0.7}
@@ -1589,9 +1636,14 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
     color: AppColor.black,
   },
-  headerRightContainer: {
-    width: "10%",
+  headerActions: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 6,
+  },
+  headerIconButton: {
     alignItems: "flex-end",
+    minWidth: 34,
   },
   notificationBadge: {
     alignItems: "center",
