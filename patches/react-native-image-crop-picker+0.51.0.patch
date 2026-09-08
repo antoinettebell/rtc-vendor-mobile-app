@@ -1,0 +1,44 @@
+diff --git a/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.h b/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.h
+--- a/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.h
++++ b/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.h
+@@ -12,16 +12,10 @@
+ 
+ #if __has_include(<React/RCTBridgeModule.h>)
+ #import <React/RCTBridgeModule.h>
+-#import <React/RCTImageURLLoader.h>
+-#import <React/RCTImageShadowView.h>
+-#import <React/RCTImageView.h>
+-#import <React/RCTImageLoaderProtocol.h>
++#import <React/RCTConvert.h>
+ #else
+ #import "RCTBridgeModule.h"
+-#import "RCTImageURLLoader.h"
+-#import "RCTImageShadowView.h"
+-#import "RCTImageView.h"
+-#import "RCTImageLoaderProtocol.h"
++#import "RCTConvert.h"
+ #endif
+ 
+ #ifdef RCT_NEW_ARCH_ENABLED
+diff --git a/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.mm b/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.mm
+--- a/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.mm
++++ b/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.mm
+@@ -6,6 +6,7 @@
+ #import <MobileCoreServices/MobileCoreServices.h>
+ 
+ #import "ImageCropPicker.h"
++#import <React/RCTImageLoaderProtocol.h>
+ #ifdef RCT_NEW_ARCH_ENABLED
+ #import <RNCImageCropPickerSpec/RNCImageCropPickerSpec.h>
+ #endif
+@@ -375,7 +376,9 @@ RCT_EXPORT_METHOD(openCropper:(NSDictionary *)options
+     
+     NSString *path = [options objectForKey:@"path"];
+     
+-    [[self.bridge moduleForName:@"ImageLoader" lazilyLoadIfNecessary:YES] loadImageWithURLRequest:[RCTConvert NSURLRequest:path] callback:^(NSError *error, UIImage *image) {
++    id<RCTImageLoaderProtocol> imageLoader =
++        (id<RCTImageLoaderProtocol>)[self.bridge moduleForName:@"ImageLoader" lazilyLoadIfNecessary:YES];
++    [imageLoader loadImageWithURLRequest:[RCTConvert NSURLRequest:path] callback:^(NSError *error, UIImage *image) {
+         if (error) {
+             self.reject(ERROR_CROPPER_IMAGE_NOT_FOUND_KEY, ERROR_CROPPER_IMAGE_NOT_FOUND_MSG, nil);
+         } else {
