@@ -50,6 +50,7 @@ import {
   cancelScheduleEdit,
   isScheduleControlEnabled,
 } from "../helpers/employeeScheduleEdit.helper";
+import { findScheduleOverlap } from "../helpers/employeeScheduleOverlap.helper";
 import {
   formatShiftEditDate,
   formatShiftEditTime,
@@ -995,13 +996,13 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
       Alert.alert("Workday required", "Check at least one workday before saving the employee schedule.");
       return;
     }
-    if (new Set(enabledRows.map((row) => row.day)).size !== enabledRows.length) {
-      Alert.alert("Duplicate workday", "Assign each day to only one food truck and location.");
-      return;
-    }
     const invalid = enabledRows.find((row) => !/^([01]\d|2[0-3]):[0-5]\d$/.test(row.clock_in) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(row.clock_out));
     if (invalid) {
       Alert.alert("Valid times required", "Enter scheduled times as HH:MM, such as 09:00 or 17:30.");
+      return;
+    }
+    if (findScheduleOverlap(assignments)) {
+      Alert.alert("Overlapping shifts", "An employee can work multiple food trucks in one day, but their scheduled shifts cannot overlap.");
       return;
     }
     const saved = await updateEmployee(employee, { schedule_assignments: assignments, is_working: false });

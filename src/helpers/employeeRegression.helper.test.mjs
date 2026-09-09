@@ -21,6 +21,9 @@ const {
   cancelScheduleEdit,
   isScheduleControlEnabled,
 } = await loadHelper("./employeeScheduleEdit.helper.js");
+const { findScheduleOverlap } = await loadHelper(
+  "./employeeScheduleOverlap.helper.js",
+);
 const sessionScreenSource = await readFile(
   new URL("../screens/employeeSessionScreen.js", import.meta.url),
   "utf8",
@@ -188,6 +191,21 @@ assert.match(
   employeeManagementSource,
   /schedule_assignments: assignments, is_working: false/,
   "Save preserves active-shift termination enforcement",
+);
+assert.equal(
+  findScheduleOverlap([
+    { days: [{ day: "tue", enabled: true, clock_in: "09:00", clock_out: "13:00" }] },
+    { days: [{ day: "tue", enabled: true, clock_in: "13:00", clock_out: "17:00" }] },
+  ]),
+  null,
+  "back-to-back assignments across food trucks are allowed",
+);
+assert.ok(
+  findScheduleOverlap([
+    { days: [{ day: "tue", enabled: true, clock_in: "09:00", clock_out: "13:00" }] },
+    { days: [{ day: "tue", enabled: true, clock_in: "12:30", clock_out: "17:00" }] },
+  ]),
+  "overlapping assignments are rejected",
 );
 
 console.log("employee regression helper tests passed");
