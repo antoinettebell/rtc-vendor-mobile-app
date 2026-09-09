@@ -95,10 +95,11 @@ const EmployeeShiftScreen = ({ navigation }) => {
   const hasShiftAssignment = !!assignedLocation?._id && !!assignedTruckUnit?._id;
 
   const handleBack = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "employeeSessionScreen" }],
-    });
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate("employeeSessionScreen");
   };
 
   const loadDashboard = useCallback(async () => {

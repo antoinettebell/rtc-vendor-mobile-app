@@ -242,6 +242,7 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
   const [shiftHistoryByEmployee, setShiftHistoryByEmployee] = useState({});
   const [shiftHistoryLoadingId, setShiftHistoryLoadingId] = useState(null);
   const [shiftHistoryExpanded, setShiftHistoryExpanded] = useState({});
+  const [selectedShiftHistoryIds, setSelectedShiftHistoryIds] = useState({});
   const [editingShiftId, setEditingShiftId] = useState(null);
   const [shiftEditDraft, setShiftEditDraft] = useState(null);
   const [shiftPickerTarget, setShiftPickerTarget] = useState(null);
@@ -599,6 +600,10 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
         ...current,
         [employee._id]: response?.data?.sessions || [],
       }));
+      setSelectedShiftHistoryIds((current) => ({
+        ...current,
+        [employee._id]: [],
+      }));
     } catch (error) {
       Alert.alert(
         "Shift history unavailable",
@@ -686,30 +691,31 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
     setShiftPickerTarget(null);
   };
 
+  const toggleShiftHistorySelection = (employeeId, sessionId) => {
+    setSelectedShiftHistoryIds((current) => {
+      const selected = current[employeeId] || [];
+      return {
+        ...current,
+        [employeeId]: selected.includes(sessionId)
+          ? selected.filter((id) => id !== sessionId)
+          : [...selected, sessionId],
+      };
+    });
+  };
+
   const archiveShiftHistory = async (employee) => {
-    let weeklySessions = [];
-    try {
-      const response = await getVendorEmployeeShiftHistory_API({
-        employee_id: employee._id,
-        range: "week",
-      });
-      weeklySessions = response?.data?.sessions || [];
-    } catch (error) {
-      Alert.alert("Shift history unavailable", error?.message || "Please try again.");
+    const sessionIds = selectedShiftHistoryIds[employee._id] || [];
+    if (!sessionIds.length) {
+      Alert.alert("Select timecards", "Select one or more completed timecards to archive.");
       return;
     }
-    if (employee.has_open_shift || weeklySessions.some((session) => session.is_active)) {
+    if (employee.has_open_shift) {
       Alert.alert("Open shift", "End this employee's open shift before archiving shift history.");
       return;
     }
-    const sessions = weeklySessions.filter((session) => !session.is_active && session.ended_at);
-    if (!sessions.length) {
-      Alert.alert("Nothing to archive", "Only completed timecards can be archived.");
-      return;
-    }
     Alert.alert(
-      "Archive Shift History?",
-      "Are you ready to roll this employee's completed timecards into history for next week? They will remain stored for reporting but cannot be edited afterward.",
+      "Archive selected timecards?",
+      `${sessionIds.length} completed timecard${sessionIds.length === 1 ? "" : "s"} will move to history. They remain available for reporting, but only support can correct them afterward.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -719,8 +725,9 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
             try {
               await archiveVendorEmployeeShiftHistory_API({
                 employee_id: employee._id,
-                session_ids: sessions.map((session) => session.employee_session_id),
+                session_ids: sessionIds,
               });
+              setSelectedShiftHistoryIds((current) => ({ ...current, [employee._id]: [] }));
               await loadShiftHistory(employee);
             } catch (error) {
               Alert.alert("Archive failed", error?.message || "Please try again.");
@@ -2200,20 +2207,37 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                   {shiftHistoryExpanded[employee._id] && shiftHistoryLoadingId === employee._id ? (
                     <ActivityIndicator color={AppColor.primary} style={{ marginTop: 12 }} />
                   ) : shiftHistoryExpanded[employee._id] && (shiftHistoryByEmployee[employee._id] || []).length ? (
-                    (shiftHistoryByEmployee[employee._id] || []).map((session) => (
+                    (shiftHistoryByEmployee[employee._id] || []).map((session) => {
+                      const sessionId = session.employee_session_id || session._id;
+                      const canArchiveSession = !session.is_active && !!session.ended_at && !session.is_archived;
+                      const isSelectedForArchive = (selectedShiftHistoryIds[employee._id] || []).includes(sessionId);
+                      return (
                       <View
-                        key={session.employee_session_id || session._id}
+                        key={sessionId}
                         style={styles.shiftHistoryItem}
                       >
                         <View style={styles.timecardTitleRow}>
                           <Text style={styles.shiftHistoryValue}>
                             {formatOperationalDay(session.operational_day_key)}
                           </Text>
-                          {!session.is_active ? (
-                            <TouchableOpacity onPress={() => beginShiftEdit(session)}>
-                              <IconButton icon="pencil" size={18} />
-                            </TouchableOpacity>
-                          ) : null}
+                          <View style={styles.timecardActions}>
+                            {canArchiveSession ? (
+                              <TouchableOpacity
+                                style={styles.timecardSelectButton}
+                                onPress={() => toggleShiftHistorySelection(employee._id, sessionId)}
+                              >
+                                <View style={[styles.timecardCheckbox, isSelectedForArchive && styles.timecardCheckboxChecked]}>
+                                  {isSelectedForArchive ? <Text style={styles.timecardCheckboxMark}>✓</Text> : null}
+                                </View>
+                                <Text style={styles.timecardSelectText}>Archive</Text>
+                              </TouchableOpacity>
+                            ) : null}
+                            {!session.is_active ? (
+                              <TouchableOpacity onPress={() => beginShiftEdit(session)}>
+                                <IconButton icon="pencil" size={18} />
+                              </TouchableOpacity>
+                            ) : null}
+                          </View>
                         </View>
                         {editingShiftId === session.employee_session_id ? (
                           <View style={styles.timecardEditor}>
@@ -2312,7 +2336,8 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                         </View>
                         </>}
                       </View>
-                    ))
+                    );
+                    })
                   ) : shiftHistoryExpanded[employee._id] ? (
                     <Text style={styles.emptyHistoryText}>
                       No shift history for this {shiftHistoryRange}.
@@ -2320,10 +2345,15 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                   ) : null}
                   {shiftHistoryExpanded[employee._id] && (shiftHistoryByEmployee[employee._id] || []).length ? (
                     <TouchableOpacity
-                      style={styles.archiveHistoryButton}
+                      style={[
+                        styles.archiveHistoryButton,
+                        !(selectedShiftHistoryIds[employee._id] || []).length && styles.disabledButton,
+                      ]}
                       onPress={() => archiveShiftHistory(employee)}
                     >
-                      <Text style={styles.archiveHistoryButtonText}>Archive Shift History</Text>
+                      <Text style={styles.archiveHistoryButtonText}>
+                        Archive Selected ({(selectedShiftHistoryIds[employee._id] || []).length})
+                      </Text>
                     </TouchableOpacity>
                   ) : null}
                 </View>
@@ -2982,6 +3012,39 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  timecardActions: {
+    alignItems: "center",
+    flexDirection: "row",
+  },
+  timecardSelectButton: {
+    alignItems: "center",
+    flexDirection: "row",
+    marginRight: 2,
+    paddingVertical: 4,
+  },
+  timecardCheckbox: {
+    alignItems: "center",
+    borderColor: AppColor.primary,
+    borderRadius: 3,
+    borderWidth: 1,
+    height: 18,
+    justifyContent: "center",
+    marginRight: 5,
+    width: 18,
+  },
+  timecardCheckboxChecked: {
+    backgroundColor: AppColor.primary,
+  },
+  timecardCheckboxMark: {
+    color: AppColor.white,
+    fontFamily: Mulish700,
+    fontSize: 12,
+  },
+  timecardSelectText: {
+    color: AppColor.primary,
+    fontFamily: Mulish600,
+    fontSize: 12,
   },
   timecardEditor: {
     borderTopColor: AppColor.border,

@@ -1909,7 +1909,8 @@ const styles = StyleSheet.create({
     borderColor: AppColor.primary,
   },
   shiftEndButton: {
-    borderColor: "#FF7A7A",
+    backgroundColor: AppColor.red,
+    borderColor: AppColor.red,
   },
   shiftControlDisabled: {
     opacity: 0.5,
@@ -1920,7 +1921,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   shiftEndButtonText: {
-    color: "#FF7A7A",
+    color: AppColor.white,
+    fontFamily: Mulish700,
   },
   manageButton: {
     alignItems: "center",

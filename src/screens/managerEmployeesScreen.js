@@ -30,7 +30,12 @@ const ManagerEmployeesScreen = () => {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const runAction = (employee, action) => {
-    const actionLabel = action === "END" ? "Clock Out" : "Override Clock-In";
+    const actionLabel = {
+      END: "Clock Out",
+      OVERRIDE_START: "Override Clock-In",
+      PAUSE: "Start Break",
+      RESUME: "Resume Shift",
+    }[action] || "Update Shift";
     const submit = async () => {
       setActingEmployeeId(employee._id);
       try {
@@ -50,7 +55,11 @@ const ManagerEmployeesScreen = () => {
       actionLabel,
       action === "END"
         ? `End ${employee.first_name} ${employee.last_name}'s active shift?`
-        : `Clock in ${employee.first_name} ${employee.last_name}? This override is recorded for the vendor.`,
+        : action === "PAUSE"
+          ? `Start a break for ${employee.first_name} ${employee.last_name}?`
+          : action === "RESUME"
+            ? `Resume ${employee.first_name} ${employee.last_name}'s shift?`
+            : `Clock in ${employee.first_name} ${employee.last_name}? This override is recorded for the vendor.`,
       [
         { text: "Cancel", style: "cancel" },
         { text: actionLabel, style: action === "END" ? "destructive" : "default", onPress: submit },
@@ -72,6 +81,8 @@ const ManagerEmployeesScreen = () => {
         >
           {employees.length ? employees.map((employee) => {
             const active = !!employee.has_open_shift;
+            const shiftStatus = employee?.shift?.shift_status;
+            const breakCount = Number(employee?.shift?.break_count || 0);
             const actionAvailable = active || !!employee.shift_summary?.can_override_clock_in;
             return (
               <View key={employee._id} style={styles.card}>
@@ -79,15 +90,39 @@ const ManagerEmployeesScreen = () => {
                 <Text style={styles.meta}>{employee.assigned_truck_unit_name || "Assigned food truck"}</Text>
                 <Text style={styles.status}>Status: {formatStatus(employee)}</Text>
                 {actionAvailable ? (
-                  <TouchableOpacity
-                    disabled={actingEmployeeId === employee._id}
-                    style={[styles.actionButton, active ? styles.clockOutButton : styles.clockInButton]}
-                    onPress={() => runAction(employee, active ? "END" : "OVERRIDE_START")}
-                  >
-                    <Text style={styles.actionText}>
-                      {actingEmployeeId === employee._id ? "Saving..." : active ? "Clock Out" : "Override Clock-In"}
-                    </Text>
-                  </TouchableOpacity>
+                  <View style={styles.actionStack}>
+                    {active && shiftStatus !== "ON_BREAK" && breakCount < 2 ? (
+                      <TouchableOpacity
+                        disabled={actingEmployeeId === employee._id}
+                        style={[styles.actionButton, styles.breakButton]}
+                        onPress={() => runAction(employee, "PAUSE")}
+                      >
+                        <Text style={styles.actionText}>
+                          {actingEmployeeId === employee._id ? "Saving..." : `Start Break ${breakCount + 1}`}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+                    {active && shiftStatus === "ON_BREAK" ? (
+                      <TouchableOpacity
+                        disabled={actingEmployeeId === employee._id}
+                        style={[styles.actionButton, styles.clockInButton]}
+                        onPress={() => runAction(employee, "RESUME")}
+                      >
+                        <Text style={styles.actionText}>
+                          {actingEmployeeId === employee._id ? "Saving..." : "Resume Shift"}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+                    <TouchableOpacity
+                      disabled={actingEmployeeId === employee._id}
+                      style={[styles.actionButton, active ? styles.clockOutButton : styles.clockInButton]}
+                      onPress={() => runAction(employee, active ? "END" : "OVERRIDE_START")}
+                    >
+                      <Text style={styles.actionText}>
+                        {actingEmployeeId === employee._id ? "Saving..." : active ? "Clock Out" : "Override Clock-In"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 ) : null}
               </View>
             );
@@ -112,8 +147,10 @@ const styles = StyleSheet.create({
   meta: { color: AppColor.subText, fontFamily: Mulish400, fontSize: 14, marginTop: 4 },
   status: { color: AppColor.text, fontFamily: Mulish600, fontSize: 14, marginTop: 12 },
   actionButton: { alignItems: "center", borderRadius: 8, marginTop: 14, minHeight: 44, justifyContent: "center" },
+  actionStack: { gap: 0 },
   clockInButton: { backgroundColor: AppColor.primary },
   clockOutButton: { backgroundColor: AppColor.red },
+  breakButton: { backgroundColor: "#9A6700" },
   actionText: { color: AppColor.white, fontFamily: Mulish700, fontSize: 14 },
   empty: { color: AppColor.subText, fontFamily: Mulish400, fontSize: 15, paddingTop: 28, textAlign: "center" },
 });
