@@ -324,9 +324,50 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 	      employee_tax_identifier: "",
 	    });
 
-  const setFormValue = (key, value) => {
+  const setFormValue = useCallback((key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
-  };
+  }, []);
+
+  const addressAutocompleteQuery = useMemo(
+    () => ({
+      key: GOOGLE_MAP_API_KEY,
+      language: "en",
+      types: "address",
+      components: "country:us",
+    }),
+    [],
+  );
+  const handleEmployeeAddressChange = useCallback(
+    (text) => setFormValue("address_line1", text),
+    [setFormValue],
+  );
+  const addressAutocompleteTextInputProps = useMemo(
+    () => ({
+      value: form.address_line1,
+      onChangeText: handleEmployeeAddressChange,
+      placeholderTextColor: AppColor.textPlaceholder,
+    }),
+    [form.address_line1, handleEmployeeAddressChange],
+  );
+  const handleEmployeeAddressSelect = useCallback((_, details) => {
+    if (!details) {
+      Alert.alert(
+        "Address unavailable",
+        "Select an address suggestion with complete details.",
+      );
+      return;
+    }
+    setForm((current) => ({ ...current, ...toEmployeeAddress(details) }));
+  }, []);
+  const addressAutocompleteStyles = useMemo(
+    () => ({
+      textInput: styles.input,
+      listView: styles.addressSuggestions,
+      row: styles.addressSuggestionRow,
+      description: styles.addressSuggestionText,
+    }),
+    [],
+  );
 
   const setManagerEnabled = (enabled) => {
     const defaultTruckId = truckOptions.find((truck) => truck.value)?.value || "";
@@ -446,10 +487,11 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 
     setSaving(true);
     try {
+      const { is_manager, ...employeePayload } = form;
       const response = await createVendorEmployee_API({
         food_truck_id: foodTruck?._id,
-        ...form,
-        role: form.is_manager ? "MANAGER" : "EMPLOYEE",
+        ...employeePayload,
+        role: is_manager ? "MANAGER" : "EMPLOYEE",
       });
       if (response?.success) {
         setForm(initialForm);
@@ -1096,10 +1138,6 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
     );
   };
 
-  useEffect(() => {
-    fetchEmployees();
-  }, [fetchEmployees]);
-
   useFocusEffect(
     useCallback(() => {
       fetchEmployees();
@@ -1226,30 +1264,10 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
                 enablePoweredByContainer={false}
                 minLength={2}
                 keyboardShouldPersistTaps="always"
-                query={{
-                  key: GOOGLE_MAP_API_KEY,
-                  language: "en",
-                  types: "address",
-                  components: "country:us",
-                }}
-                textInputProps={{
-                  value: form.address_line1,
-                  onChangeText: (text) => setFormValue("address_line1", text),
-                  placeholderTextColor: AppColor.textPlaceholder,
-                }}
-                onPress={(_, details) => {
-                  if (!details) {
-                    Alert.alert("Address unavailable", "Select an address suggestion with complete details.");
-                    return;
-                  }
-                  setForm((current) => ({ ...current, ...toEmployeeAddress(details) }));
-                }}
-                styles={{
-                  textInput: styles.input,
-                  listView: styles.addressSuggestions,
-                  row: styles.addressSuggestionRow,
-                  description: styles.addressSuggestionText,
-                }}
+                query={addressAutocompleteQuery}
+                textInputProps={addressAutocompleteTextInputProps}
+                onPress={handleEmployeeAddressSelect}
+                styles={addressAutocompleteStyles}
               />
             </View>
 
