@@ -518,9 +518,19 @@ const ManagerAppNavigator = ({ insets }) => (
   <BottomTab.Navigator
     screenOptions={{
       headerShown: false,
+      tabBarHideOnKeyboard: true,
       tabBarActiveTintColor: vendorTheme.navigation.active,
       tabBarInactiveTintColor: vendorTheme.navigation.inactive,
-      tabBarStyle: { height: insets.bottom + 60 },
+      tabBarStyle: {
+        height: insets.bottom + 60,
+        backgroundColor: vendorTheme.navigation.background,
+        borderTopColor: vendorTheme.background.secondary,
+      },
+      tabBarLabelStyle: {
+        fontSize: 12,
+        fontWeight: "500",
+        bottom: Dimensions.get("window").width > 768 ? 0 : 5,
+      },
     }}
   >
     <BottomTab.Screen
