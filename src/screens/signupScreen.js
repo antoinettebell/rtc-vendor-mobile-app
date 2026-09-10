@@ -8,6 +8,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
 import {
   TextInput,
@@ -45,6 +46,9 @@ import {
 const SMS_CONSENT_MESSAGE =
   "I agree to receive automated transactional text messages from Round the Corner, including order confirmations, ready-for-pickup alerts, delivery updates, account updates, and order completion notices at the mobile number provided. Consent is not a condition of purchase. Message and data rates may apply. Message frequency varies. Reply HELP for help and STOP to cancel. View our ";
 
+const OFF_GRID_INFO =
+  "Underground of Wisdom Lane is a nonprofit community-resilience network connecting customers, vendors, skills, and local resources by ZIP code. Members check in monthly and may choose to support one another during emergencies or major service disruptions—with food, practical help, trusted information, and resources offered at reduced rates when possible. Participation is optional, and support availability is never guaranteed.\n\nExample: During a shutdown or major disruption, participating food vendors may continue serving their communities and offer meals at reduced rates when possible.";
+
 const SignUpScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
 
@@ -77,6 +81,7 @@ const SignUpScreen = ({ navigation }) => {
   const [countryPickerType, setCountryPickerType] = useState(null);
   const [agreed, setAgreed] = useState(true);
   const [agreedToMessages, setAgreedToMessages] = useState(false);
+  const [offGrid, setOffGrid] = useState(false);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({
     visible: false,
@@ -272,6 +277,7 @@ const SignUpScreen = ({ navigation }) => {
       addressState: mailingState,
       addressCountry: mailingCountry,
       addressPostal: mailingPostalCode,
+      subscribedForOffGrid: offGrid,
     };
 
     if (mailingAddressLine2.trim().length > 0) {
@@ -929,6 +935,40 @@ const SignUpScreen = ({ navigation }) => {
                 onBackdropPress={() => setCountryPickerVisible(false)}
               />
 
+              <View style={[styles.termsContainer, styles.offGridConsentContainer]}>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => setOffGrid((currentValue) => !currentValue)}
+                  style={styles.iconBox}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: offGrid }}
+                  accessibilityLabel="Join Underground of Wisdom Lane"
+                >
+                  <Ionicons
+                    name={offGrid ? "checkbox" : "square-outline"}
+                    size={22}
+                    color={AppColor.primary}
+                  />
+                </TouchableOpacity>
+                <Text style={styles.termsText}>
+                  {"Join Underground of Wisdom Lane, an off-grid community resilience network."}
+                </Text>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => Alert.alert("Underground of Wisdom Lane", OFF_GRID_INFO)}
+                  style={styles.offGridInfoButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Learn about Underground of Wisdom Lane"
+                >
+                  <Ionicons
+                    name="information-circle-outline"
+                    size={22}
+                    color={AppColor.primary}
+                  />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.offGridOptionalText}>{"Optional"}</Text>
+
               {/* T&C */}
               <View style={styles.termsContainer}>
                 <TouchableOpacity
@@ -1157,6 +1197,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: AppColor.text,
     fontFamily: Mulish400,
+  },
+  offGridConsentContainer: {
+    alignItems: "flex-start",
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 12,
+    padding: 12,
+  },
+  offGridInfoButton: {
+    marginLeft: 6,
+    padding: 2,
+  },
+  offGridOptionalText: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 12,
+    marginLeft: 12,
+    marginTop: 2,
   },
   smsConsentTitle: {
     color: AppColor.text,
