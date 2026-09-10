@@ -45,11 +45,6 @@ import {
   setSelectedCuisine,
   setSelectedLocations,
 } from "../redux/slices/foodTruckProfileSlice";
-import {
-  checkFcmToken,
-  checkInstallationId,
-} from "../helpers/notification.helper";
-import { setFcmToken_API } from "../api/appAPI";
 import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
 import { restoreSavedEmployeeLogin } from "../helpers/savedEmployeeLogin.helper";
 import {
@@ -236,22 +231,6 @@ const SignInScreen = ({ navigation, route }) => {
             );
             dispatch(onSignin(true));
             
-            // set FCM Token & DeviceId after 1.5 sec
-            setTimeout(async () => {
-              try {
-                const deviceId = await checkInstallationId();
-                const fcmToken = await checkFcmToken();
-                if (deviceId && fcmToken) {
-                  const response1 = await setFcmToken_API({
-                    token: fcmToken,
-                    deviceId: deviceId,
-                  });
-                  console.log("response => ", response1);
-                }
-              } catch (error) {
-                console.log("error => ", error);
-              }
-            }, 1500);
           } else {
             dispatch(onOnBoard(true));
             const effectivePlan = getEffectiveFoodVendorPlan({ user: response?.data?.user });

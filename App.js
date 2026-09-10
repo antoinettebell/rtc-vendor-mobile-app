@@ -16,8 +16,11 @@ import { AppColor, vendorTheme } from "./src/utils/theme";
 import GlobalSnackbar from "./src/components/GlobalSnackbar";
 import {
   createAndroidChannel,
+  checkFcmToken,
+  checkInstallationId,
   requestNotificationPermission,
 } from "./src/helpers/notification.helper";
+import { setFcmToken_API } from "./src/api/appAPI";
 import { clearCurrentNotificationOrder } from "./src/redux/slices/pushNotificationSlice";
 import { navigationRef } from "./src/helpers/navigation.helper";
 import { permission } from "./src/helpers/permission.helper";
@@ -592,6 +595,38 @@ const App = () => {
     );
     BootSplash.hide({ fade: true });
   }, []);
+
+  useEffect(() => {
+    if (!isSignedIn || !currentUser?._id) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const registerPushToken = async () => {
+      const permissionGranted = await requestNotificationPermission();
+      if (!permissionGranted) {
+        return;
+      }
+
+      const [deviceId, token] = await Promise.all([
+        checkInstallationId(),
+        checkFcmToken(),
+      ]);
+
+      if (!cancelled && deviceId && token) {
+        await setFcmToken_API({ deviceId, token });
+      }
+    };
+
+    registerPushToken().catch(() => {
+      console.warn("Push notification registration failed.");
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isSignedIn, currentUser?._id]);
 
   return (
     <NavigationContainer theme={DefaultTheme} ref={navigationRef}>

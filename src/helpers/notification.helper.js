@@ -20,22 +20,18 @@ const messagingInstance = getMessaging();
 
 export const checkInstallationId = async () => {
   try {
-    const id = await getId(installationsInstance);
-    console.log("Current Installation ID:", id);
-    return id;
+    return await getId(installationsInstance);
   } catch (error) {
-    console.log("Current Installation ID Check Error:", error);
+    console.log("Installation ID check failed.");
     return false;
   }
 };
 
 export const checkFcmToken = async () => {
   try {
-    const token = await getToken(messagingInstance);
-    console.log("Current FCM Token:", token);
-    return token;
+    return await getToken(messagingInstance);
   } catch (error) {
-    console.log("Current FCM Token Check Error:", error);
+    console.log("FCM token check failed.");
     return false;
   }
 };
@@ -43,7 +39,7 @@ export const checkFcmToken = async () => {
 export const requestNotificationPermission = async () => {
   try {
     if (Platform.OS === "android" && Platform.Version >= 33) {
-      const granted = PermissionsAndroid.request(
+      const granted = await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
       );
       return granted === PermissionsAndroid.RESULTS.GRANTED;
