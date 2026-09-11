@@ -3,6 +3,8 @@ import { getInstallations, getId } from "@react-native-firebase/installations";
 import {
   getMessaging,
   getToken,
+  isDeviceRegisteredForRemoteMessages,
+  registerDeviceForRemoteMessages,
   requestPermission,
   AuthorizationStatus,
 } from "@react-native-firebase/messaging";
@@ -29,9 +31,16 @@ export const checkInstallationId = async () => {
 
 export const checkFcmToken = async () => {
   try {
+    if (
+      Platform.OS === "ios" &&
+      !isDeviceRegisteredForRemoteMessages(messagingInstance)
+    ) {
+      await registerDeviceForRemoteMessages(messagingInstance);
+    }
+
     return await getToken(messagingInstance);
   } catch (error) {
-    console.log("FCM token check failed.");
+    console.log("FCM token check failed:", error?.code || "unknown error");
     return false;
   }
 };
