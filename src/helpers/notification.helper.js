@@ -2,6 +2,7 @@ import { PermissionsAndroid, Platform } from "react-native";
 import { getInstallations, getId } from "@react-native-firebase/installations";
 import {
   getMessaging,
+  getAPNSToken,
   getToken,
   isDeviceRegisteredForRemoteMessages,
   registerDeviceForRemoteMessages,
@@ -38,9 +39,21 @@ export const checkFcmToken = async () => {
       await registerDeviceForRemoteMessages(messagingInstance);
     }
 
+    if (Platform.OS === "ios") {
+      const apnsToken = await getAPNSToken(messagingInstance);
+      if (!apnsToken) {
+        console.log("FCM token unavailable: APNs device token is not ready.");
+        return false;
+      }
+    }
+
     return await getToken(messagingInstance);
   } catch (error) {
-    console.log("FCM token check failed:", error?.code || "unknown error");
+    console.log(
+      "FCM token check failed:",
+      error?.code || "unknown error",
+      error?.message || "",
+    );
     return false;
   }
 };

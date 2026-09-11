@@ -34,7 +34,6 @@ apiClient.interceptors.request.use(
       config.headers["Content-Type"] = "multipart/form-data";
     }
 
-    console.log("Config ===> ", config);
     return config;
   },
   function (error) {
