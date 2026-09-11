@@ -609,14 +609,29 @@ const App = () => {
         return;
       }
 
-      const [deviceId, token] = await Promise.all([
-        checkInstallationId(),
-        checkFcmToken(),
-      ]);
+      // iOS can receive the APNs registration shortly after the app session is
+      // restored. Retry briefly so a fast sign-in does not skip token upload.
+      for (let attempt = 0; attempt < 3 && !cancelled; attempt += 1) {
+        if (attempt > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        } else {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
 
-      if (!cancelled && deviceId && token) {
+        const [deviceId, token] = await Promise.all([
+          checkInstallationId(),
+          checkFcmToken(),
+        ]);
+
+        if (cancelled || !deviceId || !token) {
+          continue;
+        }
+
         await setFcmToken_API({ deviceId, token });
+        return;
       }
+
+      console.warn("Push notification token was not available.");
     };
 
     registerPushToken().catch(() => {
