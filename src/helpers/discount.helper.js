@@ -170,9 +170,11 @@ export const calculateNestedSelectedOptionCost = (selectedItems = []) =>
         selectedItem?.selectedSubItems
       );
 
-      const comboItemCost = selectedItem?.hasAdditionalCost
-        ? Number(selectedItem?.additionalCost) || 0
-        : 0;
+      const comboItemCost = selectedItem?.isAddOn
+        ? Number(selectedItem?.price ?? nestedOptionSource?.price) || 0
+        : selectedItem?.hasAdditionalCost
+          ? Number(selectedItem?.additionalCost) || 0
+          : 0;
       return sum + (comboItemCost + directOptionCost + directSideCost + nestedOptionCost) * quantity;
     },
     0

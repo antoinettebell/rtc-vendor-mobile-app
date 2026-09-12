@@ -667,8 +667,8 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
         ...selectedItem,
         isAddOn: true,
         qty: currentItem?.qty || 1,
-        hasAdditionalCost: !!currentItem?.hasAdditionalCost,
-        additionalCost: `${currentItem?.additionalCost || 0}`,
+        hasAdditionalCost: false,
+        additionalCost: "0",
       };
     }));
   };
@@ -922,8 +922,8 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
           ...entry.menuItem,
           qty: Number(entry.qty) || 1,
           isAddOn: true,
-          hasAdditionalCost: !!entry.hasAdditionalCost,
-          additionalCost: `${entry.additionalCost || 0}`,
+          hasAdditionalCost: false,
+          additionalCost: "0",
         })) || []);
       } else {
         setComboItems([]);
@@ -938,7 +938,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
       setComboSideCount(sideNames.length);
       setComboSideOptions(sideNames);
       setComboSidesPerOrder(
-        Math.min(Math.max(item.comboSidesPerOrder || 1, 1), item.subItem.filter((entry) => !entry.isAddOn).length || 1)
+        Math.min(Math.max(item.comboSidesPerOrder || 1, 1), 5)
       );
       setHasComboSideCosts(pricedSides.some((option) => option?.hasCost));
       setComboSideCostEnabled(
@@ -1076,15 +1076,17 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
           .filter(Boolean)
           .join(", ");
         newErrors.comboItems = `${promotionalNames || "This item"} has an active BOGO/BOGOHO promotion and cannot be included inside a combo`;
+      } else if (comboSidesPerOrder > comboItems.length) {
+        newErrors.comboItems = `Add at least ${comboSidesPerOrder} Combo Details, or lower Sides per Order`;
       } else if (
-        [...comboItems, ...addOnItems].some(
+        comboItems.some(
           (item) =>
             item?.hasAdditionalCost &&
             !(parseFloat(item?.additionalCost || "0") > 0)
         )
       ) {
         newErrors.comboItems =
-          "Enter an additional cost greater than $0 for every paid combo item or add on";
+          "Enter an additional cost greater than $0 for every paid Combo Detail";
       } else {
         newErrors.comboItems = "";
       }
@@ -1215,18 +1217,18 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
           menuItem: item._id || "",
           qty: Math.min(Math.max(parseInt(item.qty, 10) || 1, 1), 99),
           isAddOn: !!item.isAddOn,
-          hasAdditionalCost: !!item.hasAdditionalCost,
-          additionalCost: item.hasAdditionalCost
-            ? parseFloat(item.additionalCost || "0") || 0
-            : 0,
+          hasAdditionalCost: item.isAddOn ? false : !!item.hasAdditionalCost,
+          additionalCost: item.isAddOn
+            ? 0
+            : item.hasAdditionalCost
+              ? parseFloat(item.additionalCost || "0") || 0
+              : 0,
         }));
         // Legacy free-text sides are retired. Existing Combo Details are the
         // included-choice pool; Add Ons are optional real menu items.
         payload.comboSideOptions = [];
         payload.comboSideOptionCosts = [];
-        payload.comboSidesPerOrder = comboItems.length
-          ? Math.min(Math.max(comboSidesPerOrder, 1), comboItems.length)
-          : 1;
+        payload.comboSidesPerOrder = Math.min(Math.max(comboSidesPerOrder, 1), 5);
       }
 
       console.log("Food Item API request payload => ", payload);
@@ -3043,9 +3045,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                                 customer must select.
                               </Text>
                               <Dropdown
-                                data={flavorsPerOrderOptions.filter(
-                                  (option) => option.value <= comboItems.length
-                                )}
+                                data={flavorsPerOrderOptions}
                                 labelField="label"
                                 valueField="value"
                                 value={comboSidesPerOrder}
@@ -3063,8 +3063,8 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                             <Text style={styles.inputLabel}>Add Ons</Text>
                             <Text style={styles.optionChargeHelpText}>
                               Optional extra menu items. They do not count
-                              toward Sides per Order and are charged only when
-                              selected.
+                              toward Sides per Order and use their normal menu
+                              price when selected.
                             </Text>
                             {addOnItems.map((item, index) => (
                               <View key={item._id} style={styles.bogoItemCard}>
@@ -3079,64 +3079,9 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                                   >
                                     {item.name}
                                   </Text>
-                                  <View style={styles.switchRow}>
-                                    <Text
-                                      style={[
-                                        styles.inputLabel,
-                                        { marginBottom: 0 },
-                                      ]}
-                                    >
-                                      Additional Cost
-                                    </Text>
-                                    <Switch
-                                      color={AppColor.primary}
-                                      value={!!item.hasAdditionalCost}
-                                      onValueChange={(value) =>
-                                        setAddOnItems((current) =>
-                                          current.map((entry, itemIndex) =>
-                                            itemIndex === index
-                                              ? {
-                                                  ...entry,
-                                                  hasAdditionalCost: value,
-                                                  additionalCost: value
-                                                    ? entry.additionalCost || ""
-                                                    : "0",
-                                                }
-                                              : entry
-                                          )
-                                        )
-                                      }
-                                    />
-                                  </View>
-                                  {item.hasAdditionalCost ? (
-                                    <TextInput
-                                      dense
-                                      value={`${item.additionalCost || ""}`}
-                                      onChangeText={(text) =>
-                                        setAddOnItems((current) =>
-                                          current.map((entry, itemIndex) =>
-                                            itemIndex === index
-                                              ? {
-                                                  ...entry,
-                                                  additionalCost: text.replace(
-                                                    /[^0-9.]/g,
-                                                    ""
-                                                  ),
-                                                }
-                                              : entry
-                                          )
-                                        )
-                                      }
-                                      style={[
-                                        styles.input,
-                                        styles.optionCostInput,
-                                      ]}
-                                      contentStyle={styles.inputText}
-                                      placeholder="Cost"
-                                      mode="outlined"
-                                      keyboardType="decimal-pad"
-                                    />
-                                  ) : null}
+                                  <Text style={styles.optionChargeHelpText}>
+                                    {`Customer price: $${Number(item.price || 0).toFixed(2)}`}
+                                  </Text>
                                 </View>
                                 <IconButton
                                   icon="close-circle"

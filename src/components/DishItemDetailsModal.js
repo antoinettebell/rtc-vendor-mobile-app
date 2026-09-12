@@ -89,7 +89,9 @@ const SubItemRow = memo(({ subItem, isSelected, onToggle }) => {
     </View>
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
       <Text style={styles.subItemPrice}>
-        {subItem?.hasAdditionalCost
+        {subItem?.isAddOn
+          ? `+$${Number(childItem?.price || 0).toFixed(2)}`
+          : subItem?.hasAdditionalCost
           ? `+$${Number(subItem?.additionalCost || 0).toFixed(2)}`
           : `x${subItem?.qty}`}
         {/* {`$${(subItem?.menuItem?.price || 0).toFixed(2)}`} */}
@@ -256,7 +258,7 @@ const hasEveryConfiguredChild = (configuredItems, selectedItems, configuredLimit
 };
 
 const RequirementSectionToggle = memo(
-  ({ title, complete, expanded, onPress }) => (
+  ({ title, complete, expanded, onPress, showStatus = true }) => (
     <TouchableOpacity
       activeOpacity={0.75}
       onPress={onPress}
@@ -264,14 +266,16 @@ const RequirementSectionToggle = memo(
     >
       <View style={{ flex: 1 }}>
         <Text style={styles.requirementToggleTitle}>{title}</Text>
-        <Text
-          style={[
-            styles.requirementToggleStatus,
-            complete && styles.requirementToggleStatusComplete,
-          ]}
-        >
-          {complete ? "Complete" : "Required — complete before checkout"}
-        </Text>
+        {showStatus ? (
+          <Text
+            style={[
+              styles.requirementToggleStatus,
+              complete && styles.requirementToggleStatusComplete,
+            ]}
+          >
+            {complete ? "Complete" : "Required — complete before checkout"}
+          </Text>
+        ) : null}
       </View>
       <MaterialIcons
         name={expanded ? "expand-less" : "expand-more"}
@@ -1624,9 +1628,8 @@ const DishItemDetailsModal = ({
                               comboMenuItemId: childItem?._id,
                               qty: subItem?.qty || 1,
                               isAddOn: true,
-                              hasAdditionalCost: !!subItem?.hasAdditionalCost,
-                              additionalCost:
-                                Number(subItem?.additionalCost) || 0,
+                              hasAdditionalCost: false,
+                              additionalCost: 0,
                               selectedFlavors: [],
                               selectedToppings: [],
                               selectedComboSides: [],
@@ -1643,6 +1646,7 @@ const DishItemDetailsModal = ({
                           complete={sectionComplete}
                           expanded={sectionExpanded}
                           onPress={() => toggleRequirementSection(sectionKey)}
+                          showStatus={false}
                         />
                       ) : null}
                       {selectedChild && hasRequirements && sectionExpanded
