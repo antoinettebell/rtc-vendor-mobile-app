@@ -82,6 +82,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
   const dispatch = useDispatch();
   const bogoActionSheetRef = useRef(null);
   const comboActionSheetRef = useRef(null);
+  const addOnActionSheetRef = useRef(null);
   const Params = React.useMemo(() => route.params, [route.params]);
 
   const { selectedPlan } = useSelector((state) => state.userReducer);
@@ -141,6 +142,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
   const [menuList, setMenuList] = useState([]);
   const [bogoItems, setBogoItems] = useState([]);
   const [comboItems, setComboItems] = useState([]);
+  const [addOnItems, setAddOnItems] = useState([]);
   const [comboSideCount, setComboSideCount] = useState(0);
   const [comboSideOptions, setComboSideOptions] = useState([]);
   const [comboSidesPerOrder, setComboSidesPerOrder] = useState(1);
@@ -586,6 +588,10 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     comboActionSheetRef.current?.show();
   };
 
+  const openAddOnSheet = () => {
+    addOnActionSheetRef.current?.show();
+  };
+
   // Handle BOGO items change
   const handleBogoItemsChange = (selectedItems) => {
     setBogoItems(selectedItems);
@@ -634,6 +640,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
         );
         return {
           ...selectedItem,
+          isAddOn: false,
           qty: currentItem?.qty || selectedItem?.qty || 1,
           hasAdditionalCost: !!currentItem?.hasAdditionalCost,
           additionalCost: `${currentItem?.additionalCost || 0}`,
@@ -651,6 +658,19 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
         comboItems: "",
       }));
     }
+  };
+
+  const handleAddOnItemsChange = (selectedItems) => {
+    setAddOnItems((currentItems) => selectedItems.map((selectedItem) => {
+      const currentItem = currentItems.find((item) => String(item?._id) === String(selectedItem?._id));
+      return {
+        ...selectedItem,
+        isAddOn: true,
+        qty: currentItem?.qty || 1,
+        hasAdditionalCost: !!currentItem?.hasAdditionalCost,
+        additionalCost: `${currentItem?.additionalCost || 0}`,
+      };
+    }));
   };
 
   // Handle BOGO item remove press
@@ -891,9 +911,17 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     // Set combo items if food type is combo
     if (item.itemType === foodTypeStrings.combo) {
       if (item.subItem && item.subItem.length > 0) {
-        setComboItems(item.subItem.map((entry) => ({
+        setComboItems(item.subItem.filter((entry) => !entry.isAddOn).map((entry) => ({
           ...entry.menuItem,
           qty: Number(entry.qty) || 1,
+          isAddOn: false,
+          hasAdditionalCost: !!entry.hasAdditionalCost,
+          additionalCost: `${entry.additionalCost || 0}`,
+        })) || []);
+        setAddOnItems(item.subItem.filter((entry) => entry.isAddOn).map((entry) => ({
+          ...entry.menuItem,
+          qty: Number(entry.qty) || 1,
+          isAddOn: true,
           hasAdditionalCost: !!entry.hasAdditionalCost,
           additionalCost: `${entry.additionalCost || 0}`,
         })) || []);
@@ -910,7 +938,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
       setComboSideCount(sideNames.length);
       setComboSideOptions(sideNames);
       setComboSidesPerOrder(
-        Math.min(Math.max(item.comboSidesPerOrder || 1, 1), sideNames.length)
+        Math.min(Math.max(item.comboSidesPerOrder || 1, 1), item.subItem.filter((entry) => !entry.isAddOn).length || 1)
       );
       setHasComboSideCosts(pricedSides.some((option) => option?.hasCost));
       setComboSideCostEnabled(
@@ -921,6 +949,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
       );
     } else {
       setComboItems([]);
+      setAddOnItems([]);
     }
   };
 
@@ -1047,31 +1076,21 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
           .filter(Boolean)
           .join(", ");
         newErrors.comboItems = `${promotionalNames || "This item"} has an active BOGO/BOGOHO promotion and cannot be included inside a combo`;
+      } else if (
+        [...comboItems, ...addOnItems].some(
+          (item) =>
+            item?.hasAdditionalCost &&
+            !(parseFloat(item?.additionalCost || "0") > 0)
+        )
+      ) {
+        newErrors.comboItems =
+          "Enter an additional cost greater than $0 for every paid combo item or add on";
       } else {
         newErrors.comboItems = "";
       }
 
-      const configuredSides = comboSideOptions.slice(0, comboSideCount);
-      const normalizedSides = configuredSides.map((side) =>
-        String(side || "").trim().toLowerCase()
-      );
-      if (configuredSides.some((side) => !String(side || "").trim())) {
-        newErrors.comboSideOptions = "Enter a name for every selectable side";
-      } else if (new Set(normalizedSides).size !== normalizedSides.length) {
-        newErrors.comboSideOptions = "Selectable side names must be unique";
-      } else if (
-        configuredSides.some(
-          (_, index) =>
-            hasComboSideCosts &&
-            comboSideCostEnabled[index] &&
-            !(parseFloat(comboSideCosts[index] || "0") > 0)
-        )
-      ) {
-        newErrors.comboSideOptions =
-          "Enter a cost greater than $0 for each paid side";
-      } else {
-        newErrors.comboSideOptions = "";
-      }
+
+      newErrors.comboSideOptions = "";
 	    } else {
 	      newErrors.comboItems = "";
 	      newErrors.comboSideOptions = "";
@@ -1192,33 +1211,21 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
       }
 
       if (foodType === foodTypeStrings.combo) {
-        payload.subItem = comboItems.map((item) => ({
+        payload.subItem = [...comboItems, ...addOnItems].map((item) => ({
           menuItem: item._id || "",
           qty: Math.min(Math.max(parseInt(item.qty, 10) || 1, 1), 99),
+          isAddOn: !!item.isAddOn,
           hasAdditionalCost: !!item.hasAdditionalCost,
           additionalCost: item.hasAdditionalCost
             ? parseFloat(item.additionalCost || "0") || 0
             : 0,
         }));
-        payload.comboSideOptions = comboSideOptions
-          .slice(0, comboSideCount)
-          .map((name) => toTitleCase(String(name || "").trim()))
-          .filter(Boolean);
-        payload.comboSideOptionCosts = payload.comboSideOptions.map(
-          (name, index) => ({
-            name,
-            hasCost: !!(hasComboSideCosts && comboSideCostEnabled[index]),
-            cost:
-              hasComboSideCosts && comboSideCostEnabled[index]
-                ? parseFloat(comboSideCosts[index] || "0") || 0
-                : 0,
-          })
-        );
-        payload.comboSidesPerOrder = payload.comboSideOptions.length
-          ? Math.min(
-              Math.max(comboSidesPerOrder, 1),
-              payload.comboSideOptions.length
-            )
+        // Legacy free-text sides are retired. Existing Combo Details are the
+        // included-choice pool; Add Ons are optional real menu items.
+        payload.comboSideOptions = [];
+        payload.comboSideOptionCosts = [];
+        payload.comboSidesPerOrder = comboItems.length
+          ? Math.min(Math.max(comboSidesPerOrder, 1), comboItems.length)
           : 1;
       }
 
@@ -3028,90 +3035,128 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 	                            </Text>
 	                          </TouchableOpacity>
 
-                          <View style={{ marginTop: 16, gap: 12 }}>
-                            <Text style={styles.inputLabel}>
-                              Selectable Side Options
-                            </Text>
-                            <Text style={styles.optionChargeHelpText}>
-                              Add the side choices customers can select. Turn on
-                              Additional Cost only for paid substitutions.
-                            </Text>
-                            {comboSideOptions
-                              .slice(0, comboSideCount)
-                              .map((sideName, index) => (
-                                <View
-                                  key={`combo-side-${index}`}
-                                  style={styles.optionCostRow}
-                                >
-                                  <TextInput
-                                    dense
-                                    value={sideName}
-                                    onChangeText={(text) =>
-                                      changeComboSideOption(text, index)
-                                    }
-                                    style={[styles.input, { flex: 1 }]}
-                                    contentStyle={styles.inputText}
-                                    placeholder={`Side ${index + 1}`}
-                                    mode="outlined"
-                                    outlineColor={AppColor.border}
-                                    activeOutlineColor={AppColor.primary}
-                                    outlineStyle={{ borderRadius: 8 }}
-                                    autoCapitalize="words"
-                                  />
-                                  {hasComboSideCosts ? (
-                                    <>
-                                      <Switch
-                                        color={AppColor.primary}
-                                        value={!!comboSideCostEnabled[index]}
-                                        onValueChange={() =>
-                                          handleOptionCostToggle(
-                                            setComboSideCostEnabled,
-                                            index
-                                          )
-                                        }
-                                      />
-                                      {comboSideCostEnabled[index] ? (
-                                        <TextInput
-                                          dense
-                                          value={comboSideCosts[index] || ""}
-                                          onChangeText={(text) =>
-                                            handleOptionCostChange(
-                                              setComboSideCosts,
-                                              text,
-                                              index
-                                            )
-                                          }
-                                          style={[
-                                            styles.input,
-                                            styles.optionCostInput,
-                                          ]}
-                                          contentStyle={styles.inputText}
-                                          placeholder="Cost"
-                                          mode="outlined"
-                                          keyboardType="decimal-pad"
-                                          outlineColor={AppColor.border}
-                                          activeOutlineColor={AppColor.primary}
-                                          outlineStyle={{ borderRadius: 8 }}
-                                        />
-                                      ) : null}
-                                    </>
-                                  ) : null}
-                                  <IconButton
-                                    icon="close-circle"
-                                    iconColor={AppColor.error}
-                                    size={20}
-                                    onPress={() =>
-                                      removeComboSideOption(index)
-                                    }
-                                  />
-                                </View>
-                              ))}
+                          {comboItems.length > 0 ? (
+                            <View style={{ marginTop: 16 }}>
+                              <Text style={styles.inputLabel}>Sides per Order</Text>
+                              <Text style={styles.optionChargeHelpText}>
+                                Choose how many included Combo Details the
+                                customer must select.
+                              </Text>
+                              <Dropdown
+                                data={flavorsPerOrderOptions.filter(
+                                  (option) => option.value <= comboItems.length
+                                )}
+                                labelField="label"
+                                valueField="value"
+                                value={comboSidesPerOrder}
+                                onChange={(selected) =>
+                                  setComboSidesPerOrder(selected.value)
+                                }
+                                placeholder="Select"
+                                style={styles.dropdown}
+                                containerStyle={styles.dropdownContainer}
+                              />
+                            </View>
+                          ) : null}
 
+                          <View style={{ marginTop: 20, gap: 12 }}>
+                            <Text style={styles.inputLabel}>Add Ons</Text>
+                            <Text style={styles.optionChargeHelpText}>
+                              Optional extra menu items. They do not count
+                              toward Sides per Order and are charged only when
+                              selected.
+                            </Text>
+                            {addOnItems.map((item, index) => (
+                              <View key={item._id} style={styles.bogoItemCard}>
+                                <AppImage
+                                  uri={item.imgUrls?.[0]}
+                                  containerStyle={styles.bogoItemImage}
+                                />
+                                <View style={{ flex: 1, gap: 8 }}>
+                                  <Text
+                                    style={styles.bogoItemName}
+                                    numberOfLines={1}
+                                  >
+                                    {item.name}
+                                  </Text>
+                                  <View style={styles.switchRow}>
+                                    <Text
+                                      style={[
+                                        styles.inputLabel,
+                                        { marginBottom: 0 },
+                                      ]}
+                                    >
+                                      Additional Cost
+                                    </Text>
+                                    <Switch
+                                      color={AppColor.primary}
+                                      value={!!item.hasAdditionalCost}
+                                      onValueChange={(value) =>
+                                        setAddOnItems((current) =>
+                                          current.map((entry, itemIndex) =>
+                                            itemIndex === index
+                                              ? {
+                                                  ...entry,
+                                                  hasAdditionalCost: value,
+                                                  additionalCost: value
+                                                    ? entry.additionalCost || ""
+                                                    : "0",
+                                                }
+                                              : entry
+                                          )
+                                        )
+                                      }
+                                    />
+                                  </View>
+                                  {item.hasAdditionalCost ? (
+                                    <TextInput
+                                      dense
+                                      value={`${item.additionalCost || ""}`}
+                                      onChangeText={(text) =>
+                                        setAddOnItems((current) =>
+                                          current.map((entry, itemIndex) =>
+                                            itemIndex === index
+                                              ? {
+                                                  ...entry,
+                                                  additionalCost: text.replace(
+                                                    /[^0-9.]/g,
+                                                    ""
+                                                  ),
+                                                }
+                                              : entry
+                                          )
+                                        )
+                                      }
+                                      style={[
+                                        styles.input,
+                                        styles.optionCostInput,
+                                      ]}
+                                      contentStyle={styles.inputText}
+                                      placeholder="Cost"
+                                      mode="outlined"
+                                      keyboardType="decimal-pad"
+                                    />
+                                  ) : null}
+                                </View>
+                                <IconButton
+                                  icon="close-circle"
+                                  iconColor={AppColor.error}
+                                  size={20}
+                                  onPress={() =>
+                                    setAddOnItems((current) =>
+                                      current.filter(
+                                        (_, itemIndex) => itemIndex !== index
+                                      )
+                                    )
+                                  }
+                                  style={styles.removeBogoItemIcon}
+                                />
+                              </View>
+                            ))}
                             <TouchableOpacity
                               style={styles.bogoToggleContainer}
-                              onPress={addComboSideOption}
+                              onPress={openAddOnSheet}
                               activeOpacity={0.7}
-                              disabled={comboSideCount >= 15}
                             >
                               <AntDesign
                                 name="pluscircleo"
@@ -3119,55 +3164,9 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                                 color={AppColor.primary}
                               />
                               <Text style={styles.bogoToggleText}>
-                                Add Selectable Side
+                                Add Optional Menu Item
                               </Text>
                             </TouchableOpacity>
-
-                            {comboSideCount > 0 ? (
-                              <View style={styles.switchRow}>
-                                <Text
-                                  style={[
-                                    styles.inputLabel,
-                                    { marginBottom: 0 },
-                                  ]}
-                                >
-                                  Additional Cost
-                                </Text>
-                                <Switch
-                                  color={AppColor.primary}
-                                  value={hasComboSideCosts}
-                                  onValueChange={setHasComboSideCosts}
-                                />
-                              </View>
-                            ) : null}
-
-                            {!!errors.comboSideOptions && (
-                              <HelperText
-                                type="error"
-                                visible={!!errors.comboSideOptions}
-                                style={styles.helper}
-                              >
-                                {errors.comboSideOptions}
-                              </HelperText>
-                            )}
-
-                            {comboSideCount > 0 ? (
-                              <View>
-                                <Text style={styles.inputLabel}>Sides per Order</Text>
-                                <Dropdown
-                                  data={flavorsPerOrderOptions.filter(
-                                    (option) => option.value <= comboSideCount
-                                  )}
-                                  labelField="label"
-                                  valueField="value"
-                                  value={comboSidesPerOrder}
-                                  onChange={(selected) => setComboSidesPerOrder(selected.value)}
-                                  placeholder="Select"
-                                  style={styles.dropdown}
-                                  containerStyle={styles.dropdownContainer}
-                                />
-                              </View>
-                            ) : null}
                           </View>
 
 		                          {!!errors.comboItems && (
@@ -3225,6 +3224,20 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
         menuList={filterComboChildCandidates(memoizedMenuList)}
         onSelectionChange={handleComboItemsChange}
         onClose={() => console.log("Combo items sheet closed")}
+      />
+
+      <ComboItemsActionSheet
+        actionSheetRef={addOnActionSheetRef}
+        selectedMenus={addOnItems}
+        menuList={filterComboChildCandidates(memoizedMenuList).filter(
+          (menuItem) =>
+            !comboItems.some(
+              (comboItem) =>
+                String(comboItem?._id) === String(menuItem?._id)
+            )
+        )}
+        onSelectionChange={handleAddOnItemsChange}
+        onClose={() => console.log("Combo add-ons sheet closed")}
       />
 
       {/* Media Picker Modal */}

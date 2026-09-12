@@ -90,24 +90,32 @@ const isChildSelectionComplete = (selection) => {
   );
 };
 
-const findMissingOrIncompleteChild = (configuredItems, selectedItems) => {
+const getComboSelectionError = (comboItem, selectedItems) => {
+  const configuredItems = Array.isArray(comboItem?.subItem)
+    ? comboItem.subItem
+    : [];
+  const includedItems = configuredItems.filter((item) => !item?.isAddOn);
   const selections = Array.isArray(selectedItems) ? selectedItems : [];
+  const includedSelections = selections.filter((item) => !item?.isAddOn);
 
-  for (const configuredItem of Array.isArray(configuredItems)
-    ? configuredItems
-    : []) {
-    const child = getChildItem(configuredItem);
-    const childId = getMenuItemId(configuredItem);
-    const selection = selections.find(
-      (candidate) => String(getMenuItemId(candidate)) === String(childId),
+  if (includedItems.length) {
+    const requiredCount = getSelectionLimit(
+      comboItem?.comboSidesPerOrder,
+      includedItems.length,
     );
-
-    if (!selection || !isChildSelectionComplete(selection)) {
-      return child;
+    if (includedSelections.length !== requiredCount) {
+      return `Choose exactly ${requiredCount} included combo item${requiredCount === 1 ? "" : "s"}.`;
     }
   }
 
-  return null;
+  // Add Ons are optional, but once selected their own flavor/topping/etc.
+  // requirements must still be completed.
+  const incompleteSelection = selections.find(
+    (selection) => !isChildSelectionComplete(selection),
+  );
+  return incompleteSelection
+    ? getChildItem(incompleteSelection)
+    : null;
 };
 
 const getDiscountSourceItem = (item) => {
@@ -124,23 +132,24 @@ const getDiscountSourceItem = (item) => {
 
 export const getNestedSelectionError = (item) => {
   if (item?.itemType === COMBO_ITEM_TYPE) {
-    const invalidChild = findMissingOrIncompleteChild(
-      item?.subItem,
-      item?.selectedSubItems,
-    );
+    const invalidChild = getComboSelectionError(item, item?.selectedSubItems);
     if (invalidChild) {
-      return `Complete the required options for ${invalidChild?.name || "the included combo item"}.`;
+      return typeof invalidChild === "string"
+        ? invalidChild
+        : `Complete the required options for ${invalidChild?.name || "the selected combo item"}.`;
     }
   }
 
   const discountSource = getDiscountSourceItem(item);
   if (discountSource?.itemType === COMBO_ITEM_TYPE) {
-    const invalidDiscountChild = findMissingOrIncompleteChild(
-      discountSource?.subItem,
+    const invalidDiscountChild = getComboSelectionError(
+      discountSource,
       item?.selectedDiscountSubItems,
     );
     if (invalidDiscountChild) {
-      return `Complete the required options for ${invalidDiscountChild?.name || "the included discount item"}.`;
+      return typeof invalidDiscountChild === "string"
+        ? invalidDiscountChild
+        : `Complete the required options for ${invalidDiscountChild?.name || "the selected discount item"}.`;
     }
   }
 

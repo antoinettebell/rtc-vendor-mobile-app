@@ -236,6 +236,7 @@ const buildRequiredChildSelections = (configuredItems, savedSelections = []) =>
         ...saved,
         comboMenuItemId: child._id,
         qty: configuredItem?.qty || saved?.qty || 1,
+        isAddOn: !!configuredItem?.isAddOn,
         hasAdditionalCost: !!configuredItem?.hasAdditionalCost,
         additionalCost: Number(configuredItem?.additionalCost) || 0,
         selectedFlavors: saved?.selectedFlavors || [],
@@ -249,7 +250,9 @@ const buildRequiredChildSelections = (configuredItems, savedSelections = []) =>
 const hasEveryConfiguredChild = (configuredItems, selectedItems, configuredLimit) => {
   const available = Array.isArray(configuredItems) ? configuredItems.length : 0;
   const required = getSelectionLimit(configuredLimit, available);
-  return (Array.isArray(selectedItems) ? selectedItems : []).length === required;
+  const includedSelections = (Array.isArray(selectedItems) ? selectedItems : [])
+    .filter((item) => !item?.isAddOn);
+  return includedSelections.length === required;
 };
 
 const RequirementSectionToggle = memo(
@@ -549,7 +552,11 @@ const DishItemDetailsModal = ({
     comboSideOptions.length > 0;
   const configuredComboItems =
     selectedMenuItem?.itemType === foodTypeStrings.combo
-      ? selectedMenuItem?.subItem || []
+      ? (selectedMenuItem?.subItem || []).filter((item) => !item?.isAddOn)
+      : [];
+  const configuredAddOnItems =
+    selectedMenuItem?.itemType === foodTypeStrings.combo
+      ? (selectedMenuItem?.subItem || []).filter((item) => item?.isAddOn)
       : [];
   const configuredDiscountComboItems =
     hasDiscountOffer && discountSourceItem?.itemType === foodTypeStrings.combo
@@ -585,7 +592,8 @@ const DishItemDetailsModal = ({
     hasFlavorChoices ||
     hasToppingChoices ||
     hasComboSideChoices ||
-    configuredComboItems.length > 0;
+    configuredComboItems.length > 0 ||
+    configuredAddOnItems.length > 0;
   const discountRequirementsComplete =
     (!hasDiscountFlavorChoices ||
       isOptionSelectionComplete(
@@ -1494,10 +1502,10 @@ const DishItemDetailsModal = ({
             ) : null}
 
             {/* Combo Items */}
-            {isRequirementExpanded("primary-item") && selectedMenuItem.subItem?.length > 0 && (
+            {isRequirementExpanded("primary-item") && configuredComboItems.length > 0 && (
               <View style={styles.actionSheetSection}>
-                <Text style={styles.sectionTitle}>{`Choose exactly ${getSelectionLimit(selectedMenuItem?.comboSidesPerOrder, selectedMenuItem.subItem.length)} Combo Items:`}</Text>
-                {selectedMenuItem.subItem.map((subItem) => {
+                <Text style={styles.sectionTitle}>{`Choose exactly ${getSelectionLimit(selectedMenuItem?.comboSidesPerOrder, configuredComboItems.length)} Combo Detail${getSelectionLimit(selectedMenuItem?.comboSidesPerOrder, configuredComboItems.length) === 1 ? "" : "s"}:`}</Text>
+                {configuredComboItems.map((subItem) => {
                   const childItem = getComboChildItem(subItem);
                   const selectedChild = selectedSubItems.find(
                     (item) =>
@@ -1526,8 +1534,11 @@ const DishItemDetailsModal = ({
                             setSelectedSubItems((current) => current.filter((entry) => String(getMenuItemId(entry)) !== String(childItem?._id)));
                             return;
                           }
-                          const limit = getSelectionLimit(selectedMenuItem?.comboSidesPerOrder, selectedMenuItem.subItem.length);
-                          if (selectedSubItems.length >= limit) {
+                          const limit = getSelectionLimit(selectedMenuItem?.comboSidesPerOrder, configuredComboItems.length);
+                          const selectedIncludedCount = selectedSubItems.filter(
+                            (entry) => !entry?.isAddOn
+                          ).length;
+                          if (selectedIncludedCount >= limit) {
                             Alert.alert("Selection limit", `Choose up to ${limit}.`);
                             return;
                           }
@@ -1535,6 +1546,7 @@ const DishItemDetailsModal = ({
                             ...childItem,
                             comboMenuItemId: childItem?._id,
                             qty: subItem?.qty || 1,
+                            isAddOn: false,
                             hasAdditionalCost: !!subItem?.hasAdditionalCost,
                             additionalCost: Number(subItem?.additionalCost) || 0,
                             selectedFlavors: [], selectedToppings: [], selectedComboSides: [], customizationInput: "",
@@ -1555,6 +1567,89 @@ const DishItemDetailsModal = ({
                             selectedChild,
                             setSelectedSubItems,
                             "Combo item"
+                          )
+                        : null}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {isRequirementExpanded("primary-item") && configuredAddOnItems.length > 0 && (
+              <View style={styles.actionSheetSection}>
+                <Text style={styles.sectionTitle}>Optional Add Ons</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Add any extras you would like with this combo.
+                </Text>
+                {configuredAddOnItems.map((subItem) => {
+                  const childItem = getComboChildItem(subItem);
+                  const selectedChild = selectedSubItems.find(
+                    (item) =>
+                      String(getMenuItemId(item)) === String(childItem?._id)
+                  );
+                  const requirementState = getChildRequirementState(
+                    selectedChild || childItem
+                  );
+                  const hasRequirements =
+                    requirementState.hasFlavorChoices ||
+                    requirementState.hasToppingChoices ||
+                    requirementState.hasComboSideChoices;
+                  const sectionKey = `add-on-${childItem?._id}`;
+                  const sectionExpanded = isRequirementExpanded(sectionKey);
+                  const sectionComplete = selectedChild
+                    ? isChildSelectionComplete(selectedChild)
+                    : false;
+
+                  return (
+                    <View key={subItem?._id || childItem?._id}>
+                      <SubItemRow
+                        subItem={subItem}
+                        isSelected={!!selectedChild}
+                        onToggle={() => {
+                          if (selectedChild) {
+                            setSelectedSubItems((current) =>
+                              current.filter(
+                                (entry) =>
+                                  String(getMenuItemId(entry)) !==
+                                  String(childItem?._id)
+                              )
+                            );
+                            return;
+                          }
+
+                          setSelectedSubItems((current) => [
+                            ...current,
+                            {
+                              ...childItem,
+                              comboMenuItemId: childItem?._id,
+                              qty: subItem?.qty || 1,
+                              isAddOn: true,
+                              hasAdditionalCost: !!subItem?.hasAdditionalCost,
+                              additionalCost:
+                                Number(subItem?.additionalCost) || 0,
+                              selectedFlavors: [],
+                              selectedToppings: [],
+                              selectedComboSides: [],
+                            },
+                          ]);
+                          if (hasRequirements) {
+                            toggleRequirementSection(sectionKey);
+                          }
+                        }}
+                      />
+                      {hasRequirements ? (
+                        <RequirementSectionToggle
+                          title={`Choose options for ${childItem?.name || "add on"}`}
+                          complete={sectionComplete}
+                          expanded={sectionExpanded}
+                          onPress={() => toggleRequirementSection(sectionKey)}
+                        />
+                      ) : null}
+                      {selectedChild && hasRequirements && sectionExpanded
+                        ? renderChildCustomizationFields(
+                            selectedChild,
+                            setSelectedSubItems,
+                            "Add on"
                           )
                         : null}
                     </View>
@@ -2097,6 +2192,12 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
     color: AppColor.text,
     marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    fontFamily: Mulish400,
+    color: AppColor.textHighlighter,
+    marginBottom: 8,
   },
   bogoSectionHeading: {
     fontSize: 17,
