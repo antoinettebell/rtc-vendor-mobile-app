@@ -133,6 +133,8 @@ export const empNumberList = [
 export const discountTypeList = [
   { label: "Percentage", type: "PERCENTAGE", txt: "" },
   { label: "Fixed", type: "FIXED", txt: "" },
+  { label: "BOGO", type: "BOGO", txt: "" },
+  { label: "BOGOHO", type: "BOGOHO", txt: "" },
 ];
 
 export const PaymentMethodNames = {

@@ -75,7 +75,6 @@ const flavorsPerOrderOptions = Array.from({ length: 5 }, (_, index) => ({
   label: `${index + 1}`,
   value: index + 1,
 }));
-const flavorCategoryNames = ["individual", "dessert", "desserts", "side", "sides"];
 
 export default function MenuAddDishItemScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
@@ -98,22 +97,19 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     [Params?.category?.name]
   );
 
-  const foodType = React.useMemo(
+  const categoryFoodType = React.useMemo(
     () => getFoodType(Params?.category?.name),
     [Params?.category?.name]
   );
-  const canUseFlavors = React.useMemo(
-    () => {
-      const categoryName = String(Params?.category?.name || "")
-        .trim()
-        .toLowerCase();
-      return (
-        foodType === foodTypeStrings.combo ||
-        flavorCategoryNames.some((name) => categoryName.includes(name))
-      );
-    },
-    [Params?.category?.name, foodType]
+  const [foodType, setFoodType] = useState(
+    Params?.type === "edit" && Params?.foodItem?.itemType
+      ? Params.foodItem.itemType
+      : categoryFoodType
   );
+  // Flavors are a dish configuration, not a category-name capability. New
+  // categories (for example, Kids) must retain the same flavor controls as
+  // existing categories instead of depending on a hard-coded name list.
+  const canUseFlavors = true;
 
   const { checkAndRequestPermission: photosPermissionStatus } = usePermission(
     permission.photos
@@ -624,12 +620,102 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
       setErrors((prev) => ({
         ...prev,
         predefinedDiscount: "",
+        customDiscount: "",
       }));
     } else {
       // Clear BOGO items when toggled off to allow manual selection
       setBogoItems([]);
     }
   };
+
+  const renderCustomBogoFields = () => (
+    <>
+      <View style={styles.switchRow}>
+        <Text style={[styles.inputLabel, { marginBottom: 0 }]}>Same item</Text>
+        <Switch
+          color={AppColor.primary}
+          value={isSameItemForBogo}
+          onValueChange={handleBogoSameItemToggle}
+        />
+      </View>
+
+      {!isSameItemForBogo ? (
+        <TouchableOpacity
+          style={styles.bogoToggleContainer}
+          onPress={openBogoSheet}
+          activeOpacity={0.7}
+        >
+          <AntDesign name="pluscircleo" size={20} color={AppColor.primary} />
+          <Text style={styles.bogoToggleText}>Choose reward dish</Text>
+        </TouchableOpacity>
+      ) : null}
+
+      <View style={{ marginTop: 16, gap: 12 }}>
+        <Text style={styles.inputLabel}>Configure Discount</Text>
+        <View style={{ flexDirection: "row", gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.optionChargeHelpText}>Buy Qty</Text>
+            <NativeTextInput
+              value={buyQty}
+              onChangeText={setBuyQty}
+              keyboardType="number-pad"
+              style={styles.ruleInput}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.optionChargeHelpText}>Get Qty</Text>
+            <NativeTextInput
+              value={getQty}
+              onChangeText={setGetQty}
+              keyboardType="number-pad"
+              style={styles.ruleInput}
+            />
+          </View>
+        </View>
+      </View>
+
+      {bogoItems.map((item, index) => (
+        <View key={item?._id || `bogo-${index}`} style={styles.bogoItemCard}>
+          {item?._id === "SAME_ITEM" ? (
+            <View
+              style={[
+                styles.bogoItemImage,
+                {
+                  backgroundColor: AppColor.primary + "20",
+                  justifyContent: "center",
+                  alignItems: "center",
+                },
+              ]}
+            >
+              <AntDesign name="sync" size={24} color={AppColor.primary} />
+            </View>
+          ) : (
+            <AppImage
+              uri={item?.imgUrls?.[0]}
+              containerStyle={styles.bogoItemImage}
+            />
+          )}
+          <View style={{ flex: 1 }}>
+            <Text style={styles.bogoItemName} numberOfLines={1}>
+              {item?._id === "SAME_ITEM" ? "Same Item" : item?.name}
+            </Text>
+          </View>
+          <IconButton
+            icon="close-circle"
+            iconColor={AppColor.error}
+            size={20}
+            onPress={() => onBogoItemRemovePress(index)}
+          />
+        </View>
+      ))}
+
+      {!!errors.customDiscount ? (
+        <HelperText type="error" visible style={styles.helper}>
+          {errors.customDiscount}
+        </HelperText>
+      ) : null}
+    </>
+  );
 
   // Handle Combo items change
   const handleComboItemsChange = (selectedItems) => {
@@ -791,6 +877,12 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 
   // Transform API data to component state
   const transformApiDataToState = (item) => {
+    // A category may contain both individual dishes and combos (for example,
+    // Kids). When editing, the saved menu record is the source of truth. Do
+    // not re-infer its type from the category name or the combo controls will
+    // disappear and a later save can accidentally downgrade it.
+    setFoodType(item.itemType || categoryFoodType);
+
     // Transform images array
     const transformedPhotos = item.imgUrls.map((uri) => ({
       uri,
@@ -878,34 +970,37 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 
     if (item.discountMode === "PREDEFINED") {
       setSelectedPredefinedDiscount(item.predefinedDiscount || null);
-      if (["BOGO", "BOGOHO"].includes(item.predefinedDiscount?.key)) {
-        let sameItemFound = false;
-        const temp_data = item.bogoItems.map((obj) => {
-          if (obj.isSameItem) {
-            sameItemFound = true;
-            return {
-              _id: "SAME_ITEM",
-              name: "Same Item",
-              isSameItem: true,
-              imgUrls: [],
-              price: item.strikePrice || item.price,
-            };
-          }
-          return obj.itemId;
-        });
-        setBogoItems(temp_data || []);
-        setIsSameItemForBogo(sameItemFound);
-
-        // Load discount rules
-        if (item.discountRules) {
-          setBuyQty(item.discountRules.buyQty?.toString() || "1");
-          setGetQty(item.discountRules.getQty?.toString() || "1");
-          setDiscountRuleVal(item.discountRules.discount?.toString() || "0");
-        }
-      }
     } else if (item.discountMode === "CUSTOM") {
       setSelectedDiscountType(item.discountType || "FIXED");
       setItemDiscount(discountString || "0");
+    }
+
+    if (["BOGO", "BOGOHO"].includes(item.discountType)) {
+      let sameItemFound = false;
+      const rewardItems = (item.bogoItems || []).map((obj) => {
+        if (obj.isSameItem) {
+          sameItemFound = true;
+          return {
+            _id: "SAME_ITEM",
+            name: "Same Item",
+            isSameItem: true,
+            imgUrls: [],
+            price: item.strikePrice || item.price,
+          };
+        }
+        return obj.itemId;
+      });
+      setBogoItems(rewardItems);
+      setIsSameItemForBogo(sameItemFound);
+      setBuyQty(item.discountRules?.buyQty?.toString() || "1");
+      setGetQty(item.discountRules?.getQty?.toString() || "1");
+      setDiscountRuleVal(
+        item.discountRules?.discount?.toString() ||
+          (item.discountType === "BOGO" ? "1" : "0.5")
+      );
+    } else {
+      setBogoItems([]);
+      setIsSameItemForBogo(false);
     }
 
     // Set combo items if food type is combo
@@ -927,6 +1022,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
         })) || []);
       } else {
         setComboItems([]);
+        setAddOnItems([]);
       }
       const savedSides = Array.isArray(item.comboSideOptions)
         ? item.comboSideOptions.filter(Boolean)
@@ -953,6 +1049,12 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     }
   };
 
+  useEffect(() => {
+    if (Params?.type !== "edit") {
+      setFoodType(categoryFoodType);
+    }
+  }, [Params?.type, categoryFoodType]);
+
   // Save menu API call (Edit and Add)
   const saveMenuAPI = async () => {
     // Validate all fields (this part will now only run for the final save after all tabs are validated)
@@ -965,31 +1067,65 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     // Only validate discount if toggle is enabled
     if (discountEnabled) {
       if (discountSource === "custom") {
-        const discountError = addValidateItemDiscount(itemDiscount);
-        if (discountError) {
-          newErrors.customDiscount = discountError;
-        } else if (parseFloat(itemDiscount || 0) <= 0) {
-          newErrors.customDiscount = "Discount must be greater than 0";
-        } else {
-          // Calculate discounted price for custom discount
-          discountedObject = getDiscountedPrice(
-            parseFloat(itemPrice),
-            selectedDiscountType,
-            parseFloat(itemDiscount || 0)
-          );
-
-          if (discountedObject?.isPriceIncreased) {
+        if (["BOGO", "BOGOHO"].includes(selectedDiscountType)) {
+          if (bogoItems.length === 0) {
             newErrors.customDiscount =
-              "Discount must be less than actual price";
+              "Please select a BOGO/BOGOHO reward item";
+          } else {
+            const parsedBuyQty = parseInt(buyQty, 10) || 1;
+            const parsedGetQty = parseInt(getQty, 10) || 1;
+            newErrors.customDiscount = "";
+            discountParams.discountMode = "CUSTOM";
+            discountParams.discountType = selectedDiscountType;
+            discountParams.discount = 0;
+            discountParams.strikePrice =
+              parseFloat(parseFloat(itemPrice).toFixed(2)) || 0;
+            discountParams.price =
+              parseFloat(parseFloat(itemPrice).toFixed(2)) || 0;
+            discountParams.bogoItems = [
+              {
+                itemId:
+                  bogoItems?.[0]?._id === "SAME_ITEM"
+                    ? null
+                    : bogoItems?.[0]?._id || "",
+                qty: parsedGetQty,
+                isSameItem: bogoItems?.[0]?._id === "SAME_ITEM",
+              },
+            ];
+            discountParams.discountRules = {
+              buyQty: parsedBuyQty,
+              getQty: parsedGetQty,
+              discount: selectedDiscountType === "BOGO" ? 1 : 0.5,
+              repeatable: true,
+            };
           }
+        } else {
+          const discountError = addValidateItemDiscount(itemDiscount);
+          if (discountError) {
+            newErrors.customDiscount = discountError;
+          } else if (parseFloat(itemDiscount || 0) <= 0) {
+            newErrors.customDiscount = "Discount must be greater than 0";
+          } else {
+            // Calculate discounted price for custom discount
+            discountedObject = getDiscountedPrice(
+              parseFloat(itemPrice),
+              selectedDiscountType,
+              parseFloat(itemDiscount || 0)
+            );
 
-          // add params to discountParams for API request payload
-          discountParams.discount = parseFloat(itemDiscount || 0);
-          discountParams.discountMode = "CUSTOM";
-          discountParams.discountType = selectedDiscountType;
-          discountParams.strikePrice =
-            parseFloat(parseFloat(itemPrice).toFixed(2)) || 0;
-          discountParams.price = discountedObject?.afterdiscountprice || 0;
+            if (discountedObject?.isPriceIncreased) {
+              newErrors.customDiscount =
+                "Discount must be less than actual price";
+            }
+
+            // add params to discountParams for API request payload
+            discountParams.discount = parseFloat(itemDiscount || 0);
+            discountParams.discountMode = "CUSTOM";
+            discountParams.discountType = selectedDiscountType;
+            discountParams.strikePrice =
+              parseFloat(parseFloat(itemPrice).toFixed(2)) || 0;
+            discountParams.price = discountedObject?.afterdiscountprice || 0;
+          }
         }
       } else if (discountSource === "predefined") {
         if (!selectedPredefinedDiscount) {
@@ -2319,92 +2455,43 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                             {/* Custom Discount Fields */}
                             {discountSource === "custom" && (
                               <>
-                                <View
-                                  style={{
-                                    flexDirection: "row",
-                                    alignItems: "center",
-                                    borderWidth: 1,
-                                    borderColor: AppColor.border,
-                                    borderRadius: 8,
+                                <Dropdown
+                                  data={discountTypeList}
+                                  labelField="label"
+                                  valueField="type"
+                                  value={selectedDiscountType}
+                                  onChange={(item) => {
+                                    setSelectedDiscountType(item.type);
+                                    setErrors((previous) => ({
+                                      ...previous,
+                                      customDiscount: "",
+                                    }));
+                                    if (item.type === "BOGO") {
+                                      setBuyQty("1");
+                                      setGetQty("1");
+                                      setDiscountRuleVal("1");
+                                    } else if (item.type === "BOGOHO") {
+                                      setBuyQty("1");
+                                      setGetQty("1");
+                                      setDiscountRuleVal("0.5");
+                                    } else {
+                                      setBogoItems([]);
+                                      setIsSameItemForBogo(false);
+                                    }
                                   }}
-                                >
-                                  <View style={{ width: 80 }}>
-                                    <View
-                                      style={{
-                                        justifyContent: "center",
-                                        paddingLeft: 16,
-                                        height: 48,
-                                      }}
-                                    >
-                                      <FontAwesome6
-                                        name={
-                                          selectedDiscountType === "FIXED"
-                                            ? "dollar-sign"
-                                            : "percent"
-                                        }
-                                        size={18}
-                                        color={AppColor.textHighlighter}
-                                      />
-                                    </View>
-                                    <Dropdown
-                                      data={discountTypeList}
-                                      labelField="txt"
-                                      valueField="type"
-                                      value={selectedDiscountType}
-                                      onChange={(item) => {
-                                        setSelectedDiscountType(item.type);
-                                      }}
-                                      placeholder={""}
-                                      style={{
-                                        position: "absolute",
-                                        height: 48,
-                                        paddingHorizontal: 12,
-                                        paddingVertical: 14,
-                                        flexDirection: "row",
-                                        alignItems: "center",
-                                        justifyContent: "space-between",
-                                        marginBottom: 5,
-                                      }}
-                                      containerStyle={{ width: width - 66 }}
-                                      placeholderStyle={[
-                                        styles.dropdownPlaceholder,
-                                        { position: "absolute" },
-                                      ]}
-                                      itemTextStyle={{ fontFamily: Mulish400 }}
-                                      selectedTextStyle={{
-                                        fontFamily: Mulish400,
-                                      }}
-                                      renderItem={(item) => (
-                                        <View
-                                          style={{
-                                            flex: 1,
-                                            height: 48,
-                                            paddingHorizontal: 16,
-                                            justifyContent: "center",
-                                          }}
-                                        >
-                                          <Text
-                                            style={{
-                                              fontSize: 16,
-                                              fontFamily: Mulish400,
-                                              color: AppColor.text,
-                                            }}
-                                          >
-                                            {item.label}
-                                          </Text>
-                                        </View>
-                                      )}
-                                    />
-                                  </View>
+                                  placeholder="Select promotion type"
+                                  style={styles.dropdown}
+                                  containerStyle={styles.dropdownContainer}
+                                  placeholderStyle={styles.dropdownPlaceholder}
+                                  itemTextStyle={{ fontFamily: Mulish400 }}
+                                  selectedTextStyle={{ fontFamily: Mulish400 }}
+                                />
 
-                                  <View
-                                    style={{
-                                      width: 1,
-                                      height: "100%",
-                                      backgroundColor: AppColor.border,
-                                    }}
-                                  />
-
+                                {["BOGO", "BOGOHO"].includes(
+                                  selectedDiscountType
+                                ) ? (
+                                  renderCustomBogoFields()
+                                ) : (
                                   <NativeTextInput
                                     value={itemDiscount}
                                     onChangeText={handleItemDiscountChange}
@@ -2428,9 +2515,12 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                                     }
                                     keyboardType="number-pad"
                                   />
-                                </View>
+                                )}
 
-                                {!!errors.customDiscount && (
+                                {!!errors.customDiscount &&
+                                  !["BOGO", "BOGOHO"].includes(
+                                    selectedDiscountType
+                                  ) && (
                                   <HelperText
                                     type="error"
                                     visible={!!errors.customDiscount}

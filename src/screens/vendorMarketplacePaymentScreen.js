@@ -96,6 +96,11 @@ const formatNativeErrorDiagnostic = (label, diagnostic) => {
   return fields;
 };
 
+const formatTapToPayTrace = (diagnostic) =>
+  Array.isArray(diagnostic?.trace) && diagnostic.trace.length
+    ? ["Trace:\n" + diagnostic.trace.filter((entry) => typeof entry === "string").join("\n")]
+    : [];
+
 const APPLE_PAY_METHOD_DATA = {
   supportedMethods: PaymentMethodNameEnum.ApplePay,
   data: {
@@ -388,6 +393,7 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
           ...formatNativeErrorDiagnostic("Outer", outerDiagnostic),
           ...formatNativeErrorDiagnostic("Underlying 1", firstUnderlying),
           ...formatNativeErrorDiagnostic("Underlying 2", secondUnderlying),
+          ...formatTapToPayTrace(outerDiagnostic),
         ].join("\n\n"),
       );
     } finally {

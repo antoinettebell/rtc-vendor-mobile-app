@@ -90,6 +90,11 @@ const formatNativeErrorDiagnostic = (label, diagnostic) => {
   return fields;
 };
 
+const formatTapToPayTrace = (diagnostic) =>
+  Array.isArray(diagnostic?.trace) && diagnostic.trace.length
+    ? ["Trace:\n" + diagnostic.trace.filter((entry) => typeof entry === "string").join("\n")]
+    : [];
+
 const toMoneyNumber = (value) => {
   const n = Number(value);
   return Number.isFinite(n) ? Number(n.toFixed(2)) : 0;
@@ -610,6 +615,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
           ...formatNativeErrorDiagnostic("Outer", outerDiagnostic),
           ...formatNativeErrorDiagnostic("Underlying 1", firstUnderlying),
           ...formatNativeErrorDiagnostic("Underlying 2", secondUnderlying),
+          ...formatTapToPayTrace(outerDiagnostic),
         ].join("\n\n"),
       );
       setPaymentLoading(null);
