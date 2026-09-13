@@ -470,6 +470,7 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
 
       setEarnings({
         totalEarning: Number(backendEarnings.totalEarning || 0),
+        yearToDateEarning: Number(backendEarnings.yearToDateEarning || 0),
         todayEarning: Number(backendEarnings.todayEarning || 0),
         weeklyEarning: Number(backendEarnings.weeklyEarning || 0),
         monthlyEarning: Number(backendEarnings.monthlyEarning || 0),
@@ -592,7 +593,7 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
 
   const onPressNavigationHandler = ({
     listType = "earning",
-    durationType = "monthly",
+    durationType = "yearly",
   }) => {
     navigation.navigate("earningListScreen", {
       truckId: user.foodTruck._id,
@@ -893,8 +894,8 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                 <>
                   <View style={styles.earningsRow}>
                     <EarningComponent
-                      title={"Total Earnings"}
-                      amount={formatMoney(earnings?.totalEarning || 0)}
+                      title={"Year-to-Date Earnings"}
+                      amount={formatMoney(earnings?.yearToDateEarning || 0)}
                       onPress={() => onPressNavigationHandler({})}
                     />
                     <EarningComponent

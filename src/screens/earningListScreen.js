@@ -185,6 +185,11 @@ const EarningListScreen = ({ navigation, route }) => {
       {/* Toggle Buttons */}
       <View style={styles.toggleContainer}>
         <ToggleButton
+          text="YTD"
+          isActive={activeSection === "yearly"}
+          onPress={() => setActiveSection("yearly")}
+        />
+        <ToggleButton
           text="Daily"
           isActive={activeSection === "daily"}
           onPress={() => setActiveSection("daily")}
