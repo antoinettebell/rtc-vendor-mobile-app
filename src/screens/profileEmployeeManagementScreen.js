@@ -1036,25 +1036,22 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 
   const saveEmployeeSchedule = async (employee) => {
     const assignments = scheduleDrafts[employee._id] || getScheduleDraft(employee);
-    if (!assignments.length || assignments.some((item) => !item.truck_unit_id || !item.location_id)) {
+    const scheduledAssignments = assignments.filter((item) => item.days.some((row) => row.enabled));
+    if (scheduledAssignments.some((item) => !item.truck_unit_id || !item.location_id)) {
       Alert.alert("Truck and location required", "Select a food truck and serving location on every schedule card.");
       return;
     }
-    const enabledRows = assignments.flatMap((assignment) => assignment.days.filter((row) => row.enabled));
-    if (!enabledRows.length) {
-      Alert.alert("Workday required", "Check at least one workday before saving the employee schedule.");
-      return;
-    }
+    const enabledRows = scheduledAssignments.flatMap((assignment) => assignment.days.filter((row) => row.enabled));
     const invalid = enabledRows.find((row) => !/^([01]\d|2[0-3]):[0-5]\d$/.test(row.clock_in) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(row.clock_out));
     if (invalid) {
       Alert.alert("Valid times required", "Enter scheduled times as HH:MM, such as 09:00 or 17:30.");
       return;
     }
-    if (findScheduleOverlap(assignments)) {
+    if (findScheduleOverlap(scheduledAssignments)) {
       Alert.alert("Overlapping shifts", "An employee can work multiple food trucks in one day, but their scheduled shifts cannot overlap.");
       return;
     }
-    const saved = await updateEmployee(employee, { schedule_assignments: assignments, is_working: false });
+    const saved = await updateEmployee(employee, { schedule_assignments: scheduledAssignments, is_working: false });
     if (saved) {
       setScheduleEditingId(null);
       setScheduleExpandedId(null);

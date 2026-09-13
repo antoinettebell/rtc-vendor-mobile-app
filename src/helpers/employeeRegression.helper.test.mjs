@@ -189,8 +189,13 @@ assert.match(employeeManagementSource, />Save<\/Text>/);
 assert.match(employeeManagementSource, />Cancel<\/Text>/);
 assert.match(
   employeeManagementSource,
-  /schedule_assignments: assignments, is_working: false/,
+  /schedule_assignments: scheduledAssignments, is_working: false/,
   "Save preserves active-shift termination enforcement",
+);
+assert.match(
+  employeeManagementSource,
+  /assignments\.filter\(\(item\) => item\.days\.some\(\(row\) => row\.enabled\)\)/,
+  "Saving with no selected workdays clears the employee schedule",
 );
 assert.equal(
   findScheduleOverlap([
