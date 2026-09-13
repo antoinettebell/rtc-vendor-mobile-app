@@ -1137,6 +1137,11 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                         </Pressable>
                       </View>
                     </View>
+                    <Text style={styles.operationalDayNote}>
+                      Employee workdays run from 4:00 AM to 3:59 AM the following
+                      day. Example: Work completed Monday before 4:00 AM counts
+                      toward Sunday.
+                    </Text>
                     {visibleEmployees.length ? (
                       visibleEmployees.map((employee) => {
                         const metrics = employee.metrics || {};
@@ -1604,6 +1609,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 16,
+  },
+  operationalDayNote: {
+    color: AppColor.subText,
+    fontFamily: Mulish400,
+    fontSize: 11,
+    lineHeight: 16,
+    marginBottom: 10,
   },
   headerActions: {
     alignItems: "center",
