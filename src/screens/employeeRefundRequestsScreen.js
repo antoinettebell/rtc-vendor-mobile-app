@@ -34,6 +34,22 @@ const formatDateTime = (value) => {
   });
 };
 
+const scalarText = (value, fallback = "") => {
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+  if (value && typeof value === "object" && value._id !== value) {
+    return scalarText(value._id, fallback);
+  }
+  return fallback;
+};
+
+const orderLabel = (request) =>
+  scalarText(request?.orderNumber) ||
+  scalarText(request?.order_id?.orderNumber) ||
+  scalarText(request?.order_id?._id) ||
+  scalarText(request?.order_id, "Unknown");
+
 const EmployeeRefundRequestsScreen = ({ navigation, route }) => {
   const initialBucket = route?.params?.bucket || "PENDING";
   const [requests, setRequests] = useState([]);
@@ -97,7 +113,7 @@ const EmployeeRefundRequestsScreen = ({ navigation, route }) => {
         <View style={styles.requestHeader}>
           <View style={styles.requestTitleBlock}>
             <Text style={styles.requestTitle}>
-              Order #{item.orderNumber || item.order_id || "Unknown"}
+              Order #{orderLabel(item)}
             </Text>
             <Text style={styles.requestMeta}>
               {item.request_type || "Request"} | {item.reason_code || "No reason"}

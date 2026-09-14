@@ -805,9 +805,14 @@ const EmployeeSessionScreen = ({ navigation }) => {
                       ]}
                       onPress={() =>
                         runOperationalProtectedAction(() =>
-                          navigation.navigate("employeeRefundRequestsScreen", {
-                            bucket: bucket.value,
-                          }),
+                          navigation.navigate(
+                            user?.role === "MANAGER" && bucket.value === "PENDING"
+                              ? "managerEmployeesScreen"
+                              : "employeeRefundRequestsScreen",
+                            user?.role === "MANAGER" && bucket.value === "PENDING"
+                              ? undefined
+                              : { bucket: bucket.value },
+                          ),
                         )
                       }
                     >
