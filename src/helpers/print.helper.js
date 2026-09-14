@@ -279,6 +279,8 @@ const operationalRows = (form) => {
         <td>${escapeHtml(item.brand)}</td>
         <td>${escapeHtml(item.item_location)}</td>
         <td>${escapeHtml(item.purchased_from)}</td>
+        <td>${escapeHtml(item.date_purchased ? moment(item.date_purchased).format("MMM D, YYYY") : "")}</td>
+        <td>${escapeHtml(item.use_by_date ? moment(item.use_by_date).format("MMM D, YYYY") : "")}</td>
         <td>${escapeHtml(item.beginning_quantity)}</td>
         <td>${escapeHtml(item.current_quantity)}</td>
         <td>${escapeHtml(item.max_quantity)}</td>
@@ -318,7 +320,7 @@ export const printOperationalComplianceForm = async (form) => {
         ${form.truck_unit ? `<div><strong>Truck / Unit:</strong> ${escapeHtml(form.truck_unit)}</div>` : ""}
       </div>
       <table><thead><tr>${inventory
-        ? "<th>#</th><th>Item</th><th>Brand</th><th>Location</th><th>Purchased From</th><th>Beginning</th><th>Current</th><th>Max</th><th>Reorder</th><th>Status</th><th>Notes</th>"
+        ? "<th>#</th><th>Item</th><th>Brand</th><th>Location</th><th>Purchased From</th><th>Date Purchased</th><th>Use-By Date</th><th>Beginning</th><th>Current</th><th>Max</th><th>Reorder</th><th>Status</th><th>Notes</th>"
         : "<th>#</th><th>Complete</th><th>Area</th><th>Task</th><th>Notes</th>"
       }</tr></thead><tbody>${operationalRows(form)}</tbody></table>
     </body></html>`;

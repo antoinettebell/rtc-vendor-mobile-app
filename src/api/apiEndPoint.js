@@ -73,6 +73,17 @@ export const OPERATIONAL_COMPLIANCE_UNLOCK = (id) =>
   `/operational-compliance/${id}/unlock`;
 export const OPERATIONAL_COMPLIANCE_ARCHIVE = (id) =>
   `/operational-compliance/${id}/archive`;
+export const OPERATIONAL_INVENTORY_ITEMS = "/operational-compliance/inventory/items";
+export const OPERATIONAL_INVENTORY_ITEM = (id, itemId) =>
+  `/operational-compliance/inventory/${id}/items/${itemId}`;
+export const OPERATIONAL_INVENTORY_ITEM_SUBMIT = (id, itemId) =>
+  `${OPERATIONAL_INVENTORY_ITEM(id, itemId)}/submit`;
+export const OPERATIONAL_INVENTORY_ITEM_CLOSE = (id, itemId) =>
+  `${OPERATIONAL_INVENTORY_ITEM(id, itemId)}/close-count`;
+export const OPERATIONAL_INVENTORY_ITEM_ARCHIVE = (id, itemId) =>
+  `${OPERATIONAL_INVENTORY_ITEM(id, itemId)}/archive`;
+export const OPERATIONAL_INVENTORY_REVIEW = (id) =>
+  `/operational-compliance/inventory/${id}/review`;
 
 // Add-ons
 export const GET_ADD_ONS = "/public/add-ons";

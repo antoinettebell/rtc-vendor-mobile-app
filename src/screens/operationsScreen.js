@@ -1,9 +1,9 @@
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSelector } from "react-redux";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import { getOperationalComplianceForms_API } from "../api/appAPI";
+import { getOperationalComplianceForms_API, reviewEmployeeInventory_API } from "../api/appAPI";
 import { AppColor } from "../utils/theme";
 
 const TYPES = [
@@ -16,9 +16,9 @@ const OperationsScreen = ({ navigation }) => {
   const { user } = useSelector((state) => state.userReducer);
   const isEmployee = user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
   const [loading, setLoading] = useState(true);
-  const [submitted, setSubmitted] = useState([]);
-  const [archived, setArchived] = useState([]);
+  const [employeeInventory, setEmployeeInventory] = useState([]);
   const [error, setError] = useState("");
+  const [reviewingId, setReviewingId] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -29,11 +29,14 @@ const OperationsScreen = ({ navigation }) => {
       if (!Array.isArray(forms)) {
         throw new Error("Operations returned an invalid response.");
       }
-      setSubmitted(forms.filter((item) => item.status === "SUBMITTED"));
-      setArchived(forms.filter((item) => item.status === "ARCHIVED"));
+      setEmployeeInventory(forms.filter((item) => (
+        item.form_type === "INVENTORY" &&
+        item.status === "SUBMITTED" &&
+        item.employee_internal_id &&
+        !item.inventory_review_action
+      )));
     } catch (loadError) {
-      setSubmitted([]);
-      setArchived([]);
+      setEmployeeInventory([]);
       setError(loadError?.message || "Unable to load operations.");
     } finally {
       setLoading(false);
@@ -42,7 +45,27 @@ const OperationsScreen = ({ navigation }) => {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const open = (type, formId) => navigation.navigate("operationalFormScreen", { type, formId });
+  const open = (type, formId, startEditing = false) => navigation.navigate("operationalFormScreen", { type, formId, startEditing, reviewMode: !!formId && type === "INVENTORY" });
+  const review = (form, action) => Alert.alert(
+    action === "ARCHIVED" ? "Archive Employee Inventory" : "Close Inventory",
+    action === "ARCHIVED"
+      ? "Do you want to remove these submitted items from current inventory?"
+      : "Are you sure you want to close this employee inventory review into current inventory?",
+    [
+      { text: "No", style: "cancel" },
+      { text: "Yes", onPress: async () => {
+        try {
+          setReviewingId(form._id);
+          await reviewEmployeeInventory_API(form._id, { action });
+          await load();
+        } catch (caught) {
+          Alert.alert("Employee Inventory Review", caught?.message || "Unable to review this inventory submission.");
+        } finally {
+          setReviewingId("");
+        }
+      } },
+    ],
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -70,22 +93,22 @@ const OperationsScreen = ({ navigation }) => {
           </View>
         ) : null}
 
-        <Text style={styles.sectionTitle}>Inventory Review</Text>
-        {loading ? <ActivityIndicator color={AppColor.primary} /> : error ? null : submitted.length ? submitted.map((form) => (
-          <TouchableOpacity key={form._id} style={styles.record} onPress={() => open(form.form_type, form._id)}>
-            <Text style={styles.recordTitle}>{TYPES.find((x) => x.type === form.form_type)?.title}</Text>
-            <Text style={styles.detail}>{new Date(form.submitted_at).toLocaleString()}</Text>
-          </TouchableOpacity>
-        )) : <Text style={styles.empty}>No submitted forms.</Text>}
-
-        {!isEmployee ? <Text style={styles.sectionTitle}>Archive</Text> : null}
-        {!isEmployee && !error && archived.map((form) => (
-          <TouchableOpacity key={form._id} style={styles.record} onPress={() => open(form.form_type, form._id)}>
-            <View><Text style={styles.recordTitle}>{TYPES.find((x) => x.type === form.form_type)?.title}</Text><Text style={styles.detail}>{new Date(form.archived_at).toLocaleString()}</Text></View>
-            <MaterialIcons name="image" size={22} color="#64748B" />
-          </TouchableOpacity>
+        {!isEmployee ? <Text style={styles.sectionTitle}>Employee Inventory Review</Text> : null}
+        {!isEmployee && loading ? <ActivityIndicator color={AppColor.primary} /> : null}
+        {!isEmployee && !loading && !error && employeeInventory.map((form) => (
+          <View key={form._id} style={styles.recordCard}>
+            <TouchableOpacity style={styles.record} onPress={() => open(form.form_type, form._id)}>
+              <View><Text style={styles.recordTitle}>{form.prepared_by_name || "Employee"}</Text><Text style={styles.detail}>{form.truck_unit || "Food truck"} · {new Date(form.submitted_at).toLocaleString()}</Text></View>
+              <MaterialIcons name="chevron-right" size={22} color="#64748B" />
+            </TouchableOpacity>
+            <View style={styles.reviewActions}>
+              <TouchableOpacity disabled={reviewingId === form._id} style={styles.smallButton} onPress={() => open(form.form_type, form._id, true)}><Text style={styles.smallButtonText}>Edit</Text></TouchableOpacity>
+              <TouchableOpacity disabled={reviewingId === form._id} style={styles.smallButton} onPress={() => open(form.form_type, form._id, true)}><Text style={styles.smallButtonText}>Close Inventory</Text></TouchableOpacity>
+              <TouchableOpacity disabled={reviewingId === form._id} style={styles.smallDangerButton} onPress={() => review(form, "ARCHIVED")}><Text style={styles.smallDangerText}>{reviewingId === form._id ? "Working..." : "Archive"}</Text></TouchableOpacity>
+            </View>
+          </View>
         ))}
-        {!isEmployee && !loading && !error && !archived.length ? <Text style={styles.empty}>No archived forms.</Text> : null}
+        {!isEmployee && !loading && !error && !employeeInventory.length ? <Text style={styles.empty}>No employee inventory submissions need review.</Text> : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -101,8 +124,14 @@ const styles = StyleSheet.create({
   cardTitle: { color: "#0F172A", fontSize: 17, fontWeight: "700" },
   detail: { color: "#64748B", fontSize: 13, marginTop: 3 },
   sectionTitle: { color: "#334155", fontSize: 16, fontWeight: "700", marginBottom: 10, marginTop: 22 },
-  record: { alignItems: "center", backgroundColor: "white", borderRadius: 10, flexDirection: "row", justifyContent: "space-between", marginBottom: 9, padding: 14 },
+  recordCard: { backgroundColor: "white", borderRadius: 10, marginBottom: 9, padding: 12 },
+  record: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", padding: 4 },
   recordTitle: { color: "#0F172A", fontSize: 15, fontWeight: "600" },
+  reviewActions: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginTop: 10 },
+  smallButton: { borderColor: AppColor.primary, borderRadius: 7, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 8 },
+  smallButtonText: { color: AppColor.primary, fontSize: 12, fontWeight: "700" },
+  smallDangerButton: { borderColor: "#DC2626", borderRadius: 7, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 8 },
+  smallDangerText: { color: "#B91C1C", fontSize: 12, fontWeight: "700" },
   empty: { color: "#64748B", fontSize: 14 },
   errorCard: { alignItems: "center", backgroundColor: "#FEF3F2", borderColor: "#FDA29B", borderRadius: 12, borderWidth: 1, marginTop: 8, padding: 18 },
   errorTitle: { color: "#912018", fontSize: 16, fontWeight: "700", marginTop: 8 },

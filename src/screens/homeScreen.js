@@ -873,6 +873,7 @@ const HomeScreen = ({ navigation }) => {
       navigation.navigate("operationalFormScreen", {
         type: item.form_type,
         formId: item.form_id,
+        inventoryItemId: item.inventory_item_id,
       });
       return;
     }

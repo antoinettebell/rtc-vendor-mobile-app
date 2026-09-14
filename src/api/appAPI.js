@@ -118,6 +118,12 @@ import {
   OPERATIONAL_COMPLIANCE_FORMS,
   OPERATIONAL_COMPLIANCE_SUBMIT,
   OPERATIONAL_COMPLIANCE_UNLOCK,
+  OPERATIONAL_INVENTORY_ITEMS,
+  OPERATIONAL_INVENTORY_ITEM,
+  OPERATIONAL_INVENTORY_ITEM_SUBMIT,
+  OPERATIONAL_INVENTORY_ITEM_CLOSE,
+  OPERATIONAL_INVENTORY_ITEM_ARCHIVE,
+  OPERATIONAL_INVENTORY_REVIEW,
 } from "./apiEndPoint";
 
 /**
@@ -1494,6 +1500,24 @@ export const unlockOperationalComplianceForm_API = async (id) =>
 
 export const archiveOperationalComplianceForm_API = async (id) =>
   (await apiClient.post(OPERATIONAL_COMPLIANCE_ARCHIVE(id), {}, { skipToken: false }))?.data;
+
+export const createOperationalInventoryItem_API = async (payload) =>
+  (await apiClient.post(OPERATIONAL_INVENTORY_ITEMS, payload, { skipToken: false }))?.data;
+
+export const saveOperationalInventoryItem_API = async (id, itemId, payload) =>
+  (await apiClient.put(OPERATIONAL_INVENTORY_ITEM(id, itemId), payload, { skipToken: false }))?.data;
+
+export const submitOperationalInventoryItem_API = async (id, itemId, payload) =>
+  (await apiClient.post(OPERATIONAL_INVENTORY_ITEM_SUBMIT(id, itemId), payload, { skipToken: false }))?.data;
+
+export const closeOperationalInventoryCount_API = async (id, itemId, payload) =>
+  (await apiClient.post(OPERATIONAL_INVENTORY_ITEM_CLOSE(id, itemId), payload, { skipToken: false }))?.data;
+
+export const archiveOperationalInventoryItem_API = async (id, itemId) =>
+  (await apiClient.post(OPERATIONAL_INVENTORY_ITEM_ARCHIVE(id, itemId), {}, { skipToken: false }))?.data;
+
+export const reviewEmployeeInventory_API = async (id, payload) =>
+  (await apiClient.post(OPERATIONAL_INVENTORY_REVIEW(id), payload, { skipToken: false }))?.data;
 
 export const createVendorEmployee_API = async (payload) => {
   try {
