@@ -47,10 +47,10 @@ const PAYMENT_FILTERS = [
 ];
 
 const REQUEST_STATUS_FILTERS = [
+  { label: "All", value: null },
   { label: "Pending", value: "pending" },
   { label: "Approved", value: "approved" },
   { label: "Rejected", value: "rejected" },
-  { label: "All", value: null },
 ];
 
 const EMPLOYEE_STATUS_FILTERS = [
@@ -206,7 +206,7 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
   const [employeeFilter, setEmployeeFilter] = useState(null);
   const [employeeStatusFilter, setEmployeeStatusFilter] = useState("active");
   const [paymentFilter, setPaymentFilter] = useState(null);
-  const [requestStatusFilter, setRequestStatusFilter] = useState("pending");
+  const [requestStatusFilter, setRequestStatusFilter] = useState(null);
   const [refundRequests, setRefundRequests] = useState([]);
   const [reviewRequest, setReviewRequest] = useState(null);
   const [reviewStatus, setReviewStatus] = useState("APPROVED");

@@ -61,6 +61,12 @@ const ORDER_BUCKETS = [
     value: "completed",
     statuses: [orderStatusStrings.completed],
   },
+  {
+    label: "Refunded",
+    value: "refunded",
+    refunded: true,
+    statuses: [],
+  },
 ];
 
 const REQUEST_REASONS = [
@@ -114,8 +120,19 @@ const getAvailableReasons = (order, requestType) =>
       ),
   );
 
-const getDisplayOrderStatus = (order) =>
-  order?.refundStatus === "PENDING" ? "Refund Pending" : order?.orderStatus;
+const isRefundedOrder = (order) =>
+  String(order?.paymentStatus || "").toUpperCase() === "REFUNDED" ||
+  String(order?.refundStatus || "").toUpperCase() === "SUCCESS";
+
+const orderMatchesBucket = (order, bucket) =>
+  bucket?.refunded
+    ? isRefundedOrder(order)
+    : !isRefundedOrder(order) && bucket?.statuses?.includes(order?.orderStatus);
+
+const getDisplayOrderStatus = (order) => {
+  if (isRefundedOrder(order)) return "Refunded";
+  return order?.refundStatus === "PENDING" ? "Refund Pending" : order?.orderStatus;
+};
 
 const EmployeeOrderManagementScreen = ({ navigation, route }) => {
   const initialBucket = route?.params?.bucket || "preparing";
@@ -171,7 +188,7 @@ const EmployeeOrderManagementScreen = ({ navigation, route }) => {
     () =>
       ORDER_BUCKETS.reduce((counts, bucket) => {
         counts[bucket.value] = orders.filter((order) =>
-          bucket.statuses.includes(order?.orderStatus),
+          orderMatchesBucket(order, bucket),
         ).length;
         return counts;
       }, {}),
@@ -180,9 +197,7 @@ const EmployeeOrderManagementScreen = ({ navigation, route }) => {
 
   const filteredOrders = useMemo(
     () =>
-      orders.filter((order) =>
-        selectedBucketConfig.statuses.includes(order?.orderStatus),
-      ),
+      orders.filter((order) => orderMatchesBucket(order, selectedBucketConfig)),
     [orders, selectedBucketConfig],
   );
 
@@ -323,8 +338,11 @@ const EmployeeOrderManagementScreen = ({ navigation, route }) => {
     const nextStatus = getNextOrderStatus(item?.orderStatus);
     const nextStatusLabel = getNextOrderStatusLabel(item?.orderStatus);
     const isRefundPending = item?.refundStatus === "PENDING";
+    const isRefunded = isRefundedOrder(item);
     const canRequestRefundCancel =
-      !getOrderRequest(item?._id) && !isCompletedRefundWindowExpired(item);
+      !isRefunded &&
+      !getOrderRequest(item?._id) &&
+      !isCompletedRefundWindowExpired(item);
     const existingRequest = getOrderRequest(item?._id);
 
     return (
@@ -372,7 +390,7 @@ const EmployeeOrderManagementScreen = ({ navigation, route }) => {
             />
             <Text style={styles.secondaryButtonText}>Print</Text>
           </TouchableOpacity>
-          {nextStatus && !isRefundPending ? (
+          {nextStatus && !isRefundPending && !isRefunded ? (
             <TouchableOpacity
               activeOpacity={0.8}
               style={styles.primarySmallButton}
