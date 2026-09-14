@@ -122,6 +122,24 @@ const formatDateTime = (value) => {
   });
 };
 
+const scalarText = (value, fallback = "") => {
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+  if (value && typeof value === "object" && value._id !== value) {
+    return scalarText(value._id, fallback);
+  }
+  return fallback;
+};
+
+const refundOrderLabel = (request) =>
+  scalarText(request?.order_id?.orderNumber) ||
+  scalarText(request?.order_id?._id) ||
+  scalarText(request?.order_id, "Unavailable");
+
+const refundOrderId = (request) =>
+  scalarText(request?.order_id?._id) || scalarText(request?.order_id);
+
 const formatShiftDateTime = (value) => {
   if (!value) {
     return null;
@@ -675,7 +693,7 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
 	              {reviewStatus === "APPROVED" ? "Approve Request" : "Reject Request"}
             </Text>
             <Text style={styles.modalMeta}>
-              Order #{reviewRequest?.order_id?.orderNumber || reviewRequest?.order_id}
+	              Order #{refundOrderLabel(reviewRequest)}
             </Text>
             <Text style={styles.modalMeta}>
               {reviewRequest?.request_type} | {reviewRequest?.reason_code}
@@ -1363,7 +1381,7 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                           const isPending =
                             String(request.request_status || "").toUpperCase() ===
                             "PENDING";
-                          const orderId = request.order_id?._id || request.order_id;
+                          const orderId = refundOrderId(request);
                           return (
                           <Pressable
                             key={request.request_id}
@@ -1377,7 +1395,7 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
                             }}
                           >
                             <Text style={styles.requestTitle}>
-                              Order #{request.order_id?.orderNumber || request.order_id}
+	                              Order #{refundOrderLabel(request)}
                             </Text>
                             <Text style={styles.requestMeta}>
                               Employee: {request.employee_login_id || "Employee"}

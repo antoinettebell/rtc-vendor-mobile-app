@@ -878,7 +878,9 @@ const HomeScreen = ({ navigation }) => {
     }
 
     if (item.type === "EMPLOYEE_REFUND_CANCEL_REQUEST") {
-      navigation.navigate("employeesScreen");
+      navigation.navigate(
+        user?.role === "MANAGER" ? "managerEmployeesScreen" : "employeesScreen"
+      );
       return;
     }
 

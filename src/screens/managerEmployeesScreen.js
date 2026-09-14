@@ -8,10 +8,19 @@ import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 
 const formatStatus = (employee) =>
   employee?.has_open_shift ? "Clocked in" : employee?.is_working ? "On duty" : "Not clocked in";
+const scalarText = (value, fallback = "") => {
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+  if (value && typeof value === "object" && value._id !== value) {
+    return scalarText(value._id, fallback);
+  }
+  return fallback;
+};
 const orderLabel = (request) =>
-  typeof request?.order_id === "object"
-    ? request.order_id?.orderNumber || request.order_id?._id || "Unavailable"
-    : request?.order_id || "Unavailable";
+  scalarText(request?.order_id?.orderNumber) ||
+  scalarText(request?.order_id?._id) ||
+  scalarText(request?.order_id, "Unavailable");
 
 const ManagerEmployeesScreen = () => {
   const insets = useSafeAreaInsets();
