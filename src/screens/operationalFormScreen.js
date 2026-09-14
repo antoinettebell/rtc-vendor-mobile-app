@@ -46,6 +46,37 @@ const emptyInventoryItem = () => ({
   notes: "",
 });
 const asDateLabel = (value) => value ? new Date(value).toLocaleDateString() : "Select date";
+const cloneForm = (value) => value ? JSON.parse(JSON.stringify(value)) : value;
+const formTimestamp = (value) => new Date(
+  value?.updatedAt || value?.submitted_at || value?.archived_at || value?.form_date || 0,
+).getTime();
+const buildInventoryGroups = (forms, currentForm) => {
+  const byId = new Map();
+  [...(forms || []), currentForm]
+    .filter((item) => item?.form_type === "INVENTORY")
+    .forEach((item) => byId.set(String(item._id), item));
+  const groupedForms = [...byId.values()].reduce((result, item) => {
+    const truck = item.truck_unit || "Unassigned Truck";
+    result[truck] = [...(result[truck] || []), item];
+    return result;
+  }, {});
+  return Object.entries(groupedForms).map(([truck, truckForms]) => {
+    const active = truckForms
+      .filter((item) => item.status !== "ARCHIVED")
+      .sort((left, right) => formTimestamp(right) - formTimestamp(left))[0];
+    const items = [
+      ...(active?.inventory_items || []).map((item) => ({ ...item, inventory_status: "Active" })),
+      ...truckForms
+        .filter((item) => item.status === "ARCHIVED")
+        .sort((left, right) => formTimestamp(right) - formTimestamp(left))
+        .flatMap((item) => (item.inventory_items || []).map((inventoryItem) => ({
+          ...inventoryItem,
+          inventory_status: "Archived",
+        }))),
+    ];
+    return { truck, form: active || truckForms[0], items };
+  }).sort((left, right) => left.truck.localeCompare(right.truck));
+};
 
 const OperationalTextField = ({
   editable,
@@ -79,7 +110,15 @@ const OperationalFormScreen = ({ navigation, route }) => {
   const defaultPreparedByName = isEmployee
     ? [user?.first_name || user?.firstName, user?.last_name || user?.lastName].filter(Boolean).join(" ")
     : "Vendor";
+  const actorInitials = [
+    user?.first_name || user?.firstName,
+    user?.last_name || user?.lastName,
+  ].filter(Boolean).map((value) => String(value).trim().charAt(0).toUpperCase()).join("");
   const [form, setForm] = useState(null);
+  const [originalForm, setOriginalForm] = useState(null);
+  const [forms, setForms] = useState([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [expandedInventory, setExpandedInventory] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [quantityTarget, setQuantityTarget] = useState(null);
@@ -88,7 +127,7 @@ const OperationalFormScreen = ({ navigation, route }) => {
   const [truckUnits, setTruckUnits] = useState([]);
   const [truckUnitPickerVisible, setTruckUnitPickerVisible] = useState(false);
 
-  const editable = form?.status === "DRAFT";
+  const editable = isEditing && form?.status !== "ARCHIVED";
   const archived = form?.status === "ARCHIVED";
   const inventory = type === "INVENTORY";
 
@@ -99,10 +138,12 @@ const OperationalFormScreen = ({ navigation, route }) => {
     try {
       let nextForm = null;
       let response = null;
+      const listResponse = await getOperationalComplianceForms_API({ type });
+      const availableForms = listResponse?.data?.forms || listResponse?.forms || [];
+      setForms(availableForms);
       if (formId) {
-        response = await getOperationalComplianceForms_API({ type });
-        const forms = response?.data?.forms || response?.forms || [];
-        nextForm = forms.find((item) => item._id === formId) || null;
+        response = listResponse;
+        nextForm = availableForms.find((item) => item._id === formId) || null;
       } else {
         response = await getCurrentOperationalComplianceForm_API(type);
         nextForm = response?.data?.form || response?.form || null;
@@ -110,10 +151,13 @@ const OperationalFormScreen = ({ navigation, route }) => {
       if (!nextForm) throw new Error("The requested operations form was not found.");
       const responseTruckUnits = response?.data?.truckUnits || response?.truckUnits || [];
       setTruckUnits(responseTruckUnits);
-      setForm({
+      const normalizedForm = {
         ...nextForm,
         prepared_by_name: nextForm.prepared_by_name || defaultPreparedByName,
-      });
+      };
+      setForm(normalizedForm);
+      setOriginalForm(cloneForm(normalizedForm));
+      setIsEditing(false);
     } catch (error) {
       setLoadError(error?.message || "Unable to load the form.");
     } finally {
@@ -140,21 +184,39 @@ const OperationalFormScreen = ({ navigation, route }) => {
   });
 
   const payload = useMemo(() => ({
-    prepared_by_name: form?.prepared_by_name || "",
-    initials: form?.initials || "",
     truck_unit: form?.truck_unit || "",
     form_date: form?.form_date || new Date().toISOString(),
     inventory_items: form?.inventory_items || [],
     checklist_items: form?.checklist_items || [],
   }), [form]);
 
+  const inventoryGroups = useMemo(
+    () => buildInventoryGroups(forms, form),
+    [form, forms],
+  );
+
+  const rememberSavedForm = (saved) => {
+    setForm(saved);
+    setOriginalForm(cloneForm(saved));
+    setForms((current) => {
+      const exists = current.some((item) => item._id === saved._id);
+      return exists
+        ? current.map((item) => item._id === saved._id ? saved : item)
+        : [saved, ...current];
+    });
+    setIsEditing(false);
+  };
+
   const save = async (submit = false) => {
     setSaving(true);
     try {
+      if (!submit && originalForm?.status === "SUBMITTED") {
+        await unlockOperationalComplianceForm_API(form._id);
+      }
       const response = submit
         ? await submitOperationalComplianceForm_API(form._id, payload)
         : await saveOperationalComplianceForm_API(form._id, payload);
-      setForm(response?.data?.form || response?.form || form);
+      rememberSavedForm(response?.data?.form || response?.form || form);
       Alert.alert(submit ? "Submitted" : "Saved", submit ? "The vendor can now review this form. No approval is required." : "Your changes were saved.");
     } catch (error) {
       Alert.alert("Operations", error?.message || "Unable to save this form.");
@@ -163,13 +225,17 @@ const OperationalFormScreen = ({ navigation, route }) => {
     }
   };
 
-  const unlock = async () => {
-    try {
-      const response = await unlockOperationalComplianceForm_API(form._id);
-      setForm(response?.data?.form || response?.form || form);
-    } catch (error) {
-      Alert.alert("Operations", error?.message || "Unable to edit this form.");
-    }
+  const cancelEdit = () => {
+    setForm(cloneForm(originalForm));
+    setIsEditing(false);
+  };
+  const beginEdit = () => {
+    setForm((current) => ({
+      ...current,
+      prepared_by_name: defaultPreparedByName,
+      initials: actorInitials,
+    }));
+    setIsEditing(true);
   };
 
   const archive = () => Alert.alert(
@@ -188,9 +254,9 @@ const OperationalFormScreen = ({ navigation, route }) => {
     ],
   );
 
-  const print = async () => {
+  const print = async (printableForm = form) => {
     try {
-      await printOperationalComplianceForm(form);
+      await printOperationalComplianceForm(printableForm);
     } catch (error) {
       Alert.alert("Print", error?.message || "Unable to print this form.");
     }
@@ -244,17 +310,16 @@ const OperationalFormScreen = ({ navigation, route }) => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}><MaterialIcons name="arrow-back" size={27} color="#0F172A" /></TouchableOpacity>
-        <View style={styles.headerCopy}><Text style={styles.title}>{TITLES[type]}</Text><Text style={styles.status}>{form.status}</Text></View>
+        <View style={styles.headerCopy}><Text style={styles.title}>{TITLES[type]}</Text>{!(inventory && form.status === "DRAFT") ? <Text style={styles.status}>{form.status}</Text> : null}</View>
         <View style={styles.headerActions}>
-          <TouchableOpacity accessibilityLabel="Print form" onPress={print}><MaterialIcons name="print" size={25} color={AppColor.primary} /></TouchableOpacity>
-          {form.status === "SUBMITTED" && !isEmployee ? <TouchableOpacity onPress={unlock}><MaterialIcons name="edit" size={25} color={AppColor.primary} /></TouchableOpacity> : null}
+          {!inventory ? <TouchableOpacity accessibilityLabel="Print form" onPress={() => print()}><MaterialIcons name="print" size={25} color={AppColor.primary} /></TouchableOpacity> : null}
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         {archived ? <View style={styles.archiveBanner}><MaterialIcons name="image" size={20} color="#475569" /><Text style={styles.archiveText}>Archived read-only snapshot</Text></View> : null}
         <View style={styles.card}>
-          <OperationalTextField editable={editable && !isEmployee} label="Employee / Vendor Name" value={form.prepared_by_name} onChangeText={(value) => updateHeader("prepared_by_name", value)} />
-          {!inventory ? <OperationalTextField editable={editable} label="Initials" value={form.initials} maxLength={10} onChangeText={(value) => updateHeader("initials", value)} /> : null}
+          <OperationalTextField editable={false} label="Employee / Vendor Name" value={form.prepared_by_name} onChangeText={() => {}} />
+          {!inventory ? <OperationalTextField editable={false} label="Initials" value={form.initials} maxLength={10} onChangeText={() => {}} /> : null}
           <DateField label="Date" value={form.form_date} onSelect={(value) => updateHeader("form_date", value)} />
           <TouchableOpacity
             disabled={!editable || isEmployee}
@@ -311,8 +376,29 @@ const OperationalFormScreen = ({ navigation, route }) => {
 
         {inventory && editable ? <TouchableOpacity style={styles.secondaryButton} onPress={() => updateHeader("inventory_items", [...(form.inventory_items || []), emptyInventoryItem()])}><MaterialIcons name="add" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Add Inventory Item</Text></TouchableOpacity> : null}
         {!inventory ? <Text style={styles.safetyNote}>Report damaged equipment, unsafe temperatures, leaks, or other concerns to a manager before leaving.</Text> : null}
-        {editable ? <View style={styles.actions}><TouchableOpacity disabled={saving} style={styles.secondaryButton} onPress={() => save(false)}><Text style={styles.secondaryText}>Save Draft</Text></TouchableOpacity><TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={() => save(true)}><Text style={styles.primaryText}>{saving ? "Saving..." : "Submit"}</Text></TouchableOpacity></View> : null}
+        {editable ? <View style={styles.actions}><TouchableOpacity disabled={saving} style={styles.secondaryButton} onPress={cancelEdit}><Text style={styles.secondaryText}>Cancel</Text></TouchableOpacity><TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={() => save(false)}><Text style={styles.primaryText}>{saving ? "Saving..." : "Save"}</Text></TouchableOpacity></View> : null}
+        {!editable && !archived && (form.status === "DRAFT" || (!isEmployee && form.status === "SUBMITTED")) ? <TouchableOpacity style={styles.secondaryButton} onPress={beginEdit}><MaterialIcons name="edit" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Edit</Text></TouchableOpacity> : null}
+        {!editable && form.status === "DRAFT" ? <TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={() => save(true)}><Text style={styles.primaryText}>{saving ? "Submitting..." : "Submit"}</Text></TouchableOpacity> : null}
         {form.status === "SUBMITTED" && !isEmployee ? <TouchableOpacity style={styles.archiveButton} onPress={archive}><Text style={styles.primaryText}>Archive Form</Text></TouchableOpacity> : null}
+        {inventory ? <View style={styles.inventoryReview}>
+          <Text style={styles.sectionTitle}>Current Inventory by Food Truck</Text>
+          <Text style={styles.reviewCopy}>Review active and archived inventory items for each truck.</Text>
+          {inventoryGroups.length ? inventoryGroups.map((group) => {
+            const expanded = !!expandedInventory[group.truck];
+            return <View key={group.truck} style={styles.inventoryGroup}>
+              <View style={styles.inventoryGroupHeader}>
+                <TouchableOpacity style={styles.inventoryGroupToggle} onPress={() => setExpandedInventory((current) => ({ ...current, [group.truck]: !expanded }))}>
+                  <MaterialIcons name={expanded ? "expand-less" : "expand-more"} size={24} color={AppColor.primary} />
+                  <View><Text style={styles.inventoryGroupTitle}>{group.truck}</Text><Text style={styles.detail}>{group.items.length} inventory item{group.items.length === 1 ? "" : "s"}</Text></View>
+                </TouchableOpacity>
+                <TouchableOpacity accessibilityLabel={`Print ${group.truck} inventory`} style={styles.printButton} onPress={() => print({ ...group.form, status: "Inventory Review", truck_unit: group.truck, inventory_items: group.items })}>
+                  <MaterialIcons name="print" size={22} color={AppColor.primary} />
+                </TouchableOpacity>
+              </View>
+              {expanded ? <View style={styles.inventoryGroupItems}>{group.items.map((item, index) => <View key={`${item._id || index}-${item.inventory_status}`} style={styles.inventorySummaryItem}><View style={styles.inventorySummaryCopy}><Text style={styles.inventorySummaryName}>{item.item_name || `Item ${index + 1}`}</Text><Text style={styles.detail}>Current {Number(item.current_quantity) || 0} · Reorder {Number(item.reorder_quantity) || 0}</Text></View><Text style={item.inventory_status === "Archived" ? styles.archivedStatus : styles.activeStatus}>{item.inventory_status}</Text></View>)}</View> : null}
+            </View>;
+          }) : <Text style={styles.emptyText}>No inventory records are available.</Text>}
+        </View> : null}
       </ScrollView>
 
       <Modal transparent visible={!!quantityTarget} animationType="slide" onRequestClose={() => setQuantityTarget(null)}>
@@ -371,6 +457,7 @@ const styles = StyleSheet.create({
   itemHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginBottom: 12 }, itemTitle: { color: "#0F172A", fontSize: 17, fontWeight: "700" }, quantityRow: { flexDirection: "row", gap: 10 }, quantityColumn: { flex: 1 },
   checkRow: { alignItems: "center", flexDirection: "row", gap: 10, marginBottom: 12 }, areaInput: { borderBottomColor: "#CBD5E1", borderBottomWidth: 1, color: "#0F172A", flex: 1, fontSize: 16, fontWeight: "700", paddingVertical: 7 }, safetyNote: { color: "#475569", fontSize: 13, fontStyle: "italic", lineHeight: 19, marginBottom: 18 },
   actions: { flexDirection: "row", gap: 10 }, primaryButton: { alignItems: "center", backgroundColor: AppColor.primary, borderRadius: 10, flex: 1, justifyContent: "center", minHeight: 48, padding: 12 }, primaryText: { color: "white", fontSize: 15, fontWeight: "700" }, secondaryButton: { alignItems: "center", backgroundColor: "white", borderColor: AppColor.primary, borderRadius: 10, borderWidth: 1, flexDirection: "row", gap: 6, justifyContent: "center", marginBottom: 12, minHeight: 48, padding: 12 }, secondaryText: { color: AppColor.primary, fontSize: 15, fontWeight: "700" }, archiveButton: { alignItems: "center", backgroundColor: "#475569", borderRadius: 10, marginTop: 12, padding: 14 },
+  inventoryReview: { marginTop: 24 }, sectionTitle: { color: "#0F172A", fontSize: 19, fontWeight: "700" }, reviewCopy: { color: "#64748B", fontSize: 13, lineHeight: 19, marginBottom: 12, marginTop: 4 }, detail: { color: "#64748B", fontSize: 12, marginTop: 3 }, inventoryGroup: { backgroundColor: "white", borderColor: "#E2E8F0", borderRadius: 12, borderWidth: 1, marginBottom: 10, overflow: "hidden" }, inventoryGroupHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", padding: 13 }, inventoryGroupToggle: { alignItems: "center", flex: 1, flexDirection: "row", gap: 8 }, inventoryGroupTitle: { color: "#0F172A", fontSize: 16, fontWeight: "700" }, printButton: { borderColor: AppColor.primary, borderRadius: 8, borderWidth: 1, padding: 8 }, inventoryGroupItems: { borderTopColor: "#E2E8F0", borderTopWidth: 1, paddingHorizontal: 13 }, inventorySummaryItem: { alignItems: "center", borderBottomColor: "#E2E8F0", borderBottomWidth: 1, flexDirection: "row", justifyContent: "space-between", paddingVertical: 12 }, inventorySummaryCopy: { flex: 1, paddingRight: 10 }, inventorySummaryName: { color: "#0F172A", fontSize: 14, fontWeight: "600" }, activeStatus: { backgroundColor: "#DCFCE7", borderRadius: 12, color: "#166534", fontSize: 12, fontWeight: "700", overflow: "hidden", paddingHorizontal: 9, paddingVertical: 4 }, archivedStatus: { backgroundColor: "#E2E8F0", borderRadius: 12, color: "#475569", fontSize: 12, fontWeight: "700", overflow: "hidden", paddingHorizontal: 9, paddingVertical: 4 },
   modalBackdrop: { backgroundColor: "rgba(15,23,42,0.45)", flex: 1, justifyContent: "flex-end" }, modalCard: { backgroundColor: "white", borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "65%", padding: 18 }, modalTitle: { color: "#0F172A", fontSize: 20, fontWeight: "700", marginBottom: 10 }, quantityOption: { alignItems: "center", borderBottomColor: "#E2E8F0", borderBottomWidth: 1, padding: 13 }, quantityOptionText: { color: "#0F172A", fontSize: 17 }, modalClose: { alignItems: "center", paddingTop: 14 },
   emptyText: { color: "#64748B", padding: 18, textAlign: "center" },
 });

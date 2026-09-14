@@ -283,6 +283,7 @@ const operationalRows = (form) => {
         <td>${escapeHtml(item.current_quantity)}</td>
         <td>${escapeHtml(item.max_quantity)}</td>
         <td>${escapeHtml(item.reorder_quantity)}</td>
+        <td>${escapeHtml(item.inventory_status || (form.status === "ARCHIVED" ? "Archived" : "Active"))}</td>
         <td>${escapeHtml(item.notes)}</td>
       </tr>`).join("");
   }
@@ -317,7 +318,7 @@ export const printOperationalComplianceForm = async (form) => {
         ${form.truck_unit ? `<div><strong>Truck / Unit:</strong> ${escapeHtml(form.truck_unit)}</div>` : ""}
       </div>
       <table><thead><tr>${inventory
-        ? "<th>#</th><th>Item</th><th>Brand</th><th>Location</th><th>Purchased From</th><th>Beginning</th><th>Current</th><th>Max</th><th>Reorder</th><th>Notes</th>"
+        ? "<th>#</th><th>Item</th><th>Brand</th><th>Location</th><th>Purchased From</th><th>Beginning</th><th>Current</th><th>Max</th><th>Reorder</th><th>Status</th><th>Notes</th>"
         : "<th>#</th><th>Complete</th><th>Area</th><th>Task</th><th>Notes</th>"
       }</tr></thead><tbody>${operationalRows(form)}</tbody></table>
     </body></html>`;

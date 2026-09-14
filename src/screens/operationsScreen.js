@@ -70,7 +70,7 @@ const OperationsScreen = ({ navigation }) => {
           </View>
         ) : null}
 
-        <Text style={styles.sectionTitle}>Submitted for Review</Text>
+        <Text style={styles.sectionTitle}>Inventory Review</Text>
         {loading ? <ActivityIndicator color={AppColor.primary} /> : error ? null : submitted.length ? submitted.map((form) => (
           <TouchableOpacity key={form._id} style={styles.record} onPress={() => open(form.form_type, form._id)}>
             <Text style={styles.recordTitle}>{TYPES.find((x) => x.type === form.form_type)?.title}</Text>
