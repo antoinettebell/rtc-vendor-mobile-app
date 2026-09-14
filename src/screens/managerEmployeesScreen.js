@@ -1,31 +1,80 @@
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StatusBarManager from "../components/StatusBarManager";
-import { getManagerEmployees_API, managerEmployeeShiftAction_API } from "../api/appAPI";
+import { getManagerEmployees_API, getRefundCancelRequests_API, managerEmployeeShiftAction_API, reviewRefundCancelRequest_API } from "../api/appAPI";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 
 const formatStatus = (employee) =>
   employee?.has_open_shift ? "Clocked in" : employee?.is_working ? "On duty" : "Not clocked in";
+const orderLabel = (request) =>
+  typeof request?.order_id === "object"
+    ? request.order_id?.orderNumber || request.order_id?._id || "Unavailable"
+    : request?.order_id || "Unavailable";
 
 const ManagerEmployeesScreen = () => {
   const insets = useSafeAreaInsets();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actingEmployeeId, setActingEmployeeId] = useState(null);
+  const [refundRequests, setRefundRequests] = useState([]);
+  const [responseNotes, setResponseNotes] = useState({});
+  const [reviewingRequestId, setReviewingRequestId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await getManagerEmployees_API();
-      setEmployees(response?.data?.vendoremployeeList || []);
+      const [employeeResponse, refundResponse] = await Promise.all([
+        getManagerEmployees_API(),
+        getRefundCancelRequests_API({ status: "PENDING", limit: 25 }),
+      ]);
+      setEmployees(employeeResponse?.data?.vendoremployeeList || []);
+      setRefundRequests(refundResponse?.data?.requests || []);
     } catch (error) {
       Alert.alert("Employees unavailable", error?.message || "Please try again.");
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const reviewRequest = (request, status) => {
+    const notes = String(responseNotes[request.request_id] || "").trim();
+    if (status === "REJECTED" && !notes) {
+      Alert.alert("Notes required", "Please add a response note before rejecting this request.");
+      return;
+    }
+    Alert.alert(
+      status === "APPROVED" ? "Approve request?" : "Reject request?",
+      status === "APPROVED"
+        ? "The refund or cancellation will be processed now."
+        : "The employee will be able to see your response.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: status === "APPROVED" ? "Approve" : "Reject",
+          style: status === "REJECTED" ? "destructive" : "default",
+          onPress: async () => {
+            setReviewingRequestId(request.request_id);
+            try {
+              await reviewRefundCancelRequest_API({
+                request_id: request.request_id,
+                payload: {
+                  request_status: status,
+                  vendor_response_notes: notes,
+                },
+              });
+              await load();
+            } catch (error) {
+              Alert.alert("Review unavailable", error?.message || "Please try again.");
+            } finally {
+              setReviewingRequestId(null);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -79,6 +128,29 @@ const ManagerEmployeesScreen = () => {
           contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={AppColor.primary} />}
         >
+          <View style={styles.refundSection}>
+            <Text style={styles.sectionTitle}>Employee Refund Activity</Text>
+            <Text style={styles.sectionHint}>Only requests made while you were on duty at this location remain available while you are still on duty here.</Text>
+            {refundRequests.length ? refundRequests.map((request) => (
+              <View key={request.request_id} style={styles.refundCard}>
+                <Text style={styles.name}>Order #{orderLabel(request)}</Text>
+                <Text style={styles.meta}>{request.request_type} · {request.reason_code}</Text>
+                <Text style={styles.meta}>Employee: {request.employee_login_id || "Employee"}</Text>
+                {request.employee_notes ? <Text style={styles.meta}>Note: {request.employee_notes}</Text> : null}
+                <TextInput
+                  multiline
+                  placeholder="Response note (required to reject)"
+                  style={styles.notesInput}
+                  value={responseNotes[request.request_id] || ""}
+                  onChangeText={(value) => setResponseNotes((current) => ({ ...current, [request.request_id]: value }))}
+                />
+                <View style={styles.reviewActions}>
+                  <TouchableOpacity disabled={reviewingRequestId === request.request_id} style={[styles.reviewButton, styles.rejectButton]} onPress={() => reviewRequest(request, "REJECTED")}><Text style={styles.actionText}>Reject</Text></TouchableOpacity>
+                  <TouchableOpacity disabled={reviewingRequestId === request.request_id} style={[styles.reviewButton, styles.approveButton]} onPress={() => reviewRequest(request, "APPROVED")}><Text style={styles.actionText}>{reviewingRequestId === request.request_id ? "Saving..." : "Approve"}</Text></TouchableOpacity>
+                </View>
+              </View>
+            )) : <Text style={styles.empty}>No pending requests are available for your current duty location.</Text>}
+          </View>
           {employees.length ? employees.map((employee) => {
             const active = !!employee.has_open_shift;
             const shiftStatus = employee?.shift?.shift_status;
@@ -142,6 +214,15 @@ const styles = StyleSheet.create({
   subtitle: { color: AppColor.subText, fontFamily: Mulish400, fontSize: 13, marginTop: 4 },
   loader: { marginTop: 32 },
   content: { gap: 12, padding: 16 },
+  refundSection: { gap: 10, marginBottom: 8 },
+  sectionTitle: { color: AppColor.text, fontFamily: Mulish700, fontSize: 21 },
+  sectionHint: { color: AppColor.subText, fontFamily: Mulish400, fontSize: 13, lineHeight: 19 },
+  refundCard: { backgroundColor: "#FFF7ED", borderColor: "#FDBA74", borderRadius: 10, borderWidth: 1, padding: 16 },
+  notesInput: { backgroundColor: AppColor.white, borderColor: AppColor.border, borderRadius: 8, borderWidth: 1, color: AppColor.text, fontFamily: Mulish400, marginTop: 12, minHeight: 70, padding: 10, textAlignVertical: "top" },
+  reviewActions: { flexDirection: "row", gap: 10, marginTop: 12 },
+  reviewButton: { alignItems: "center", borderRadius: 8, flex: 1, minHeight: 44, justifyContent: "center" },
+  approveButton: { backgroundColor: AppColor.primary },
+  rejectButton: { backgroundColor: AppColor.red },
   card: { backgroundColor: AppColor.white, borderColor: AppColor.border, borderRadius: 10, borderWidth: 1, padding: 16 },
   name: { color: AppColor.text, fontFamily: Mulish700, fontSize: 19 },
   meta: { color: AppColor.subText, fontFamily: Mulish400, fontSize: 14, marginTop: 4 },

@@ -72,6 +72,7 @@ export const notificationTypes = {
   vendor_daily_location_check: "VENDOR_DAILY_LOCATION_CHECK",
   vendor_compliance_expiration: "VENDOR_COMPLIANCE_EXPIRATION",
   vendor_compliance_required: "VENDOR_COMPLIANCE_REQUIRED",
+  employee_refund_cancel_request: "EMPLOYEE_REFUND_CANCEL_REQUEST",
   order_cancelled: "ORDER_CANCELLED",
   order_accepted: "ORDER_ACCEPTED",
   order_rejected: "ORDER_REJECTED",

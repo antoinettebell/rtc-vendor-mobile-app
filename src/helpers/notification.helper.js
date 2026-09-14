@@ -130,6 +130,14 @@ export const handleNotificationAction = async (notification) => {
 
   if (
     notificationData?.activityType ===
+    notificationTypes.employee_refund_cancel_request
+  ) {
+    const role = store.getState().userReducer.user?.role;
+    navigate(role === "MANAGER" ? "managerEmployeesScreen" : "employeesScreen");
+  }
+
+  if (
+    notificationData?.activityType ===
       notificationTypes.vendor_compliance_expiration ||
     notificationData?.activityType === notificationTypes.vendor_compliance_required
   ) {

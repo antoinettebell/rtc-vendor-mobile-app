@@ -877,6 +877,11 @@ const HomeScreen = ({ navigation }) => {
       return;
     }
 
+    if (item.type === "EMPLOYEE_REFUND_CANCEL_REQUEST") {
+      navigation.navigate("employeesScreen");
+      return;
+    }
+
     if (
       item.type === "MARKETPLACE_BID" ||
       item.type === "MARKETPLACE_APPLICATION" ||
