@@ -96,6 +96,9 @@ const POST_PICKUP_STATUSES = [
   orderStatusStrings.completed,
 ];
 const TEN_MINUTES_MS = 10 * 60 * 1000;
+const isRefundedOrder = (order) =>
+  String(order?.paymentStatus || "").toUpperCase() === "REFUNDED" ||
+  String(order?.refundStatus || "").toUpperCase() === "SUCCESS";
 const isCashPayment = (order) =>
   ["CASH", "COD"].includes(
     String(order?.paymentMethod || order?.payment_method || "").toUpperCase(),
@@ -550,8 +553,10 @@ const EmployeeSessionScreen = ({ navigation }) => {
   const selectedOrderBucketConfig =
     ORDER_BUCKETS.find((bucket) => bucket.value === selectedOrderBucket) ||
     ORDER_BUCKETS[0];
-  const filteredOrders = orders.filter((order) =>
-    selectedOrderBucketConfig.statuses.includes(order?.orderStatus),
+  const filteredOrders = orders.filter(
+    (order) =>
+      !isRefundedOrder(order) &&
+      selectedOrderBucketConfig.statuses.includes(order?.orderStatus),
   );
   const refundBucketCounts = REFUND_BUCKETS.reduce((counts, bucket) => {
     counts[bucket.value] = requests.filter(
@@ -762,8 +767,10 @@ const EmployeeSessionScreen = ({ navigation }) => {
               <Text style={styles.panelTitle}>Order Management</Text>
               <View style={styles.bucketRow}>
                 {ORDER_BUCKETS.map((bucket) => {
-                  const count = orders.filter((order) =>
-                    bucket.statuses.includes(order?.orderStatus),
+                  const count = orders.filter(
+                    (order) =>
+                      !isRefundedOrder(order) &&
+                      bucket.statuses.includes(order?.orderStatus),
                   ).length;
                   return (
                     <TouchableOpacity

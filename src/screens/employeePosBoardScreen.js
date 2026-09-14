@@ -99,6 +99,9 @@ const POST_PICKUP_STATUSES = [
   orderStatusStrings.completed,
 ];
 const TEN_MINUTES_MS = 10 * 60 * 1000;
+const isRefundedOrder = (order) =>
+  String(order?.paymentStatus || "").toUpperCase() === "REFUNDED" ||
+  String(order?.refundStatus || "").toUpperCase() === "SUCCESS";
 
 const isCashPayment = (order) =>
   ["COD", "CASH"].includes(
@@ -339,8 +342,10 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
 
   const selectedTabStatuses =
     ORDER_TABS.find((tab) => tab.value === selectedOrderTab)?.statuses || [];
-  const filteredOrders = orders.filter((item) =>
-    selectedTabStatuses.includes(item.orderStatus),
+  const filteredOrders = orders.filter(
+    (item) =>
+      !isRefundedOrder(item) &&
+      selectedTabStatuses.includes(item.orderStatus),
   );
   const loadDashboard = useCallback(async () => {
     const response = await getEmployeeDashboard_API();

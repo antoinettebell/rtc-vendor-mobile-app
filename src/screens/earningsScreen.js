@@ -184,8 +184,9 @@ const getEmployeeShiftStatusText = (employee) => {
 const getDateRange = (dateFilter) => {
   const period =
     dateFilter === "month" ? "month" : dateFilter === "week" ? "week" : "day";
-  const start = moment().startOf(period).format("YYYY-MM-DD");
-  const end = moment().endOf(period).format("YYYY-MM-DD");
+  const operationalDate = moment().subtract(4, "hours");
+  const start = operationalDate.clone().startOf(period).format("YYYY-MM-DD");
+  const end = operationalDate.clone().endOf(period).format("YYYY-MM-DD");
 
   return { startDate: start, endDate: end };
 };
@@ -250,6 +251,7 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
       (acc, employee) => {
         const metrics = employee.metrics || {};
         const orders = Number(metrics.orders_processed || 0);
+        const paidOrders = Number(metrics.paid_orders || 0);
         const sales = Number(metrics.gross_sales || 0);
 	        const requests = Number(metrics.refund_cancel_requests_submitted || 0);
 	        const grossHours = Number(metrics.gross_hours_worked || 0);
@@ -258,17 +260,18 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
 	        return {
 	          sales: acc.sales + sales,
 	          orders: acc.orders + orders,
+	          paidOrders: acc.paidOrders + paidOrders,
 	          requests: acc.requests + requests,
 	          grossHours: acc.grossHours + grossHours,
 	          netHours: acc.netHours + netHours,
 	        };
 	      },
-	      { sales: 0, orders: 0, requests: 0, grossHours: 0, netHours: 0 }
+	      { sales: 0, orders: 0, paidOrders: 0, requests: 0, grossHours: 0, netHours: 0 }
 	    );
 
     return {
       ...totals,
-	      averageTicket: totals.orders ? totals.sales / totals.orders : 0,
+	      averageTicket: totals.paidOrders ? totals.sales / totals.paidOrders : 0,
 	    };
 	  }, []);
 	  const activeDateFilters = isEmployeesScreen
@@ -354,7 +357,7 @@ const EarningsScreen = ({ navigation, screenMode = "earnings" }) => {
         key: "avgTicket",
         label: "Avg. Ticket",
         value: `$${formatMoney(allFoodTruckSummary.averageTicket)}`,
-        detailLabel: "Gross sales divided by orders",
+        detailLabel: "Gross sales divided by paid orders",
         rawValue: allFoodTruckSummary.averageTicket,
 	      },
 	    ];
