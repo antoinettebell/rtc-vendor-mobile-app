@@ -17,6 +17,7 @@ import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { useSelector } from "react-redux";
 import {
   archiveOperationalComplianceForm_API,
+  discardEmployeeInventoryDraft_API,
   getCurrentOperationalComplianceForm_API,
   getOperationalComplianceForms_API,
   saveOperationalComplianceForm_API,
@@ -369,6 +370,25 @@ const OperationalFormContent = ({ navigation, route }) => {
     ],
   );
 
+  const discardEmployeeDraft = () => Alert.alert(
+    "Discard Draft",
+    `Discard ${form?.prepared_by_name || "this employee"}'s inventory draft? This cannot be undone.`,
+    [
+      { text: "Cancel", style: "cancel" },
+      { text: "Discard", style: "destructive", onPress: async () => {
+        try {
+          setSaving(true);
+          await discardEmployeeInventoryDraft_API(form._id);
+          navigation.goBack();
+        } catch (error) {
+          Alert.alert("Employee Inventory Review", error?.message || "Unable to discard this inventory draft.");
+        } finally {
+          setSaving(false);
+        }
+      } },
+    ],
+  );
+
   const print = async (printableForm = form) => {
     try {
       await printOperationalComplianceForm(printableForm);
@@ -531,7 +551,7 @@ const OperationalFormContent = ({ navigation, route }) => {
         {!editable && !archived && !employeeInventoryDraft && !(inventory && isEmployee) && (form.status === "DRAFT" || (!isEmployee && form.status === "SUBMITTED")) ? <TouchableOpacity style={styles.secondaryButton} onPress={beginEdit}><MaterialIcons name="edit" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Edit</Text></TouchableOpacity> : null}
         {!editable && inventory && isEmployee && form.status === "DRAFT" ? <TouchableOpacity style={styles.secondaryButton} onPress={beginEmployeeInventoryAdd}><MaterialIcons name="add" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Add Inventory Item</Text></TouchableOpacity> : null}
         {!editable && form.status === "DRAFT" && !employeeInventoryDraft && !(inventory && isEmployee) ? <TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={() => save(true)}><Text style={styles.primaryText}>{saving ? "Submitting..." : "Submit"}</Text></TouchableOpacity> : null}
-        {employeeInventoryDraft && !editable ? <Text style={styles.safetyNote}>In progress — read only until the employee submits this inventory count.</Text> : null}
+        {employeeInventoryDraft && !editable ? <><Text style={styles.safetyNote}>In progress — read only until the employee submits this inventory count.</Text><TouchableOpacity disabled={saving} style={styles.archiveButton} onPress={discardEmployeeDraft}><Text style={styles.primaryText}>{saving ? "Discarding..." : "Discard Draft"}</Text></TouchableOpacity></> : null}
         {employeeInventoryReview && !editable ? <TouchableOpacity style={styles.primaryButton} onPress={beginEdit}><Text style={styles.primaryText}>Close Inventory</Text></TouchableOpacity> : null}
         {form.status === "SUBMITTED" && !isEmployee && !editable ? <TouchableOpacity disabled={saving} style={styles.archiveButton} onPress={archive}><Text style={styles.primaryText}>{employeeInventoryReview ? "Archive" : "Archive Form"}</Text></TouchableOpacity> : null}
         {inventory && !isEmployee ? <View style={styles.inventoryReview}>

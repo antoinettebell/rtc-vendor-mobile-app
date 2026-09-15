@@ -82,6 +82,8 @@ export const OPERATIONAL_INVENTORY_ITEM_CLOSE = (id, itemId) =>
   `${OPERATIONAL_INVENTORY_ITEM(id, itemId)}/close-count`;
 export const OPERATIONAL_INVENTORY_ITEM_ARCHIVE = (id, itemId) =>
   `${OPERATIONAL_INVENTORY_ITEM(id, itemId)}/archive`;
+export const OPERATIONAL_INVENTORY_DISCARD_DRAFT = (id) =>
+  `/operational-compliance/inventory/${id}/discard-draft`;
 export const OPERATIONAL_INVENTORY_REVIEW = (id) =>
   `/operational-compliance/inventory/${id}/review`;
 

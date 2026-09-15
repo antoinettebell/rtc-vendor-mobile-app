@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, SafeAreaView, ScrollView, StyleSheet, Text, T
 import { useFocusEffect } from "@react-navigation/native";
 import { useSelector } from "react-redux";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import { getOperationalComplianceForms_API, reviewEmployeeInventory_API } from "../api/appAPI";
+import { discardEmployeeInventoryDraft_API, getOperationalComplianceForms_API, reviewEmployeeInventory_API } from "../api/appAPI";
 import { AppColor } from "../utils/theme";
 
 const TYPES = [
@@ -67,6 +67,25 @@ const OperationsScreen = ({ navigation }) => {
     ],
   );
 
+  const discardDraft = (form) => Alert.alert(
+    "Discard Draft",
+    `Discard ${form.prepared_by_name || "this employee"}'s inventory draft? This cannot be undone.`,
+    [
+      { text: "Cancel", style: "cancel" },
+      { text: "Discard", style: "destructive", onPress: async () => {
+        try {
+          setReviewingId(form._id);
+          await discardEmployeeInventoryDraft_API(form._id);
+          await load();
+        } catch (caught) {
+          Alert.alert("Employee Inventory Review", caught?.message || "Unable to discard this inventory draft.");
+        } finally {
+          setReviewingId("");
+        }
+      } },
+    ],
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -103,7 +122,7 @@ const OperationsScreen = ({ navigation }) => {
               {form.status === "SUBMITTED" ? <MaterialIcons name="chevron-right" size={22} color="#64748B" /> : null}
             </TouchableOpacity>
             <View style={styles.inventoryPreview}>{(form.inventory_items || []).map((item, index) => <View key={item._id || index} style={styles.inventoryPreviewRow}><Text style={styles.inventoryItemName}>{item.item_name || `Item ${index + 1}`}</Text><Text style={styles.detail}>Current {Number(item.current_quantity) || 0} · Reorder {Number(item.reorder_quantity) || 0}</Text></View>)}</View>
-            {form.status === "DRAFT" ? <Text style={styles.draftNote}>Read only until the employee submits this inventory count.</Text> : <View style={styles.reviewActions}>
+            {form.status === "DRAFT" ? <><Text style={styles.draftNote}>Read only until the employee submits this inventory count.</Text><View style={styles.reviewActions}><TouchableOpacity disabled={reviewingId === form._id} style={styles.smallDangerButton} onPress={() => discardDraft(form)}><Text style={styles.smallDangerText}>{reviewingId === form._id ? "Discarding..." : "Discard Draft"}</Text></TouchableOpacity></View></> : <View style={styles.reviewActions}>
               <TouchableOpacity disabled={reviewingId === form._id} style={styles.smallButton} onPress={() => open(form.form_type, form._id, true)}><Text style={styles.smallButtonText}>Edit</Text></TouchableOpacity>
               <TouchableOpacity disabled={reviewingId === form._id} style={styles.smallButton} onPress={() => open(form.form_type, form._id, true)}><Text style={styles.smallButtonText}>Close Inventory</Text></TouchableOpacity>
               <TouchableOpacity disabled={reviewingId === form._id} style={styles.smallDangerButton} onPress={() => review(form, "ARCHIVED")}><Text style={styles.smallDangerText}>{reviewingId === form._id ? "Working..." : "Archive"}</Text></TouchableOpacity>

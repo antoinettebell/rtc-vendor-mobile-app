@@ -123,6 +123,7 @@ import {
   OPERATIONAL_INVENTORY_ITEM_SUBMIT,
   OPERATIONAL_INVENTORY_ITEM_CLOSE,
   OPERATIONAL_INVENTORY_ITEM_ARCHIVE,
+  OPERATIONAL_INVENTORY_DISCARD_DRAFT,
   OPERATIONAL_INVENTORY_REVIEW,
 } from "./apiEndPoint";
 
@@ -1515,6 +1516,9 @@ export const closeOperationalInventoryCount_API = async (id, itemId, payload) =>
 
 export const archiveOperationalInventoryItem_API = async (id, itemId) =>
   (await apiClient.post(OPERATIONAL_INVENTORY_ITEM_ARCHIVE(id, itemId), {}, { skipToken: false }))?.data;
+
+export const discardEmployeeInventoryDraft_API = async (id) =>
+  (await apiClient.post(OPERATIONAL_INVENTORY_DISCARD_DRAFT(id), {}, { skipToken: false }))?.data;
 
 export const reviewEmployeeInventory_API = async (id, payload) =>
   (await apiClient.post(OPERATIONAL_INVENTORY_REVIEW(id), payload, { skipToken: false }))?.data;

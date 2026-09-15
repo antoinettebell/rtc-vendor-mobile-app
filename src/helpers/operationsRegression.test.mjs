@@ -26,6 +26,9 @@ assert.match(operations, /Employee Inventory Review/);
 assert.match(operations, /\["DRAFT", "SUBMITTED"\]\.includes\(item\.status\)/);
 assert.match(operations, /Draft counts are visible as read-only/);
 assert.match(operations, /Read only until the employee submits/);
+assert.match(operations, /discardEmployeeInventoryDraft_API/);
+assert.match(operations, /Discard Draft/);
+assert.match(operations, /This cannot be undone/);
 assert.match(operations, /startEditing/);
 assert.match(operations, /Close Inventory/);
 assert.match(form, /CLOSED_INTO_INVENTORY/);
@@ -38,6 +41,7 @@ for (const label of ["Update", "Close Inventory", "Archive", "Cancel"]) {
 assert.match(form, /form\.status === "SUBMITTED" && !isEmployee/);
 assert.match(form, /employeeInventoryDraft/);
 assert.match(form, /In progress — read only until the employee submits/);
+assert.match(form, /discardEmployeeInventoryDraft_API/);
 assert.match(form, /editable && !isEmployee/);
 assert.match(form, /Perform Count/);
 assert.match(form, /beginEmployeeInventoryAdd/);
