@@ -165,6 +165,9 @@ const OperationalFormContent = ({ navigation, route }) => {
       const normalizedForm = {
         ...nextForm,
         prepared_by_name: nextForm.prepared_by_name || defaultPreparedByName,
+        inventory_items: inventory && !isEmployee && nextForm.employee_internal_id
+          ? (nextForm.inventory_items || []).filter((item) => item.employee_modified_at)
+          : nextForm.inventory_items,
       };
       setForm(normalizedForm);
       setOriginalForm(cloneForm(normalizedForm));
@@ -274,10 +277,21 @@ const OperationalFormContent = ({ navigation, route }) => {
     setSelectedInventoryIndex(null);
     setEmployeeInventoryMode(null);
   };
-  const closeEmployeeInventoryReview = () => {
+  const closeEmployeeInventoryReview = async () => {
     const reorderItems = (form.inventory_items || []).filter((item) => reorderQuantity(item) > 0);
     if (!reorderItems.length) {
-      Alert.alert("Close Inventory", "No reorder is currently needed for this inventory submission.");
+      try {
+        setSaving(true);
+        await reviewEmployeeInventory_API(form._id, {
+          action: "UPDATED",
+          inventory_items: form.inventory_items || [],
+        });
+        navigation.goBack();
+      } catch (error) {
+        Alert.alert("Employee Inventory Review", error?.message || "Unable to close this inventory review.");
+      } finally {
+        setSaving(false);
+      }
       return;
     }
     Alert.alert(
@@ -328,6 +342,11 @@ const OperationalFormContent = ({ navigation, route }) => {
 
   const beginEmployeeInventoryCount = (index) => {
     setOriginalForm(cloneForm(form));
+    setForm((current) => {
+      const items = [...(current.inventory_items || [])];
+      items[index] = { ...items[index], employee_modified: true };
+      return { ...current, inventory_items: items };
+    });
     setSelectedInventoryIndex(index);
     setEmployeeInventoryMode("COUNT");
     setIsEditing(true);
@@ -338,7 +357,7 @@ const OperationalFormContent = ({ navigation, route }) => {
     setOriginalForm(cloneForm(form));
     setForm((current) => ({
       ...current,
-      inventory_items: [...(current.inventory_items || []), emptyInventoryItem()],
+      inventory_items: [...(current.inventory_items || []), { ...emptyInventoryItem(), employee_modified: true }],
     }));
     setSelectedInventoryIndex(nextIndex);
     setEmployeeInventoryMode("ADD");

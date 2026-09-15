@@ -152,7 +152,11 @@ export default function VendorInventoryScreen({ navigation, inventoryItemId }) {
   const beginClose = () => {
     const reorderQuantity = Number(selected.reorder_quantity || 0);
     if (reorderQuantity === 0) {
-      Alert.alert("Close Inventory Count", "No reorder is currently needed for this inventory item.");
+      Alert.alert(
+        "Close Inventory Count",
+        "No reorder is currently needed for this inventory item.",
+        [{ text: "OK", onPress: () => setSelected(null) }],
+      );
       return;
     }
     Alert.alert(
