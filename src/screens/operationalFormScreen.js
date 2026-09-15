@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -111,7 +111,7 @@ const OperationalTextField = ({
 );
 
 const OperationalFormContent = ({ navigation, route }) => {
-  const { type, formId, startEditing = false } = route.params || {};
+  const { type, formId, startEditing = false, startImmediately = false, addTask = false } = route.params || {};
   const { user } = useSelector((state) => state.userReducer);
   const isEmployee = user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
   const defaultPreparedByName = isEmployee
@@ -135,7 +135,8 @@ const OperationalFormContent = ({ navigation, route }) => {
   const [truckUnitPickerVisible, setTruckUnitPickerVisible] = useState(false);
   const [selectedInventoryIndex, setSelectedInventoryIndex] = useState(null);
   const [employeeInventoryMode, setEmployeeInventoryMode] = useState(null);
-  const [checklistStarted, setChecklistStarted] = useState(false);
+  const [checklistStarted] = useState(startImmediately);
+  const addedTaskOnOpen = useRef(false);
 
   const editable = isEditing && form?.status !== "ARCHIVED";
   const archived = form?.status === "ARCHIVED";
@@ -173,15 +174,20 @@ const OperationalFormContent = ({ navigation, route }) => {
       if (!nextForm) throw new Error("The requested operations form was not found.");
       const responseTruckUnits = response?.data?.truckUnits || response?.truckUnits || [];
       setTruckUnits(responseTruckUnits);
-      const normalizedForm = {
+      const baseNormalizedForm = {
         ...nextForm,
         prepared_by_name: nextForm.prepared_by_name || defaultPreparedByName,
         inventory_items: inventory && !isEmployee && nextForm.employee_internal_id
           ? (nextForm.inventory_items || []).filter((item) => item.employee_modified_at)
           : nextForm.inventory_items,
       };
+      const shouldAddTask = addTask && vendorChecklist && nextForm.status === "DRAFT" && !addedTaskOnOpen.current;
+      const normalizedForm = shouldAddTask
+        ? { ...baseNormalizedForm, checklist_items: [...(baseNormalizedForm.checklist_items || []), { area: "Additional Task", task: "", completed: false, notes: "" }] }
+        : baseNormalizedForm;
+      if (shouldAddTask) addedTaskOnOpen.current = true;
       setForm(normalizedForm);
-      setOriginalForm(cloneForm(normalizedForm));
+      setOriginalForm(cloneForm(baseNormalizedForm));
       setIsEditing(Boolean(
         (checklistStarted && !formId && nextForm.status === "DRAFT") ||
         (isEmployee && formId && nextForm.status === "DRAFT") ||
@@ -194,7 +200,7 @@ const OperationalFormContent = ({ navigation, route }) => {
     } finally {
       setLoading(false);
     }
-  }, [checklistOverview, checklistStarted, defaultPreparedByName, formId, inventory, isEmployee, startEditing, type]);
+  }, [addTask, checklistOverview, checklistStarted, defaultPreparedByName, formId, inventory, isEmployee, startEditing, type, vendorChecklist]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -459,7 +465,10 @@ const OperationalFormContent = ({ navigation, route }) => {
           <Text style={[styles.title, { marginLeft: 15 }]}>{TITLES[type]}</Text>
         </View>
         <ScrollView contentContainerStyle={styles.content}>
-          <TouchableOpacity style={[styles.primaryButton, styles.overviewStartButton]} onPress={() => setChecklistStarted(true)}><Text style={styles.primaryText}>{type === "OPENING_CHECKLIST" ? "Start Opening Process" : "Start Closing Process"}</Text></TouchableOpacity>
+          <View style={styles.overviewActions}>
+            <TouchableOpacity style={[styles.primaryButton, styles.overviewStartButton]} onPress={() => navigation.push("operationalFormScreen", { type, startImmediately: true })}><Text style={styles.primaryText}>{type === "OPENING_CHECKLIST" ? "Start Opening Process" : "Start Closing Process"}</Text></TouchableOpacity>
+            {!isEmployee ? <TouchableOpacity accessibilityLabel="Add additional task" style={styles.addTaskButton} onPress={() => navigation.push("operationalFormScreen", { type, startImmediately: true, addTask: true })}><MaterialIcons name="add" size={28} color="white" /></TouchableOpacity> : null}
+          </View>
           <Text style={styles.sectionTitle}>{isEmployee ? "Draft & Pending Review" : "Employee Submitted"}</Text>
           {draftAndPending.length ? draftAndPending.map((item) => <TouchableOpacity key={item._id} style={styles.historyRecord} onPress={() => openSavedForm(item)}><View style={styles.recordCopy}><View style={styles.recordTitleRow}><Text style={styles.recordTitle}>{item.prepared_by_name || "Employee"}</Text><Text style={item.status === "DRAFT" ? styles.draftBadge : styles.submittedBadge}>{item.status === "DRAFT" ? "Draft" : "Pending Review"}</Text></View><Text style={styles.detail}>{item.truck_unit || "Food truck"} · {new Date(item.submitted_at || item.updatedAt || item.createdAt || item.form_date).toLocaleString()}</Text></View><MaterialIcons name="chevron-right" size={22} color="#64748B" /></TouchableOpacity>) : <Text style={styles.emptyText}>{isEmployee ? "No draft or pending checklists." : "No employee-submitted checklists."}</Text>}
           <Text style={styles.sectionTitle}>Archived</Text>
@@ -588,15 +597,15 @@ const OperationalFormContent = ({ navigation, route }) => {
           <View key={item._id || index} style={styles.card}>
             <TouchableOpacity disabled={!editable} style={styles.checkRow} onPress={() => updateChecklist(index, "completed", !item.completed)}>
               <MaterialIcons name={item.completed ? "check-box" : "check-box-outline-blank"} size={28} color={item.completed ? AppColor.primary : "#64748B"} />
-              <TextInput editable={editable} maxLength={80} style={[styles.areaInput, !editable && styles.readonly]} value={item.area} onChangeText={(value) => updateChecklist(index, "area", value)} />
+              <TextInput editable={editable && !isEmployee} maxLength={80} style={[styles.areaInput, (!editable || isEmployee) && styles.readonly]} value={item.area} onChangeText={(value) => updateChecklist(index, "area", value)} />
             </TouchableOpacity>
-            <OperationalTextField editable={editable} label="Task" value={item.task} maxLength={250} multiline onChangeText={(value) => updateChecklist(index, "task", value)} />
+            <OperationalTextField editable={editable && !isEmployee} label="Task" value={item.task} maxLength={250} multiline onChangeText={(value) => updateChecklist(index, "task", value)} />
             <OperationalTextField editable={editable} label="Notes" value={item.notes} maxLength={250} multiline onChangeText={(value) => updateChecklist(index, "notes", value)} />
           </View>
         ))}
 
         {inventory && !isEmployee && editable ? <TouchableOpacity style={styles.secondaryButton} onPress={() => updateHeader("inventory_items", [...(form.inventory_items || []), emptyInventoryItem()])}><MaterialIcons name="add" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Add Inventory Item</Text></TouchableOpacity> : null}
-        {!inventory && editable ? <TouchableOpacity style={styles.secondaryButton} onPress={addChecklistTask}><MaterialIcons name="add" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Add Additional Task</Text></TouchableOpacity> : null}
+        {!inventory && editable && !isEmployee ? <TouchableOpacity style={styles.secondaryButton} onPress={addChecklistTask}><MaterialIcons name="add" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Add Additional Task</Text></TouchableOpacity> : null}
         {!inventory ? <Text style={styles.safetyNote}>Report damaged equipment, unsafe temperatures, leaks, or other concerns to a manager before leaving.</Text> : null}
         {employeeInventoryReview && editable ? <Text style={styles.safetyNote}>{employeeInventoryMode === "REORDER" ? "Enter the new product lot. Dates are required, and Beginning, Current, and Max quantities must match the quantity received." : "Update accepts the employee count. Close Inventory is only used when replacement products were received."}</Text> : null}
         {editable ? <View style={styles.actions}>{employeeInventoryReview && employeeInventoryMode === "REORDER" ? <>
@@ -706,7 +715,7 @@ const styles = StyleSheet.create({
   inventoryReview: { marginTop: 24 }, sectionTitle: { color: "#0F172A", fontSize: 19, fontWeight: "700" }, reviewCopy: { color: "#64748B", fontSize: 13, lineHeight: 19, marginBottom: 12, marginTop: 4 }, detail: { color: "#64748B", fontSize: 12, marginTop: 3 }, inventoryGroup: { backgroundColor: "white", borderColor: "#E2E8F0", borderRadius: 12, borderWidth: 1, marginBottom: 10, overflow: "hidden" }, inventoryGroupHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", padding: 13 }, inventoryGroupToggle: { alignItems: "center", flex: 1, flexDirection: "row", gap: 8 }, inventoryGroupTitle: { color: "#0F172A", fontSize: 16, fontWeight: "700" }, printButton: { borderColor: AppColor.primary, borderRadius: 8, borderWidth: 1, padding: 8 }, inventoryGroupItems: { borderTopColor: "#E2E8F0", borderTopWidth: 1, paddingHorizontal: 13 }, inventorySummaryItem: { alignItems: "center", borderBottomColor: "#E2E8F0", borderBottomWidth: 1, flexDirection: "row", justifyContent: "space-between", paddingVertical: 12 }, inventorySummaryCopy: { flex: 1, paddingRight: 10 }, inventorySummaryName: { color: "#0F172A", fontSize: 14, fontWeight: "600" }, activeStatus: { backgroundColor: "#DCFCE7", borderRadius: 12, color: "#166534", fontSize: 12, fontWeight: "700", overflow: "hidden", paddingHorizontal: 9, paddingVertical: 4 }, archivedStatus: { backgroundColor: "#E2E8F0", borderRadius: 12, color: "#475569", fontSize: 12, fontWeight: "700", overflow: "hidden", paddingHorizontal: 9, paddingVertical: 4 },
   modalBackdrop: { backgroundColor: "rgba(15,23,42,0.45)", flex: 1, justifyContent: "flex-end" }, modalCard: { backgroundColor: "white", borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "65%", padding: 18 }, modalTitle: { color: "#0F172A", fontSize: 20, fontWeight: "700", marginBottom: 10 }, quantityOption: { alignItems: "center", borderBottomColor: "#E2E8F0", borderBottomWidth: 1, padding: 13 }, quantityOptionText: { color: "#0F172A", fontSize: 17 }, modalClose: { alignItems: "center", paddingTop: 14 },
   emptyText: { color: "#64748B", padding: 18, textAlign: "center" },
-  historyRecord: { alignItems: "center", backgroundColor: "white", borderColor: "#E2E8F0", borderRadius: 10, borderWidth: 1, flexDirection: "row", justifyContent: "space-between", marginTop: 10, padding: 14 }, recordCopy: { flex: 1, paddingRight: 10 }, recordTitleRow: { alignItems: "center", flexDirection: "row", flexWrap: "wrap", gap: 8 }, recordTitle: { color: "#0F172A", fontSize: 15, fontWeight: "700" }, draftBadge: { backgroundColor: "#FEF3C7", borderRadius: 10, color: "#92400E", fontSize: 10, fontWeight: "700", overflow: "hidden", paddingHorizontal: 7, paddingVertical: 3 }, submittedBadge: { backgroundColor: "#DBEAFE", borderRadius: 10, color: "#1D4ED8", fontSize: 10, fontWeight: "700", overflow: "hidden", paddingHorizontal: 7, paddingVertical: 3 }, overviewStartButton: { flex: 0, marginBottom: 18 },
+  historyRecord: { alignItems: "center", backgroundColor: "white", borderColor: "#E2E8F0", borderRadius: 10, borderWidth: 1, flexDirection: "row", justifyContent: "space-between", marginTop: 10, padding: 14 }, recordCopy: { flex: 1, paddingRight: 10 }, recordTitleRow: { alignItems: "center", flexDirection: "row", flexWrap: "wrap", gap: 8 }, recordTitle: { color: "#0F172A", fontSize: 15, fontWeight: "700" }, draftBadge: { backgroundColor: "#FEF3C7", borderRadius: 10, color: "#92400E", fontSize: 10, fontWeight: "700", overflow: "hidden", paddingHorizontal: 7, paddingVertical: 3 }, submittedBadge: { backgroundColor: "#DBEAFE", borderRadius: 10, color: "#1D4ED8", fontSize: 10, fontWeight: "700", overflow: "hidden", paddingHorizontal: 7, paddingVertical: 3 }, overviewActions: { alignItems: "stretch", flexDirection: "row", gap: 10, marginBottom: 18 }, overviewStartButton: { flex: 1, marginBottom: 0 }, addTaskButton: { alignItems: "center", backgroundColor: AppColor.primary, borderRadius: 10, justifyContent: "center", minHeight: 48, width: 52 },
 });
 
 export default OperationalFormScreen;
