@@ -49,6 +49,9 @@ const emptyInventoryItem = () => ({
 });
 const asDateLabel = (value) => value ? new Date(value).toLocaleDateString() : "Select date";
 const cloneForm = (value) => value ? JSON.parse(JSON.stringify(value)) : value;
+const reorderQuantity = (item = {}) => Number(
+  item.reorder_quantity ?? Math.max(0, Number(item.max_quantity || 0) - Number(item.current_quantity || 0)),
+);
 const formTimestamp = (value) => new Date(
   value?.updatedAt || value?.submitted_at || value?.archived_at || value?.form_date || 0,
 ).getTime();
@@ -220,10 +223,26 @@ const OperationalFormContent = ({ navigation, route }) => {
   const save = async (submit = false) => {
     setSaving(true);
     try {
+      if (inventory && payload.inventory_items.some((item) => Number(item.beginning_quantity || 0) > Number(item.max_quantity || 0))) {
+        throw new Error("Beginning quantity cannot exceed max quantity.");
+      }
       if (employeeInventoryReview) {
+        if (submit && employeeInventoryMode === "REORDER") {
+          const invalidLot = payload.inventory_items.find((item) => {
+            const beginning = Number(item.beginning_quantity);
+            const current = Number(item.current_quantity);
+            const maximum = Number(item.max_quantity);
+            return !item.date_purchased || !item.use_by_date || beginning <= 0 || beginning !== current || current !== maximum;
+          });
+          if (invalidLot) {
+            throw new Error("Each reordered item needs new purchase and use-by dates. Beginning, current, and max quantities must match the quantity received.");
+          }
+        }
         await reviewEmployeeInventory_API(form._id, {
           action: submit ? "CLOSED_INTO_INVENTORY" : "UPDATED",
-          inventory_items: payload.inventory_items,
+          ...(submit && employeeInventoryMode === "REORDER"
+            ? { reorder_items: payload.inventory_items }
+            : { inventory_items: payload.inventory_items }),
         });
         Alert.alert(
           "Employee Inventory Review",
@@ -253,14 +272,39 @@ const OperationalFormContent = ({ navigation, route }) => {
     setSelectedInventoryIndex(null);
     setEmployeeInventoryMode(null);
   };
-  const closeEmployeeInventoryReview = () => Alert.alert(
-    "Close Inventory",
-    "Are you sure you want to close this employee inventory review into current inventory?",
-    [
-      { text: "No", style: "cancel" },
-      { text: "Yes", onPress: () => save(true) },
-    ],
-  );
+  const closeEmployeeInventoryReview = () => {
+    const reorderItems = (form.inventory_items || []).filter((item) => reorderQuantity(item) > 0);
+    if (!reorderItems.length) {
+      Alert.alert("Close Inventory", "No reorder is currently needed for this inventory submission.");
+      return;
+    }
+    Alert.alert(
+      "Close Inventory",
+      "Did you receive new products for the items that need reordering?",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Yes",
+          onPress: () => {
+            setOriginalForm(cloneForm(form));
+            setForm((current) => ({
+              ...current,
+              inventory_items: reorderItems.map((item) => ({
+                ...item,
+                date_purchased: null,
+                use_by_date: null,
+                beginning_quantity: 0,
+                current_quantity: 0,
+                max_quantity: 0,
+                reorder_quantity: 0,
+              })),
+            }));
+            setEmployeeInventoryMode("REORDER");
+          },
+        },
+      ],
+    );
+  };
   const updateEmployeeInventoryReview = () => Alert.alert(
     "Update Inventory",
     "Update the matching current inventory records with these reviewed quantities?",
@@ -419,7 +463,9 @@ const OperationalFormContent = ({ navigation, route }) => {
           const selectedItem = !employeeItem || selectedInventoryIndex === index;
           const addingItem = employeeItem && employeeInventoryMode === "ADD" && selectedInventoryIndex === index;
           const countingItem = employeeItem && employeeInventoryMode === "COUNT" && selectedInventoryIndex === index;
-          const editAllFields = editable && (!employeeItem || addingItem);
+          const replacingInventory = employeeInventoryReview && employeeInventoryMode === "REORDER";
+          const editAllFields = editable && (!employeeItem || addingItem) && !replacingInventory;
+          const editReplacementFields = editable && replacingInventory;
           return <View key={item._id || index} style={styles.card}>
             <TouchableOpacity
               disabled={!employeeItem}
@@ -441,14 +487,14 @@ const OperationalFormContent = ({ navigation, route }) => {
               <OperationalTextField editable={editAllFields} label="Brand" value={item.brand} onChangeText={(value) => updateInventory(index, "brand", value)} />
               <OperationalTextField editable={editAllFields} label="Item Name" value={item.item_name} onChangeText={(value) => updateInventory(index, "item_name", value)} />
               <OperationalTextField editable={editAllFields} label="Purchased From" value={item.purchased_from} onChangeText={(value) => updateInventory(index, "purchased_from", value)} />
-              <DateField canEdit={editAllFields} label="Date Purchased" value={item.date_purchased} onSelect={(value) => updateInventory(index, "date_purchased", value)} />
-              <DateField canEdit={editAllFields} label="Use-By Date" value={item.use_by_date} onSelect={(value) => updateInventory(index, "use_by_date", value)} />
+              <DateField canEdit={editAllFields || editReplacementFields} label="Date Purchased" value={item.date_purchased} onSelect={(value) => updateInventory(index, "date_purchased", value)} />
+              <DateField canEdit={editAllFields || editReplacementFields} label="Use-By Date" value={item.use_by_date} onSelect={(value) => updateInventory(index, "use_by_date", value)} />
               <View style={styles.quantityRow}>
-                <View style={styles.quantityColumn}><QuantityField canEdit={editAllFields} label="Beginning Quantity" value={item.beginning_quantity} onSelect={(value) => updateInventory(index, "beginning_quantity", value)} /></View>
-                <View style={styles.quantityColumn}><QuantityField canEdit={editAllFields || countingItem} label="Current Quantity" value={item.current_quantity} onSelect={(value) => updateInventory(index, "current_quantity", value)} /></View>
+                <View style={styles.quantityColumn}><QuantityField canEdit={editAllFields || editReplacementFields} label="Beginning Quantity" value={item.beginning_quantity} onSelect={(value) => updateInventory(index, "beginning_quantity", value)} /></View>
+                <View style={styles.quantityColumn}><QuantityField canEdit={editAllFields || countingItem || editReplacementFields} label="Current Quantity" value={item.current_quantity} onSelect={(value) => updateInventory(index, "current_quantity", value)} /></View>
               </View>
               <View style={styles.quantityRow}>
-                <View style={styles.quantityColumn}><QuantityField canEdit={editAllFields} label="Max Quantity" value={item.max_quantity} onSelect={(value) => updateInventory(index, "max_quantity", value)} /></View>
+                <View style={styles.quantityColumn}><QuantityField canEdit={editAllFields || editReplacementFields} label="Max Quantity" value={item.max_quantity} onSelect={(value) => updateInventory(index, "max_quantity", value)} /></View>
                 <View style={styles.quantityColumn}><QuantityField canEdit={false} label="Reorder Quantity" value={item.reorder_quantity} readOnly /></View>
               </View>
               <OperationalTextField editable={editAllFields} label="Notes" value={item.notes} maxLength={250} multiline onChangeText={(value) => updateInventory(index, "notes", value)} />
@@ -468,8 +514,11 @@ const OperationalFormContent = ({ navigation, route }) => {
 
         {inventory && !isEmployee && editable ? <TouchableOpacity style={styles.secondaryButton} onPress={() => updateHeader("inventory_items", [...(form.inventory_items || []), emptyInventoryItem()])}><MaterialIcons name="add" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Add Inventory Item</Text></TouchableOpacity> : null}
         {!inventory ? <Text style={styles.safetyNote}>Report damaged equipment, unsafe temperatures, leaks, or other concerns to a manager before leaving.</Text> : null}
-        {employeeInventoryReview && editable ? <Text style={styles.safetyNote}>Update corrects the matching current record. Closing inventory requires a fresh use-by date and starts the next count.</Text> : null}
-        {editable ? <View style={styles.actions}>{employeeInventoryReview ? <>
+        {employeeInventoryReview && editable ? <Text style={styles.safetyNote}>{employeeInventoryMode === "REORDER" ? "Enter the new product lot. Dates are required, and Beginning, Current, and Max quantities must match the quantity received." : "Update accepts the employee count. Close Inventory is only used when replacement products were received."}</Text> : null}
+        {editable ? <View style={styles.actions}>{employeeInventoryReview && employeeInventoryMode === "REORDER" ? <>
+          <TouchableOpacity disabled={saving} style={styles.secondaryButton} onPress={cancelEdit}><Text style={styles.secondaryText}>Cancel</Text></TouchableOpacity>
+          <TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={() => save(true)}><Text style={styles.primaryText}>{saving ? "Submitting..." : "Submit"}</Text></TouchableOpacity>
+        </> : employeeInventoryReview ? <>
           <TouchableOpacity disabled={saving} style={[styles.primaryButton, styles.reviewActionButton]} onPress={updateEmployeeInventoryReview}><Text style={styles.primaryText}>{saving ? "Updating..." : "Update"}</Text></TouchableOpacity>
           <TouchableOpacity disabled={saving} style={[styles.primaryButton, styles.reviewActionButton]} onPress={closeEmployeeInventoryReview}><Text style={styles.primaryText}>{saving ? "Closing..." : "Close Inventory"}</Text></TouchableOpacity>
           <TouchableOpacity disabled={saving} style={[styles.archiveButton, styles.reviewActionButton]} onPress={archive}><Text style={styles.primaryText}>Archive</Text></TouchableOpacity>

@@ -72,7 +72,7 @@ const Field = ({ label, value, editable, onChangeText, numeric = false, multilin
       multiline={multiline}
       onChangeText={onChangeText}
       style={[styles.input, !editable && styles.readonly, multiline && styles.notes]}
-      value={numeric ? String(value ?? 0) : String(value || "")}
+      value={numeric ? String(value ?? "") : String(value || "")}
     />
   </View>
 );
@@ -147,6 +147,40 @@ export default function VendorInventoryScreen({ navigation, inventoryItemId }) {
     }
     return next;
   });
+  const beginClose = () => {
+    const reorderQuantity = Number(selected.reorder_quantity || 0);
+    if (reorderQuantity === 0) {
+      Alert.alert("Close Inventory Count", "No reorder is currently needed for this inventory item.");
+      return;
+    }
+    Alert.alert(
+      "Close Inventory Count",
+      "Did you receive new products for this inventory item?",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Yes",
+          onPress: () => {
+            setOriginal(clone(selected));
+            setSelected(selected.pending_close_draft ? {
+              ...selected,
+              ...selected.pending_close_draft,
+            } : {
+              ...selected,
+              date_purchased: null,
+              use_by_date: null,
+              beginning_quantity: null,
+              current_quantity: null,
+              max_quantity: null,
+              reorder_quantity: 0,
+            });
+            setClosing(true);
+            setEditing(true);
+          },
+        },
+      ],
+    );
+  };
   const payload = () => ({
     item_location: selected.item_location,
     brand: selected.brand,
@@ -154,15 +188,19 @@ export default function VendorInventoryScreen({ navigation, inventoryItemId }) {
     purchased_from: selected.purchased_from,
     date_purchased: selected.date_purchased,
     use_by_date: selected.use_by_date,
-    beginning_quantity: Number(selected.beginning_quantity || 0),
-    current_quantity: Number(selected.current_quantity || 0),
-    max_quantity: Math.max(1, Number(selected.max_quantity || 1)),
+    beginning_quantity: closing && selected.beginning_quantity == null ? null : Number(selected.beginning_quantity || 0),
+    current_quantity: closing && selected.current_quantity == null ? null : Number(selected.current_quantity || 0),
+    max_quantity: closing && selected.max_quantity == null ? null : Math.max(1, Number(selected.max_quantity || 1)),
     notes: selected.notes,
   });
 
   const persist = async (submit = false) => {
     if (!String(selected?.item_name || "").trim()) {
       Alert.alert("Inventory", "Enter an inventory item name.");
+      return;
+    }
+    if (Number(selected.beginning_quantity || 0) > Number(selected.max_quantity || 0)) {
+      Alert.alert("Inventory", "Beginning quantity cannot exceed max quantity.");
       return;
     }
     setSaving(true);
@@ -190,7 +228,15 @@ export default function VendorInventoryScreen({ navigation, inventoryItemId }) {
           await submitOperationalInventoryItem_API(created.form._id, created.item._id, payload());
         }
       } else if (closing && submit) {
-        if (!selected.use_by_date) throw new Error("Enter the fresh item use-by date.");
+        if (!selected.date_purchased || !selected.use_by_date) {
+          throw new Error("Enter the new item purchase and use-by dates.");
+        }
+        const beginning = Number(selected.beginning_quantity);
+        const current = Number(selected.current_quantity);
+        const maximum = Number(selected.max_quantity);
+        if (beginning <= 0 || beginning !== current || current !== maximum) {
+          throw new Error("Beginning, current, and max quantities must match the received quantity.");
+        }
         await new Promise((resolve) => Alert.alert(
           "Close Inventory Count",
           "Are you sure you want to close out this item's monthly inventory count?",
@@ -289,7 +335,7 @@ export default function VendorInventoryScreen({ navigation, inventoryItemId }) {
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         {!selected.formId ? <TouchableOpacity style={styles.field} onPress={() => setTruckPicker(true)}><Text style={styles.label}>Food Truck</Text><View style={styles.select}><Text>{selected.truck || "Choose food truck"}</Text><MaterialIcons name="expand-more" size={22} color="#64748B" /></View></TouchableOpacity> : null}
-        {closing ? <Text style={styles.closeNotice}>Enter the fresh inventory details, including a new use-by date. Submitting will preserve this count and start the next count with the current quantity.</Text> : null}
+        {closing ? <Text style={styles.closeNotice}>Enter the new product lot. Date Purchased and Use-By Date are required. Beginning, Current, and Max quantities must all match the quantity received.</Text> : null}
         <View style={styles.card}>
           <Field editable={editing} label="Item Location" value={selected.item_location} onChangeText={(value) => patch("item_location", value)} />
           <Field editable={editing} label="Brand" value={selected.brand} onChangeText={(value) => patch("brand", value)} />
@@ -306,7 +352,7 @@ export default function VendorInventoryScreen({ navigation, inventoryItemId }) {
           <TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={() => persist(true)}><Text style={styles.primaryText}>Submit</Text></TouchableOpacity>
         </View> : !archived ? <>
           <TouchableOpacity style={styles.secondaryButton} onPress={() => setEditing(true)}><MaterialIcons name="edit" size={20} color={AppColor.primary} /><Text style={styles.secondaryText}>Edit</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryButton} onPress={() => { const next = selected.pending_close_draft ? { ...selected, ...selected.pending_close_draft } : { ...selected, use_by_date: null }; setOriginal(clone(selected)); setSelected(next); setClosing(true); setEditing(true); }}><Text style={styles.secondaryText}>Close Inventory Count</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.secondaryButton} onPress={beginClose}><Text style={styles.secondaryText}>Close Inventory Count</Text></TouchableOpacity>
           <TouchableOpacity disabled={saving} style={styles.archiveButton} onPress={archive}><Text style={styles.archiveText}>Archive</Text></TouchableOpacity>
         </> : null}
       </ScrollView>
@@ -326,7 +372,7 @@ export default function VendorInventoryScreen({ navigation, inventoryItemId }) {
       {loading ? <ActivityIndicator color={AppColor.primary} /> : <>
         <Text style={styles.sectionTitle}>Current Inventory by Food Truck</Text>
         <Text style={styles.intro}>Review active inventory items. Print is available inside each food truck section.</Text>
-        <View style={styles.guidance}><Text style={styles.guideLine}><Text style={styles.guideTitle}>Edit existing inventory</Text> if there was a miscount. Update quantities to fix the miscount.</Text><Text style={styles.guideLine}><Text style={styles.guideTitle}>Close Inventory Count</Text> to preserve the existing count and start a new count using the current quantity.</Text><Text style={styles.guideLine}><Text style={styles.guideTitle}>Archive</Text> removes an item from inventory. This cannot be undone.</Text></View>
+        <View style={styles.guidance}><Text style={styles.guideLine}><Text style={styles.guideTitle}>Edit existing inventory</Text> if there was a miscount. Update quantities to fix the miscount.</Text><Text style={styles.guideLine}><Text style={styles.guideTitle}>Close Inventory Count</Text> records received replacement products when an item needs reordering. The existing lot remains active until it expires or is archived.</Text><Text style={styles.guideLine}><Text style={styles.guideTitle}>Archive</Text> removes an item from inventory. This cannot be undone.</Text></View>
         {renderGroups(currentGroups, expandedCurrent, setExpandedCurrent)}
         <Text style={styles.sectionTitle}>Archived Inventory Items</Text>
         <Text style={styles.intro}>Inventory archived during the last 30 days.</Text>

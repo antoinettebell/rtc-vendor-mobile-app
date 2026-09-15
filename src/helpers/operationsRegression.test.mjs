@@ -17,6 +17,10 @@ const inventory = await readFile(
   new URL("../screens/vendorInventoryScreen.js", import.meta.url),
   "utf8",
 );
+const notificationBell = await readFile(
+  new URL("../components/VendorMarketplaceNotificationBell.js", import.meta.url),
+  "utf8",
+);
 
 assert.match(operations, /Employee Inventory Review/);
 assert.match(operations, /startEditing/);
@@ -36,12 +40,19 @@ assert.match(form, /employeeInventoryMode === "COUNT"/);
 assert.match(form, /inventory && !isEmployee \? <View style=\{styles\.inventoryReview\}/);
 assert.match(inventory, /Close Inventory Count/);
 assert.match(inventory, /archiveOperationalInventoryItem_API/);
-assert.match(inventory, /pending_close_draft/);
+assert.match(inventory, /Did you receive new products/);
+assert.match(inventory, /No reorder is currently needed/);
+assert.match(inventory, /Beginning quantity cannot exceed max quantity/);
+assert.match(inventory, /Beginning, current, and max quantities must match/);
 assert.match(inventory, /setSelected\(savedItem\)/);
 assert.match(inventory, /formId: created\.form\._id/);
 assert.match(inventory, /Archived Inventory Items/);
 assert.match(home, /item\.type === "OPERATIONAL_COMPLIANCE"/);
 assert.match(home, /formId: item\.form_id/);
+assert.match(home, /reviewMode: item\.form_type === "INVENTORY" && !!item\.form_id && !item\.inventory_item_id/);
+assert.match(notificationBell, /reviewMode: item\.form_type === "INVENTORY" && !!item\.form_id && !item\.inventory_item_id/);
+assert.match(form, /reorder_items: payload\.inventory_items/);
+assert.match(form, /Did you receive new products/);
 assert.match(home, /acknowledgeMarketplaceNotifications_API/);
 assert.match(home, /vendorHomeClearedNotifications/);
 assert.match(home, /Clear Notifications/);

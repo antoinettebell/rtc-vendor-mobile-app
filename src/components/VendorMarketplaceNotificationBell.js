@@ -152,6 +152,15 @@ const VendorMarketplaceNotificationBell = ({ navigation, onOpenNotification }) =
 
   const open = (item) => {
     setVisible(false);
+    if (item.type === "OPERATIONAL_COMPLIANCE") {
+      navigation.navigate("operationalFormScreen", {
+        type: item.form_type,
+        formId: item.form_id,
+        inventoryItemId: item.inventory_item_id,
+        reviewMode: item.form_type === "INVENTORY" && !!item.form_id && !item.inventory_item_id,
+      });
+      return;
+    }
     if (item.type === "MARKETPLACE_MESSAGE") {
       navigation.navigate(
         "vendorMarketplaceMessagesScreen",

@@ -874,6 +874,7 @@ const HomeScreen = ({ navigation }) => {
         type: item.form_type,
         formId: item.form_id,
         inventoryItemId: item.inventory_item_id,
+        reviewMode: item.form_type === "INVENTORY" && !!item.form_id && !item.inventory_item_id,
       });
       return;
     }
