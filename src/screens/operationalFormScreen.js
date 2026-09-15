@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import { useFocusEffect } from "@react-navigation/native";
 import { useSelector } from "react-redux";
 import {
   archiveOperationalComplianceForm_API,
@@ -140,6 +141,7 @@ const OperationalFormContent = ({ navigation, route }) => {
   const archived = form?.status === "ARCHIVED";
   const inventory = type === "INVENTORY";
   const vendorChecklist = !inventory && !isEmployee;
+  const checklistOverview = !inventory && !formId && !checklistStarted;
   const employeeInventoryReview = inventory && !isEmployee && !!form?.employee_internal_id;
   const employeeInventoryDraft = employeeInventoryReview && form?.status === "DRAFT";
   const employeeChecklistReview = vendorChecklist && !!form?.employee_internal_id;
@@ -158,7 +160,7 @@ const OperationalFormContent = ({ navigation, route }) => {
       if (formId) {
         response = listResponse;
         nextForm = availableForms.find((item) => item._id === formId) || null;
-      } else if (vendorChecklist && !checklistStarted) {
+      } else if (checklistOverview) {
         setTruckUnits(listResponse?.data?.truckUnits || listResponse?.truckUnits || []);
         setForm(null);
         setOriginalForm(null);
@@ -181,7 +183,8 @@ const OperationalFormContent = ({ navigation, route }) => {
       setForm(normalizedForm);
       setOriginalForm(cloneForm(normalizedForm));
       setIsEditing(Boolean(
-        (checklistStarted && vendorChecklist && !formId && nextForm.status === "DRAFT") ||
+        (checklistStarted && !formId && nextForm.status === "DRAFT") ||
+        (isEmployee && formId && nextForm.status === "DRAFT") ||
         (startEditing && formId && !isEmployee && nextForm.employee_internal_id && nextForm.status === "SUBMITTED")
       ));
       setSelectedInventoryIndex(null);
@@ -191,9 +194,9 @@ const OperationalFormContent = ({ navigation, route }) => {
     } finally {
       setLoading(false);
     }
-  }, [checklistStarted, defaultPreparedByName, formId, isEmployee, startEditing, type, vendorChecklist]);
+  }, [checklistOverview, checklistStarted, defaultPreparedByName, formId, inventory, isEmployee, startEditing, type]);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const updateHeader = (field, value) => setForm((current) => ({ ...current, [field]: value }));
   const updateInventory = (index, field, value) => setForm((current) => {
@@ -443,8 +446,10 @@ const OperationalFormContent = ({ navigation, route }) => {
     </SafeAreaView>
   );
 
-  if (!loadError && vendorChecklist && !formId && !checklistStarted) {
-    const employeeSubmitted = forms.filter((item) => item.status === "SUBMITTED" && item.employee_internal_id);
+  if (!loadError && checklistOverview) {
+    const draftAndPending = forms.filter((item) => isEmployee
+      ? ["DRAFT", "SUBMITTED"].includes(item.status)
+      : item.status === "SUBMITTED" && item.employee_internal_id);
     const archivedForms = forms.filter((item) => item.status === "ARCHIVED");
     const openSavedForm = (item) => navigation.push("operationalFormScreen", { type, formId: item._id });
     return (
@@ -455,10 +460,10 @@ const OperationalFormContent = ({ navigation, route }) => {
         </View>
         <ScrollView contentContainerStyle={styles.content}>
           <TouchableOpacity style={[styles.primaryButton, styles.overviewStartButton]} onPress={() => setChecklistStarted(true)}><Text style={styles.primaryText}>{type === "OPENING_CHECKLIST" ? "Start Opening Process" : "Start Closing Process"}</Text></TouchableOpacity>
-          <Text style={styles.sectionTitle}>Employee Submitted</Text>
-          {employeeSubmitted.length ? employeeSubmitted.map((item) => <TouchableOpacity key={item._id} style={styles.historyRecord} onPress={() => openSavedForm(item)}><View><Text style={styles.recordTitle}>{item.prepared_by_name || "Employee"}</Text><Text style={styles.detail}>{item.truck_unit || "Food truck"} · {new Date(item.submitted_at || item.form_date).toLocaleString()}</Text></View><MaterialIcons name="chevron-right" size={22} color="#64748B" /></TouchableOpacity>) : <Text style={styles.emptyText}>No employee-submitted checklists.</Text>}
+          <Text style={styles.sectionTitle}>{isEmployee ? "Draft & Pending Review" : "Employee Submitted"}</Text>
+          {draftAndPending.length ? draftAndPending.map((item) => <TouchableOpacity key={item._id} style={styles.historyRecord} onPress={() => openSavedForm(item)}><View style={styles.recordCopy}><View style={styles.recordTitleRow}><Text style={styles.recordTitle}>{item.prepared_by_name || "Employee"}</Text><Text style={item.status === "DRAFT" ? styles.draftBadge : styles.submittedBadge}>{item.status === "DRAFT" ? "Draft" : "Pending Review"}</Text></View><Text style={styles.detail}>{item.truck_unit || "Food truck"} · {new Date(item.submitted_at || item.updatedAt || item.createdAt || item.form_date).toLocaleString()}</Text></View><MaterialIcons name="chevron-right" size={22} color="#64748B" /></TouchableOpacity>) : <Text style={styles.emptyText}>{isEmployee ? "No draft or pending checklists." : "No employee-submitted checklists."}</Text>}
           <Text style={styles.sectionTitle}>Archived</Text>
-          {archivedForms.length ? archivedForms.map((item) => <TouchableOpacity key={item._id} style={styles.historyRecord} onPress={() => openSavedForm(item)}><View><Text style={styles.recordTitle}>{item.prepared_by_name || "Vendor"}</Text><Text style={styles.detail}>{item.truck_unit || "Food truck"} · {new Date(item.archived_at || item.form_date).toLocaleString()}</Text></View><MaterialIcons name="chevron-right" size={22} color="#64748B" /></TouchableOpacity>) : <Text style={styles.emptyText}>No archived checklists.</Text>}
+          {archivedForms.length ? archivedForms.map((item) => <TouchableOpacity key={item._id} style={styles.historyRecord} onPress={() => openSavedForm(item)}><View style={styles.recordCopy}><View style={styles.recordTitleRow}><Text style={styles.recordTitle}>{item.prepared_by_name || (isEmployee ? "Employee" : "Vendor")}</Text><Text style={styles.archivedStatus}>Archived</Text></View><Text style={styles.detail}>{item.truck_unit || "Food truck"} · {new Date(item.archived_at || item.updatedAt || item.createdAt || item.form_date).toLocaleString()}</Text></View><MaterialIcons name="chevron-right" size={22} color="#64748B" /></TouchableOpacity>) : <Text style={styles.emptyText}>No archived checklists.</Text>}
         </ScrollView>
       </SafeAreaView>
     );
@@ -701,7 +706,7 @@ const styles = StyleSheet.create({
   inventoryReview: { marginTop: 24 }, sectionTitle: { color: "#0F172A", fontSize: 19, fontWeight: "700" }, reviewCopy: { color: "#64748B", fontSize: 13, lineHeight: 19, marginBottom: 12, marginTop: 4 }, detail: { color: "#64748B", fontSize: 12, marginTop: 3 }, inventoryGroup: { backgroundColor: "white", borderColor: "#E2E8F0", borderRadius: 12, borderWidth: 1, marginBottom: 10, overflow: "hidden" }, inventoryGroupHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", padding: 13 }, inventoryGroupToggle: { alignItems: "center", flex: 1, flexDirection: "row", gap: 8 }, inventoryGroupTitle: { color: "#0F172A", fontSize: 16, fontWeight: "700" }, printButton: { borderColor: AppColor.primary, borderRadius: 8, borderWidth: 1, padding: 8 }, inventoryGroupItems: { borderTopColor: "#E2E8F0", borderTopWidth: 1, paddingHorizontal: 13 }, inventorySummaryItem: { alignItems: "center", borderBottomColor: "#E2E8F0", borderBottomWidth: 1, flexDirection: "row", justifyContent: "space-between", paddingVertical: 12 }, inventorySummaryCopy: { flex: 1, paddingRight: 10 }, inventorySummaryName: { color: "#0F172A", fontSize: 14, fontWeight: "600" }, activeStatus: { backgroundColor: "#DCFCE7", borderRadius: 12, color: "#166534", fontSize: 12, fontWeight: "700", overflow: "hidden", paddingHorizontal: 9, paddingVertical: 4 }, archivedStatus: { backgroundColor: "#E2E8F0", borderRadius: 12, color: "#475569", fontSize: 12, fontWeight: "700", overflow: "hidden", paddingHorizontal: 9, paddingVertical: 4 },
   modalBackdrop: { backgroundColor: "rgba(15,23,42,0.45)", flex: 1, justifyContent: "flex-end" }, modalCard: { backgroundColor: "white", borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "65%", padding: 18 }, modalTitle: { color: "#0F172A", fontSize: 20, fontWeight: "700", marginBottom: 10 }, quantityOption: { alignItems: "center", borderBottomColor: "#E2E8F0", borderBottomWidth: 1, padding: 13 }, quantityOptionText: { color: "#0F172A", fontSize: 17 }, modalClose: { alignItems: "center", paddingTop: 14 },
   emptyText: { color: "#64748B", padding: 18, textAlign: "center" },
-  historyRecord: { alignItems: "center", backgroundColor: "white", borderColor: "#E2E8F0", borderRadius: 10, borderWidth: 1, flexDirection: "row", justifyContent: "space-between", marginTop: 10, padding: 14 }, recordTitle: { color: "#0F172A", fontSize: 15, fontWeight: "700" }, overviewStartButton: { flex: 0, marginBottom: 18 },
+  historyRecord: { alignItems: "center", backgroundColor: "white", borderColor: "#E2E8F0", borderRadius: 10, borderWidth: 1, flexDirection: "row", justifyContent: "space-between", marginTop: 10, padding: 14 }, recordCopy: { flex: 1, paddingRight: 10 }, recordTitleRow: { alignItems: "center", flexDirection: "row", flexWrap: "wrap", gap: 8 }, recordTitle: { color: "#0F172A", fontSize: 15, fontWeight: "700" }, draftBadge: { backgroundColor: "#FEF3C7", borderRadius: 10, color: "#92400E", fontSize: 10, fontWeight: "700", overflow: "hidden", paddingHorizontal: 7, paddingVertical: 3 }, submittedBadge: { backgroundColor: "#DBEAFE", borderRadius: 10, color: "#1D4ED8", fontSize: 10, fontWeight: "700", overflow: "hidden", paddingHorizontal: 7, paddingVertical: 3 }, overviewStartButton: { flex: 0, marginBottom: 18 },
 });
 
 export default OperationalFormScreen;

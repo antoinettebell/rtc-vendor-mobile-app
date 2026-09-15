@@ -74,9 +74,14 @@ assert.match(notificationBell, /reviewMode: item\.form_type === "INVENTORY" && !
 assert.match(form, /reorder_items: payload\.inventory_items/);
 assert.match(form, /Did you receive new products/);
 assert.match(form, /checklistStarted/);
+assert.match(form, /useFocusEffect/);
+assert.match(form, /checklistOverview/);
 assert.match(form, /Start Opening Process/);
 assert.match(form, /Start Closing Process/);
 assert.match(form, /Employee Submitted/);
+assert.match(form, /Draft & Pending Review/);
+assert.match(form, /Pending Review/);
+assert.match(form, /item\.status === "DRAFT" \? "Draft"/);
 assert.match(form, /No employee-submitted checklists/);
 assert.match(form, /Archived/);
 assert.match(form, /Save Draft/);
