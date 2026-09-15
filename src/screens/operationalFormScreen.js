@@ -134,12 +134,15 @@ const OperationalFormContent = ({ navigation, route }) => {
   const [truckUnitPickerVisible, setTruckUnitPickerVisible] = useState(false);
   const [selectedInventoryIndex, setSelectedInventoryIndex] = useState(null);
   const [employeeInventoryMode, setEmployeeInventoryMode] = useState(null);
+  const [checklistStarted, setChecklistStarted] = useState(false);
 
   const editable = isEditing && form?.status !== "ARCHIVED";
   const archived = form?.status === "ARCHIVED";
   const inventory = type === "INVENTORY";
+  const vendorChecklist = !inventory && !isEmployee;
   const employeeInventoryReview = inventory && !isEmployee && !!form?.employee_internal_id;
   const employeeInventoryDraft = employeeInventoryReview && form?.status === "DRAFT";
+  const employeeChecklistReview = vendorChecklist && !!form?.employee_internal_id;
 
 
   const load = useCallback(async () => {
@@ -155,6 +158,12 @@ const OperationalFormContent = ({ navigation, route }) => {
       if (formId) {
         response = listResponse;
         nextForm = availableForms.find((item) => item._id === formId) || null;
+      } else if (vendorChecklist && !checklistStarted) {
+        setTruckUnits(listResponse?.data?.truckUnits || listResponse?.truckUnits || []);
+        setForm(null);
+        setOriginalForm(null);
+        setIsEditing(false);
+        return;
       } else {
         response = await getCurrentOperationalComplianceForm_API(type);
         nextForm = response?.data?.form || response?.form || null;
@@ -171,7 +180,10 @@ const OperationalFormContent = ({ navigation, route }) => {
       };
       setForm(normalizedForm);
       setOriginalForm(cloneForm(normalizedForm));
-      setIsEditing(Boolean(startEditing && formId && !isEmployee && nextForm.employee_internal_id && nextForm.status === "SUBMITTED"));
+      setIsEditing(Boolean(
+        (checklistStarted && vendorChecklist && !formId && nextForm.status === "DRAFT") ||
+        (startEditing && formId && !isEmployee && nextForm.employee_internal_id && nextForm.status === "SUBMITTED")
+      ));
       setSelectedInventoryIndex(null);
       setEmployeeInventoryMode(null);
     } catch (error) {
@@ -179,7 +191,7 @@ const OperationalFormContent = ({ navigation, route }) => {
     } finally {
       setLoading(false);
     }
-  }, [defaultPreparedByName, formId, isEmployee, startEditing, type]);
+  }, [checklistStarted, defaultPreparedByName, formId, isEmployee, startEditing, type, vendorChecklist]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -340,6 +352,11 @@ const OperationalFormContent = ({ navigation, route }) => {
     setIsEditing(true);
   };
 
+  const addChecklistTask = () => updateHeader("checklist_items", [
+    ...(form.checklist_items || []),
+    { area: "Additional Task", task: "", completed: false, notes: "" },
+  ]);
+
   const beginEmployeeInventoryCount = (index) => {
     setOriginalForm(cloneForm(form));
     setForm((current) => {
@@ -425,6 +442,27 @@ const OperationalFormContent = ({ navigation, route }) => {
       <View style={styles.loading}><ActivityIndicator color={AppColor.primary} /></View>
     </SafeAreaView>
   );
+
+  if (!loadError && vendorChecklist && !formId && !checklistStarted) {
+    const employeeSubmitted = forms.filter((item) => item.status === "SUBMITTED" && item.employee_internal_id);
+    const archivedForms = forms.filter((item) => item.status === "ARCHIVED");
+    const openSavedForm = (item) => navigation.push("operationalFormScreen", { type, formId: item._id });
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}><MaterialIcons name="arrow-back" size={27} color="#0F172A" /></TouchableOpacity>
+          <Text style={[styles.title, { marginLeft: 15 }]}>{TITLES[type]}</Text>
+        </View>
+        <ScrollView contentContainerStyle={styles.content}>
+          <TouchableOpacity style={[styles.primaryButton, styles.overviewStartButton]} onPress={() => setChecklistStarted(true)}><Text style={styles.primaryText}>{type === "OPENING_CHECKLIST" ? "Start Opening Process" : "Start Closing Process"}</Text></TouchableOpacity>
+          <Text style={styles.sectionTitle}>Employee Submitted</Text>
+          {employeeSubmitted.length ? employeeSubmitted.map((item) => <TouchableOpacity key={item._id} style={styles.historyRecord} onPress={() => openSavedForm(item)}><View><Text style={styles.recordTitle}>{item.prepared_by_name || "Employee"}</Text><Text style={styles.detail}>{item.truck_unit || "Food truck"} · {new Date(item.submitted_at || item.form_date).toLocaleString()}</Text></View><MaterialIcons name="chevron-right" size={22} color="#64748B" /></TouchableOpacity>) : <Text style={styles.emptyText}>No employee-submitted checklists.</Text>}
+          <Text style={styles.sectionTitle}>Archived</Text>
+          {archivedForms.length ? archivedForms.map((item) => <TouchableOpacity key={item._id} style={styles.historyRecord} onPress={() => openSavedForm(item)}><View><Text style={styles.recordTitle}>{item.prepared_by_name || "Vendor"}</Text><Text style={styles.detail}>{item.truck_unit || "Food truck"} · {new Date(item.archived_at || item.form_date).toLocaleString()}</Text></View><MaterialIcons name="chevron-right" size={22} color="#64748B" /></TouchableOpacity>) : <Text style={styles.emptyText}>No archived checklists.</Text>}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   if (loadError || !form) return (
     <SafeAreaView style={styles.container}>
@@ -553,6 +591,7 @@ const OperationalFormContent = ({ navigation, route }) => {
         ))}
 
         {inventory && !isEmployee && editable ? <TouchableOpacity style={styles.secondaryButton} onPress={() => updateHeader("inventory_items", [...(form.inventory_items || []), emptyInventoryItem()])}><MaterialIcons name="add" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Add Inventory Item</Text></TouchableOpacity> : null}
+        {!inventory && editable ? <TouchableOpacity style={styles.secondaryButton} onPress={addChecklistTask}><MaterialIcons name="add" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Add Additional Task</Text></TouchableOpacity> : null}
         {!inventory ? <Text style={styles.safetyNote}>Report damaged equipment, unsafe temperatures, leaks, or other concerns to a manager before leaving.</Text> : null}
         {employeeInventoryReview && editable ? <Text style={styles.safetyNote}>{employeeInventoryMode === "REORDER" ? "Enter the new product lot. Dates are required, and Beginning, Current, and Max quantities must match the quantity received." : "Update accepts the employee count. Close Inventory is only used when replacement products were received."}</Text> : null}
         {editable ? <View style={styles.actions}>{employeeInventoryReview && employeeInventoryMode === "REORDER" ? <>
@@ -566,8 +605,8 @@ const OperationalFormContent = ({ navigation, route }) => {
         </> : inventory && isEmployee ? <>
           <TouchableOpacity disabled={saving} style={styles.secondaryButton} onPress={cancelEdit}><Text style={styles.secondaryText}>Cancel</Text></TouchableOpacity>
           <TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={() => save(true)}><Text style={styles.primaryText}>{saving ? "Submitting..." : "Submit"}</Text></TouchableOpacity>
-        </> : <><TouchableOpacity disabled={saving} style={styles.secondaryButton} onPress={cancelEdit}><Text style={styles.secondaryText}>Cancel</Text></TouchableOpacity><TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={() => save(false)}><Text style={styles.primaryText}>{saving ? "Saving..." : "Save"}</Text></TouchableOpacity></>}</View> : null}
-        {!editable && !archived && !employeeInventoryDraft && !(inventory && isEmployee) && (form.status === "DRAFT" || (!isEmployee && form.status === "SUBMITTED")) ? <TouchableOpacity style={styles.secondaryButton} onPress={beginEdit}><MaterialIcons name="edit" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Edit</Text></TouchableOpacity> : null}
+        </> : !inventory ? <><TouchableOpacity disabled={saving} style={styles.secondaryButton} onPress={cancelEdit}><Text style={styles.secondaryText}>Cancel</Text></TouchableOpacity><TouchableOpacity disabled={saving} style={styles.secondaryButton} onPress={() => save(false)}><Text style={styles.secondaryText}>{saving ? "Saving..." : "Save Draft"}</Text></TouchableOpacity><TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={() => save(true)}><Text style={styles.primaryText}>{saving ? "Submitting..." : "Submit"}</Text></TouchableOpacity></> : <><TouchableOpacity disabled={saving} style={styles.secondaryButton} onPress={cancelEdit}><Text style={styles.secondaryText}>Cancel</Text></TouchableOpacity><TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={() => save(false)}><Text style={styles.primaryText}>{saving ? "Saving..." : "Save"}</Text></TouchableOpacity></>}</View> : null}
+        {!editable && !archived && !employeeInventoryDraft && !employeeChecklistReview && !(inventory && isEmployee) && (form.status === "DRAFT" || (!isEmployee && form.status === "SUBMITTED")) ? <TouchableOpacity style={styles.secondaryButton} onPress={beginEdit}><MaterialIcons name="edit" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Edit</Text></TouchableOpacity> : null}
         {!editable && inventory && isEmployee && form.status === "DRAFT" ? <TouchableOpacity style={styles.secondaryButton} onPress={beginEmployeeInventoryAdd}><MaterialIcons name="add" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Add Inventory Item</Text></TouchableOpacity> : null}
         {!editable && form.status === "DRAFT" && !employeeInventoryDraft && !(inventory && isEmployee) ? <TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={() => save(true)}><Text style={styles.primaryText}>{saving ? "Submitting..." : "Submit"}</Text></TouchableOpacity> : null}
         {employeeInventoryDraft && !editable ? <><Text style={styles.safetyNote}>In progress — read only until the employee submits this inventory count.</Text><TouchableOpacity disabled={saving} style={styles.archiveButton} onPress={discardEmployeeDraft}><Text style={styles.primaryText}>{saving ? "Discarding..." : "Discard Draft"}</Text></TouchableOpacity></> : null}
@@ -662,6 +701,7 @@ const styles = StyleSheet.create({
   inventoryReview: { marginTop: 24 }, sectionTitle: { color: "#0F172A", fontSize: 19, fontWeight: "700" }, reviewCopy: { color: "#64748B", fontSize: 13, lineHeight: 19, marginBottom: 12, marginTop: 4 }, detail: { color: "#64748B", fontSize: 12, marginTop: 3 }, inventoryGroup: { backgroundColor: "white", borderColor: "#E2E8F0", borderRadius: 12, borderWidth: 1, marginBottom: 10, overflow: "hidden" }, inventoryGroupHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", padding: 13 }, inventoryGroupToggle: { alignItems: "center", flex: 1, flexDirection: "row", gap: 8 }, inventoryGroupTitle: { color: "#0F172A", fontSize: 16, fontWeight: "700" }, printButton: { borderColor: AppColor.primary, borderRadius: 8, borderWidth: 1, padding: 8 }, inventoryGroupItems: { borderTopColor: "#E2E8F0", borderTopWidth: 1, paddingHorizontal: 13 }, inventorySummaryItem: { alignItems: "center", borderBottomColor: "#E2E8F0", borderBottomWidth: 1, flexDirection: "row", justifyContent: "space-between", paddingVertical: 12 }, inventorySummaryCopy: { flex: 1, paddingRight: 10 }, inventorySummaryName: { color: "#0F172A", fontSize: 14, fontWeight: "600" }, activeStatus: { backgroundColor: "#DCFCE7", borderRadius: 12, color: "#166534", fontSize: 12, fontWeight: "700", overflow: "hidden", paddingHorizontal: 9, paddingVertical: 4 }, archivedStatus: { backgroundColor: "#E2E8F0", borderRadius: 12, color: "#475569", fontSize: 12, fontWeight: "700", overflow: "hidden", paddingHorizontal: 9, paddingVertical: 4 },
   modalBackdrop: { backgroundColor: "rgba(15,23,42,0.45)", flex: 1, justifyContent: "flex-end" }, modalCard: { backgroundColor: "white", borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "65%", padding: 18 }, modalTitle: { color: "#0F172A", fontSize: 20, fontWeight: "700", marginBottom: 10 }, quantityOption: { alignItems: "center", borderBottomColor: "#E2E8F0", borderBottomWidth: 1, padding: 13 }, quantityOptionText: { color: "#0F172A", fontSize: 17 }, modalClose: { alignItems: "center", paddingTop: 14 },
   emptyText: { color: "#64748B", padding: 18, textAlign: "center" },
+  historyRecord: { alignItems: "center", backgroundColor: "white", borderColor: "#E2E8F0", borderRadius: 10, borderWidth: 1, flexDirection: "row", justifyContent: "space-between", marginTop: 10, padding: 14 }, recordTitle: { color: "#0F172A", fontSize: 15, fontWeight: "700" }, overviewStartButton: { flex: 0, marginBottom: 18 },
 });
 
 export default OperationalFormScreen;

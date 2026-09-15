@@ -17,6 +17,7 @@ const OperationsScreen = ({ navigation }) => {
   const isEmployee = user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
   const [loading, setLoading] = useState(true);
   const [employeeInventory, setEmployeeInventory] = useState([]);
+  const [employeeChecklists, setEmployeeChecklists] = useState([]);
   const [error, setError] = useState("");
   const [reviewingId, setReviewingId] = useState("");
 
@@ -35,8 +36,14 @@ const OperationsScreen = ({ navigation }) => {
         item.employee_internal_id &&
         !item.inventory_review_action
       )));
+      setEmployeeChecklists(forms.filter((item) => (
+        ["OPENING_CHECKLIST", "CLOSING_CHECKLIST"].includes(item.form_type) &&
+        item.status === "SUBMITTED" &&
+        item.employee_internal_id
+      )));
     } catch (loadError) {
       setEmployeeInventory([]);
+      setEmployeeChecklists([]);
       setError(loadError?.message || "Unable to load operations.");
     } finally {
       setLoading(false);
@@ -112,9 +119,17 @@ const OperationsScreen = ({ navigation }) => {
           </View>
         ) : null}
 
-        {!isEmployee ? <Text style={styles.sectionTitle}>Employee Inventory Review</Text> : null}
-        {!isEmployee ? <Text style={styles.sectionCopy}>Draft counts are visible as read-only while employees work. Review actions become available after submission.</Text> : null}
+        {!isEmployee ? <Text style={styles.sectionTitle}>Employee Review</Text> : null}
+        {!isEmployee ? <Text style={styles.sectionCopy}>Open submitted employee checklists or review inventory activity.</Text> : null}
         {!isEmployee && loading ? <ActivityIndicator color={AppColor.primary} /> : null}
+        {!isEmployee && !loading && !error && employeeChecklists.map((form) => (
+          <TouchableOpacity key={form._id} style={styles.recordCard} onPress={() => open(form.form_type, form._id)}>
+            <View style={styles.record}>
+              <View style={styles.recordCopy}><View style={styles.recordTitleRow}><Text style={styles.recordTitle}>{form.prepared_by_name || "Employee"}</Text><Text style={styles.submittedBadge}>Submitted</Text></View><Text style={styles.detail}>{form.form_type === "OPENING_CHECKLIST" ? "Opening Checklist" : "Closing Checklist"} · {form.truck_unit || "Food truck"} · {new Date(form.submitted_at || form.updatedAt || form.createdAt || form.form_date).toLocaleString()}</Text></View>
+              <MaterialIcons name="chevron-right" size={22} color="#64748B" />
+            </View>
+          </TouchableOpacity>
+        ))}
         {!isEmployee && !loading && !error && employeeInventory.map((form) => (
           <View key={form._id} style={styles.recordCard}>
             <TouchableOpacity disabled={form.status !== "SUBMITTED"} style={styles.record} onPress={() => open(form.form_type, form._id)}>
@@ -129,7 +144,7 @@ const OperationsScreen = ({ navigation }) => {
             </View>}
           </View>
         ))}
-        {!isEmployee && !loading && !error && !employeeInventory.length ? <Text style={styles.empty}>No employee inventory submissions need review.</Text> : null}
+        {!isEmployee && !loading && !error && !employeeInventory.length && !employeeChecklists.length ? <Text style={styles.empty}>No employee submissions need review.</Text> : null}
       </ScrollView>
     </SafeAreaView>
   );

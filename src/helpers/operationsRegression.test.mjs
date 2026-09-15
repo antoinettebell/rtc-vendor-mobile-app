@@ -23,8 +23,12 @@ const notificationBell = await readFile(
 );
 
 assert.match(operations, /Employee Inventory Review/);
+assert.match(operations, /Employee Review/);
+assert.match(operations, /employeeChecklists/);
+assert.match(operations, /OPENING_CHECKLIST/);
+assert.match(operations, /CLOSING_CHECKLIST/);
 assert.match(operations, /\["DRAFT", "SUBMITTED"\]\.includes\(item\.status\)/);
-assert.match(operations, /Draft counts are visible as read-only/);
+assert.match(operations, /review inventory activity/);
 assert.match(operations, /Read only until the employee submits/);
 assert.match(operations, /filter\(\(item\) => item\.employee_modified_at\)/);
 assert.match(operations, /discardEmployeeInventoryDraft_API/);
@@ -69,6 +73,15 @@ assert.match(home, /reviewMode: item\.form_type === "INVENTORY" && !!item\.form_
 assert.match(notificationBell, /reviewMode: item\.form_type === "INVENTORY" && !!item\.form_id && !item\.inventory_item_id/);
 assert.match(form, /reorder_items: payload\.inventory_items/);
 assert.match(form, /Did you receive new products/);
+assert.match(form, /checklistStarted/);
+assert.match(form, /Start Opening Process/);
+assert.match(form, /Start Closing Process/);
+assert.match(form, /Employee Submitted/);
+assert.match(form, /No employee-submitted checklists/);
+assert.match(form, /Archived/);
+assert.match(form, /Save Draft/);
+assert.match(form, /Add Additional Task/);
+assert.match(form, /employeeChecklistReview/);
 assert.match(home, /acknowledgeMarketplaceNotifications_API/);
 assert.match(home, /vendorHomeClearedNotifications/);
 assert.match(home, /Clear Notifications/);
