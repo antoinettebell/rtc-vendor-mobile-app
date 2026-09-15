@@ -31,7 +31,7 @@ const OperationsScreen = ({ navigation }) => {
       }
       setEmployeeInventory(forms.filter((item) => (
         item.form_type === "INVENTORY" &&
-        item.status === "SUBMITTED" &&
+        ["DRAFT", "SUBMITTED"].includes(item.status) &&
         item.employee_internal_id &&
         !item.inventory_review_action
       )));
@@ -94,18 +94,20 @@ const OperationsScreen = ({ navigation }) => {
         ) : null}
 
         {!isEmployee ? <Text style={styles.sectionTitle}>Employee Inventory Review</Text> : null}
+        {!isEmployee ? <Text style={styles.sectionCopy}>Draft counts are visible as read-only while employees work. Review actions become available after submission.</Text> : null}
         {!isEmployee && loading ? <ActivityIndicator color={AppColor.primary} /> : null}
         {!isEmployee && !loading && !error && employeeInventory.map((form) => (
           <View key={form._id} style={styles.recordCard}>
-            <TouchableOpacity style={styles.record} onPress={() => open(form.form_type, form._id)}>
-              <View><Text style={styles.recordTitle}>{form.prepared_by_name || "Employee"}</Text><Text style={styles.detail}>{form.truck_unit || "Food truck"} · {new Date(form.submitted_at).toLocaleString()}</Text></View>
-              <MaterialIcons name="chevron-right" size={22} color="#64748B" />
+            <TouchableOpacity disabled={form.status !== "SUBMITTED"} style={styles.record} onPress={() => open(form.form_type, form._id)}>
+              <View style={styles.recordCopy}><View style={styles.recordTitleRow}><Text style={styles.recordTitle}>{form.prepared_by_name || "Employee"}</Text><Text style={form.status === "DRAFT" ? styles.draftBadge : styles.submittedBadge}>{form.status === "DRAFT" ? "In Progress" : "Submitted"}</Text></View><Text style={styles.detail}>{form.truck_unit || "Food truck"} · {new Date(form.submitted_at || form.updatedAt || form.createdAt || form.form_date).toLocaleString()}</Text></View>
+              {form.status === "SUBMITTED" ? <MaterialIcons name="chevron-right" size={22} color="#64748B" /> : null}
             </TouchableOpacity>
-            <View style={styles.reviewActions}>
+            <View style={styles.inventoryPreview}>{(form.inventory_items || []).map((item, index) => <View key={item._id || index} style={styles.inventoryPreviewRow}><Text style={styles.inventoryItemName}>{item.item_name || `Item ${index + 1}`}</Text><Text style={styles.detail}>Current {Number(item.current_quantity) || 0} · Reorder {Number(item.reorder_quantity) || 0}</Text></View>)}</View>
+            {form.status === "DRAFT" ? <Text style={styles.draftNote}>Read only until the employee submits this inventory count.</Text> : <View style={styles.reviewActions}>
               <TouchableOpacity disabled={reviewingId === form._id} style={styles.smallButton} onPress={() => open(form.form_type, form._id, true)}><Text style={styles.smallButtonText}>Edit</Text></TouchableOpacity>
               <TouchableOpacity disabled={reviewingId === form._id} style={styles.smallButton} onPress={() => open(form.form_type, form._id, true)}><Text style={styles.smallButtonText}>Close Inventory</Text></TouchableOpacity>
               <TouchableOpacity disabled={reviewingId === form._id} style={styles.smallDangerButton} onPress={() => review(form, "ARCHIVED")}><Text style={styles.smallDangerText}>{reviewingId === form._id ? "Working..." : "Archive"}</Text></TouchableOpacity>
-            </View>
+            </View>}
           </View>
         ))}
         {!isEmployee && !loading && !error && !employeeInventory.length ? <Text style={styles.empty}>No employee inventory submissions need review.</Text> : null}
@@ -124,9 +126,18 @@ const styles = StyleSheet.create({
   cardTitle: { color: "#0F172A", fontSize: 17, fontWeight: "700" },
   detail: { color: "#64748B", fontSize: 13, marginTop: 3 },
   sectionTitle: { color: "#334155", fontSize: 16, fontWeight: "700", marginBottom: 10, marginTop: 22 },
+  sectionCopy: { color: "#64748B", fontSize: 13, lineHeight: 18, marginBottom: 10 },
   recordCard: { backgroundColor: "white", borderRadius: 10, marginBottom: 9, padding: 12 },
   record: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", padding: 4 },
+  recordCopy: { flex: 1 },
+  recordTitleRow: { alignItems: "center", flexDirection: "row", gap: 8 },
   recordTitle: { color: "#0F172A", fontSize: 15, fontWeight: "600" },
+  draftBadge: { backgroundColor: "#FEF3C7", borderRadius: 10, color: "#92400E", fontSize: 10, fontWeight: "700", overflow: "hidden", paddingHorizontal: 7, paddingVertical: 3 },
+  submittedBadge: { backgroundColor: "#DCFCE7", borderRadius: 10, color: "#166534", fontSize: 10, fontWeight: "700", overflow: "hidden", paddingHorizontal: 7, paddingVertical: 3 },
+  inventoryPreview: { borderTopColor: "#E2E8F0", borderTopWidth: 1, marginTop: 9, paddingTop: 6 },
+  inventoryPreviewRow: { borderBottomColor: "#F1F5F9", borderBottomWidth: 1, paddingVertical: 7 },
+  inventoryItemName: { color: "#0F172A", fontSize: 13, fontWeight: "600" },
+  draftNote: { color: "#92400E", fontSize: 12, marginTop: 9 },
   reviewActions: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginTop: 10 },
   smallButton: { borderColor: AppColor.primary, borderRadius: 7, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 8 },
   smallButtonText: { color: AppColor.primary, fontSize: 12, fontWeight: "700" },

@@ -138,6 +138,7 @@ const OperationalFormContent = ({ navigation, route }) => {
   const archived = form?.status === "ARCHIVED";
   const inventory = type === "INVENTORY";
   const employeeInventoryReview = inventory && !isEmployee && !!form?.employee_internal_id;
+  const employeeInventoryDraft = employeeInventoryReview && form?.status === "DRAFT";
 
 
   const load = useCallback(async () => {
@@ -166,7 +167,7 @@ const OperationalFormContent = ({ navigation, route }) => {
       };
       setForm(normalizedForm);
       setOriginalForm(cloneForm(normalizedForm));
-      setIsEditing(Boolean(startEditing && formId && !isEmployee && nextForm.employee_internal_id));
+      setIsEditing(Boolean(startEditing && formId && !isEmployee && nextForm.employee_internal_id && nextForm.status === "SUBMITTED"));
       setSelectedInventoryIndex(null);
       setEmployeeInventoryMode(null);
     } catch (error) {
@@ -527,9 +528,10 @@ const OperationalFormContent = ({ navigation, route }) => {
           <TouchableOpacity disabled={saving} style={styles.secondaryButton} onPress={cancelEdit}><Text style={styles.secondaryText}>Cancel</Text></TouchableOpacity>
           <TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={() => save(true)}><Text style={styles.primaryText}>{saving ? "Submitting..." : "Submit"}</Text></TouchableOpacity>
         </> : <><TouchableOpacity disabled={saving} style={styles.secondaryButton} onPress={cancelEdit}><Text style={styles.secondaryText}>Cancel</Text></TouchableOpacity><TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={() => save(false)}><Text style={styles.primaryText}>{saving ? "Saving..." : "Save"}</Text></TouchableOpacity></>}</View> : null}
-        {!editable && !archived && !(inventory && isEmployee) && (form.status === "DRAFT" || (!isEmployee && form.status === "SUBMITTED")) ? <TouchableOpacity style={styles.secondaryButton} onPress={beginEdit}><MaterialIcons name="edit" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Edit</Text></TouchableOpacity> : null}
+        {!editable && !archived && !employeeInventoryDraft && !(inventory && isEmployee) && (form.status === "DRAFT" || (!isEmployee && form.status === "SUBMITTED")) ? <TouchableOpacity style={styles.secondaryButton} onPress={beginEdit}><MaterialIcons name="edit" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Edit</Text></TouchableOpacity> : null}
         {!editable && inventory && isEmployee && form.status === "DRAFT" ? <TouchableOpacity style={styles.secondaryButton} onPress={beginEmployeeInventoryAdd}><MaterialIcons name="add" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Add Inventory Item</Text></TouchableOpacity> : null}
-        {!editable && form.status === "DRAFT" && !(inventory && isEmployee) ? <TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={() => save(true)}><Text style={styles.primaryText}>{saving ? "Submitting..." : "Submit"}</Text></TouchableOpacity> : null}
+        {!editable && form.status === "DRAFT" && !employeeInventoryDraft && !(inventory && isEmployee) ? <TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={() => save(true)}><Text style={styles.primaryText}>{saving ? "Submitting..." : "Submit"}</Text></TouchableOpacity> : null}
+        {employeeInventoryDraft && !editable ? <Text style={styles.safetyNote}>In progress — read only until the employee submits this inventory count.</Text> : null}
         {employeeInventoryReview && !editable ? <TouchableOpacity style={styles.primaryButton} onPress={beginEdit}><Text style={styles.primaryText}>Close Inventory</Text></TouchableOpacity> : null}
         {form.status === "SUBMITTED" && !isEmployee && !editable ? <TouchableOpacity disabled={saving} style={styles.archiveButton} onPress={archive}><Text style={styles.primaryText}>{employeeInventoryReview ? "Archive" : "Archive Form"}</Text></TouchableOpacity> : null}
         {inventory && !isEmployee ? <View style={styles.inventoryReview}>

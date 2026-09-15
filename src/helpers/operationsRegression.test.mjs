@@ -23,6 +23,9 @@ const notificationBell = await readFile(
 );
 
 assert.match(operations, /Employee Inventory Review/);
+assert.match(operations, /\["DRAFT", "SUBMITTED"\]\.includes\(item\.status\)/);
+assert.match(operations, /Draft counts are visible as read-only/);
+assert.match(operations, /Read only until the employee submits/);
 assert.match(operations, /startEditing/);
 assert.match(operations, /Close Inventory/);
 assert.match(form, /CLOSED_INTO_INVENTORY/);
@@ -33,6 +36,8 @@ for (const label of ["Update", "Close Inventory", "Archive", "Cancel"]) {
   assert.ok(form.includes(`"${label}"`) || form.includes(`>${label}<`));
 }
 assert.match(form, /form\.status === "SUBMITTED" && !isEmployee/);
+assert.match(form, /employeeInventoryDraft/);
+assert.match(form, /In progress — read only until the employee submits/);
 assert.match(form, /editable && !isEmployee/);
 assert.match(form, /Perform Count/);
 assert.match(form, /beginEmployeeInventoryAdd/);
@@ -42,6 +47,8 @@ assert.match(inventory, /Close Inventory Count/);
 assert.match(inventory, /archiveOperationalInventoryItem_API/);
 assert.match(inventory, /Did you receive new products/);
 assert.match(inventory, /No reorder is currently needed/);
+assert.match(inventory, /item\.record_status === "SUBMITTED" \? "Active" : "In Progress"/);
+assert.match(inventory, /!inProgress \? <TouchableOpacity/);
 assert.match(inventory, /Beginning quantity cannot exceed max quantity/);
 assert.match(inventory, /Beginning, current, and max quantities must match/);
 assert.match(inventory, /setSelected\(savedItem\)/);
