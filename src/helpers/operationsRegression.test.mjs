@@ -30,6 +30,10 @@ for (const label of ["Update", "Close Inventory", "Archive", "Cancel"]) {
 }
 assert.match(form, /form\.status === "SUBMITTED" && !isEmployee/);
 assert.match(form, /editable && !isEmployee/);
+assert.match(form, /Perform Count/);
+assert.match(form, /beginEmployeeInventoryAdd/);
+assert.match(form, /employeeInventoryMode === "COUNT"/);
+assert.match(form, /inventory && !isEmployee \? <View style=\{styles\.inventoryReview\}/);
 assert.match(inventory, /Close Inventory Count/);
 assert.match(inventory, /archiveOperationalInventoryItem_API/);
 assert.match(inventory, /pending_close_draft/);

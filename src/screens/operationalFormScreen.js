@@ -128,6 +128,8 @@ const OperationalFormContent = ({ navigation, route }) => {
   const [loadError, setLoadError] = useState("");
   const [truckUnits, setTruckUnits] = useState([]);
   const [truckUnitPickerVisible, setTruckUnitPickerVisible] = useState(false);
+  const [selectedInventoryIndex, setSelectedInventoryIndex] = useState(null);
+  const [employeeInventoryMode, setEmployeeInventoryMode] = useState(null);
 
   const editable = isEditing && form?.status !== "ARCHIVED";
   const archived = form?.status === "ARCHIVED";
@@ -162,6 +164,8 @@ const OperationalFormContent = ({ navigation, route }) => {
       setForm(normalizedForm);
       setOriginalForm(cloneForm(normalizedForm));
       setIsEditing(Boolean(startEditing && formId && !isEmployee && nextForm.employee_internal_id));
+      setSelectedInventoryIndex(null);
+      setEmployeeInventoryMode(null);
     } catch (error) {
       setLoadError(error?.message || "Unable to load the form.");
     } finally {
@@ -209,6 +213,8 @@ const OperationalFormContent = ({ navigation, route }) => {
         : [saved, ...current];
     });
     setIsEditing(false);
+    setSelectedInventoryIndex(null);
+    setEmployeeInventoryMode(null);
   };
 
   const save = async (submit = false) => {
@@ -244,6 +250,8 @@ const OperationalFormContent = ({ navigation, route }) => {
   const cancelEdit = () => {
     setForm(cloneForm(originalForm));
     setIsEditing(false);
+    setSelectedInventoryIndex(null);
+    setEmployeeInventoryMode(null);
   };
   const closeEmployeeInventoryReview = () => Alert.alert(
     "Close Inventory",
@@ -269,6 +277,25 @@ const OperationalFormContent = ({ navigation, route }) => {
         initials: actorInitials,
       }));
     }
+    setIsEditing(true);
+  };
+
+  const beginEmployeeInventoryCount = (index) => {
+    setOriginalForm(cloneForm(form));
+    setSelectedInventoryIndex(index);
+    setEmployeeInventoryMode("COUNT");
+    setIsEditing(true);
+  };
+
+  const beginEmployeeInventoryAdd = () => {
+    const nextIndex = (form.inventory_items || []).length;
+    setOriginalForm(cloneForm(form));
+    setForm((current) => ({
+      ...current,
+      inventory_items: [...(current.inventory_items || []), emptyInventoryItem()],
+    }));
+    setSelectedInventoryIndex(nextIndex);
+    setEmployeeInventoryMode("ADD");
     setIsEditing(true);
   };
 
@@ -332,20 +359,20 @@ const OperationalFormContent = ({ navigation, route }) => {
     </SafeAreaView>
   );
 
-  const QuantityField = ({ label, value, onSelect, readOnly = false }) => (
-    <TouchableOpacity disabled={!editable || readOnly} style={styles.field} onPress={() => setQuantityTarget({ label, value, onSelect })}>
+  const QuantityField = ({ label, value, onSelect, readOnly = false, canEdit = editable }) => (
+    <TouchableOpacity disabled={!canEdit || readOnly} style={styles.field} onPress={() => setQuantityTarget({ label, value, onSelect })}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={[styles.select, (!editable || readOnly) && styles.readonly]}>
+      <View style={[styles.select, (!canEdit || readOnly) && styles.readonly]}>
         <Text style={styles.selectText}>{Number(value) || 0}</Text>
-        {editable && !readOnly ? <MaterialIcons name="expand-more" size={22} color="#64748B" /> : null}
+        {canEdit && !readOnly ? <MaterialIcons name="expand-more" size={22} color="#64748B" /> : null}
       </View>
     </TouchableOpacity>
   );
 
-  const DateField = ({ label, value, onSelect }) => (
-    <TouchableOpacity disabled={!editable} style={styles.field} onPress={() => setDateTarget({ value, onSelect })}>
+  const DateField = ({ label, value, onSelect, canEdit = editable }) => (
+    <TouchableOpacity disabled={!canEdit} style={styles.field} onPress={() => setDateTarget({ value, onSelect })}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={[styles.select, !editable && styles.readonly]}><Text style={styles.selectText}>{asDateLabel(value)}</Text><MaterialIcons name="calendar-today" size={19} color="#64748B" /></View>
+      <View style={[styles.select, !canEdit && styles.readonly]}><Text style={styles.selectText}>{asDateLabel(value)}</Text><MaterialIcons name="calendar-today" size={19} color="#64748B" /></View>
     </TouchableOpacity>
   );
 
@@ -363,7 +390,7 @@ const OperationalFormContent = ({ navigation, route }) => {
         <View style={styles.card}>
           <OperationalTextField editable={false} label="Employee / Vendor Name" value={form.prepared_by_name} onChangeText={() => {}} />
           {!inventory ? <OperationalTextField editable={false} label="Initials" value={form.initials} maxLength={10} onChangeText={() => {}} /> : null}
-          <DateField label="Date" value={form.form_date} onSelect={(value) => updateHeader("form_date", value)} />
+          <DateField canEdit={editable && !isEmployee} label="Date" value={form.form_date} onSelect={(value) => updateHeader("form_date", value)} />
           <TouchableOpacity
             disabled={!editable || isEmployee}
             style={styles.field}
@@ -387,26 +414,48 @@ const OperationalFormContent = ({ navigation, route }) => {
           ) : null}
         </View>
 
-        {inventory ? (form.inventory_items || []).map((item, index) => (
-          <View key={item._id || index} style={styles.card}>
-            <View style={styles.itemHeader}><Text style={styles.itemTitle}>Item {index + 1}</Text>{editable ? <TouchableOpacity onPress={() => updateHeader("inventory_items", form.inventory_items.filter((_, itemIndex) => itemIndex !== index))}><MaterialIcons name="delete-outline" size={22} color="#B91C1C" /></TouchableOpacity> : null}</View>
-            <OperationalTextField editable={editable} label="Item Location" value={item.item_location} onChangeText={(value) => updateInventory(index, "item_location", value)} />
-            <OperationalTextField editable={editable} label="Brand" value={item.brand} onChangeText={(value) => updateInventory(index, "brand", value)} />
-            <OperationalTextField editable={editable} label="Item Name" value={item.item_name} onChangeText={(value) => updateInventory(index, "item_name", value)} />
-            <OperationalTextField editable={editable} label="Purchased From" value={item.purchased_from} onChangeText={(value) => updateInventory(index, "purchased_from", value)} />
-            <DateField label="Date Purchased" value={item.date_purchased} onSelect={(value) => updateInventory(index, "date_purchased", value)} />
-            <DateField label="Use-By Date" value={item.use_by_date} onSelect={(value) => updateInventory(index, "use_by_date", value)} />
-            <View style={styles.quantityRow}>
-              <View style={styles.quantityColumn}><QuantityField label="Beginning Quantity" value={item.beginning_quantity} onSelect={(value) => updateInventory(index, "beginning_quantity", value)} /></View>
-              <View style={styles.quantityColumn}><QuantityField label="Current Quantity" value={item.current_quantity} onSelect={(value) => updateInventory(index, "current_quantity", value)} /></View>
-            </View>
-            <View style={styles.quantityRow}>
-              <View style={styles.quantityColumn}><QuantityField label="Max Quantity" value={item.max_quantity} onSelect={(value) => updateInventory(index, "max_quantity", value)} /></View>
-              <View style={styles.quantityColumn}><QuantityField label="Reorder Quantity" value={item.reorder_quantity} readOnly /></View>
-            </View>
-            <OperationalTextField editable={editable} label="Notes" value={item.notes} maxLength={250} multiline onChangeText={(value) => updateInventory(index, "notes", value)} />
-          </View>
-        )) : (form.checklist_items || []).map((item, index) => (
+        {inventory ? (form.inventory_items || []).map((item, index) => {
+          const employeeItem = isEmployee;
+          const selectedItem = !employeeItem || selectedInventoryIndex === index;
+          const addingItem = employeeItem && employeeInventoryMode === "ADD" && selectedInventoryIndex === index;
+          const countingItem = employeeItem && employeeInventoryMode === "COUNT" && selectedInventoryIndex === index;
+          const editAllFields = editable && (!employeeItem || addingItem);
+          return <View key={item._id || index} style={styles.card}>
+            <TouchableOpacity
+              disabled={!employeeItem}
+              style={styles.itemHeader}
+              onPress={() => {
+                if (editable) return;
+                setSelectedInventoryIndex(selectedInventoryIndex === index ? null : index);
+              }}
+            >
+              <View style={styles.inventoryItemHeading}>
+                <Text style={styles.itemTitle}>{item.item_name || `Inventory Item ${index + 1}`}</Text>
+                {employeeItem ? <Text style={styles.detail}>Current {Number(item.current_quantity) || 0} · Reorder {Number(item.reorder_quantity) || 0}</Text> : null}
+              </View>
+              {employeeItem ? <MaterialIcons name={selectedItem ? "expand-less" : "expand-more"} size={24} color={AppColor.primary} /> : null}
+              {!employeeItem && editable ? <TouchableOpacity onPress={() => updateHeader("inventory_items", form.inventory_items.filter((_, itemIndex) => itemIndex !== index))}><MaterialIcons name="delete-outline" size={22} color="#B91C1C" /></TouchableOpacity> : null}
+            </TouchableOpacity>
+            {selectedItem ? <>
+              <OperationalTextField editable={editAllFields} label="Item Location" value={item.item_location} onChangeText={(value) => updateInventory(index, "item_location", value)} />
+              <OperationalTextField editable={editAllFields} label="Brand" value={item.brand} onChangeText={(value) => updateInventory(index, "brand", value)} />
+              <OperationalTextField editable={editAllFields} label="Item Name" value={item.item_name} onChangeText={(value) => updateInventory(index, "item_name", value)} />
+              <OperationalTextField editable={editAllFields} label="Purchased From" value={item.purchased_from} onChangeText={(value) => updateInventory(index, "purchased_from", value)} />
+              <DateField canEdit={editAllFields} label="Date Purchased" value={item.date_purchased} onSelect={(value) => updateInventory(index, "date_purchased", value)} />
+              <DateField canEdit={editAllFields} label="Use-By Date" value={item.use_by_date} onSelect={(value) => updateInventory(index, "use_by_date", value)} />
+              <View style={styles.quantityRow}>
+                <View style={styles.quantityColumn}><QuantityField canEdit={editAllFields} label="Beginning Quantity" value={item.beginning_quantity} onSelect={(value) => updateInventory(index, "beginning_quantity", value)} /></View>
+                <View style={styles.quantityColumn}><QuantityField canEdit={editAllFields || countingItem} label="Current Quantity" value={item.current_quantity} onSelect={(value) => updateInventory(index, "current_quantity", value)} /></View>
+              </View>
+              <View style={styles.quantityRow}>
+                <View style={styles.quantityColumn}><QuantityField canEdit={editAllFields} label="Max Quantity" value={item.max_quantity} onSelect={(value) => updateInventory(index, "max_quantity", value)} /></View>
+                <View style={styles.quantityColumn}><QuantityField canEdit={false} label="Reorder Quantity" value={item.reorder_quantity} readOnly /></View>
+              </View>
+              <OperationalTextField editable={editAllFields} label="Notes" value={item.notes} maxLength={250} multiline onChangeText={(value) => updateInventory(index, "notes", value)} />
+              {employeeItem && !editable && form.status === "DRAFT" ? <TouchableOpacity style={styles.primaryButton} onPress={() => beginEmployeeInventoryCount(index)}><Text style={styles.primaryText}>Perform Count</Text></TouchableOpacity> : null}
+            </> : null}
+          </View>;
+        }) : (form.checklist_items || []).map((item, index) => (
           <View key={item._id || index} style={styles.card}>
             <TouchableOpacity disabled={!editable} style={styles.checkRow} onPress={() => updateChecklist(index, "completed", !item.completed)}>
               <MaterialIcons name={item.completed ? "check-box" : "check-box-outline-blank"} size={28} color={item.completed ? AppColor.primary : "#64748B"} />
@@ -417,7 +466,7 @@ const OperationalFormContent = ({ navigation, route }) => {
           </View>
         ))}
 
-        {inventory && editable ? <TouchableOpacity style={styles.secondaryButton} onPress={() => updateHeader("inventory_items", [...(form.inventory_items || []), emptyInventoryItem()])}><MaterialIcons name="add" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Add Inventory Item</Text></TouchableOpacity> : null}
+        {inventory && !isEmployee && editable ? <TouchableOpacity style={styles.secondaryButton} onPress={() => updateHeader("inventory_items", [...(form.inventory_items || []), emptyInventoryItem()])}><MaterialIcons name="add" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Add Inventory Item</Text></TouchableOpacity> : null}
         {!inventory ? <Text style={styles.safetyNote}>Report damaged equipment, unsafe temperatures, leaks, or other concerns to a manager before leaving.</Text> : null}
         {employeeInventoryReview && editable ? <Text style={styles.safetyNote}>Update corrects the matching current record. Closing inventory requires a fresh use-by date and starts the next count.</Text> : null}
         {editable ? <View style={styles.actions}>{employeeInventoryReview ? <>
@@ -425,12 +474,16 @@ const OperationalFormContent = ({ navigation, route }) => {
           <TouchableOpacity disabled={saving} style={[styles.primaryButton, styles.reviewActionButton]} onPress={closeEmployeeInventoryReview}><Text style={styles.primaryText}>{saving ? "Closing..." : "Close Inventory"}</Text></TouchableOpacity>
           <TouchableOpacity disabled={saving} style={[styles.archiveButton, styles.reviewActionButton]} onPress={archive}><Text style={styles.primaryText}>Archive</Text></TouchableOpacity>
           <TouchableOpacity disabled={saving} style={[styles.secondaryButton, styles.reviewActionButton]} onPress={cancelEdit}><Text style={styles.secondaryText}>Cancel</Text></TouchableOpacity>
+        </> : inventory && isEmployee ? <>
+          <TouchableOpacity disabled={saving} style={styles.secondaryButton} onPress={cancelEdit}><Text style={styles.secondaryText}>Cancel</Text></TouchableOpacity>
+          <TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={() => save(true)}><Text style={styles.primaryText}>{saving ? "Submitting..." : "Submit"}</Text></TouchableOpacity>
         </> : <><TouchableOpacity disabled={saving} style={styles.secondaryButton} onPress={cancelEdit}><Text style={styles.secondaryText}>Cancel</Text></TouchableOpacity><TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={() => save(false)}><Text style={styles.primaryText}>{saving ? "Saving..." : "Save"}</Text></TouchableOpacity></>}</View> : null}
-        {!editable && !archived && (form.status === "DRAFT" || (!isEmployee && form.status === "SUBMITTED")) ? <TouchableOpacity style={styles.secondaryButton} onPress={beginEdit}><MaterialIcons name="edit" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Edit</Text></TouchableOpacity> : null}
-        {!editable && form.status === "DRAFT" ? <TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={() => save(true)}><Text style={styles.primaryText}>{saving ? "Submitting..." : "Submit"}</Text></TouchableOpacity> : null}
+        {!editable && !archived && !(inventory && isEmployee) && (form.status === "DRAFT" || (!isEmployee && form.status === "SUBMITTED")) ? <TouchableOpacity style={styles.secondaryButton} onPress={beginEdit}><MaterialIcons name="edit" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Edit</Text></TouchableOpacity> : null}
+        {!editable && inventory && isEmployee && form.status === "DRAFT" ? <TouchableOpacity style={styles.secondaryButton} onPress={beginEmployeeInventoryAdd}><MaterialIcons name="add" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Add Inventory Item</Text></TouchableOpacity> : null}
+        {!editable && form.status === "DRAFT" && !(inventory && isEmployee) ? <TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={() => save(true)}><Text style={styles.primaryText}>{saving ? "Submitting..." : "Submit"}</Text></TouchableOpacity> : null}
         {employeeInventoryReview && !editable ? <TouchableOpacity style={styles.primaryButton} onPress={beginEdit}><Text style={styles.primaryText}>Close Inventory</Text></TouchableOpacity> : null}
         {form.status === "SUBMITTED" && !isEmployee && !editable ? <TouchableOpacity disabled={saving} style={styles.archiveButton} onPress={archive}><Text style={styles.primaryText}>{employeeInventoryReview ? "Archive" : "Archive Form"}</Text></TouchableOpacity> : null}
-        {inventory ? <View style={styles.inventoryReview}>
+        {inventory && !isEmployee ? <View style={styles.inventoryReview}>
           <Text style={styles.sectionTitle}>Current Inventory by Food Truck</Text>
           <Text style={styles.reviewCopy}>Review active and archived inventory items for each truck.</Text>
           {inventoryGroups.length ? inventoryGroups.map((group) => {
@@ -513,7 +566,7 @@ const styles = StyleSheet.create({
   archiveBanner: { alignItems: "center", backgroundColor: "#E2E8F0", borderRadius: 10, flexDirection: "row", gap: 8, marginBottom: 14, padding: 12 }, archiveText: { color: "#475569", fontWeight: "600" },
   field: { marginBottom: 12 }, fieldLabel: { color: "#475569", fontSize: 12, fontWeight: "600", marginBottom: 5 }, input: { backgroundColor: "white", borderColor: "#CBD5E1", borderRadius: 9, borderWidth: 1, color: "#0F172A", fontSize: 15, minHeight: 44, paddingHorizontal: 12, paddingVertical: 9 }, notesInput: { minHeight: 74, textAlignVertical: "top" }, readonly: { backgroundColor: "#F1F5F9", color: "#475569" },
   select: { alignItems: "center", backgroundColor: "white", borderColor: "#CBD5E1", borderRadius: 9, borderWidth: 1, flexDirection: "row", justifyContent: "space-between", minHeight: 44, paddingHorizontal: 12 }, selectText: { color: "#0F172A", fontSize: 15 },
-  itemHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginBottom: 12 }, itemTitle: { color: "#0F172A", fontSize: 17, fontWeight: "700" }, quantityRow: { flexDirection: "row", gap: 10 }, quantityColumn: { flex: 1 },
+  itemHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginBottom: 12 }, inventoryItemHeading: { flex: 1 }, itemTitle: { color: "#0F172A", fontSize: 17, fontWeight: "700" }, quantityRow: { flexDirection: "row", gap: 10 }, quantityColumn: { flex: 1 },
   checkRow: { alignItems: "center", flexDirection: "row", gap: 10, marginBottom: 12 }, areaInput: { borderBottomColor: "#CBD5E1", borderBottomWidth: 1, color: "#0F172A", flex: 1, fontSize: 16, fontWeight: "700", paddingVertical: 7 }, safetyNote: { color: "#475569", fontSize: 13, fontStyle: "italic", lineHeight: 19, marginBottom: 18 },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: 10 }, primaryButton: { alignItems: "center", backgroundColor: AppColor.primary, borderRadius: 10, flex: 1, justifyContent: "center", minHeight: 48, padding: 12 }, primaryText: { color: "white", fontSize: 15, fontWeight: "700" }, secondaryButton: { alignItems: "center", backgroundColor: "white", borderColor: AppColor.primary, borderRadius: 10, borderWidth: 1, flexDirection: "row", gap: 6, justifyContent: "center", marginBottom: 12, minHeight: 48, padding: 12 }, secondaryText: { color: AppColor.primary, fontSize: 15, fontWeight: "700" }, archiveButton: { alignItems: "center", backgroundColor: "#475569", borderRadius: 10, marginTop: 12, padding: 14 }, reviewActionButton: { flexBasis: "47%", flexGrow: 1, marginBottom: 0, marginTop: 0 },
   inventoryReview: { marginTop: 24 }, sectionTitle: { color: "#0F172A", fontSize: 19, fontWeight: "700" }, reviewCopy: { color: "#64748B", fontSize: 13, lineHeight: 19, marginBottom: 12, marginTop: 4 }, detail: { color: "#64748B", fontSize: 12, marginTop: 3 }, inventoryGroup: { backgroundColor: "white", borderColor: "#E2E8F0", borderRadius: 12, borderWidth: 1, marginBottom: 10, overflow: "hidden" }, inventoryGroupHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", padding: 13 }, inventoryGroupToggle: { alignItems: "center", flex: 1, flexDirection: "row", gap: 8 }, inventoryGroupTitle: { color: "#0F172A", fontSize: 16, fontWeight: "700" }, printButton: { borderColor: AppColor.primary, borderRadius: 8, borderWidth: 1, padding: 8 }, inventoryGroupItems: { borderTopColor: "#E2E8F0", borderTopWidth: 1, paddingHorizontal: 13 }, inventorySummaryItem: { alignItems: "center", borderBottomColor: "#E2E8F0", borderBottomWidth: 1, flexDirection: "row", justifyContent: "space-between", paddingVertical: 12 }, inventorySummaryCopy: { flex: 1, paddingRight: 10 }, inventorySummaryName: { color: "#0F172A", fontSize: 14, fontWeight: "600" }, activeStatus: { backgroundColor: "#DCFCE7", borderRadius: 12, color: "#166534", fontSize: 12, fontWeight: "700", overflow: "hidden", paddingHorizontal: 9, paddingVertical: 4 }, archivedStatus: { backgroundColor: "#E2E8F0", borderRadius: 12, color: "#475569", fontSize: 12, fontWeight: "700", overflow: "hidden", paddingHorizontal: 9, paddingVertical: 4 },
