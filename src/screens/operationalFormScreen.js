@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,8 +18,11 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useSelector } from "react-redux";
 import {
   archiveOperationalComplianceForm_API,
+  archiveOperationalChecklistTask_API,
+  createOperationalChecklistTask_API,
   discardEmployeeInventoryDraft_API,
   getCurrentOperationalComplianceForm_API,
+  getOperationalChecklistTasks_API,
   getOperationalComplianceForms_API,
   saveOperationalComplianceForm_API,
   submitOperationalComplianceForm_API,
@@ -111,7 +114,7 @@ const OperationalTextField = ({
 );
 
 const OperationalFormContent = ({ navigation, route }) => {
-  const { type, formId, startEditing = false, startImmediately = false, addTask = false } = route.params || {};
+  const { type, formId, startEditing = false, startImmediately = false } = route.params || {};
   const { user } = useSelector((state) => state.userReducer);
   const isEmployee = user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
   const defaultPreparedByName = isEmployee
@@ -135,8 +138,12 @@ const OperationalFormContent = ({ navigation, route }) => {
   const [truckUnitPickerVisible, setTruckUnitPickerVisible] = useState(false);
   const [selectedInventoryIndex, setSelectedInventoryIndex] = useState(null);
   const [employeeInventoryMode, setEmployeeInventoryMode] = useState(null);
+  const [checklistTasks, setChecklistTasks] = useState([]);
+  const [taskListExpanded, setTaskListExpanded] = useState(false);
+  const [taskModalVisible, setTaskModalVisible] = useState(false);
+  const [taskTitle, setTaskTitle] = useState("");
+  const [taskDetails, setTaskDetails] = useState("");
   const [checklistStarted] = useState(startImmediately);
-  const addedTaskOnOpen = useRef(false);
 
   const editable = isEditing && form?.status !== "ARCHIVED";
   const archived = form?.status === "ARCHIVED";
@@ -158,6 +165,10 @@ const OperationalFormContent = ({ navigation, route }) => {
       const listResponse = await getOperationalComplianceForms_API({ type });
       const availableForms = listResponse?.data?.forms || listResponse?.forms || [];
       setForms(availableForms);
+      if (vendorChecklist) {
+        const taskResponse = await getOperationalChecklistTasks_API(type);
+        setChecklistTasks(taskResponse?.data?.tasks || taskResponse?.tasks || []);
+      }
       if (formId) {
         response = listResponse;
         nextForm = availableForms.find((item) => item._id === formId) || null;
@@ -181,12 +192,7 @@ const OperationalFormContent = ({ navigation, route }) => {
           ? (nextForm.inventory_items || []).filter((item) => item.employee_modified_at)
           : nextForm.inventory_items,
       };
-      const shouldAddTask = addTask && vendorChecklist && nextForm.status === "DRAFT" && !addedTaskOnOpen.current;
-      const normalizedForm = shouldAddTask
-        ? { ...baseNormalizedForm, checklist_items: [...(baseNormalizedForm.checklist_items || []), { area: "Additional Task", task: "", completed: false, notes: "" }] }
-        : baseNormalizedForm;
-      if (shouldAddTask) addedTaskOnOpen.current = true;
-      setForm(normalizedForm);
+      setForm(baseNormalizedForm);
       setOriginalForm(cloneForm(baseNormalizedForm));
       setIsEditing(Boolean(
         (checklistStarted && !formId && nextForm.status === "DRAFT") ||
@@ -200,7 +206,7 @@ const OperationalFormContent = ({ navigation, route }) => {
     } finally {
       setLoading(false);
     }
-  }, [addTask, checklistOverview, checklistStarted, defaultPreparedByName, formId, inventory, isEmployee, startEditing, type, vendorChecklist]);
+  }, [checklistOverview, checklistStarted, defaultPreparedByName, formId, inventory, isEmployee, startEditing, type, vendorChecklist]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -361,10 +367,56 @@ const OperationalFormContent = ({ navigation, route }) => {
     setIsEditing(true);
   };
 
-  const addChecklistTask = () => updateHeader("checklist_items", [
-    ...(form.checklist_items || []),
-    { area: "Additional Task", task: "", completed: false, notes: "" },
-  ]);
+  const openTaskForm = () => {
+    setTaskTitle("");
+    setTaskDetails("");
+    setTaskModalVisible(true);
+  };
+  const submitChecklistTask = async () => {
+    if (!taskTitle.trim() || !taskDetails.trim()) {
+      Alert.alert("Additional Task", "Enter both the task title and task details.");
+      return;
+    }
+    try {
+      setSaving(true);
+      const response = await createOperationalChecklistTask_API({
+        form_type: type,
+        title: taskTitle.trim(),
+        details: taskDetails.trim(),
+      });
+      const saved = response?.data?.task || response?.task;
+      if (saved) setChecklistTasks((current) => [...current, saved]);
+      setTaskModalVisible(false);
+      setTaskTitle("");
+      setTaskDetails("");
+    } catch (error) {
+      Alert.alert("Additional Task", error?.message || "Unable to add this checklist task.");
+    } finally {
+      setSaving(false);
+    }
+  };
+  const archiveChecklistTask = (task) => Alert.alert(
+    "Archive Task",
+    `Remove “${task.title}” from future ${type === "OPENING_CHECKLIST" ? "opening" : "closing"} checklists?`,
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Archive",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            setSaving(true);
+            await archiveOperationalChecklistTask_API(task._id);
+            setChecklistTasks((current) => current.filter((item) => item._id !== task._id));
+          } catch (error) {
+            Alert.alert("Archive Task", error?.message || "Unable to archive this checklist task.");
+          } finally {
+            setSaving(false);
+          }
+        },
+      },
+    ],
+  );
 
   const beginEmployeeInventoryCount = (index) => {
     setOriginalForm(cloneForm(form));
@@ -458,6 +510,21 @@ const OperationalFormContent = ({ navigation, route }) => {
       : item.status === "SUBMITTED" && item.employee_internal_id);
     const archivedForms = forms.filter((item) => item.status === "ARCHIVED");
     const openSavedForm = (item) => navigation.push("operationalFormScreen", { type, formId: item._id });
+    if (taskModalVisible) return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => setTaskModalVisible(false)}><MaterialIcons name="arrow-back" size={27} color="#0F172A" /></TouchableOpacity>
+          <Text style={[styles.title, { marginLeft: 15 }]}>Add Checklist Task</Text>
+        </View>
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.card}>
+            <OperationalTextField editable label="Task Title" value={taskTitle} maxLength={80} onChangeText={setTaskTitle} />
+            <OperationalTextField editable label="Task Details" value={taskDetails} maxLength={250} multiline onChangeText={setTaskDetails} />
+          </View>
+          <View style={styles.actions}><TouchableOpacity disabled={saving} style={styles.secondaryButton} onPress={() => setTaskModalVisible(false)}><Text style={styles.secondaryText}>Cancel</Text></TouchableOpacity><TouchableOpacity disabled={saving} style={styles.primaryButton} onPress={submitChecklistTask}><Text style={styles.primaryText}>{saving ? "Submitting..." : "Submit"}</Text></TouchableOpacity></View>
+        </ScrollView>
+      </SafeAreaView>
+    );
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -467,8 +534,15 @@ const OperationalFormContent = ({ navigation, route }) => {
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.overviewActions}>
             <TouchableOpacity style={[styles.primaryButton, styles.overviewStartButton]} onPress={() => navigation.push("operationalFormScreen", { type, startImmediately: true })}><Text style={styles.primaryText}>{type === "OPENING_CHECKLIST" ? "Start Opening Process" : "Start Closing Process"}</Text></TouchableOpacity>
-            {!isEmployee ? <TouchableOpacity accessibilityLabel="Add additional task" style={styles.addTaskButton} onPress={() => navigation.push("operationalFormScreen", { type, startImmediately: true, addTask: true })}><MaterialIcons name="add" size={28} color="white" /></TouchableOpacity> : null}
+            {!isEmployee ? <TouchableOpacity accessibilityLabel="Add additional task" style={styles.addTaskButton} onPress={openTaskForm}><MaterialIcons name="add" size={28} color="white" /></TouchableOpacity> : null}
           </View>
+          {!isEmployee ? <View style={styles.taskManager}>
+            <TouchableOpacity style={styles.taskManagerHeader} onPress={() => setTaskListExpanded((current) => !current)}>
+              <View><Text style={styles.sectionTitle}>Active Tasks</Text><Text style={styles.detail}>{checklistTasks.length} task{checklistTasks.length === 1 ? "" : "s"}</Text></View>
+              <MaterialIcons name={taskListExpanded ? "expand-less" : "expand-more"} size={25} color={AppColor.primary} />
+            </TouchableOpacity>
+            {taskListExpanded ? <View style={styles.taskList}>{checklistTasks.map((task) => <View key={task._id} style={styles.taskRow}><View style={styles.taskCopy}><Text style={styles.recordTitle}>{task.title}</Text><Text style={styles.detail}>{task.details}</Text></View><TouchableOpacity disabled={saving} accessibilityLabel={`Archive ${task.title}`} style={styles.taskArchiveButton} onPress={() => archiveChecklistTask(task)}><Text style={styles.taskArchiveText}>Archive</Text></TouchableOpacity></View>)}</View> : null}
+          </View> : null}
           <Text style={styles.sectionTitle}>{isEmployee ? "Draft & Pending Review" : "Employee Submitted"}</Text>
           {draftAndPending.length ? draftAndPending.map((item) => <TouchableOpacity key={item._id} style={styles.historyRecord} onPress={() => openSavedForm(item)}><View style={styles.recordCopy}><View style={styles.recordTitleRow}><Text style={styles.recordTitle}>{item.prepared_by_name || "Employee"}</Text><Text style={item.status === "DRAFT" ? styles.draftBadge : styles.submittedBadge}>{item.status === "DRAFT" ? "Draft" : "Pending Review"}</Text></View><Text style={styles.detail}>{item.truck_unit || "Food truck"} · {new Date(item.submitted_at || item.updatedAt || item.createdAt || item.form_date).toLocaleString()}</Text></View><MaterialIcons name="chevron-right" size={22} color="#64748B" /></TouchableOpacity>) : <Text style={styles.emptyText}>{isEmployee ? "No draft or pending checklists." : "No employee-submitted checklists."}</Text>}
           <Text style={styles.sectionTitle}>Archived</Text>
@@ -597,15 +671,14 @@ const OperationalFormContent = ({ navigation, route }) => {
           <View key={item._id || index} style={styles.card}>
             <TouchableOpacity disabled={!editable} style={styles.checkRow} onPress={() => updateChecklist(index, "completed", !item.completed)}>
               <MaterialIcons name={item.completed ? "check-box" : "check-box-outline-blank"} size={28} color={item.completed ? AppColor.primary : "#64748B"} />
-              <TextInput editable={editable && !isEmployee} maxLength={80} style={[styles.areaInput, (!editable || isEmployee) && styles.readonly]} value={item.area} onChangeText={(value) => updateChecklist(index, "area", value)} />
+              <TextInput editable={false} maxLength={80} style={[styles.areaInput, styles.readonly]} value={item.area} />
             </TouchableOpacity>
-            <OperationalTextField editable={editable && !isEmployee} label="Task" value={item.task} maxLength={250} multiline onChangeText={(value) => updateChecklist(index, "task", value)} />
+            <OperationalTextField editable={false} label="Task" value={item.task} maxLength={250} multiline onChangeText={() => {}} />
             <OperationalTextField editable={editable} label="Notes" value={item.notes} maxLength={250} multiline onChangeText={(value) => updateChecklist(index, "notes", value)} />
           </View>
         ))}
 
         {inventory && !isEmployee && editable ? <TouchableOpacity style={styles.secondaryButton} onPress={() => updateHeader("inventory_items", [...(form.inventory_items || []), emptyInventoryItem()])}><MaterialIcons name="add" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Add Inventory Item</Text></TouchableOpacity> : null}
-        {!inventory && editable && !isEmployee ? <TouchableOpacity style={styles.secondaryButton} onPress={addChecklistTask}><MaterialIcons name="add" size={21} color={AppColor.primary} /><Text style={styles.secondaryText}>Add Additional Task</Text></TouchableOpacity> : null}
         {!inventory ? <Text style={styles.safetyNote}>Report damaged equipment, unsafe temperatures, leaks, or other concerns to a manager before leaving.</Text> : null}
         {employeeInventoryReview && editable ? <Text style={styles.safetyNote}>{employeeInventoryMode === "REORDER" ? "Enter the new product lot. Dates are required, and Beginning, Current, and Max quantities must match the quantity received." : "Update accepts the employee count. Close Inventory is only used when replacement products were received."}</Text> : null}
         {editable ? <View style={styles.actions}>{employeeInventoryReview && employeeInventoryMode === "REORDER" ? <>
@@ -716,6 +789,7 @@ const styles = StyleSheet.create({
   modalBackdrop: { backgroundColor: "rgba(15,23,42,0.45)", flex: 1, justifyContent: "flex-end" }, modalCard: { backgroundColor: "white", borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "65%", padding: 18 }, modalTitle: { color: "#0F172A", fontSize: 20, fontWeight: "700", marginBottom: 10 }, quantityOption: { alignItems: "center", borderBottomColor: "#E2E8F0", borderBottomWidth: 1, padding: 13 }, quantityOptionText: { color: "#0F172A", fontSize: 17 }, modalClose: { alignItems: "center", paddingTop: 14 },
   emptyText: { color: "#64748B", padding: 18, textAlign: "center" },
   historyRecord: { alignItems: "center", backgroundColor: "white", borderColor: "#E2E8F0", borderRadius: 10, borderWidth: 1, flexDirection: "row", justifyContent: "space-between", marginTop: 10, padding: 14 }, recordCopy: { flex: 1, paddingRight: 10 }, recordTitleRow: { alignItems: "center", flexDirection: "row", flexWrap: "wrap", gap: 8 }, recordTitle: { color: "#0F172A", fontSize: 15, fontWeight: "700" }, draftBadge: { backgroundColor: "#FEF3C7", borderRadius: 10, color: "#92400E", fontSize: 10, fontWeight: "700", overflow: "hidden", paddingHorizontal: 7, paddingVertical: 3 }, submittedBadge: { backgroundColor: "#DBEAFE", borderRadius: 10, color: "#1D4ED8", fontSize: 10, fontWeight: "700", overflow: "hidden", paddingHorizontal: 7, paddingVertical: 3 }, overviewActions: { alignItems: "stretch", flexDirection: "row", gap: 10, marginBottom: 18 }, overviewStartButton: { flex: 1, marginBottom: 0 }, addTaskButton: { alignItems: "center", backgroundColor: AppColor.primary, borderRadius: 10, justifyContent: "center", minHeight: 48, width: 52 },
+  taskManager: { backgroundColor: "white", borderColor: "#E2E8F0", borderRadius: 12, borderWidth: 1, marginBottom: 18, overflow: "hidden" }, taskManagerHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", padding: 14 }, taskList: { borderTopColor: "#E2E8F0", borderTopWidth: 1 }, taskRow: { alignItems: "center", borderBottomColor: "#E2E8F0", borderBottomWidth: 1, flexDirection: "row", padding: 13 }, taskCopy: { flex: 1, paddingRight: 10 }, taskArchiveButton: { borderColor: "#B91C1C", borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 7 }, taskArchiveText: { color: "#B91C1C", fontSize: 12, fontWeight: "700" },
 });
 
 export default OperationalFormScreen;

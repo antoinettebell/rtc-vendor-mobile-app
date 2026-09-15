@@ -118,6 +118,9 @@ import {
   OPERATIONAL_COMPLIANCE_FORMS,
   OPERATIONAL_COMPLIANCE_SUBMIT,
   OPERATIONAL_COMPLIANCE_UNLOCK,
+  OPERATIONAL_CHECKLIST_TASKS,
+  OPERATIONAL_CHECKLIST_TASK_CREATE,
+  OPERATIONAL_CHECKLIST_TASK_ARCHIVE,
   OPERATIONAL_INVENTORY_ITEMS,
   OPERATIONAL_INVENTORY_ITEM,
   OPERATIONAL_INVENTORY_ITEM_SUBMIT,
@@ -1501,6 +1504,15 @@ export const unlockOperationalComplianceForm_API = async (id) =>
 
 export const archiveOperationalComplianceForm_API = async (id) =>
   (await apiClient.post(OPERATIONAL_COMPLIANCE_ARCHIVE(id), {}, { skipToken: false }))?.data;
+
+export const getOperationalChecklistTasks_API = async (type) =>
+  (await apiClient.get(OPERATIONAL_CHECKLIST_TASKS(type), { skipToken: false }))?.data;
+
+export const createOperationalChecklistTask_API = async (payload) =>
+  (await apiClient.post(OPERATIONAL_CHECKLIST_TASK_CREATE, payload, { skipToken: false }))?.data;
+
+export const archiveOperationalChecklistTask_API = async (taskId) =>
+  (await apiClient.post(OPERATIONAL_CHECKLIST_TASK_ARCHIVE(taskId), {}, { skipToken: false }))?.data;
 
 export const createOperationalInventoryItem_API = async (payload) =>
   (await apiClient.post(OPERATIONAL_INVENTORY_ITEMS, payload, { skipToken: false }))?.data;

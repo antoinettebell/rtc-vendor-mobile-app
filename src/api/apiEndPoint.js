@@ -73,6 +73,11 @@ export const OPERATIONAL_COMPLIANCE_UNLOCK = (id) =>
   `/operational-compliance/${id}/unlock`;
 export const OPERATIONAL_COMPLIANCE_ARCHIVE = (id) =>
   `/operational-compliance/${id}/archive`;
+export const OPERATIONAL_CHECKLIST_TASKS = (type) =>
+  `/operational-compliance/checklist-tasks/${type}`;
+export const OPERATIONAL_CHECKLIST_TASK_CREATE = "/operational-compliance/checklist-tasks";
+export const OPERATIONAL_CHECKLIST_TASK_ARCHIVE = (taskId) =>
+  `/operational-compliance/checklist-tasks/${taskId}/archive`;
 export const OPERATIONAL_INVENTORY_ITEMS = "/operational-compliance/inventory/items";
 export const OPERATIONAL_INVENTORY_ITEM = (id, itemId) =>
   `/operational-compliance/inventory/${id}/items/${itemId}`;
