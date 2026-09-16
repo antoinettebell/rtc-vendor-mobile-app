@@ -8,6 +8,7 @@ import UIKit
 @objc final class TapToPayManager: NSObject {
   private var reader: MposUIReader?
   private var readerEnvironment: MposEnvironment?
+  private var diagnosticTrace: [String] = []
   private let diagnosticLogger = Logger(
     subsystem: Bundle.main.bundleIdentifier ?? "com.rounddacorner.vendor",
     category: "TapToPay"
@@ -72,6 +73,7 @@ import UIKit
     if let developerInfo {
       diagnostic["developerInfo"] = developerInfo
     }
+    diagnostic["trace"] = diagnosticTrace
     let developerInfoForLog = developerInfo ?? "unavailable"
 
     diagnosticLogger.error(
@@ -79,7 +81,7 @@ import UIKit
     )
 
     return NSError(domain: "RTCTapToPay", code: 502, userInfo: [
-      NSLocalizedDescriptionKey: "Tap to Pay transaction failed: \(nativeError.localizedDescription)",
+      NSLocalizedDescriptionKey: "Tap to Pay on iPhone transaction failed: \(nativeError.localizedDescription)",
       "tapToPayStage": "charge_result",
       "tapToPayErrorDomain": nativeError.domain,
       "tapToPayErrorCode": nativeError.code,
@@ -96,10 +98,40 @@ import UIKit
       .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     guard !value.isEmpty, !value.hasPrefix("$(") else {
       throw NSError(domain: "RTCTapToPay", code: 503, userInfo: [
-        NSLocalizedDescriptionKey: "Tap to Pay is missing the required native configuration: \(key)."
+        NSLocalizedDescriptionKey: "Tap to Pay on iPhone is missing the required native configuration: \(key)."
       ])
     }
     return value
+  }
+
+  private func optionalBuildSetting(_ key: String) -> String? {
+    let value = (Bundle.main.object(forInfoDictionaryKey: key) as? String)?
+      .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    guard !value.isEmpty, !value.hasPrefix("$(") else { return nil }
+    return value
+  }
+
+  private func enabledBuildSetting(_ key: String) -> Bool {
+    guard let value = optionalBuildSetting(key)?.lowercased() else {
+      return false
+    }
+    return ["1", "true", "yes"].contains(value)
+  }
+
+  private func identifierSuffix(_ value: String?) -> String {
+    guard let value, !value.isEmpty else { return "not_configured" }
+    return String(value.suffix(4))
+  }
+
+  private func logStage(_ stage: String, details: String = "") {
+    let entry = details.isEmpty ? stage : "\(stage) \(details)"
+    diagnosticTrace.append(String(entry.prefix(512)))
+    if diagnosticTrace.count > 8 {
+      diagnosticTrace.removeFirst(diagnosticTrace.count - 8)
+    }
+    diagnosticLogger.info(
+      "[TapToPayDiagnostic] stage=\(stage, privacy: .public) \(details, privacy: .public)"
+    )
   }
 
   private func configuredReader(environment: MposEnvironment) async throws -> MposUIReader {
@@ -137,17 +169,69 @@ import UIKit
   }
 
   private func ensureActivated(_ reader: MposUIReader, environment: MposEnvironment) async throws -> Bool {
+    let configuredDeviceId = optionalBuildSetting("CybersourceTapToPayDeviceId")
+    let forceReactivation = enabledBuildSetting("CybersourceTapToPayResetEnrollment")
+    var existingDeviceId: String?
+
     // The SDK persists activation outside the JavaScript configuration.  A
     // prior live enrollment must not satisfy a requested sandbox enrollment.
     if case .activated(let device) = await reader.activationStatus,
        device.environment == environment {
-      return false
+      existingDeviceId = device.deviceId
+      if !forceReactivation {
+        logStage(
+          "activation_reused",
+          details: "environment=\(String(describing: environment)) device_id_suffix=\(identifierSuffix(device.deviceId)) configured_device_id_suffix=\(identifierSuffix(configuredDeviceId))"
+        )
+        return false
+      }
     }
 
     let activation = await reader.activation()
+    let reactivationDeviceId = configuredDeviceId ?? existingDeviceId
+    logStage(
+      forceReactivation ? "activation_reactivation_requested" : "activation_requested",
+      details: "environment=\(String(describing: environment)) configured_device_id_suffix=\(identifierSuffix(configuredDeviceId)) reactivation_device_id_suffix=\(identifierSuffix(reactivationDeviceId))"
+    )
+
+    if let reactivationDeviceId {
+      let result = await activation.activateWithOtp(
+        environment: environment,
+        deviceId: reactivationDeviceId
+      )
+      switch result {
+      case .success(let device, let isNewDevice):
+        logStage(
+          "activation_succeeded",
+          details: "new_device=\(isNewDevice) device_id_suffix=\(identifierSuffix(device.deviceId))"
+        )
+        return isNewDevice
+      case .cancelledByUser:
+        throw NSError(domain: "RTCTapToPay", code: 499, userInfo: [
+          NSLocalizedDescriptionKey: "Device activation was cancelled."
+        ])
+      case .invalidOTP(let info):
+        throw NSError(domain: "RTCTapToPay", code: 401, userInfo: [
+          NSLocalizedDescriptionKey: "The activation code was not accepted: \(safeDiagnosticText(info))"
+        ])
+      case .error(let info):
+        throw NSError(domain: "RTCTapToPay", code: 500, userInfo: [
+          NSLocalizedDescriptionKey: "Device activation failed: \(safeDiagnosticText(info))"
+        ])
+      @unknown default:
+        throw NSError(domain: "RTCTapToPay", code: 500, userInfo: [
+          NSLocalizedDescriptionKey: "Device activation returned an unknown result."
+        ])
+      }
+    }
+
     let result = await activation.activateWithOtp(environment: environment, otp: nil)
     switch result {
-    case .success(_, let isNewDevice):
+    case .success(let device, let isNewDevice):
+      logStage(
+        "activation_succeeded",
+        details: "new_device=\(isNewDevice) device_id_suffix=\(identifierSuffix(device.deviceId))"
+      )
       return isNewDevice
     case .cancelledByUser:
       throw NSError(domain: "RTCTapToPay", code: 499, userInfo: [
@@ -177,6 +261,11 @@ import UIKit
     }
 
     let requestedEnvironment = environment(from: environmentName)
+    diagnosticTrace.removeAll(keepingCapacity: true)
+    logStage(
+      "sale_requested",
+      details: "environment=\(String(describing: requestedEnvironment)) amount=\(amount) currency=\(String(describing: currency)) reference_present=\(!reference.isEmpty)"
+    )
     let reader = try await configuredReader(environment: requestedEnvironment)
     let newlyActivated = try await ensureActivated(
       reader,
@@ -188,11 +277,14 @@ import UIKit
       try await showMerchantEducation(from: viewController)
     }
     let online = try await reader.mposUIOnline()
+    logStage("online_session_ready")
     let parameters = ChargeParameters(amount: amount, currency: currency, customIdentifier: reference)
+    logStage("charge_started")
     let result = await online.startChargeTransaction(with: parameters)
 
     switch result {
     case .success(let transaction):
+      logStage("charge_succeeded", details: "transaction_id_present=\(!transaction.identifier.isEmpty)")
       return [
         "transactionId": transaction.identifier,
         "provider": "CYBERSOURCE",
@@ -200,6 +292,7 @@ import UIKit
         "reference": reference
       ]
     case .offlineSuccess(let transaction):
+      logStage("charge_offline_succeeded", details: "transaction_id_present=\(!transaction.id.isEmpty)")
       return [
         "transactionId": transaction.id,
         "provider": "CYBERSOURCE",
@@ -209,13 +302,13 @@ import UIKit
       ]
     case .payByLinkFallback:
       throw NSError(domain: "RTCTapToPay", code: 409, userInfo: [
-        NSLocalizedDescriptionKey: "Tap to Pay was unavailable. Please retry when the iPhone is online."
+        NSLocalizedDescriptionKey: "Tap to Pay on iPhone was unavailable. Please retry when the iPhone is online."
       ])
     case .failure(let error):
       throw transactionFailure(error)
     @unknown default:
       throw NSError(domain: "RTCTapToPay", code: 500, userInfo: [
-        NSLocalizedDescriptionKey: "Tap to Pay returned an unknown result."
+        NSLocalizedDescriptionKey: "Tap to Pay on iPhone returned an unknown result."
       ])
     }
   }

@@ -478,7 +478,7 @@ const UserProfileScreen = ({ navigation }) => {
                 <View style={styles.employeeProfileGrid}>
                   <View style={styles.employeeProfileRow}>
                     <Text style={styles.employeeProfileLabel}>
-                      Tap to Pay Serial Number
+                      Tap to Pay on iPhone Serial Number
                     </Text>
                     <Text style={styles.employeeProfileValue}>
                       {employeeProfile.tap_to_pay_serial_number || "Not assigned"}

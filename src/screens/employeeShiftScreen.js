@@ -312,7 +312,7 @@ const EmployeeShiftScreen = ({ navigation }) => {
             </Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Tap to Pay serial number</Text>
+            <Text style={styles.detailLabel}>Tap to Pay on iPhone serial number</Text>
             <Text style={styles.detailValue}>
               {employeeProfile.tap_to_pay_serial_number || "Not assigned"}
             </Text>

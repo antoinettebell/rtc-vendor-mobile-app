@@ -596,8 +596,8 @@ const ProfileMenuScreen = ({ navigation }) => {
       await showTapToPayMerchantEducation();
     } catch (error) {
       Alert.alert(
-        "Tap to Pay",
-        error?.message || "Tap to Pay education is unavailable on this device."
+        "Tap to Pay on iPhone",
+        error?.message || "Tap to Pay on iPhone education is unavailable on this device."
       );
     }
   };
@@ -781,7 +781,7 @@ const ProfileMenuScreen = ({ navigation }) => {
 	        </View>
 
 	        <View style={styles.vendorAccessCodeCard}>
-	          <Text style={styles.vendorAccessCodeLabel}>Tap to Pay Vendor Access Code</Text>
+	          <Text style={styles.vendorAccessCodeLabel}>Tap to Pay on iPhone Vendor Access Code</Text>
 	          <Text style={styles.vendorAccessCodeValue}>
 	            {user?.foodTruck?.tap_to_pay_serial_number || "Not assigned"}
 	          </Text>
@@ -916,7 +916,7 @@ const ProfileMenuScreen = ({ navigation }) => {
             <>
               <ItemComponent
                 rightIcon
-                label="How to Accept Tap to Pay"
+                label="How to Accept Tap to Pay on iPhone"
                 imageUri={PROFILE_MENU_IMAGES.helpSupportTC}
                 onPress={handleTapToPayEducationPress}
               />

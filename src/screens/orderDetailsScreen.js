@@ -231,7 +231,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     );
     const refundMessage =
       order?.paymentMethod === "TAP_TO_PAY"
-        ? `Refund $${refundAmount.toFixed(2)} to the customer? Tips are excluded from Tap to Pay refunds.`
+        ? `Refund $${refundAmount.toFixed(2)} to the customer? Tips are excluded from Tap to Pay on iPhone refunds.`
         : "Mark this cash order as refunded?";
 
     Alert.alert(

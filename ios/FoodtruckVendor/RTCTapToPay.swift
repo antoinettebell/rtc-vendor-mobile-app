@@ -1,4 +1,5 @@
 import Foundation
+import ProximityReader
 import React
 
 @objc(RTCTapToPay)
@@ -21,10 +22,13 @@ final class RTCTapToPay: NSObject {
     let amount = currencyAmount(from: amountString)
     Task { @MainActor in
       do {
-        guard #available(iOS 16.0, *) else {
-          throw NSError(domain: "RTCTapToPay", code: 403, userInfo: [
-            NSLocalizedDescriptionKey: "Tap to Pay requires iOS 16 or later."
-          ])
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-RTCForceTapToPayUnsupportedOS") {
+          throw unsupportedOSVersionError()
+        }
+#endif
+        guard #available(iOS 17.6, *) else {
+          throw unsupportedOSVersionError()
         }
         let reference = nullableStringValue(options["orderNumber"])
           ?? nullableStringValue(options["orderId"])
@@ -37,6 +41,14 @@ final class RTCTapToPay: NSObject {
         )
         resolve(result)
       } catch let error as NSError {
+        if isOSVersionUnsupported(error) {
+          reject(
+            "E_TAP_TO_PAY_OS_UNSUPPORTED",
+            Self.unsupportedOSVersionMessage,
+            unsupportedOSVersionError(underlying: error)
+          )
+          return
+        }
         reject(diagnosticCode(for: error), error.localizedDescription, error)
       } catch {
         reject(
@@ -62,7 +74,7 @@ final class RTCTapToPay: NSObject {
         guard #available(iOS 18.0, *),
               let viewController = TapToPayManager.topViewController() else {
           throw NSError(domain: "RTCTapToPay", code: 403, userInfo: [
-            NSLocalizedDescriptionKey: "Tap to Pay education requires iOS 18 or later."
+            NSLocalizedDescriptionKey: "Tap to Pay on iPhone education requires iOS 18 or later."
           ])
         }
         try await manager.showMerchantEducation(from: viewController)
@@ -89,6 +101,42 @@ final class RTCTapToPay: NSObject {
     let string = stringValue(value).trimmingCharacters(in: .whitespacesAndNewlines)
 
     return string.isEmpty ? nil : string
+  }
+
+  private static let unsupportedOSVersionMessage =
+    "Tap to Pay on iPhone requires the latest version of iOS. Update this iPhone in Settings and try again."
+
+  private func unsupportedOSVersionError(underlying: NSError? = nil) -> NSError {
+    var userInfo: [String: Any] = [
+      NSLocalizedDescriptionKey: Self.unsupportedOSVersionMessage
+    ]
+    if let underlying {
+      userInfo[NSUnderlyingErrorKey] = underlying
+    }
+    return NSError(domain: "RTCTapToPay", code: 426, userInfo: userInfo)
+  }
+
+  private func isOSVersionUnsupported(_ error: Error) -> Bool {
+    if let readerError = error as? PaymentCardReaderError,
+       case .osVersionNotSupported = readerError {
+      return true
+    }
+
+    let nativeError = error as NSError
+    if nativeError.domain == "RTCTapToPay", nativeError.code == 426 {
+      return true
+    }
+    if let underlying = nativeError.userInfo[NSUnderlyingErrorKey] as? Error,
+       isOSVersionUnsupported(underlying) {
+      return true
+    }
+
+    let normalizedDescription = nativeError.localizedDescription
+      .lowercased()
+      .replacingOccurrences(of: "_", with: "")
+      .replacingOccurrences(of: " ", with: "")
+    return normalizedDescription.contains("osversionnotsupported")
+      || normalizedDescription.contains("operatingsystemversionnotsupported")
   }
 
   private func diagnosticCode(for error: NSError) -> String {

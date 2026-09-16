@@ -21,7 +21,7 @@ const normalizeTapToPayResult = (result = {}) => {
     };
   }
 
-  throw new Error("Tap to Pay did not return a usable payment result.");
+  throw new Error("Tap to Pay on iPhone did not return a usable payment result.");
 };
 
 export const startTapToPaySale = async ({
@@ -32,12 +32,12 @@ export const startTapToPaySale = async ({
   reference,
 }) => {
   if (Platform.OS !== "ios") {
-    throw new Error("Tap to Pay is not enabled on Android in this build.");
+    throw new Error("Tap to Pay on iPhone is not enabled on Android in this build.");
   }
 
   if (!tapToPayConfig.enabled && !tapToPayConfig.mockMode) {
     throw new Error(
-      "Tap to Pay is included with Elite, but it is not enabled in this app build. Install the Tap to Pay-enabled build or contact RTC support."
+      "Tap to Pay on iPhone is included with Elite, but it is not enabled in this app build. Install the Tap to Pay on iPhone-enabled build or contact RTC support."
     );
   }
   if (tapToPayConfig.mockMode) {
@@ -65,7 +65,7 @@ export const startTapToPaySale = async ({
 
   if (!nativeTapToPay?.startSale) {
     throw new Error(
-      "Tap to Pay native module is not installed. Add the iOS/Android Tap to Pay SDK bridge as RTCTapToPay."
+      "The Tap to Pay on iPhone native module is not installed. Add the iOS Tap to Pay on iPhone SDK bridge as RTCTapToPay."
     );
   }
 
@@ -86,7 +86,7 @@ export const startTapToPaySale = async ({
 
 export const showTapToPayMerchantEducation = async () => {
   if (!nativeTapToPay?.showMerchantEducation) {
-    throw new Error("Tap to Pay merchant education is unavailable in this build.");
+    throw new Error("Tap to Pay on iPhone merchant education is unavailable in this build.");
   }
 
   return nativeTapToPay.showMerchantEducation();

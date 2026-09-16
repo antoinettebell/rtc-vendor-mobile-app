@@ -60,7 +60,7 @@ const tapToPayDiagnostic = (error) => {
     outer: nativeDiagnostic || {
       domain: hasNativeDiagnostic ? parts[2] : "unavailable",
       code: hasNativeDiagnostic ? parts[3] : "unavailable",
-      message: error?.message || "Tap to Pay could not be completed.",
+      message: error?.message || "Tap to Pay on iPhone could not be completed.",
     },
   };
 };
@@ -574,16 +574,16 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
   const handleTapToPay = async () => {
     if (!canUseTapToPay) {
       Alert.alert(
-        "Tap to Pay unavailable",
+        "Tap to Pay on iPhone unavailable",
         tapToPayComplianceLoading
-          ? "Checking Tap to Pay compliance status."
+          ? "Checking Tap to Pay on iPhone compliance status."
           : !isTapToPayCompliant
-          ? "Please complete your compliance paperwork to receive Tap to Pay Services."
+          ? "Please complete your compliance paperwork to receive Tap to Pay on iPhone services."
           : !vendorCanUseTapToPay && isEmployeeSession
-          ? "Tap to Pay is only available to employees on the Elite plan."
+          ? "Tap to Pay on iPhone is only available to employees on the Elite plan."
           : !vendorCanUseTapToPay
-            ? "Tap to Pay is not available for your current vendor plan."
-            : "Tap to Pay is not enabled in this build or this device is not ready.",
+            ? "Tap to Pay on iPhone is not available for your current vendor plan."
+            : "Tap to Pay on iPhone is not enabled in this build or this device is not ready.",
       );
       return;
     }
@@ -599,12 +599,21 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
 
       await completeTapToPayPayment(tapToPayResult);
     } catch (error) {
+      if (error?.code === "E_TAP_TO_PAY_OS_UNSUPPORTED") {
+        Alert.alert(
+          "Software Update Required",
+          error?.message ||
+            "Tap to Pay on iPhone requires the latest version of iOS. Update this iPhone in Settings and try again.",
+        );
+        setPaymentLoading(null);
+        return;
+      }
       const diagnostic = tapToPayDiagnostic(error);
       const outerDiagnostic = diagnostic.outer;
       const firstUnderlying = outerDiagnostic?.underlying;
       const secondUnderlying = firstUnderlying?.underlying;
       Alert.alert(
-        "Tap to Pay Diagnostic",
+        "Tap to Pay on iPhone Diagnostic",
         [
           `Stage: ${diagnostic.stage}`,
           ...formatNativeErrorDiagnostic("Outer", outerDiagnostic),
@@ -634,7 +643,10 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
 
       finishCheckout(createdOrder);
     } catch (error) {
-      Alert.alert("Tap to Pay failed", error?.message || "Please try again.");
+      Alert.alert(
+        "Tap to Pay on iPhone failed",
+        error?.message || "Please try again.",
+      );
     } finally {
       setPaymentLoading(null);
     }
@@ -774,7 +786,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
             />
             {tapToPayOptionAvailable ? (
               <SummaryRow
-                label="Tap to Pay Total"
+                label="Tap to Pay on iPhone Total"
                 value={`$${toAmount(tapSummary.total)}`}
                 bold
               />

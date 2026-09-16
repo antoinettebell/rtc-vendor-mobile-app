@@ -60,7 +60,7 @@ const tapToPayDiagnostic = (error) => {
     outer: nativeDiagnostic || {
       domain: hasNativeDiagnostic ? parts[2] : "unavailable",
       code: hasNativeDiagnostic ? parts[3] : "unavailable",
-      message: error?.message || "Tap to Pay could not be completed.",
+      message: error?.message || "Tap to Pay on iPhone could not be completed.",
     },
   };
 };
@@ -337,10 +337,10 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
     if (!payment || paymentLoading) return;
     if (!isTapToPayCompliant) {
       Alert.alert(
-        "Tap to Pay unavailable",
+        "Tap to Pay on iPhone unavailable",
         tapToPayComplianceLoading
-          ? "Checking Tap to Pay compliance status."
-          : "Please complete your compliance paperwork to receive Tap to Pay Services.",
+          ? "Checking Tap to Pay on iPhone compliance status."
+          : "Please complete your compliance paperwork to receive Tap to Pay on iPhone services.",
       );
       return;
     }
@@ -377,12 +377,21 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
         );
       }
     } catch (error) {
+      if (error?.code === "E_TAP_TO_PAY_OS_UNSUPPORTED") {
+        Alert.alert(
+          "Software Update Required",
+          error?.message ||
+            "Tap to Pay on iPhone requires the latest version of iOS. Update this iPhone in Settings and try again.",
+        );
+        setPaymentLoading(null);
+        return;
+      }
       const diagnostic = tapToPayDiagnostic(error);
       const outerDiagnostic = diagnostic.outer;
       const firstUnderlying = outerDiagnostic?.underlying;
       const secondUnderlying = firstUnderlying?.underlying;
       Alert.alert(
-        "Tap to Pay Diagnostic",
+        "Tap to Pay on iPhone Diagnostic",
         [
           `Stage: ${diagnostic.stage}`,
           ...formatNativeErrorDiagnostic("Outer", outerDiagnostic),
@@ -481,7 +490,7 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
           <Text style={styles.meta}>Status: {payment?.payment_status || "PENDING"}</Text>
           <Text style={styles.meta}>
             {isFinalEventPayment
-              ? "Use Tap to Pay or Cash to complete this final event payment."
+              ? "Use Tap to Pay on iPhone or Cash to complete this final event payment."
               : "Use Apple Pay or Google Pay to complete this marketplace payment, or call RTC for help."}
           </Text>
         </View>
