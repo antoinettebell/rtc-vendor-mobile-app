@@ -67,7 +67,9 @@ import {
   MARKETPLACE_VENDOR_AGREEMENT_RETURN,
   MARKETPLACE_VENDOR_AGREEMENT_SIGNING,
   MEDIA_UPLOAD,
+  CREATE_TAP_TO_PAY_ACTIVATION_CODE,
   REGISTER_COMPLETE,
+  REGISTER_TAP_TO_PAY_TERMINAL,
   REMOVE_ACCOUNT,
   REMOVE_FCM_TOKEN,
   REMOVE_FOOD_CATEGORY,
@@ -739,6 +741,32 @@ export const updateFoodTruckProfile_API = async ({ payload, foodTruckId }) => {
   try {
     const URL = `${UPDATE_FOODTRUCK}/${foodTruckId}`;
     const response = await apiClient.put(URL, payload, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const registerTapToPayTerminal_API = async ({ deviceId }) => {
+  try {
+    const response = await apiClient.put(
+      REGISTER_TAP_TO_PAY_TERMINAL,
+      { device_id: deviceId },
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const createTapToPayActivationCode_API = async () => {
+  try {
+    const response = await apiClient.post(
+      CREATE_TAP_TO_PAY_ACTIVATION_CODE,
+      {},
+      { skipToken: false },
+    );
     return response?.data;
   } catch (error) {
     throw error?.response?.data || error;

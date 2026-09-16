@@ -12,6 +12,51 @@ final class RTCTapToPay: NSObject {
     true
   }
 
+  @objc(activate:resolver:rejecter:)
+  func activate(
+    _ options: NSDictionary,
+    resolver resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    Task { @MainActor in
+      do {
+        guard #available(iOS 17.6, *) else {
+          throw unsupportedOSVersionError()
+        }
+        guard let activationCode = nullableStringValue(options["activationCode"]) else {
+          throw NSError(domain: "RTCTapToPay", code: 400, userInfo: [
+            NSLocalizedDescriptionKey: "A Tap to Pay activation code is required."
+          ])
+        }
+        let result = try await manager.activate(
+          environmentName: stringValue(options["environment"], fallback: "production"),
+          activationCode: activationCode
+        )
+        resolve(result)
+      } catch let error as NSError {
+        if isOSVersionUnsupported(error) {
+          reject(
+            "E_TAP_TO_PAY_OS_UNSUPPORTED",
+            Self.unsupportedOSVersionMessage,
+            unsupportedOSVersionError(underlying: error)
+          )
+          return
+        }
+        reject(diagnosticCode(for: error), error.localizedDescription, error)
+      } catch {
+        reject(
+          "E_TAP_TO_PAY_ACTIVATION_FAILED",
+          error.localizedDescription,
+          NSError(
+            domain: "RTCTapToPay",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: error.localizedDescription]
+          )
+        )
+      }
+    }
+  }
+
   @objc(startSale:resolver:rejecter:)
   func startSale(
     _ options: NSDictionary,

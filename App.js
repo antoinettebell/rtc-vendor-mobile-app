@@ -95,6 +95,7 @@ import VendorMarketplaceApplicationDetailScreen from "./src/screens/vendorMarket
 import VendorFeeCheckoutScreen from "./src/screens/vendorFeeCheckoutScreen";
 import VendorComplianceScreen from "./src/screens/vendorComplianceScreen";
 import AuthMenuSetupPromptScreen from "./src/screens/authMenuSetupPromptScreen";
+import AuthTapToPaySetupScreen from "./src/screens/authTapToPaySetupScreen";
 import EventVendorProfileScreen from "./src/screens/eventVendorProfileScreen";
 import EventVendorPhotosScreen from "./src/screens/eventVendorPhotosScreen";
 import EventVendorMarketplaceScreen from "./src/screens/eventVendorMarketplaceScreen";
@@ -188,6 +189,10 @@ const FinalSignupStepsNavigator = () => (
     <Stack.Screen
       name="authMenuSetupPromptScreen"
       component={AuthMenuSetupPromptScreen}
+    />
+    <Stack.Screen
+      name="authTapToPaySetupScreen"
+      component={AuthTapToPaySetupScreen}
     />
     <Stack.Screen
       name="profileEmployeeManagementScreen"
@@ -371,6 +376,10 @@ const MainAppNavigator = ({ insets }) => (
     <Stack.Screen
       name="vendorComplianceScreen"
       component={VendorComplianceScreen}
+    />
+    <Stack.Screen
+      name="authTapToPaySetupScreen"
+      component={AuthTapToPaySetupScreen}
     />
     <Stack.Screen
       name="profileEmployeeManagementScreen"

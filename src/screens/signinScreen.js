@@ -235,7 +235,11 @@ const SignInScreen = ({ navigation, route }) => {
             dispatch(onOnBoard(true));
             const effectivePlan = getEffectiveFoodVendorPlan({ user: response?.data?.user });
             dispatch(setVendorOnboardingStep(
-              getResumableFoodVendorGuidedStep(effectivePlan, vendorOnboardingStep)
+              getResumableFoodVendorGuidedStep(
+                effectivePlan,
+                vendorOnboardingStep,
+                { includeTapToPay: Platform.OS === "ios" },
+              )
             ));
           }
         }

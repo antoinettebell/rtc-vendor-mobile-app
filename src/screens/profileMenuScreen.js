@@ -52,6 +52,7 @@ import { updateUserKey } from "../redux/slices/userInfoSlice";
 import { formatVendorRating } from "../helpers/rating.helper";
 import { showTapToPayMerchantEducation } from "../services/tapToPay-service";
 import tapToPayConfig from "../services/tapToPay-config";
+import { getVendorPaymentCapabilities } from "../helpers/vendorPaymentCapabilities.helper";
 
 const ItemComponent = ({ imageUri, label, rightIcon, isRed, onPress }) => (
   <TouchableOpacity
@@ -439,6 +440,7 @@ const ProfileMenuScreen = ({ navigation }) => {
   });
   const [compliance, setCompliance] = useState(null);
   const [complianceLoading, setComplianceLoading] = useState(false);
+  const tapToPayPlanEligible = getVendorPaymentCapabilities(user).tapToPay;
 
   const loadComplianceSummary = useCallback(async () => {
     const foodTruckId = user?.foodTruck?._id;
@@ -781,7 +783,7 @@ const ProfileMenuScreen = ({ navigation }) => {
 	        </View>
 
 	        <View style={styles.vendorAccessCodeCard}>
-	          <Text style={styles.vendorAccessCodeLabel}>Tap to Pay on iPhone Vendor Access Code</Text>
+	          <Text style={styles.vendorAccessCodeLabel}>Tap to Pay on iPhone Terminal Serial ID</Text>
 	          <Text style={styles.vendorAccessCodeValue}>
 	            {user?.foodTruck?.tap_to_pay_serial_number || "Not assigned"}
 	          </Text>
@@ -914,6 +916,17 @@ const ProfileMenuScreen = ({ navigation }) => {
           <HR />
           {Platform.OS === "ios" && tapToPayConfig.enabled ? (
             <>
+              {tapToPayPlanEligible ? (
+                <>
+                  <ItemComponent
+                    rightIcon
+                    label="Set Up Tap to Pay on iPhone"
+                    imageUri={PROFILE_MENU_IMAGES.helpSupportTC}
+                    onPress={() => navigation.navigate("authTapToPaySetupScreen")}
+                  />
+                  <HR />
+                </>
+              ) : null}
               <ItemComponent
                 rightIcon
                 label="How to Accept Tap to Pay on iPhone"

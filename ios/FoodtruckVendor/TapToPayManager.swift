@@ -168,7 +168,11 @@ import UIKit
     return newReader
   }
 
-  private func ensureActivated(_ reader: MposUIReader, environment: MposEnvironment) async throws -> Bool {
+  private func ensureActivated(
+    _ reader: MposUIReader,
+    environment: MposEnvironment,
+    activationCode: String? = nil
+  ) async throws -> Bool {
     let configuredDeviceId = optionalBuildSetting("CybersourceTapToPayDeviceId")
     let forceReactivation = enabledBuildSetting("CybersourceTapToPayResetEnrollment")
     var existingDeviceId: String?
@@ -197,6 +201,7 @@ import UIKit
     if let reactivationDeviceId {
       let result = await activation.activateWithOtp(
         environment: environment,
+        otp: activationCode,
         deviceId: reactivationDeviceId
       )
       switch result {
@@ -225,7 +230,10 @@ import UIKit
       }
     }
 
-    let result = await activation.activateWithOtp(environment: environment, otp: nil)
+    let result = await activation.activateWithOtp(
+      environment: environment,
+      otp: activationCode
+    )
     switch result {
     case .success(let device, let isNewDevice):
       logStage(
@@ -239,7 +247,7 @@ import UIKit
       ])
     case .invalidOTP(let info):
       throw NSError(domain: "RTCTapToPay", code: 401, userInfo: [
-        NSLocalizedDescriptionKey: "The activation code was not accepted: \(info)"
+        NSLocalizedDescriptionKey: "The activation code was not accepted: \(safeDiagnosticText(info))"
       ])
     case .error(let info):
       throw NSError(domain: "RTCTapToPay", code: 500, userInfo: [
@@ -250,6 +258,45 @@ import UIKit
         NSLocalizedDescriptionKey: "Device activation returned an unknown result."
       ])
     }
+  }
+
+  @MainActor
+  func activate(environmentName: String, activationCode: String) async throws -> [String: Any] {
+    let requestedEnvironment = environment(from: environmentName)
+    diagnosticTrace.removeAll(keepingCapacity: true)
+    logStage(
+      "setup_requested",
+      details: "environment=\(String(describing: requestedEnvironment))"
+    )
+    let reader = try await configuredReader(environment: requestedEnvironment)
+    let newlyActivated = try await ensureActivated(
+      reader,
+      environment: requestedEnvironment,
+      activationCode: activationCode
+    )
+
+    guard case .activated(let device) = await reader.activationStatus,
+          device.environment == requestedEnvironment else {
+      throw NSError(domain: "RTCTapToPay", code: 409, userInfo: [
+        NSLocalizedDescriptionKey: "Tap to Pay on iPhone activation did not complete. Please try again."
+      ])
+    }
+
+    if #available(iOS 18.0, *),
+       newlyActivated,
+       let viewController = Self.topViewController() {
+      try await showMerchantEducation(from: viewController)
+    }
+
+    logStage(
+      "setup_ready",
+      details: "new_device=\(newlyActivated) device_id_suffix=\(identifierSuffix(device.deviceId))"
+    )
+    return [
+      "activated": true,
+      "newDevice": newlyActivated,
+      "deviceId": device.deviceId,
+    ]
   }
 
   @MainActor
@@ -271,6 +318,11 @@ import UIKit
       reader,
       environment: requestedEnvironment
     )
+    var activatedDeviceId: String?
+    if case .activated(let device) = await reader.activationStatus,
+       device.environment == requestedEnvironment {
+      activatedDeviceId = device.deviceId
+    }
     if #available(iOS 18.0, *),
        newlyActivated,
        let viewController = Self.topViewController() {
@@ -285,21 +337,29 @@ import UIKit
     switch result {
     case .success(let transaction):
       logStage("charge_succeeded", details: "transaction_id_present=\(!transaction.identifier.isEmpty)")
-      return [
+      var response: [String: Any] = [
         "transactionId": transaction.identifier,
         "provider": "CYBERSOURCE",
         "environment": environmentName,
         "reference": reference
       ]
+      if let activatedDeviceId {
+        response["deviceId"] = activatedDeviceId
+      }
+      return response
     case .offlineSuccess(let transaction):
       logStage("charge_offline_succeeded", details: "transaction_id_present=\(!transaction.id.isEmpty)")
-      return [
+      var response: [String: Any] = [
         "transactionId": transaction.id,
         "provider": "CYBERSOURCE",
         "environment": environmentName,
         "reference": reference,
         "offline": true
       ]
+      if let activatedDeviceId {
+        response["deviceId"] = activatedDeviceId
+      }
+      return response
     case .payByLinkFallback:
       throw NSError(domain: "RTCTapToPay", code: 409, userInfo: [
         NSLocalizedDescriptionKey: "Tap to Pay on iPhone was unavailable. Please retry when the iPhone is online."

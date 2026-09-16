@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppColor, Mulish400, Mulish700 } from "../utils/theme";
 import { useNavigation } from "@react-navigation/native";
@@ -159,10 +159,18 @@ const SplashScreen = () => {
         navigation.replace("authUnderReviewNoteScreen");
       } else if (vendorOnboardingStep && user?.vendorSubtype !== "EVENT_VENDOR") {
         const effectivePlan = getEffectiveFoodVendorPlan({ user, selectedPlan });
-        const guidedStep = getResumableFoodVendorGuidedStep(effectivePlan, vendorOnboardingStep);
+        const guidedStep = getResumableFoodVendorGuidedStep(
+          effectivePlan,
+          vendorOnboardingStep,
+          { includeTapToPay: Platform.OS === "ios" },
+        );
         if (guidedStep !== vendorOnboardingStep) dispatch(setVendorOnboardingStep(guidedStep));
         if (guidedStep === "COMPLIANCE") {
         navigation.replace("vendorComplianceScreen", {
+          onboardingFlow: true,
+        });
+        } else if (guidedStep === "TAP_TO_PAY") {
+        navigation.replace("authTapToPaySetupScreen", {
           onboardingFlow: true,
         });
         } else if (guidedStep === "PAYMENT") {

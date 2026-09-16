@@ -563,6 +563,13 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
                       Secure payments, customer support, order management, and
                       more.
                     </Text>
+                    {Platform.OS === "ios" ? (
+                      <Text style={styles.allPlansText}>
+                        Eligible plans include Tap to Pay on iPhone, allowing
+                        you to accept contactless payments directly on your
+                        iPhone.
+                      </Text>
+                    ) : null}
                   </View>
                 </View>
               ) : null}

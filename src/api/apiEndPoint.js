@@ -12,6 +12,10 @@ export const REMOVE_ACCOUNT = "/user";
 export const CUISINE = "/cuisine";
 export const MEDIA_UPLOAD = "/file";
 export const UPDATE_FOODTRUCK = "/food-truck";
+export const REGISTER_TAP_TO_PAY_TERMINAL =
+  "/food-truck/tap-to-pay-terminal";
+export const CREATE_TAP_TO_PAY_ACTIVATION_CODE =
+  "/food-truck/tap-to-pay-activation-code";
 export const GET_FOODTRUCK_DETAILS = "/food-truck";
 export const REGISTER_COMPLETE = "/food-truck/complete";
 export const UPDATE_FOOD_TRUCK_UNITS = (foodtruck_id) =>

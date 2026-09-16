@@ -10,6 +10,28 @@ assert.equal(helper.getNextFoodVendorGuidedStep({ slug: "SUB_BASIC" }, "MENU"), 
 assert.equal(helper.getNextFoodVendorGuidedStep({ slug: "SUB_PLATINUM" }, "PAYMENT"), "EMPLOYEES");
 assert.equal(helper.getResumableFoodVendorGuidedStep({ slug: "SUB_PLATINUM" }, "EMPLOYEES"), "EMPLOYEES");
 assert.equal(helper.getResumableFoodVendorGuidedStep({ slug: "SUB_BASIC" }, "EMPLOYEES"), "MENU");
+const tapToPayPlan = {
+  slug: "SUB_ELITE",
+  capabilities: {
+    walkUpPos: true,
+    tapToPay: true,
+    walkUpPosPaymentMethods: ["CASH", "TAP_TO_PAY"],
+  },
+};
+assert.equal(helper.isTapToPaySetupEligible(tapToPayPlan), true);
+assert.equal(
+  helper.getResumableFoodVendorGuidedStep(
+    tapToPayPlan,
+    "TAP_TO_PAY",
+    { includeTapToPay: true },
+  ),
+  "TAP_TO_PAY",
+);
+assert.equal(
+  helper.getResumableFoodVendorGuidedStep(tapToPayPlan, "TAP_TO_PAY"),
+  "COMPLIANCE",
+  "non-iPhone sessions do not resume the iPhone-only setup stage",
+);
 assert.equal(
   helper.getEffectiveFoodVendorPlan({ user: { foodTruck: { plan: { slug: "SUB_ELITE" } } }, selectedPlan: { slug: "SUB_BASIC" } }).slug,
   "SUB_ELITE",

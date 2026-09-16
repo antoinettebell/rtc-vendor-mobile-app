@@ -1,4 +1,8 @@
 import { NativeModules, Platform } from "react-native";
+import {
+  createTapToPayActivationCode_API,
+  registerTapToPayTerminal_API,
+} from "../api/appAPI";
 import tapToPayConfig from "./tapToPay-config";
 
 const nativeTapToPay = NativeModules.RTCTapToPay;
@@ -7,6 +11,24 @@ export const isTapToPayAvailable = () =>
   Platform.OS === "ios" &&
   tapToPayConfig.enabled &&
   !!nativeTapToPay?.startSale;
+
+const registerActivatedTerminal = async (result = {}) => {
+  const deviceId = String(result?.deviceId || "").trim();
+  if (!deviceId) {
+    throw new Error(
+      "Tap to Pay on iPhone activated, but no terminal serial ID was returned. Please contact RTC support."
+    );
+  }
+
+  const registration = await registerTapToPayTerminal_API({ deviceId });
+  return {
+    activated: result?.activated !== false,
+    newDevice: result?.newDevice === true,
+    terminalSerialSuffix: registration?.data?.terminal_serial_suffix
+      || registration?.terminal_serial_suffix
+      || deviceId.slice(-4),
+  };
+};
 
 const normalizeTapToPayResult = (result = {}) => {
   if (result.transactionId || result.transId) {
@@ -81,7 +103,48 @@ export const startTapToPaySale = async ({
     sdkConfigId: tapToPayConfig.sdkConfigId,
   });
 
-  return normalizeTapToPayResult(result);
+  const deviceId = String(result?.deviceId || "").trim();
+  if (deviceId) {
+    try {
+      await registerTapToPayTerminal_API({ deviceId });
+    } catch {
+      // Terminal registration is retried on the next Tap to Pay transaction.
+      // A bookkeeping failure must not invalidate a completed card payment.
+    }
+  }
+
+  const paymentResult = { ...(result || {}) };
+  delete paymentResult.deviceId;
+  return normalizeTapToPayResult(paymentResult);
+};
+
+export const activateTapToPay = async () => {
+  if (Platform.OS !== "ios") {
+    throw new Error("Tap to Pay on iPhone setup requires a compatible iPhone.");
+  }
+  if (!tapToPayConfig.enabled) {
+    throw new Error("Tap to Pay on iPhone is not enabled in this app build.");
+  }
+  if (!nativeTapToPay?.activate) {
+    throw new Error("Tap to Pay on iPhone setup is unavailable in this app build.");
+  }
+
+  const activationResponse = await createTapToPayActivationCode_API();
+  const activationCode = String(
+    activationResponse?.data?.activation_code
+      || activationResponse?.activation_code
+      || "",
+  ).trim();
+  if (!activationCode) {
+    throw new Error("A secure Tap to Pay activation code could not be generated. Please try again.");
+  }
+
+  const result = await nativeTapToPay.activate({
+    environment: tapToPayConfig.environment,
+    provider: tapToPayConfig.provider,
+    activationCode,
+  });
+  return registerActivatedTerminal(result);
 };
 
 export const showTapToPayMerchantEducation = async () => {

@@ -3,6 +3,7 @@ import {
 	  ActivityIndicator,
 	  Alert,
 	  Linking,
+	  Platform,
 	  ScrollView,
   StyleSheet,
   Text,
@@ -31,6 +32,10 @@ import {
   onOnBoard,
   setVendorOnboardingStep,
 } from "../redux/slices/authSlice";
+import {
+  getEffectiveFoodVendorPlan,
+  isTapToPaySetupEligible,
+} from "../helpers/foodVendorGuidedSetup.helper";
 
 const SCORE_FALLBACK = {
   red: "#D93025",
@@ -540,12 +545,18 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       return;
     }
 
-    dispatch(setVendorOnboardingStep("PAYMENT"));
+    const effectivePlan = getEffectiveFoodVendorPlan({ user });
+    const showTapToPaySetup = Platform.OS === "ios"
+      && isTapToPaySetupEligible(effectivePlan);
+    const nextStep = showTapToPaySetup ? "TAP_TO_PAY" : "PAYMENT";
+    dispatch(setVendorOnboardingStep(nextStep));
     navigation.reset({
       index: 0,
       routes: [
         {
-          name: "authFoodTruckBankDetailScreen",
+          name: showTapToPaySetup
+            ? "authTapToPaySetupScreen"
+            : "authFoodTruckBankDetailScreen",
           params: {
             onboardingFlow: true,
           },
@@ -930,7 +941,12 @@ const VendorComplianceScreen = ({ navigation, route }) => {
           {isOnboardingFlow ? (
             <>
               <TouchableOpacity onPress={continueToPayment} style={styles.onboardingContinueButton}>
-                <Text style={styles.onboardingContinueButtonText}>Next: Payment Details</Text>
+                <Text style={styles.onboardingContinueButtonText}>
+                  {Platform.OS === "ios"
+                    && isTapToPaySetupEligible(getEffectiveFoodVendorPlan({ user }))
+                    ? "Next: Set Up Tap to Pay"
+                    : "Next: Payment Details"}
+                </Text>
                 <Ionicons name="arrow-forward" size={18} color={AppColor.white} />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => continueToPayment({ skip: true })} style={styles.onboardingSkipButton}>
