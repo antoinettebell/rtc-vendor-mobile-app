@@ -40,7 +40,7 @@ export default function AuthUnderReviewNoteScreen() {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const navigation = useNavigation();
-  const { user } = useSelector((state) => state.userReducer);
+  const { user, selectedPlan } = useSelector((state) => state.userReducer);
 
   const [loading, setLoading] = useState(false);
   const approvalHandledRef = useRef(false);
@@ -121,6 +121,7 @@ export default function AuthUnderReviewNoteScreen() {
         if (requestStatus === "APPROVED") {
           const effectivePlan = getEffectiveFoodVendorPlan({
             user: refreshedUser,
+            selectedPlan,
           });
           const requiresTapToPayCompliance =
             Platform.OS === "ios" && isTapToPaySetupEligible(effectivePlan);
@@ -172,7 +173,7 @@ export default function AuthUnderReviewNoteScreen() {
         setLoading(false);
       }
     }
-  }, [dispatch, navigation, user?._id]);
+  }, [dispatch, navigation, selectedPlan, user?._id]);
 
   useEffect(() => {
     checkApprovalStatus({ silent: true });
