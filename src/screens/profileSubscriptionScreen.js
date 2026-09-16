@@ -41,6 +41,7 @@ import {
   isRemovedSubscriptionBenefit,
   normalizeSubscriptionBenefit,
 } from "../helpers/subscriptionBenefits.helper";
+import { isTapToPaySetupEligible } from "../helpers/foodVendorGuidedSetup.helper";
 
 const EVENT_MARKETPLACE_PATTERN = /event|booking|marketplace/i;
 
@@ -103,21 +104,53 @@ const ProfileSubscriptionScreen = ({ navigation }) => {
   const onUpdatePlanPress = async () => {
     setPlansLoading(true);
     try {
+      const pendingPreviousPlanId =
+        userDetails?.foodTruck?.tap_to_pay_upgrade_previous_plan_id;
+      const isRestoringPreviousTier =
+        userDetails?.foodTruck?.tap_to_pay_upgrade_pending === true
+        && String(pendingPreviousPlanId || "") === String(selectedPlanId || "");
       const response = await updateFoodtruckSubscription_API({
         planId: selectedPlanId,
+        tap_to_pay_upgrade_rollback: isRestoringPreviousTier,
       });
       console.log("response => ", response);
       if (response?.success && response?.data) {
+        const previousPlan =
+          plansData.find((plan) => String(plan?._id) === String(currentPlanId))
+          || userDetails?.foodTruck?.plan;
+        const upgradedToTapToPay =
+          !isTapToPaySetupEligible(previousPlan)
+          && isTapToPaySetupEligible(selectedPlanObject);
         dispatch(
           updateFoodTruckKey({ keyName: "planId", keyValue: selectedPlanId }),
         );
+        dispatch(
+          updateFoodTruckKey({ keyName: "plan", keyValue: selectedPlanObject }),
+        );
+        dispatch(updateFoodTruckKey({
+          keyName: "tap_to_pay_upgrade_pending",
+          keyValue: upgradedToTapToPay && !isRestoringPreviousTier,
+        }));
+        dispatch(updateFoodTruckKey({
+          keyName: "tap_to_pay_upgrade_previous_plan_id",
+          keyValue: upgradedToTapToPay
+            ? (previousPlan?._id || userDetails?.foodTruck?.planId)
+            : null,
+        }));
+        dispatch(setSelectedPlan(selectedPlanObject));
         dispatch(
           showSnackbar({
             message: "Plan updated successfully!",
             type: "success",
           }),
         );
-        navigation.goBack();
+        if (upgradedToTapToPay) {
+          navigation.navigate("vendorComplianceScreen", {
+            tapToPayUpgradeFlow: true,
+          });
+        } else {
+          navigation.goBack();
+        }
       }
     } catch (error) {
       console.log("error => ", error);

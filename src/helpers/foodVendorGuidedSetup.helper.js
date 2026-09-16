@@ -22,7 +22,7 @@ export const getEffectiveFoodVendorPlan = ({ user, selectedPlan } = {}) => {
 };
 
 export const getFoodVendorGuidedSteps = (plan) => [
-  "COMPLIANCE",
+  ...(isTapToPaySetupEligible(plan) ? ["COMPLIANCE"] : []),
   "PAYMENT",
   ...(isEmployeeSetupEligible(plan) ? ["EMPLOYEES"] : []),
   "MENU",
@@ -48,5 +48,5 @@ export const getResumableFoodVendorGuidedStep = (
     return "TAP_TO_PAY";
   }
   if (checkpoint === "EMPLOYEES" && !isEmployeeSetupEligible(plan)) return "MENU";
-  return steps.includes(checkpoint) ? checkpoint : "COMPLIANCE";
+  return steps.includes(checkpoint) ? checkpoint : steps[0] || null;
 };

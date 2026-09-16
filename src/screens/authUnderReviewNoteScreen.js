@@ -31,6 +31,10 @@ import {
 } from "../helpers/eventVendorProfile.helper";
 import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
 import { getEventVendorSignOutKeys } from "../helpers/eventVendorApplicationDraft.helper";
+import {
+  getEffectiveFoodVendorPlan,
+  isTapToPaySetupEligible,
+} from "../helpers/foodVendorGuidedSetup.helper";
 
 export default function AuthUnderReviewNoteScreen() {
   const insets = useSafeAreaInsets();
@@ -115,15 +119,23 @@ export default function AuthUnderReviewNoteScreen() {
         ).toUpperCase();
 
         if (requestStatus === "APPROVED") {
+          const effectivePlan = getEffectiveFoodVendorPlan({
+            user: refreshedUser,
+          });
+          const requiresTapToPayCompliance =
+            Platform.OS === "ios" && isTapToPaySetupEligible(effectivePlan);
+          const nextStep = requiresTapToPayCompliance ? "COMPLIANCE" : "PAYMENT";
           approvalHandledRef.current = true;
           dispatch(onOnBoard(true));
           dispatch(onUnderReview(false));
-          dispatch(setVendorOnboardingStep("COMPLIANCE"));
+          dispatch(setVendorOnboardingStep(nextStep));
           navigation.reset({
             index: 0,
             routes: [
               {
-                name: "vendorComplianceScreen",
+                name: requiresTapToPayCompliance
+                  ? "vendorComplianceScreen"
+                  : "authFoodTruckBankDetailScreen",
                 params: { onboardingFlow: true },
               },
             ],

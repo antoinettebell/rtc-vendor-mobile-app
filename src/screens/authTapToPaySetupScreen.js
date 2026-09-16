@@ -13,13 +13,17 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
+  getBankDetail_API,
   getUserDetail_API,
   getVendorComplianceSummary_API,
+  updateFoodtruckSubscription_API,
 } from "../api/appAPI";
 import StatusBarManager from "../components/StatusBarManager";
 import { setVendorOnboardingStep } from "../redux/slices/authSlice";
 import { setUser } from "../redux/slices/userSlice";
-import { activateTapToPay } from "../services/tapToPay-service";
+import {
+  activateTapToPay,
+} from "../services/tapToPay-service";
 import tapToPayConfig from "../services/tapToPay-config";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 
@@ -28,10 +32,13 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.userReducer);
   const isOnboardingFlow = route?.params?.onboardingFlow === true;
+  const isTapToPayUpgradeFlow = route?.params?.tapToPayUpgradeFlow === true;
   const [compliance, setCompliance] = useState(null);
   const [loadingCompliance, setLoadingCompliance] = useState(true);
   const [activating, setActivating] = useState(false);
+  const [terminalReady, setTerminalReady] = useState(false);
   const [terminalSuffix, setTerminalSuffix] = useState("");
+  const [hasPaymentDetails, setHasPaymentDetails] = useState(null);
   const terminalSerial = user?.foodTruck?.tap_to_pay_serial_number || "";
   const isCompliant = compliance?.eligible === true
     && Number(compliance?.score) === 100;
@@ -58,7 +65,52 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
     loadCompliance();
   }, [loadCompliance]);
 
-  const continueToPayment = () => {
+  const loadPaymentDetails = useCallback(async () => {
+    try {
+      const response = await getBankDetail_API();
+      setHasPaymentDetails(!!response?.data?.bankDetail);
+    } catch {
+      setHasPaymentDetails(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isTapToPayUpgradeFlow) loadPaymentDetails();
+  }, [isTapToPayUpgradeFlow, loadPaymentDetails]);
+
+  const continueToPayment = async () => {
+    if (!isCompliant || !terminalReady) {
+      Alert.alert(
+        "Tap to Pay Setup Required",
+        "Complete Tap to Pay activation on this iPhone before continuing to Payment Details.",
+      );
+      return;
+    }
+    if (isTapToPayUpgradeFlow) {
+      if (hasPaymentDetails !== true) {
+        navigation.reset({
+          index: 0,
+          routes: [{
+            name: "authFoodTruckBankDetailScreen",
+            params: { tapToPayUpgradeFlow: true },
+          }],
+        });
+        return;
+      }
+      try {
+        await updateFoodtruckSubscription_API({
+          planId: user?.foodTruck?.plan?._id || user?.foodTruck?.planId,
+          complete_tap_to_pay_upgrade: true,
+        });
+        navigation.reset({ index: 0, routes: [{ name: "splash" }] });
+      } catch (error) {
+        Alert.alert(
+          "Unable to Finish Setup",
+          error?.message || "Tap to Pay setup could not be completed. Please try again.",
+        );
+      }
+      return;
+    }
     if (!isOnboardingFlow) {
       navigation.goBack();
       return;
@@ -74,6 +126,16 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
   };
 
   const returnToCompliance = () => {
+    if (isTapToPayUpgradeFlow) {
+      navigation.reset({
+        index: 0,
+        routes: [{
+          name: "vendorComplianceScreen",
+          params: { tapToPayUpgradeFlow: true },
+        }],
+      });
+      return;
+    }
     if (!isOnboardingFlow) {
       navigation.goBack();
       return;
@@ -94,6 +156,7 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
     try {
       const result = await activateTapToPay();
       setTerminalSuffix(result?.terminalSerialSuffix || "");
+      setTerminalReady(result?.activated !== false);
 
       const refreshed = await getUserDetail_API(user?._id);
       if (refreshed?.success && refreshed?.data?.user) {
@@ -200,10 +263,15 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         ) : null}
 
-        {isOnboardingFlow ? (
-          <TouchableOpacity onPress={continueToPayment} style={styles.continueButton}>
+        {(isOnboardingFlow || isTapToPayUpgradeFlow) && terminalReady ? (
+          <TouchableOpacity
+            onPress={continueToPayment}
+            style={styles.continueButton}
+          >
             <Text style={styles.continueButtonText}>
-              {terminalSerial || terminalSuffix ? "Next: Payment Details" : "Set Up Later"}
+              {isTapToPayUpgradeFlow && hasPaymentDetails === true
+                ? "Finish Setup"
+                : "Next: Payment Details"}
             </Text>
           </TouchableOpacity>
         ) : null}

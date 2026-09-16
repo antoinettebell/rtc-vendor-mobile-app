@@ -18,7 +18,12 @@ import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import Octicons from "react-native-vector-icons/Octicons";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
-import { getAddOnsPlans_API, getPlansData_API } from "../api/appAPI";
+import {
+  getAddOnsPlans_API,
+  getPlansData_API,
+  getUserDetail_API,
+  updateFoodtruckSubscription_API,
+} from "../api/appAPI";
 import {
   isRemovedSubscriptionBenefit,
   normalizeSubscriptionBenefit,
@@ -27,12 +32,14 @@ import {
   clearUserSlice,
   setSelectedPlan,
   setSelectedSignupAddOns,
+  setUser,
 } from "../redux/slices/userSlice";
 import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlice";
 import {
   onOnBoard,
   onSignOut,
   setPendingAuthRoute,
+  setVendorOnboardingStep,
 } from "../redux/slices/authSlice";
 import StatusBarManager from "../components/StatusBarManager";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
@@ -47,6 +54,7 @@ import {
   isFoodVendorPlan,
   reconcileSelectedAddOnsForPlan,
 } from "../helpers/signupCatalog.helper";
+import { isTapToPaySetupEligible } from "../helpers/foodVendorGuidedSetup.helper";
 
 const EVENT_MARKETPLACE_PATTERN = /event|booking|marketplace/i;
 
@@ -72,8 +80,10 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
 
-  const { selectedPlan } = useSelector((state) => state.userReducer);
+  const { selectedPlan, user } = useSelector((state) => state.userReducer);
   const isSignupFlow = route?.params?.signupFlow === true;
+  const isOnboardingPlanChange =
+    route?.params?.changePlanDuringOnboarding === true;
 
   const switchToAuthRoot = (destination) => {
     dispatch(setPendingAuthRoute(destination));
@@ -146,7 +156,33 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
       const temp_plan = plansData.find((plan) => plan._id === selectedPlanId);
       dispatch(setSelectedPlan(temp_plan));
       dispatch(setSelectedSignupAddOns(submittedAddOns));
-      if (isSignupFlow) {
+      if (isOnboardingPlanChange) {
+        const response = await updateFoodtruckSubscription_API({
+          planId: selectedPlanId,
+          onboarding_change: true,
+        });
+        if (!response?.success) {
+          throw new Error(response?.message || "Unable to update the selected plan.");
+        }
+
+        const refreshed = await getUserDetail_API(user?._id);
+        if (refreshed?.success && refreshed?.data?.user) {
+          dispatch(setUser(refreshed.data.user));
+        }
+        const requiresTapToPayCompliance =
+          Platform.OS === "ios" && isTapToPaySetupEligible(temp_plan);
+        const nextStep = requiresTapToPayCompliance ? "COMPLIANCE" : "PAYMENT";
+        dispatch(setVendorOnboardingStep(nextStep));
+        navigation.reset({
+          index: 0,
+          routes: [{
+            name: requiresTapToPayCompliance
+              ? "vendorComplianceScreen"
+              : "authFoodTruckBankDetailScreen",
+            params: { onboardingFlow: true },
+          }],
+        });
+      } else if (isSignupFlow) {
         performAuthNavigation({
           navigation,
           destination: SIGNUP_ROUTE,
@@ -159,6 +195,10 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error("error => ", error);
+      Alert.alert(
+        "Unable to Change Plan",
+        error?.message || "The selected plan could not be applied. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -454,6 +494,20 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
           >
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
+        ) : isOnboardingPlanChange ? (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => navigation.reset({
+              index: 0,
+              routes: [{
+                name: "vendorComplianceScreen",
+                params: { onboardingFlow: true },
+              }],
+            })}
+            style={styles.cancelButton}
+          >
+            <Text style={styles.cancelButtonText}>Back</Text>
+          </TouchableOpacity>
         ) : (
           <IconButton
             icon={(props) => (
@@ -658,7 +712,11 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
                 ) : (
                   <View style={styles.continueButtonContent}>
                     <Text style={styles.continueButtonText}>
-                      {isSignupFlow ? "Next" : "Continue"}
+                      {isSignupFlow
+                        ? "Next"
+                        : isOnboardingPlanChange
+                          ? "Choose This Plan"
+                          : "Continue"}
                     </Text>
                     <FontAwesome6
                       name="arrow-right"

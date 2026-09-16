@@ -33,7 +33,12 @@ import {
   buildPaymentMethodPayload,
   getPaymentMethodFields,
 } from "../helpers/paymentMethodDetails.helper";
-import { addBankDetail_API, registerComplete_API, uploadImage_API } from "../api/appAPI";
+import {
+  addBankDetail_API,
+  registerComplete_API,
+  updateFoodtruckSubscription_API,
+  uploadImage_API,
+} from "../api/appAPI";
 import {
   onUnderReview,
   setVendorOnboardingStep,
@@ -109,6 +114,7 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
     (state) => state.userReducer
   );
   const isOnboardingFlow = route?.params?.onboardingFlow === true;
+  const isTapToPayUpgradeFlow = route?.params?.tapToPayUpgradeFlow === true;
 
   const skipPaymentSetup = () => {
     if (!isOnboardingFlow) return;
@@ -214,6 +220,15 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
       const response = await addBankDetail_API(payload);
       console.log("response => ", response);
       if (response?.success && response?.data) {
+        if (isTapToPayUpgradeFlow) {
+          dispatch(setBankStatus(true));
+          await updateFoodtruckSubscription_API({
+            planId: user?.foodTruck?.plan?._id || user?.foodTruck?.planId,
+            complete_tap_to_pay_upgrade: true,
+          });
+          navigation.reset({ index: 0, routes: [{ name: "splash" }] });
+          return;
+        }
         const response1 = await registerComplete_API();
         console.log("response1 => ", response1);
         if (response1?.success) {

@@ -28,14 +28,16 @@ import StatusBarManager from "../components/StatusBarManager";
 import usePermission from "../hooks/usePermission";
 import { permission } from "../helpers/permission.helper";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
-import {
-  onOnBoard,
-  setVendorOnboardingStep,
-} from "../redux/slices/authSlice";
+import { setVendorOnboardingStep } from "../redux/slices/authSlice";
 import {
   getEffectiveFoodVendorPlan,
   isTapToPaySetupEligible,
 } from "../helpers/foodVendorGuidedSetup.helper";
+import {
+  formatDateOnly,
+  parseDateOnly,
+  serializeDateOnly,
+} from "../helpers/dateOnly.helper";
 
 const SCORE_FALLBACK = {
   red: "#D93025",
@@ -62,16 +64,9 @@ const formatLabel = (value = "") =>
     .toLowerCase()
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
-const formatDate = (value) => {
-  if (!value) return "Not provided";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Not provided";
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${month}/${day}/${date.getFullYear()}`;
-};
+const formatDate = (value) => formatDateOnly(value);
 
-const formatDateForPayload = (value) => formatDate(value);
+const formatDateForPayload = (value) => serializeDateOnly(value);
 
 const getSelectedDateLabel = (value) =>
   value ? formatDate(value) : "Select expiration date";
@@ -105,6 +100,17 @@ const getOcrStatusText = (document = {}) => {
   return document.ocr_error_message
     ? `OCR: ${status} - ${document.ocr_error_message}`
     : `OCR: ${status}`;
+};
+
+const getOcrExpirationDate = (document = {}) => {
+  const fields = document?.extracted_fields || {};
+  return fields.expiration_date
+    || fields.expirationDate
+    || fields.expiry_date
+    || fields.expiryDate
+    || fields.expires_at
+    || fields.expiresAt
+    || null;
 };
 
 const getExpiringDocumentStatus = (requirement = {}) => {
@@ -156,6 +162,8 @@ const VendorComplianceScreen = ({ navigation, route }) => {
   const isOnboardingFlow =
     route?.params?.onboardingFlow === true ||
     vendorOnboardingStep === "COMPLIANCE";
+  const isTapToPayUpgradeFlow = route?.params?.tapToPayUpgradeFlow === true;
+  const isRequiredSetupFlow = isOnboardingFlow || isTapToPayUpgradeFlow;
   const defaultFoodTruckId = user?.foodTruck?._id;
   const [selectedFoodTruckId, setSelectedFoodTruckId] = useState(
     defaultFoodTruckId || null
@@ -222,24 +230,36 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     }
   }, [defaultFoodTruckId, selectedFoodTruckId, user?.foodTruck]);
 
-  const loadCompliance = useCallback(async () => {
+  const loadCompliance = useCallback(async ({ silent = false } = {}) => {
     if (!foodTruckId) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const summaryResponse = await getVendorComplianceSummary_API({
         foodtruck_id: foodTruckId,
       });
       setSummary(summaryResponse?.data?.compliance || null);
     } catch (error) {
-      Alert.alert("Compliance", error?.message || "Compliance details unavailable.");
+      if (!silent) {
+        Alert.alert("Compliance", error?.message || "Compliance details unavailable.");
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [foodTruckId]);
 
   useEffect(() => {
     loadCompliance();
   }, [loadCompliance]);
+
+  useEffect(() => {
+    const shouldRefresh = (summary?.requirements || []).some((requirement) => {
+      const document = requirement?.document;
+      return ["queued", "processing"].includes(document?.ocr_status);
+    });
+    if (!shouldRefresh) return undefined;
+    const timer = setTimeout(() => loadCompliance({ silent: true }), 5000);
+    return () => clearTimeout(timer);
+  }, [loadCompliance, summary]);
 
   useEffect(() => {
     loadFoodTruckOptions();
@@ -408,7 +428,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     if (requirement.document?.expiration_date) {
       setExpirationDates((current) => ({
         ...current,
-        [requirement.type]: new Date(requirement.document.expiration_date),
+        [requirement.type]: parseDateOnly(requirement.document.expiration_date),
       }));
     }
     setManualSanitationGrades((current) => ({
@@ -527,14 +547,38 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	  };
 
   const handleBack = () => {
+    if (isTapToPayUpgradeFlow) {
+      navigation.goBack();
+      return;
+    }
     if (isOnboardingFlow) {
-      dispatch(onOnBoard(false));
+      dispatch(setVendorOnboardingStep("PAYMENT"));
+      navigation.reset({
+        index: 0,
+        routes: [{
+          name: "authFoodTruckBankDetailScreen",
+          params: { onboardingFlow: true },
+        }],
+      });
       return;
     }
     navigation.goBack();
   };
 
+  const chooseDifferentPlan = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{
+        name: "authFoodTruckPlansScreen",
+        params: { changePlanDuringOnboarding: true },
+      }],
+    });
+  };
+
   const continueToPayment = ({ skip = false } = {}) => {
+    const effectivePlan = getEffectiveFoodVendorPlan({ user });
+    const requiresTapToPaySetup = Platform.OS === "ios"
+      && isTapToPaySetupEligible(effectivePlan);
     if (!skip && missingOnboardingDocuments.length > 0) {
       Alert.alert(
         "Complete Required Documents",
@@ -545,9 +589,18 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       return;
     }
 
-    const effectivePlan = getEffectiveFoodVendorPlan({ user });
-    const showTapToPaySetup = Platform.OS === "ios"
-      && isTapToPaySetupEligible(effectivePlan);
+    if (
+      requiresTapToPaySetup
+      && (summary?.eligible !== true || Number(summary?.score) !== 100)
+    ) {
+      Alert.alert(
+        "Compliance Required",
+        "This plan requires 100% compliance before Tap to Pay on iPhone can be activated. Complete review or choose a different plan.",
+      );
+      return;
+    }
+
+    const showTapToPaySetup = requiresTapToPaySetup;
     const nextStep = showTapToPaySetup ? "TAP_TO_PAY" : "PAYMENT";
     dispatch(setVendorOnboardingStep(nextStep));
     navigation.reset({
@@ -558,7 +611,8 @@ const VendorComplianceScreen = ({ navigation, route }) => {
             ? "authTapToPaySetupScreen"
             : "authFoodTruckBankDetailScreen",
           params: {
-            onboardingFlow: true,
+            onboardingFlow: isOnboardingFlow,
+            tapToPayUpgradeFlow: isTapToPayUpgradeFlow,
           },
         },
       ],
@@ -873,6 +927,11 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                               {getOcrStatusText(document)}
                             </Text>
                           ) : null}
+                          {document.ocr_status === "manual_review" ? (
+                            <Text style={styles.ocrComparisonText}>
+                              Vendor entered {formatDate(document.vendor_entered_expiration_date || document.expiration_date)} · OCR detected {formatDate(getOcrExpirationDate(document))}
+                            </Text>
+                          ) : null}
                         </View>
 	                        {document.file_url ? (
 	                          <TouchableOpacity
@@ -938,7 +997,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	              </>
 	            )}
 	          </TouchableOpacity>
-          {isOnboardingFlow ? (
+          {isRequiredSetupFlow ? (
             <>
               <TouchableOpacity onPress={continueToPayment} style={styles.onboardingContinueButton}>
                 <Text style={styles.onboardingContinueButtonText}>
@@ -949,9 +1008,16 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                 </Text>
                 <Ionicons name="arrow-forward" size={18} color={AppColor.white} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => continueToPayment({ skip: true })} style={styles.onboardingSkipButton}>
-                <Text style={styles.onboardingSkipButtonText}>Skip</Text>
-              </TouchableOpacity>
+              {isOnboardingFlow && (Platform.OS !== "ios"
+                || !isTapToPaySetupEligible(getEffectiveFoodVendorPlan({ user }))) ? (
+                <TouchableOpacity onPress={() => continueToPayment({ skip: true })} style={styles.onboardingSkipButton}>
+                  <Text style={styles.onboardingSkipButtonText}>Skip</Text>
+                </TouchableOpacity>
+              ) : isOnboardingFlow ? (
+                <TouchableOpacity onPress={chooseDifferentPlan} style={styles.onboardingSkipButton}>
+                  <Text style={styles.onboardingSkipButtonText}>Choose a Different Plan</Text>
+                </TouchableOpacity>
+              ) : null}
             </>
           ) : null}
 	          <DateTimePickerModal
@@ -1263,6 +1329,13 @@ const styles = StyleSheet.create({
   },
   ocrStatusWarning: {
     color: SCORE_FALLBACK.yellow,
+  },
+  ocrComparisonText: {
+    fontFamily: Mulish400,
+    fontSize: 11,
+    color: AppColor.subText,
+    lineHeight: 15,
+    marginTop: 4,
   },
   openDocumentButton: {
     minWidth: 62,
