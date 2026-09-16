@@ -68,6 +68,8 @@ import {
   MARKETPLACE_VENDOR_AGREEMENT_SIGNING,
   MEDIA_UPLOAD,
   CREATE_TAP_TO_PAY_ACTIVATION_CODE,
+  TAP_TO_PAY_TERMINAL_EVENT,
+  TAP_TO_PAY_TERMINAL_STATUS,
   REGISTER_COMPLETE,
   REGISTER_TAP_TO_PAY_TERMINAL,
   REMOVE_ACCOUNT,
@@ -747,11 +749,46 @@ export const updateFoodTruckProfile_API = async ({ payload, foodTruckId }) => {
   }
 };
 
-export const registerTapToPayTerminal_API = async ({ deviceId }) => {
+export const registerTapToPayTerminal_API = async ({
+  deviceId,
+  deviceLabel,
+  environment,
+  activationStatus,
+}) => {
   try {
     const response = await apiClient.put(
       REGISTER_TAP_TO_PAY_TERMINAL,
-      { device_id: deviceId },
+      {
+        device_id: deviceId,
+        device_label: deviceLabel || null,
+        environment: environment || "production",
+        activation_status: activationStatus || "UNKNOWN",
+      },
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const getTapToPayTerminalStatus_API = async ({ deviceId }) => {
+  try {
+    const response = await apiClient.get(TAP_TO_PAY_TERMINAL_STATUS, {
+      params: { device_id: deviceId },
+      skipToken: false,
+    });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const recordTapToPayTerminalEvent_API = async (payload) => {
+  try {
+    const response = await apiClient.post(
+      TAP_TO_PAY_TERMINAL_EVENT,
+      payload,
       { skipToken: false },
     );
     return response?.data;

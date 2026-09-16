@@ -3,6 +3,7 @@ import {
   Dimensions,
   Platform,
   Image,
+  AppState,
 } from "react-native";
 import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -25,6 +26,7 @@ import { clearCurrentNotificationOrder } from "./src/redux/slices/pushNotificati
 import { navigationRef } from "./src/helpers/navigation.helper";
 import { permission } from "./src/helpers/permission.helper";
 import NewOrderPopup from "./src/components/NewOrderPopup";
+import { syncTapToPayTerminalStatus } from "./src/services/tapToPay-service";
 
 import SigninScreen from "./src/screens/signinScreen";
 import SignupScreen from "./src/screens/signupScreen";
@@ -650,6 +652,20 @@ const App = () => {
     return () => {
       cancelled = true;
     };
+  }, [isSignedIn, currentUser?._id]);
+
+  useEffect(() => {
+    if (!isSignedIn || Platform.OS !== "ios") return undefined;
+    const sync = () => {
+      syncTapToPayTerminalStatus().catch(() => {
+        // Setup and checkout present actionable errors; foreground sync stays quiet.
+      });
+    };
+    sync();
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") sync();
+    });
+    return () => subscription.remove();
   }, [isSignedIn, currentUser?._id]);
 
   return (

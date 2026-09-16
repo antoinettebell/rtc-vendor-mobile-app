@@ -16,6 +16,10 @@ export const REGISTER_TAP_TO_PAY_TERMINAL =
   "/food-truck/tap-to-pay-terminal";
 export const CREATE_TAP_TO_PAY_ACTIVATION_CODE =
   "/food-truck/tap-to-pay-activation-code";
+export const TAP_TO_PAY_TERMINAL_STATUS =
+  "/food-truck/tap-to-pay-terminal-status";
+export const TAP_TO_PAY_TERMINAL_EVENT =
+  "/food-truck/tap-to-pay-terminal-event";
 export const GET_FOODTRUCK_DETAILS = "/food-truck";
 export const REGISTER_COMPLETE = "/food-truck/complete";
 export const UPDATE_FOOD_TRUCK_UNITS = (foodtruck_id) =>

@@ -171,10 +171,12 @@ import UIKit
   private func ensureActivated(
     _ reader: MposUIReader,
     environment: MposEnvironment,
-    activationCode: String? = nil
+    activationCode: String? = nil,
+    forceReactivationRequested: Bool = false
   ) async throws -> Bool {
     let configuredDeviceId = optionalBuildSetting("CybersourceTapToPayDeviceId")
-    let forceReactivation = enabledBuildSetting("CybersourceTapToPayResetEnrollment")
+    let forceReactivation = forceReactivationRequested
+      || enabledBuildSetting("CybersourceTapToPayResetEnrollment")
     var existingDeviceId: String?
 
     // The SDK persists activation outside the JavaScript configuration.  A
@@ -261,7 +263,26 @@ import UIKit
   }
 
   @MainActor
-  func activate(environmentName: String, activationCode: String) async throws -> [String: Any] {
+  func activationStatus(environmentName: String) async throws -> [String: Any] {
+    let requestedEnvironment = environment(from: environmentName)
+    let reader = try await configuredReader(environment: requestedEnvironment)
+    if case .activated(let device) = await reader.activationStatus,
+       device.environment == requestedEnvironment {
+      return [
+        "activated": true,
+        "deviceId": device.deviceId,
+        "environment": environmentName,
+      ]
+    }
+    return ["activated": false, "environment": environmentName]
+  }
+
+  @MainActor
+  func activate(
+    environmentName: String,
+    activationCode: String,
+    forceReactivation: Bool = false
+  ) async throws -> [String: Any] {
     let requestedEnvironment = environment(from: environmentName)
     diagnosticTrace.removeAll(keepingCapacity: true)
     logStage(
@@ -272,7 +293,8 @@ import UIKit
     let newlyActivated = try await ensureActivated(
       reader,
       environment: requestedEnvironment,
-      activationCode: activationCode
+      activationCode: activationCode,
+      forceReactivationRequested: forceReactivation
     )
 
     guard case .activated(let device) = await reader.activationStatus,

@@ -30,7 +30,8 @@ final class RTCTapToPay: NSObject {
         }
         let result = try await manager.activate(
           environmentName: stringValue(options["environment"], fallback: "production"),
-          activationCode: activationCode
+          activationCode: activationCode,
+          forceReactivation: booleanValue(options["forceReactivation"])
         )
         resolve(result)
       } catch let error as NSError {
@@ -53,6 +54,27 @@ final class RTCTapToPay: NSObject {
             userInfo: [NSLocalizedDescriptionKey: error.localizedDescription]
           )
         )
+      }
+    }
+  }
+
+  @objc(getActivationStatus:resolver:rejecter:)
+  func getActivationStatus(
+    _ options: NSDictionary,
+    resolver resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    Task { @MainActor in
+      do {
+        guard #available(iOS 17.6, *) else {
+          throw unsupportedOSVersionError()
+        }
+        let result = try await manager.activationStatus(
+          environmentName: stringValue(options["environment"], fallback: "production")
+        )
+        resolve(result)
+      } catch let error as NSError {
+        reject(diagnosticCode(for: error), error.localizedDescription, error)
       }
     }
   }
@@ -146,6 +168,12 @@ final class RTCTapToPay: NSObject {
     let string = stringValue(value).trimmingCharacters(in: .whitespacesAndNewlines)
 
     return string.isEmpty ? nil : string
+  }
+
+  private func booleanValue(_ value: Any?) -> Bool {
+    if let boolean = value as? Bool { return boolean }
+    if let number = value as? NSNumber { return number.boolValue }
+    return ["1", "true", "yes"].contains(stringValue(value).lowercased())
   }
 
   private static let unsupportedOSVersionMessage =

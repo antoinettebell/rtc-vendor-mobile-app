@@ -1,18 +1,47 @@
 import { NativeModules, Platform } from "react-native";
+import DeviceInfo from "react-native-device-info";
 import {
   createTapToPayActivationCode_API,
+  getTapToPayTerminalStatus_API,
+  recordTapToPayTerminalEvent_API,
   registerTapToPayTerminal_API,
 } from "../api/appAPI";
 import tapToPayConfig from "./tapToPay-config";
 
 const nativeTapToPay = NativeModules.RTCTapToPay;
 
+const responseData = (response) => response?.data || response || {};
+const getDeviceLabel = async () => {
+  try {
+    return (await DeviceInfo.getDeviceName()) || DeviceInfo.getModel() || "iPhone";
+  } catch {
+    return DeviceInfo.getModel?.() || "iPhone";
+  }
+};
+
+const safeActivationError = (error) => ({
+  error_code: String(error?.code || error?.status || "ACTIVATION_FAILED").slice(0, 120),
+  error_message: String(error?.message || error?.error || "Tap to Pay activation failed.").slice(0, 500),
+});
+
+const recordActivationEvent = async (eventType, details = {}) => {
+  try {
+    await recordTapToPayTerminalEvent_API({
+      event_type: eventType,
+      environment: tapToPayConfig.environment,
+      ...details,
+    });
+  } catch {
+    // Diagnostics are best effort and must never block activation or payment.
+  }
+};
+
 export const isTapToPayAvailable = () =>
   Platform.OS === "ios" &&
   tapToPayConfig.enabled &&
   !!nativeTapToPay?.startSale;
 
-const registerActivatedTerminal = async (result = {}) => {
+const registerActivatedTerminal = async (result = {}, deviceLabel) => {
   const deviceId = String(result?.deviceId || "").trim();
   if (!deviceId) {
     throw new Error(
@@ -20,7 +49,12 @@ const registerActivatedTerminal = async (result = {}) => {
     );
   }
 
-  const registration = await registerTapToPayTerminal_API({ deviceId });
+  const registration = await registerTapToPayTerminal_API({
+    deviceId,
+    deviceLabel,
+    environment: tapToPayConfig.environment,
+    activationStatus: "SUCCEEDED",
+  });
   return {
     activated: result?.activated !== false,
     newDevice: result?.newDevice === true,
@@ -28,6 +62,51 @@ const registerActivatedTerminal = async (result = {}) => {
       || registration?.terminal_serial_suffix
       || deviceId.slice(-4),
   };
+};
+
+export const getLocalTapToPayActivationStatus = async () => {
+  if (!isTapToPayAvailable() || !nativeTapToPay?.getActivationStatus) {
+    return { activated: false };
+  }
+  return nativeTapToPay.getActivationStatus({
+    environment: tapToPayConfig.environment,
+  });
+};
+
+export const syncTapToPayTerminalStatus = async () => {
+  const local = await getLocalTapToPayActivationStatus();
+  const deviceId = String(local?.deviceId || "").trim();
+  if (!local?.activated || !deviceId) return { activated: false, known: false };
+  const deviceLabel = await getDeviceLabel();
+  await registerTapToPayTerminal_API({
+    deviceId,
+    deviceLabel,
+    environment: tapToPayConfig.environment,
+  });
+  const server = responseData(await getTapToPayTerminalStatus_API({ deviceId }));
+  return { ...server, activated: true, deviceId, deviceLabel };
+};
+
+const ensureTerminalReady = async () => {
+  const local = await getLocalTapToPayActivationStatus();
+  const deviceId = String(local?.deviceId || "").trim();
+  if (!local?.activated || !deviceId) {
+    await activateTapToPay();
+    return;
+  }
+  const server = responseData(await getTapToPayTerminalStatus_API({ deviceId }));
+  if (server?.status === "HISTORICAL") {
+    throw new Error("This iPhone is marked as a historical Tap to Pay device. Contact RTC support to restore it.");
+  }
+  if (server?.reactivation_required) {
+    await activateTapToPay({ forceReactivation: true, existingDeviceId: deviceId });
+    return;
+  }
+  await registerTapToPayTerminal_API({
+    deviceId,
+    deviceLabel: await getDeviceLabel(),
+    environment: tapToPayConfig.environment,
+  });
 };
 
 const normalizeTapToPayResult = (result = {}) => {
@@ -91,6 +170,8 @@ export const startTapToPaySale = async ({
     );
   }
 
+  await ensureTerminalReady();
+
   const result = await nativeTapToPay.startSale({
     amount: Number(amount).toFixed(2),
     currency: currency || tapToPayConfig.currency,
@@ -118,7 +199,10 @@ export const startTapToPaySale = async ({
   return normalizeTapToPayResult(paymentResult);
 };
 
-export const activateTapToPay = async () => {
+export const activateTapToPay = async ({
+  forceReactivation = false,
+  existingDeviceId = null,
+} = {}) => {
   if (Platform.OS !== "ios") {
     throw new Error("Tap to Pay on iPhone setup requires a compatible iPhone.");
   }
@@ -129,22 +213,41 @@ export const activateTapToPay = async () => {
     throw new Error("Tap to Pay on iPhone setup is unavailable in this app build.");
   }
 
-  const activationResponse = await createTapToPayActivationCode_API();
-  const activationCode = String(
-    activationResponse?.data?.activation_code
-      || activationResponse?.activation_code
-      || "",
-  ).trim();
-  if (!activationCode) {
-    throw new Error("A secure Tap to Pay activation code could not be generated. Please try again.");
+  const deviceLabel = await getDeviceLabel();
+  try {
+    await recordActivationEvent("ACTIVATION_STARTED", {
+      device_id: existingDeviceId,
+      device_label: deviceLabel,
+    });
+    const activationResponse = await createTapToPayActivationCode_API();
+    const activationCode = String(
+      activationResponse?.data?.activation_code
+        || activationResponse?.activation_code
+        || "",
+    ).trim();
+    if (!activationCode) {
+      throw new Error("A secure Tap to Pay activation code could not be generated. Please try again.");
+    }
+    const result = await nativeTapToPay.activate({
+      environment: tapToPayConfig.environment,
+      provider: tapToPayConfig.provider,
+      activationCode,
+      forceReactivation,
+    });
+    const registered = await registerActivatedTerminal(result, deviceLabel);
+    await recordActivationEvent("ACTIVATION_SUCCEEDED", {
+      device_id: result?.deviceId,
+      device_label: deviceLabel,
+    });
+    return registered;
+  } catch (error) {
+    await recordActivationEvent("ACTIVATION_FAILED", {
+      device_id: existingDeviceId,
+      device_label: deviceLabel,
+      ...safeActivationError(error),
+    });
+    throw error;
   }
-
-  const result = await nativeTapToPay.activate({
-    environment: tapToPayConfig.environment,
-    provider: tapToPayConfig.provider,
-    activationCode,
-  });
-  return registerActivatedTerminal(result);
 };
 
 export const showTapToPayMerchantEducation = async () => {
