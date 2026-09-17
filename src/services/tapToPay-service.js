@@ -215,7 +215,7 @@ export const activateTapToPay = async ({
 
   const deviceLabel = await getDeviceLabel();
   try {
-    await recordActivationEvent("ACTIVATION_STARTED", {
+    void recordActivationEvent("ACTIVATION_STARTED", {
       device_id: existingDeviceId,
       device_label: deviceLabel,
     });
@@ -235,13 +235,13 @@ export const activateTapToPay = async ({
       forceReactivation,
     });
     const registered = await registerActivatedTerminal(result, deviceLabel);
-    await recordActivationEvent("ACTIVATION_SUCCEEDED", {
+    void recordActivationEvent("ACTIVATION_SUCCEEDED", {
       device_id: result?.deviceId,
       device_label: deviceLabel,
     });
     return registered;
   } catch (error) {
-    await recordActivationEvent("ACTIVATION_FAILED", {
+    void recordActivationEvent("ACTIVATION_FAILED", {
       device_id: existingDeviceId,
       device_label: deviceLabel,
       ...safeActivationError(error),

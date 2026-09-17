@@ -23,6 +23,7 @@ import { setVendorOnboardingStep } from "../redux/slices/authSlice";
 import { setUser } from "../redux/slices/userSlice";
 import {
   activateTapToPay,
+  getLocalTapToPayActivationStatus,
 } from "../services/tapToPay-service";
 import tapToPayConfig from "../services/tapToPay-config";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
@@ -64,6 +65,21 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
   useEffect(() => {
     loadCompliance();
   }, [loadCompliance]);
+
+  useEffect(() => {
+    let active = true;
+    getLocalTapToPayActivationStatus()
+      .then((status) => {
+        if (!active || !status?.activated) return;
+        const deviceId = String(status?.deviceId || "").trim();
+        setTerminalReady(true);
+        if (deviceId) setTerminalSuffix(deviceId.slice(-4));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const loadPaymentDetails = useCallback(async () => {
     try {
@@ -158,9 +174,17 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
       setTerminalSuffix(result?.terminalSerialSuffix || "");
       setTerminalReady(result?.activated !== false);
 
-      const refreshed = await getUserDetail_API(user?._id);
-      if (refreshed?.success && refreshed?.data?.user) {
-        dispatch(setUser(refreshed.data.user));
+      // Activation is complete once the SDK result has been registered. Keep
+      // the profile refresh best-effort so a slow follow-up request cannot
+      // leave the setup button spinning after a successful activation.
+      if (user?._id) {
+        void getUserDetail_API(user._id)
+          .then((refreshed) => {
+            if (refreshed?.success && refreshed?.data?.user) {
+              dispatch(setUser(refreshed.data.user));
+            }
+          })
+          .catch(() => {});
       }
 
       Alert.alert(
