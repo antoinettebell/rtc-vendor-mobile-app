@@ -57,6 +57,19 @@ const SANITATION_GRADE_OPTIONS = ["A", "B", "C", "D", "F"].map(
   (grade) => ({ label: grade, value: grade })
 );
 
+const buildJpegPickerFile = (image, fallbackPrefix) => {
+  const pathName = image?.path?.split("/").pop();
+  const sourceName = pathName || image?.filename || `${fallbackPrefix}-${Date.now()}.jpg`;
+  return {
+    uri: image?.path,
+    name: sourceName.replace(/\.(heic|heif)$/i, ".jpg"),
+    type:
+      image?.mime === "image/heic" || image?.mime === "image/heif"
+        ? "image/jpeg"
+        : image?.mime || "image/jpeg",
+  };
+};
+
 const formatLabel = (value = "") =>
   String(value)
     .replace(/_/g, " ")
@@ -385,14 +398,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
         mediaType: "photo",
         forceJpg: true,
       });
-      const file = {
-        uri: image?.path,
-        name:
-          image?.filename ||
-          image?.path?.split("/").pop() ||
-          `${requirement.type}-${Date.now()}.jpg`,
-        type: image?.mime || "image/jpeg",
-      };
+      const file = buildJpegPickerFile(image, requirement.type);
 
       await uploadComplianceFile(requirement, file);
     } catch (error) {
@@ -409,14 +415,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
         mediaType: "photo",
         forceJpg: true,
       });
-      const file = {
-        uri: image?.path,
-        name:
-          image?.filename ||
-          image?.path?.split("/").pop() ||
-          `${requirement.type}-${Date.now()}.jpg`,
-        type: image?.mime || "image/jpeg",
-      };
+      const file = buildJpegPickerFile(image, requirement.type);
 
       await uploadComplianceFile(requirement, file);
     } catch (error) {
