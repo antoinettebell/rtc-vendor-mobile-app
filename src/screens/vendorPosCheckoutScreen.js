@@ -17,6 +17,7 @@ import StatusBarManager from "../components/StatusBarManager";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 import {
   checkPosTax_API,
+  getEmployeeTapToPayTraining_API,
   getVendorComplianceSummary_API,
   placePosOrder_API,
   validatePosOrder_API,
@@ -259,6 +260,8 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
   const [paymentLoading, setPaymentLoading] = useState(null);
   const [tapToPayCompliance, setTapToPayCompliance] = useState(null);
   const [tapToPayComplianceLoading, setTapToPayComplianceLoading] = useState(true);
+  const [employeeTapToPayTraining, setEmployeeTapToPayTraining] = useState(null);
+  const [employeeTrainingLoading, setEmployeeTrainingLoading] = useState(isEmployeeSession);
   const [taxAmount, setTaxAmount] = useState(0);
   const [cashOrder, setCashOrder] = useState(null);
   const [tapOrder, setTapOrder] = useState(null);
@@ -283,6 +286,28 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
       active = false;
     };
   }, [user?._id]);
+
+  useEffect(() => {
+    if (!isEmployeeSession) {
+      setEmployeeTrainingLoading(false);
+      return undefined;
+    }
+    let active = true;
+    setEmployeeTrainingLoading(true);
+    getEmployeeTapToPayTraining_API()
+      .then((response) => {
+        if (active) setEmployeeTapToPayTraining(response?.data?.training || null);
+      })
+      .catch(() => {
+        if (active) setEmployeeTapToPayTraining(null);
+      })
+      .finally(() => {
+        if (active) setEmployeeTrainingLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isEmployeeSession, user?._id]);
 
   const isTapToPayCompliant =
     !!tapToPayCompliance?.eligible && Number(tapToPayCompliance?.score) === 100;
@@ -572,6 +597,27 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
   };
 
   const handleTapToPay = async () => {
+    if (isEmployeeSession && employeeTrainingLoading) {
+      Alert.alert(
+        "Checking Tap to Pay Training",
+        "Please wait while RTC verifies your annual training acknowledgment.",
+      );
+      return;
+    }
+    if (isEmployeeSession && !employeeTapToPayTraining?.compliant) {
+      Alert.alert(
+        "Tap to Pay Training Required",
+        "Complete the Tap to Pay on iPhone Training and acknowledgment in your employee profile before accepting a Tap to Pay payment.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Go to Training",
+            onPress: () => navigation.navigate("employeeTapToPayTrainingScreen"),
+          },
+        ],
+      );
+      return;
+    }
     if (!canUseTapToPay) {
       Alert.alert(
         "Tap to Pay on iPhone unavailable",

@@ -14,6 +14,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   getBankDetail_API,
+  getEmployeeTapToPayTraining_API,
   getUserDetail_API,
   getVendorComplianceSummary_API,
   updateFoodtruckSubscription_API,
@@ -34,19 +35,26 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
   const { user } = useSelector((state) => state.userReducer);
   const isOnboardingFlow = route?.params?.onboardingFlow === true;
   const isTapToPayUpgradeFlow = route?.params?.tapToPayUpgradeFlow === true;
+  const isEmployeeSession =
+    user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
   const [compliance, setCompliance] = useState(null);
   const [loadingCompliance, setLoadingCompliance] = useState(true);
   const [activating, setActivating] = useState(false);
   const [terminalReady, setTerminalReady] = useState(false);
   const [terminalSuffix, setTerminalSuffix] = useState("");
   const [hasPaymentDetails, setHasPaymentDetails] = useState(null);
+  const [employeeTraining, setEmployeeTraining] = useState(null);
+  const [loadingEmployeeTraining, setLoadingEmployeeTraining] = useState(isEmployeeSession);
   const terminalSerial = user?.foodTruck?.tap_to_pay_serial_number || "";
   const isCompliant = compliance?.eligible === true
     && Number(compliance?.score) === 100;
+  const isReadyForSetup = isCompliant
+    && (!isEmployeeSession || employeeTraining?.compliant === true);
   const canActivate = Platform.OS === "ios"
     && tapToPayConfig.enabled
-    && isCompliant
-    && !loadingCompliance;
+    && isReadyForSetup
+    && !loadingCompliance
+    && !loadingEmployeeTraining;
 
   const loadCompliance = useCallback(async () => {
     setLoadingCompliance(true);
@@ -65,6 +73,28 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
   useEffect(() => {
     loadCompliance();
   }, [loadCompliance]);
+
+  useEffect(() => {
+    if (!isEmployeeSession) {
+      setLoadingEmployeeTraining(false);
+      return undefined;
+    }
+    let active = true;
+    setLoadingEmployeeTraining(true);
+    getEmployeeTapToPayTraining_API()
+      .then((response) => {
+        if (active) setEmployeeTraining(response?.data?.training || null);
+      })
+      .catch(() => {
+        if (active) setEmployeeTraining(null);
+      })
+      .finally(() => {
+        if (active) setLoadingEmployeeTraining(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isEmployeeSession]);
 
   useEffect(() => {
     let active = true;
@@ -203,6 +233,10 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
 
   const statusText = loadingCompliance
     ? "Checking compliance eligibility…"
+    : isEmployeeSession && loadingEmployeeTraining
+      ? "Checking annual employee training…"
+      : isEmployeeSession && !employeeTraining?.compliant
+        ? "Complete the annual Tap to Pay training in your employee profile before setting up this iPhone."
     : isCompliant
       ? "Compliance complete — this iPhone is eligible for setup."
       : "Complete all required compliance items before activating Tap to Pay on iPhone.";
@@ -231,13 +265,13 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
         </Text>
 
         <View style={styles.statusCard}>
-          {loadingCompliance ? (
+          {loadingCompliance || loadingEmployeeTraining ? (
             <ActivityIndicator size="small" color={AppColor.primary} />
           ) : (
             <Ionicons
-              name={isCompliant ? "checkmark-circle" : "alert-circle-outline"}
+              name={isReadyForSetup ? "checkmark-circle" : "alert-circle-outline"}
               size={24}
-              color={isCompliant ? AppColor.primary : "#B42318"}
+              color={isReadyForSetup ? AppColor.primary : "#B42318"}
             />
           )}
           <Text style={styles.statusText}>{statusText}</Text>

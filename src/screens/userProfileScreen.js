@@ -17,6 +17,7 @@ import AntDesign from "react-native-vector-icons/AntDesign";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import StatusBarManager from "../components/StatusBarManager";
 import {
@@ -144,6 +145,8 @@ const UserProfileScreen = ({ navigation }) => {
       ? employeeProfile.employee_rate
       : user?.employee_rate;
   const employeeSchedule = employeeDashboard?.employee_schedule || [];
+  const employeeTapToPayTraining = employeeDashboard?.tap_to_pay_training || null;
+  const employeeTapToPayEligible = !!user?.employeeCapabilities?.tapToPay;
 
   const updateStateOnDataFetch = (USER_DATA, FOOD_TRUCK_DATA) => {
     setSocialMedia(FOOD_TRUCK_DATA?.socialMedia || []);
@@ -358,6 +361,12 @@ const UserProfileScreen = ({ navigation }) => {
     getEmployeeDashboardFromAPI();
   }, []);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      if (isEmployeeProfile) getEmployeeDashboardFromAPI();
+    }, [isEmployeeProfile]),
+  );
+
   useEffect(() => {
     if (user?.foodTruck?.socialMedia) {
       setSocialMedia(user?.foodTruck?.socialMedia);
@@ -456,6 +465,69 @@ const UserProfileScreen = ({ navigation }) => {
             ) : null}
 
             {isEmployeeProfile ? (
+              <>
+              <View style={styles.trainingComplianceBox}>
+                <View style={styles.trainingComplianceHeader}>
+                  <Text style={styles.employeeProfileTitle}>Tap to Pay Training Compliance</Text>
+                  <Text style={styles.trainingScore}>
+                    {employeeTapToPayTraining?.score || 0}%
+                  </Text>
+                </View>
+                <View style={styles.trainingProgressTrack}>
+                  <View
+                    style={[
+                      styles.trainingProgressFill,
+                      { width: `${employeeTapToPayTraining?.score || 0}%` },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.accessCodeHelper}>
+                  {employeeTapToPayTraining?.compliant
+                    ? `Valid through ${new Date(employeeTapToPayTraining.current.expires_at).toLocaleDateString()}`
+                    : "Annual Tap to Pay training is incomplete or expired."}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate("employeeTapToPayTrainingScreen")}
+                  style={styles.trainingButton}
+                >
+                  <Text style={styles.trainingButtonText}>
+                    {employeeTapToPayTraining?.compliant
+                      ? "View Tap to Pay Training"
+                      : "Complete Tap to Pay Training"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (!employeeTapToPayEligible) {
+                      Alert.alert(
+                        "Tap to Pay Not Authorized",
+                        "Tap to Pay on iPhone has not been authorized for your employee account. Please contact your vendor administrator.",
+                      );
+                      return;
+                    }
+                    if (!employeeTapToPayTraining?.compliant) {
+                      Alert.alert(
+                        "Tap to Pay Training Required",
+                        "Complete the Tap to Pay on iPhone Training and acknowledgment in your employee profile before setting up this iPhone.",
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          {
+                            text: "Go to Training",
+                            onPress: () => navigation.navigate("employeeTapToPayTrainingScreen"),
+                          },
+                        ],
+                      );
+                      return;
+                    }
+                    navigation.navigate("authTapToPaySetupScreen");
+                  }}
+                  style={styles.setupTapToPayButton}
+                >
+                  <Text style={styles.setupTapToPayButtonText}>
+                    Set Up Tap to Pay on iPhone
+                  </Text>
+                </TouchableOpacity>
+              </View>
               <View style={styles.employeeProfileBox}>
                 <View style={styles.employeeProfileHeader}>
                   <View style={styles.accessCodeIconContainer}>
@@ -567,6 +639,7 @@ const UserProfileScreen = ({ navigation }) => {
                   </View>
                 </View>
               </View>
+              </>
             ) : null}
 
             {!isEmployeeProfile ? (
@@ -901,6 +974,62 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingHorizontal: 12,
     paddingVertical: 12,
+  },
+  trainingComplianceBox: {
+    backgroundColor: AppColor.white,
+    borderColor: AppColor.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 16,
+    padding: 14,
+  },
+  trainingComplianceHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  trainingScore: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
+    fontSize: 22,
+  },
+  trainingProgressTrack: {
+    backgroundColor: "#E8ECEF",
+    borderRadius: 5,
+    height: 10,
+    marginVertical: 10,
+    overflow: "hidden",
+  },
+  trainingProgressFill: {
+    backgroundColor: AppColor.primary,
+    height: "100%",
+  },
+  trainingButton: {
+    alignItems: "center",
+    borderColor: AppColor.primary,
+    borderRadius: 9,
+    borderWidth: 1,
+    marginTop: 12,
+    paddingVertical: 11,
+  },
+  trainingButtonText: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
+    fontSize: 14,
+  },
+  setupTapToPayButton: {
+    alignItems: "center",
+    backgroundColor: AppColor.primary,
+    borderRadius: 9,
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 13,
+  },
+  setupTapToPayButtonText: {
+    color: AppColor.white,
+    fontFamily: Mulish700,
+    fontSize: 14,
+    textAlign: "center",
   },
   employeeProfileHeader: {
     alignItems: "center",

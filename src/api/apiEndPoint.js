@@ -61,6 +61,10 @@ export const MANAGER_EMPLOYEES = "/vendor-employee/manager/employees";
 export const MANAGER_EMPLOYEE_SESSION_ACTION = (employee_id) =>
   `/vendor-employee/manager/employees/${employee_id}/session/action`;
 export const EMPLOYEE_DASHBOARD = "/vendor-employee/dashboard";
+export const EMPLOYEE_TAP_TO_PAY_TRAINING =
+  "/vendor-employee/tap-to-pay-training";
+export const ACKNOWLEDGE_EMPLOYEE_TAP_TO_PAY_TRAINING =
+  "/vendor-employee/tap-to-pay-training/acknowledge";
 export const END_EMPLOYEE_SESSION = "/vendor-employee/session/end";
 export const TOGGLE_EMPLOYEE_DUTY = "/vendor-employee/session/duty";
 export const EMPLOYEE_SHIFT_ACTION = "/vendor-employee/session/action";

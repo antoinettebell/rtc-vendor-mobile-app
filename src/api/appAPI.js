@@ -88,6 +88,8 @@ import {
   UPDATE_FOOD_ITEM,
   UPDATE_LOCATION_ORDERING,
   UPDATE_ORDER_STATUS,
+  EMPLOYEE_TAP_TO_PAY_TRAINING,
+  ACKNOWLEDGE_EMPLOYEE_TAP_TO_PAY_TRAINING,
   UPDATE_REVIEW_BY_ID,
   UPDATE_SUBSCRIPTION_ADD_ONS,
   UPDATE_SUBSCRIPTION_PLAN,
@@ -1755,6 +1757,30 @@ export const getEmployeeDashboard_API = async () => {
     const response = await apiClient.get(EMPLOYEE_DASHBOARD, {
       skipToken: false,
     });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const getEmployeeTapToPayTraining_API = async () => {
+  try {
+    const response = await apiClient.get(EMPLOYEE_TAP_TO_PAY_TRAINING, {
+      skipToken: false,
+    });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const acknowledgeEmployeeTapToPayTraining_API = async (payload) => {
+  try {
+    const response = await apiClient.post(
+      ACKNOWLEDGE_EMPLOYEE_TAP_TO_PAY_TRAINING,
+      payload,
+      { skipToken: false },
+    );
     return response?.data;
   } catch (error) {
     throw error?.response?.data || error;

@@ -111,6 +111,20 @@ const timeToDate = (value) => {
 };
 const dateToTime = (date) => `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 const formatScheduleTime = (value) => timeToDate(value).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+const getTapToPayTrainingRecords = (employee = {}) =>
+  Array.isArray(employee.tap_to_pay_training_acknowledgments)
+    ? [...employee.tap_to_pay_training_acknowledgments].sort(
+        (left, right) =>
+          new Date(right.acknowledged_at).getTime() -
+          new Date(left.acknowledged_at).getTime(),
+      )
+    : [];
+const isCurrentTapToPayTraining = (record) =>
+  !!record &&
+  !record.archived_at &&
+  new Date(record.expires_at).getTime() > Date.now();
+const formatTrainingDate = (value) =>
+  value ? new Date(value).toLocaleDateString() : "—";
 
 const getGeneratedLoginPreview = ({ first_name, last_name, zip_code }) => {
   const initial = first_name.trim().charAt(0);
@@ -1612,6 +1626,58 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 	                  <Text style={styles.submenuTitle}>
 	                    Employee Profile {isEmployeeEditing(employee) ? "(Editing)" : ""}
 	                  </Text>
+                    {(() => {
+                      const records = getTapToPayTrainingRecords(employee);
+                      const current = records.find(isCurrentTapToPayTraining);
+                      const archived = records.filter((record) => !isCurrentTapToPayTraining(record));
+                      return (
+                        <View style={styles.tapTrainingSection}>
+                          <View style={styles.tapTrainingHeader}>
+                            <Text style={styles.tapTrainingTitle}>Tap to Pay Training Compliance</Text>
+                            <Text style={styles.tapTrainingScore}>{current ? 100 : 0}%</Text>
+                          </View>
+                          <View style={styles.tapTrainingTrack}>
+                            <View
+                              style={[
+                                styles.tapTrainingFill,
+                                { width: current ? "100%" : "0%" },
+                              ]}
+                            />
+                          </View>
+                          {current ? (
+                            <View style={styles.tapTrainingRecord}>
+                              <Text style={styles.tapTrainingRecordTitle}>Current acknowledgment</Text>
+                              <Text style={styles.tapTrainingRecordText}>
+                                {current.signed_name} · Signed {formatTrainingDate(current.acknowledged_at)}
+                              </Text>
+                              <Text style={styles.tapTrainingRecordText}>
+                                Valid through {formatTrainingDate(current.expires_at)}
+                              </Text>
+                            </View>
+                          ) : (
+                            <Text style={styles.tapTrainingRecordText}>
+                              This employee has not completed current annual Tap to Pay training.
+                            </Text>
+                          )}
+                          <Text style={styles.tapTrainingArchiveTitle}>Archived Training</Text>
+                          {archived.length ? archived.map((record) => (
+                            <View
+                              key={record._id || record.acknowledged_at}
+                              style={styles.tapTrainingArchiveRow}
+                            >
+                              <Text style={styles.tapTrainingRecordText}>
+                                {record.signed_name} · Signed {formatTrainingDate(record.acknowledged_at)}
+                              </Text>
+                              <Text style={styles.tapTrainingRecordText}>
+                                Expired {formatTrainingDate(record.expires_at)}
+                              </Text>
+                            </View>
+                          )) : (
+                            <Text style={styles.tapTrainingRecordText}>No archived training records.</Text>
+                          )}
+                        </View>
+                      );
+                    })()}
 	              {resetEmployeeId === employee._id ? (
                 <View style={styles.resetBox}>
                   <Text style={styles.label}>New PIN</Text>
@@ -2442,6 +2508,69 @@ const ProfileEmployeeManagementScreen = ({ navigation, route }) => {
 export default ProfileEmployeeManagementScreen;
 
 const styles = StyleSheet.create({
+  tapTrainingSection: {
+    backgroundColor: AppColor.white,
+    borderColor: AppColor.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 14,
+    padding: 12,
+  },
+  tapTrainingHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  tapTrainingTitle: {
+    color: AppColor.text,
+    fontFamily: Mulish700,
+    fontSize: 15,
+  },
+  tapTrainingScore: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
+    fontSize: 20,
+  },
+  tapTrainingTrack: {
+    backgroundColor: "#E8ECEF",
+    borderRadius: 4,
+    height: 8,
+    marginVertical: 9,
+    overflow: "hidden",
+  },
+  tapTrainingFill: {
+    backgroundColor: AppColor.primary,
+    height: "100%",
+  },
+  tapTrainingRecord: {
+    backgroundColor: "#F0F8F3",
+    borderRadius: 8,
+    padding: 10,
+  },
+  tapTrainingRecordTitle: {
+    color: AppColor.primary,
+    fontFamily: Mulish700,
+    fontSize: 13,
+    marginBottom: 3,
+  },
+  tapTrainingRecordText: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  tapTrainingArchiveTitle: {
+    color: AppColor.text,
+    fontFamily: Mulish700,
+    fontSize: 13,
+    marginBottom: 6,
+    marginTop: 12,
+  },
+  tapTrainingArchiveRow: {
+    borderTopColor: AppColor.border,
+    borderTopWidth: 1,
+    paddingVertical: 8,
+  },
   container: { flex: 1, backgroundColor: "#F9FAFB" },
   guidedActions: { backgroundColor: AppColor.white, paddingHorizontal: 20, paddingVertical: 12 },
   guidedNextButton: { backgroundColor: AppColor.primary, alignItems: "center", borderRadius: 8, paddingVertical: 14 },

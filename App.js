@@ -60,6 +60,7 @@ import AgreementScreen from "./src/screens/agreementScreen";
 import AuthFoodTruckPlansScreen from "./src/screens/authFoodTruckPlansScreen";
 import AppTermsOfServiceScreen from "./src/screens/appTermsOfServiceScreen";
 import UserProfileScreen from "./src/screens/userProfileScreen";
+import EmployeeTapToPayTrainingScreen from "./src/screens/employeeTapToPayTrainingScreen";
 import OrderDetailsScreen from "./src/screens/orderDetailsScreen";
 import PreviousOrderScreen from "./src/screens/previousOrderScreen";
 import RateReviewScreen from "./src/screens/rateReviewScreen";
@@ -505,6 +506,14 @@ const EmployeeAppNavigator = () => (
     <Stack.Screen name="operationsScreen" component={OperationsScreen} />
     <Stack.Screen name="operationalFormScreen" component={OperationalFormScreen} />
     <Stack.Screen name="userProfileScreen" component={UserProfileScreen} />
+    <Stack.Screen
+      name="employeeTapToPayTrainingScreen"
+      component={EmployeeTapToPayTrainingScreen}
+    />
+    <Stack.Screen
+      name="authTapToPaySetupScreen"
+      component={AuthTapToPaySetupScreen}
+    />
     <Stack.Screen name="vendorPosMenuScreen" component={VendorPosMenuScreen} />
     <Stack.Screen
       name="vendorPosCheckoutScreen"
@@ -523,6 +532,14 @@ const ManagerHomeNavigator = () => (
     <Stack.Screen name="operationsScreen" component={OperationsScreen} />
     <Stack.Screen name="operationalFormScreen" component={OperationalFormScreen} />
     <Stack.Screen name="userProfileScreen" component={UserProfileScreen} />
+    <Stack.Screen
+      name="employeeTapToPayTrainingScreen"
+      component={EmployeeTapToPayTrainingScreen}
+    />
+    <Stack.Screen
+      name="authTapToPaySetupScreen"
+      component={AuthTapToPaySetupScreen}
+    />
     <Stack.Screen name="vendorPosMenuScreen" component={VendorPosMenuScreen} />
     <Stack.Screen name="vendorPosCheckoutScreen" component={VendorPosCheckoutScreen} />
   </Stack.Navigator>
