@@ -53,6 +53,16 @@ const EXPIRING_DOCUMENT_TYPES = new Set([
   "CERTIFICATE_OF_INSURANCE",
   "LIQUOR_LICENSE",
 ]);
+const REQUIRED_ISSUE_DATE_DOCUMENT_TYPES = new Set([
+  "BUSINESS_LICENSE",
+  "COI",
+  "CERTIFICATE_OF_INSURANCE",
+  "LIQUOR_LICENSE",
+]);
+const REQUIRED_EXPIRATION_DOCUMENT_TYPES = new Set([
+  "COI",
+  "CERTIFICATE_OF_INSURANCE",
+]);
 const SANITATION_GRADE_OPTIONS = ["A", "B", "C", "D", "F"].map(
   (grade) => ({ label: grade, value: grade })
 );
@@ -205,11 +215,12 @@ const VendorComplianceScreen = ({ navigation, route }) => {
   const [submittingOcr, setSubmittingOcr] = useState(false);
   const [summary, setSummary] = useState(null);
   const [expirationDates, setExpirationDates] = useState({});
+  const [issueDates, setIssueDates] = useState({});
   const [manualSanitationGrades, setManualSanitationGrades] = useState({});
   const [documentRevisionTypes, setDocumentRevisionTypes] = useState({});
   const [uploadedRevisionTypes, setUploadedRevisionTypes] = useState({});
   const [expandedDocuments, setExpandedDocuments] = useState({});
-  const [datePickerRequirement, setDatePickerRequirement] = useState(null);
+  const [datePickerSelection, setDatePickerSelection] = useState(null);
   const { checkAndRequestPermission: cameraPermissionStatus } = usePermission(
     permission.camera
   );
@@ -296,6 +307,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     setExpirationDates({});
+    setIssueDates({});
     setManualSanitationGrades({});
     setDocumentRevisionTypes({});
     setUploadedRevisionTypes({});
@@ -316,13 +328,27 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 
   const uploadComplianceFile = async (requirement, file) => {
     const selectedExpirationDate = expirationDates[requirement.type];
+    const selectedIssueDate = issueDates[requirement.type];
     const isHealthPermit = requirement.type === "HEALTH_PERMIT";
-    if ((EXPIRING_DOCUMENT_TYPES.has(requirement.type) || isHealthPermit) && !selectedExpirationDate) {
+    const requiresIssueDate = REQUIRED_ISSUE_DATE_DOCUMENT_TYPES.has(requirement.type);
+    if (isHealthPermit && !selectedExpirationDate) {
       Alert.alert(
-        isHealthPermit ? "Inspection Date Required" : "Expiration Date Required",
-        isHealthPermit
-          ? "Please enter the inspection date shown on the document before uploading."
-          : "Please enter the expiration date shown on the document before uploading."
+        "Inspection Date Required",
+        "Please enter the inspection date shown on the document before uploading."
+      );
+      return;
+    }
+    if (requiresIssueDate && !selectedIssueDate) {
+      Alert.alert(
+        "Issue Date Required",
+        "Please enter the issue date shown on the document before uploading."
+      );
+      return;
+    }
+    if (REQUIRED_EXPIRATION_DOCUMENT_TYPES.has(requirement.type) && !selectedExpirationDate) {
+      Alert.alert(
+        "Expiration Date Required",
+        "Please enter the expiration date shown on the document before uploading."
       );
       return;
     }
@@ -345,6 +371,9 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       payload.append("issue_date", formatDateForPayload(selectedExpirationDate));
     } else if (selectedExpirationDate) {
       payload.append("expiration_date", formatDateForPayload(selectedExpirationDate));
+    }
+    if (selectedIssueDate && requiresIssueDate) {
+      payload.append("issue_date", formatDateForPayload(selectedIssueDate));
     }
     if (requirement.type === "HEALTH_PERMIT") {
       payload.append("sanitation_grade", sanitationGrade);
@@ -454,6 +483,12 @@ const VendorComplianceScreen = ({ navigation, route }) => {
         [requirement.type]: parseDateOnly(existingDocumentDate),
       }));
     }
+    if (REQUIRED_ISSUE_DATE_DOCUMENT_TYPES.has(requirement.type) && requirement.document?.issue_date) {
+      setIssueDates((current) => ({
+        ...current,
+        [requirement.type]: parseDateOnly(requirement.document.issue_date),
+      }));
+    }
     setManualSanitationGrades((current) => ({
       ...current,
       [requirement.type]:
@@ -476,6 +511,11 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       delete next[requirement.type];
       return next;
     });
+    setIssueDates((current) => {
+      const next = { ...current };
+      delete next[requirement.type];
+      return next;
+    });
     setManualSanitationGrades((current) => ({
       ...current,
       [requirement.type]: String(
@@ -485,7 +525,11 @@ const VendorComplianceScreen = ({ navigation, route }) => {
   };
 
   const openExpirationDatePicker = (requirement) => {
-    setDatePickerRequirement(requirement);
+    setDatePickerSelection({ requirement, field: "expiration" });
+  };
+
+  const openIssueDatePicker = (requirement) => {
+    setDatePickerSelection({ requirement, field: "issue" });
   };
 
   const toggleDocumentExpanded = (requirementType) => {
@@ -523,6 +567,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       setDocumentRevisionTypes({});
       setUploadedRevisionTypes({});
       setExpirationDates({});
+      setIssueDates({});
       setManualSanitationGrades({});
     } catch (error) {
       Alert.alert(
@@ -535,13 +580,15 @@ const VendorComplianceScreen = ({ navigation, route }) => {
   };
 
   const handleExpirationDateConfirm = (date) => {
-    if (datePickerRequirement?.type) {
-      setExpirationDates((prev) => ({
-        ...prev,
-        [datePickerRequirement.type]: date,
-      }));
+    const requirementType = datePickerSelection?.requirement?.type;
+    if (requirementType) {
+      if (datePickerSelection.field === "issue") {
+        setIssueDates((prev) => ({ ...prev, [requirementType]: date }));
+      } else {
+        setExpirationDates((prev) => ({ ...prev, [requirementType]: date }));
+      }
     }
-    setDatePickerRequirement(null);
+    setDatePickerSelection(null);
   };
 
   const openDocument = (document) => {
@@ -730,14 +777,36 @@ const VendorComplianceScreen = ({ navigation, route }) => {
             const requiresExpirationDate = EXPIRING_DOCUMENT_TYPES.has(
               requirement.type
             );
+	            const isHealthPermit = requirement.type === "HEALTH_PERMIT";
 	            const selectedExpirationDate = expirationDates[requirement.type];
+            const displayExpirationDate = Object.prototype.hasOwnProperty.call(
+              expirationDates,
+              requirement.type
+            )
+              ? selectedExpirationDate
+              : isHealthPermit
+                ? document?.issue_date
+                : document?.expiration_date;
+            const requiresIssueDate = REQUIRED_ISSUE_DATE_DOCUMENT_TYPES.has(
+              requirement.type
+            );
+            const selectedIssueDate = issueDates[requirement.type];
+            const displayIssueDate = Object.prototype.hasOwnProperty.call(
+              issueDates,
+              requirement.type
+            )
+              ? selectedIssueDate
+              : document?.issue_date;
             const isExpanded =
               expandedDocuments[requirement.type] ?? !document;
-            const isHealthPermit = requirement.type === "HEALTH_PERMIT";
             const isDocumentRevision =
               !!documentRevisionTypes[requirement.type];
             const areDocumentFieldsEditable =
               !document || isDocumentRevision;
+            const manualReviewUsesIssueDate =
+              isHealthPermit || /OCR (issue|inspection) date/i.test(
+                String(document?.ocr_error_message || "")
+              );
             const sanitationGradeValue = normalizeGradeInput(
               manualSanitationGrades[requirement.type] ||
                 getSanitationGradeFromDocument(document)
@@ -777,27 +846,63 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	                </TouchableOpacity>
 	                {isExpanded ? (
 	                  <>
-	                    <Text style={styles.documentMeta}>
-	                      {isHealthPermit ? "Inspected" : "Expires"}{" "}
-                        {formatDate(
-                          isHealthPermit
-                            ? document?.issue_date
-                            : document?.expiration_date
-                        )}
-	                  </Text>
+	                    {isHealthPermit ? (
+                        <Text style={styles.documentMeta}>
+                          Inspected {formatDate(document?.issue_date)}
+                        </Text>
+                      ) : null}
+                      {requiresIssueDate ? (
+                        <Text style={styles.documentMeta}>
+                          Issued {formatDate(document?.issue_date)}
+                        </Text>
+                      ) : null}
+                      {requiresExpirationDate ? (
+                        <Text style={styles.documentMeta}>
+                          Expires {formatDate(document?.expiration_date)}
+                        </Text>
+                      ) : null}
 	                  {isHealthPermit &&
 	                  getSanitationGradeFromDocument(document) ? (
 	                    <Text style={styles.documentMeta}>
 	                      Grade {String(getSanitationGradeFromDocument(document)).toUpperCase()}
 	                    </Text>
 	                  ) : null}
+	                  {requiresIssueDate ? (
+	                      <View style={styles.expirationInputGroup}>
+	                        <Text style={styles.expirationInputLabel}>
+                              Issue date on document *
+	                        </Text>
+	                        <TouchableOpacity
+	                          activeOpacity={0.7}
+	                          disabled={!areDocumentFieldsEditable}
+	                          onPress={() => openIssueDatePicker(requirement)}
+	                          style={[
+                              styles.expirationDateButton,
+                              !areDocumentFieldsEditable && styles.readOnlyInput,
+                            ]}
+	                        >
+	                          <Text
+	                            style={[
+	                              styles.expirationDateText,
+	                              !displayIssueDate &&
+	                                styles.expirationDatePlaceholder,
+	                            ]}
+	                          >
+	                            {getSelectedDateLabel(displayIssueDate, true).replace("inspection", "issue")}
+	                          </Text>
+	                          <Ionicons name="calendar-outline" size={18} color={AppColor.primary} />
+	                        </TouchableOpacity>
+	                      </View>
+	                    ) : null}
 	                  {requiresExpirationDate || isHealthPermit ? (
 		                      <View style={styles.expirationInputGroup}>
 		                        <View style={styles.fieldLabelRow}>
 		                          <Text style={styles.expirationInputLabel}>
 	                            {isHealthPermit
                                 ? "Inspection date on document *"
-                                : "Expiration date on document *"}
+                                : REQUIRED_EXPIRATION_DOCUMENT_TYPES.has(requirement.type)
+                                  ? "Expiration date on document *"
+                                  : "Expiration date on document (optional)"}
 		                          </Text>
                               {document ? (
                                 <TouchableOpacity
@@ -841,19 +946,11 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	                          <Text
 	                            style={[
 	                              styles.expirationDateText,
-	                              !selectedExpirationDate &&
-	                                !(isHealthPermit
-                                      ? document?.issue_date
-                                      : document?.expiration_date) &&
+	                              !displayExpirationDate &&
 	                                styles.expirationDatePlaceholder,
 	                            ]}
 	                          >
-	                            {getSelectedDateLabel(
-	                              selectedExpirationDate || (isHealthPermit
-                                    ? document?.issue_date
-                                    : document?.expiration_date),
-                                  isHealthPermit
-	                            )}
+	                            {getSelectedDateLabel(displayExpirationDate, isHealthPermit)}
 	                          </Text>
 	                          <Ionicons
 	                            name="calendar-outline"
@@ -861,6 +958,19 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	                            color={AppColor.primary}
 	                          />
 	                        </TouchableOpacity>
+	                        {!isHealthPermit &&
+                              !REQUIRED_EXPIRATION_DOCUMENT_TYPES.has(requirement.type) &&
+                              areDocumentFieldsEditable &&
+                              displayExpirationDate ? (
+                              <TouchableOpacity
+                                onPress={() => setExpirationDates((current) => ({
+                                  ...current,
+                                  [requirement.type]: null,
+                                }))}
+                              >
+                                <Text style={styles.supportText}>No expiration date on this license</Text>
+                              </TouchableOpacity>
+                            ) : null}
 		                        <Text style={styles.expirationHelpText}>
 		                          OCR runs when you tap Save & Run OCR.
 		                        </Text>
@@ -967,11 +1077,11 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                           {document.ocr_status === "manual_review" ? (
                             <Text style={styles.ocrComparisonText}>
                               Vendor entered {formatDate(
-                                isHealthPermit
+                                manualReviewUsesIssueDate
                                   ? document.vendor_entered_issue_date || document.issue_date
                                   : document.vendor_entered_expiration_date || document.expiration_date
                               )} · OCR detected {formatDate(
-                                isHealthPermit
+                                manualReviewUsesIssueDate
                                   ? getOcrIssueDate(document)
                                   : getOcrExpirationDate(document)
                               )}
@@ -1066,21 +1176,27 @@ const VendorComplianceScreen = ({ navigation, route }) => {
             </>
           ) : null}
 	          <DateTimePickerModal
-            isVisible={!!datePickerRequirement}
+            isVisible={!!datePickerSelection}
             mode="date"
             minimumDate={
-              datePickerRequirement?.type === "HEALTH_PERMIT"
+              datePickerSelection?.field === "issue" ||
+              datePickerSelection?.requirement?.type === "HEALTH_PERMIT"
                 ? undefined
                 : new Date()
             }
             maximumDate={
-              datePickerRequirement?.type === "HEALTH_PERMIT"
+              datePickerSelection?.field === "issue" ||
+              datePickerSelection?.requirement?.type === "HEALTH_PERMIT"
                 ? new Date()
                 : undefined
             }
-            date={expirationDates[datePickerRequirement?.type] || new Date()}
+            date={
+              datePickerSelection?.field === "issue"
+                ? issueDates[datePickerSelection?.requirement?.type] || new Date()
+                : expirationDates[datePickerSelection?.requirement?.type] || new Date()
+            }
             onConfirm={handleExpirationDateConfirm}
-            onCancel={() => setDatePickerRequirement(null)}
+            onCancel={() => setDatePickerSelection(null)}
           />
         </ScrollView>
       )}
