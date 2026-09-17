@@ -22,19 +22,19 @@ import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 const TRAINING_ITEMS = [
   {
     key: "PREBUILT_MENU_ONLY",
-    text: "I will use Tap to Pay only while on duty, assigned to a food truck and location, and processing customer orders made from RTC's prebuilt menu items.",
+    text: "I will use Tap to Pay only while on duty, assigned to a food truck and location, and processing customer orders made from RDC's prebuilt menu items.",
   },
   {
     key: "FOLLOW_ACTIVATION_INSTRUCTIONS",
-    text: "I will follow the Tap to Pay on iPhone setup instructions shown in RTC and all Apple and CyberSource activation prompts.",
+    text: "I will follow the Tap to Pay setup instructions shown and activation prompts in RDC.",
   },
   {
     key: "AUTHORIZED_TO_ACCEPT_TERMS",
-    text: "I am authorized to accept the applicable Tap to Pay on iPhone Terms and Conditions on behalf of my employer.",
+    text: "I am authorized to accept the applicable Tap to Pay Terms and Conditions presented during setup on behalf of my employer.",
   },
   {
     key: "RTC_USE_ONLY",
-    text: "I will not use Tap to Pay outside the RTC application.",
+    text: "I understand I cannot use Tap to Pay outside the RDC application.",
   },
   {
     key: "ACCESS_ENDS_WITH_EMPLOYMENT",
@@ -119,7 +119,7 @@ const EmployeeTapToPayTrainingScreen = ({ navigation }) => {
       setTraining(response?.data?.training || training);
       Alert.alert(
         "Training Complete",
-        "Your Tap to Pay on iPhone training is valid for one year.",
+        "Your Tap to Pay training is valid for one year.",
         [{ text: "OK", onPress: () => navigation.goBack() }],
       );
     } catch (error) {

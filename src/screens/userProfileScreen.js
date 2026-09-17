@@ -542,7 +542,7 @@ const UserProfileScreen = ({ navigation }) => {
                       Employee Profile
                     </Text>
                     <Text style={styles.accessCodeHelper}>
-                      Read-only details set by your employer.
+                      Please contact your employer to update the information on your profile.
                     </Text>
                   </View>
                 </View>
@@ -560,32 +560,6 @@ const UserProfileScreen = ({ navigation }) => {
                     <Text style={styles.employeeProfileLabel}>Hourly Pay</Text>
                     <Text style={styles.employeeProfileValue}>
                       {formatEmployeeRate(employeeRate)}
-                    </Text>
-                  </View>
-                  <View style={styles.employeeProfileRow}>
-                    <Text style={styles.employeeProfileLabel}>Today</Text>
-                    <Text style={styles.employeeProfileValue}>
-                      {formatShiftHours(
-                        employeeDashboard?.shift_summary?.today?.gross_hours_worked
-                      )}{" "}
-                      with breaks /{" "}
-                      {formatShiftHours(
-                        employeeDashboard?.shift_summary?.today?.net_hours_worked
-                      )}{" "}
-                      without
-                    </Text>
-                  </View>
-                  <View style={styles.employeeProfileRow}>
-                    <Text style={styles.employeeProfileLabel}>This Week</Text>
-                    <Text style={styles.employeeProfileValue}>
-                      {formatShiftHours(
-                        employeeDashboard?.shift_summary?.week?.gross_hours_worked
-                      )}{" "}
-                      with breaks /{" "}
-                      {formatShiftHours(
-                        employeeDashboard?.shift_summary?.week?.net_hours_worked
-                      )}{" "}
-                      without
                     </Text>
                   </View>
                   <View style={styles.employeeProfileRow}>
@@ -636,6 +610,32 @@ const UserProfileScreen = ({ navigation }) => {
                         No employee schedule is assigned.
                       </Text>
                     )}
+                  </View>
+                  <View style={styles.employeeProfileRow}>
+                    <Text style={styles.employeeProfileLabel}>Today</Text>
+                    <Text style={styles.employeeProfileValue}>
+                      {formatShiftHours(
+                        employeeDashboard?.shift_summary?.today?.gross_hours_worked
+                      )}{" "}
+                      with breaks /{" "}
+                      {formatShiftHours(
+                        employeeDashboard?.shift_summary?.today?.net_hours_worked
+                      )}{" "}
+                      without
+                    </Text>
+                  </View>
+                  <View style={styles.employeeProfileRow}>
+                    <Text style={styles.employeeProfileLabel}>This Week</Text>
+                    <Text style={styles.employeeProfileValue}>
+                      {formatShiftHours(
+                        employeeDashboard?.shift_summary?.week?.gross_hours_worked
+                      )}{" "}
+                      with breaks /{" "}
+                      {formatShiftHours(
+                        employeeDashboard?.shift_summary?.week?.net_hours_worked
+                      )}{" "}
+                      without
+                    </Text>
                   </View>
                 </View>
               </View>
