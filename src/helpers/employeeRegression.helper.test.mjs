@@ -28,6 +28,14 @@ const sessionScreenSource = await readFile(
   new URL("../screens/employeeSessionScreen.js", import.meta.url),
   "utf8",
 );
+const posBoardScreenSource = await readFile(
+  new URL("../screens/employeePosBoardScreen.js", import.meta.url),
+  "utf8",
+);
+const tapToPaySetupScreenSource = await readFile(
+  new URL("../screens/authTapToPaySetupScreen.js", import.meta.url),
+  "utf8",
+);
 const profileScreenSource = await readFile(
   new URL("../screens/userProfileScreen.js", import.meta.url),
   "utf8",
@@ -155,6 +163,21 @@ assert.match(
 );
 assert.match(signInScreenSource, /loginMode === "OWNER"/);
 assert.match(signInScreenSource, /handleSignIn\(email, password\)/);
+assert.doesNotMatch(
+  sessionScreenSource,
+  /endEmployeeSession_API/,
+  "signing out of the employee dashboard must not clock out the active shift",
+);
+assert.doesNotMatch(
+  posBoardScreenSource,
+  /endEmployeeSession_API/,
+  "signing out of employee POS must not clock out the active shift",
+);
+assert.match(
+  tapToPaySetupScreenSource,
+  /foodtruck_id: isEmployeeSession \? undefined : user\?\.foodTruck\?\._id/,
+  "employee Tap to Pay setup must use the employee-scoped compliance endpoint",
+);
 
 const savedSchedule = [
   {

@@ -39,6 +39,7 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
     user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
   const [compliance, setCompliance] = useState(null);
   const [loadingCompliance, setLoadingCompliance] = useState(true);
+  const [complianceLoadFailed, setComplianceLoadFailed] = useState(false);
   const [activating, setActivating] = useState(false);
   const [terminalReady, setTerminalReady] = useState(false);
   const [terminalSuffix, setTerminalSuffix] = useState("");
@@ -58,17 +59,22 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
 
   const loadCompliance = useCallback(async () => {
     setLoadingCompliance(true);
+    setComplianceLoadFailed(false);
     try {
       const response = await getVendorComplianceSummary_API({
-        foodtruck_id: user?.foodTruck?._id,
+        // Employees must use /vendor-compliance/me. The backend resolves the
+        // employer's food truck from the authenticated employee record. The
+        // explicit food-truck route is intentionally vendor/admin-only.
+        foodtruck_id: isEmployeeSession ? undefined : user?.foodTruck?._id,
       });
       setCompliance(response?.data?.compliance || null);
     } catch {
       setCompliance(null);
+      setComplianceLoadFailed(true);
     } finally {
       setLoadingCompliance(false);
     }
-  }, [user?.foodTruck?._id]);
+  }, [isEmployeeSession, user?.foodTruck?._id]);
 
   useEffect(() => {
     loadCompliance();
@@ -219,7 +225,7 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
 
       Alert.alert(
         "Tap to Pay Is Ready",
-        "This iPhone is activated and its terminal serial ID has been saved to your RTC profile.",
+        "This iPhone is activated and its terminal serial ID has been saved to your RDC profile.",
       );
     } catch (error) {
       Alert.alert(
@@ -233,6 +239,8 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
 
   const statusText = loadingCompliance
     ? "Checking compliance eligibility…"
+    : complianceLoadFailed
+      ? "Unable to verify vendor compliance. Please return and try again."
     : isEmployeeSession && loadingEmployeeTraining
       ? "Checking annual employee training…"
       : isEmployeeSession && !employeeTraining?.compliant
@@ -279,10 +287,10 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
 
         <View style={styles.instructionsCard}>
           <Text style={styles.instructionsTitle}>Before you begin</Text>
-          <Text style={styles.instruction}>• Use the iPhone that will accept customer payments.</Text>
-          <Text style={styles.instruction}>• Keep this iPhone connected to the internet.</Text>
-          <Text style={styles.instruction}>• Follow Apple and CyberSource prompts to complete activation.</Text>
-          <Text style={styles.instruction}>• RTC securely supplies the activation code—you will not need to contact support or enter it manually.</Text>
+          <Text style={styles.instruction}>• Use the phone that will accept customer payments.</Text>
+          <Text style={styles.instruction}>• Keep this phone connected to the internet.</Text>
+          <Text style={styles.instruction}>• Follow the Tap to Pay setup instructions shown and activation prompts in RDC.</Text>
+          <Text style={styles.instruction}>• RDC securely supplies the activation code—you will not need to contact support or enter it manually.</Text>
         </View>
 
         {terminalSerial || terminalSuffix ? (
