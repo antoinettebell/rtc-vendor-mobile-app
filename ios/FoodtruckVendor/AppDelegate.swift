@@ -5,6 +5,7 @@ import ReactAppDependencyProvider
 import GoogleMaps
 import RNBootSplash
 import Firebase
+import FirebaseMessaging
 
 @main
 class AppDelegate: RCTAppDelegate {
@@ -22,12 +23,38 @@ class AppDelegate: RCTAppDelegate {
 
     let result = super.application(application, didFinishLaunchingWithOptions: launchOptions)
 
+    // Register with APNs explicitly so Firebase Messaging receives Apple's
+    // device token before JavaScript requests an FCM token.
+    application.registerForRemoteNotifications()
+
      if let rootViewController = self.window.rootViewController {
           RNBootSplash.init()
         }
 
     return result
 
+  }
+
+  override func application(
+    _ application: UIApplication,
+    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+  ) {
+    Messaging.messaging().apnsToken = deviceToken
+    super.application(
+      application,
+      didRegisterForRemoteNotificationsWithDeviceToken: deviceToken
+    )
+  }
+
+  override func application(
+    _ application: UIApplication,
+    didFailToRegisterForRemoteNotificationsWithError error: Error
+  ) {
+    NSLog("APNs registration failed: %@", error.localizedDescription)
+    super.application(
+      application,
+      didFailToRegisterForRemoteNotificationsWithError: error
+    )
   }
 
   override func sourceURL(for bridge: RCTBridge) -> URL? {
