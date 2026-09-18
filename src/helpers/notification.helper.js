@@ -4,7 +4,7 @@ import {
   getMessaging,
   getAPNSToken,
   getToken,
-  isDeviceRegisteredForRemoteMessages,
+  onTokenRefresh,
   registerDeviceForRemoteMessages,
   requestPermission,
   AuthorizationStatus,
@@ -17,6 +17,7 @@ import {
   showAvailabilityPrompt,
 } from "../redux/slices/pushNotificationSlice";
 import { navigate } from "./navigation.helper";
+import { setFcmToken_API } from "../api/appAPI";
 
 const installationsInstance = getInstallations();
 const messagingInstance = getMessaging();
@@ -30,24 +31,60 @@ export const checkInstallationId = async () => {
   }
 };
 
+const isTooManyServerRequestsError = (error) =>
+  `${error?.code || ""} ${error?.message || ""}`
+    .toLowerCase()
+    .includes("too many server requests");
+
+const saveFcmToken = async (token) => {
+  if (!token) return false;
+
+  const deviceId = await checkInstallationId();
+  if (!deviceId) {
+    console.warn("FCM token could not be saved because the installation ID is unavailable.");
+    return false;
+  }
+
+  try {
+    await setFcmToken_API({ deviceId, token });
+    console.log("Push notification token registered successfully.");
+    return true;
+  } catch (error) {
+    console.warn(
+      "Push notification token upload failed:",
+      error?.code || "unknown error",
+      error?.message || "",
+    );
+    return false;
+  }
+};
+
 export const checkFcmToken = async () => {
   try {
-    if (
-      Platform.OS === "ios" &&
-      !isDeviceRegisteredForRemoteMessages(messagingInstance)
-    ) {
-      await registerDeviceForRemoteMessages(messagingInstance);
-    }
+    // Registration must finish before Firebase is asked for an FCM token.
+    await registerDeviceForRemoteMessages(messagingInstance);
 
     if (Platform.OS === "ios") {
       const apnsToken = await getAPNSToken(messagingInstance);
-      if (!apnsToken) {
-        console.log("FCM token unavailable: APNs device token is not ready.");
+      // Firebase cannot mint a valid iOS FCM token until Apple has supplied
+      // the native APNs token. The guard avoids racing getToken() and lets the
+      // onTokenRefresh stream capture the token as soon as it becomes ready.
+      if (typeof apnsToken !== "string" || !apnsToken.trim()) {
+        console.warn("APNs token not yet available. Waiting for stream...");
         return false;
       }
     }
 
-    return await getToken(messagingInstance);
+    try {
+      return await getToken(messagingInstance);
+    } catch (error) {
+      if (isTooManyServerRequestsError(error)) {
+        console.warn(
+          "FCM token request was throttled. Verify that the device network allows outbound TCP port 5223, or restart the physical iPhone to reset the native APNs daemon cache.",
+        );
+      }
+      throw error;
+    }
   } catch (error) {
     console.log(
       "FCM token check failed:",
@@ -57,6 +94,30 @@ export const checkFcmToken = async () => {
     return false;
   }
 };
+
+export const initializePushNotifications = async () => {
+  const permissionGranted = await requestNotificationPermission();
+  if (!permissionGranted) {
+    console.warn("Push notification permission was not granted.");
+    return false;
+  }
+
+  const token = await checkFcmToken();
+  if (!token) return false;
+
+  return saveFcmToken(token);
+};
+
+export const subscribeToPushTokenRefresh = () =>
+  onTokenRefresh(messagingInstance, (token) => {
+    saveFcmToken(token).catch((error) => {
+      console.warn(
+        "Push notification token refresh could not be saved:",
+        error?.code || "unknown error",
+        error?.message || "",
+      );
+    });
+  });
 
 export const requestNotificationPermission = async () => {
   try {

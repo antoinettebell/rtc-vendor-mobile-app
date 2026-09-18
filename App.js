@@ -13,19 +13,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import BootSplash from "react-native-bootsplash";
 import { check, request, RESULTS } from "react-native-permissions";
-import {
-  getMessaging,
-  onTokenRefresh,
-} from "@react-native-firebase/messaging";
 import { AppColor, vendorTheme } from "./src/utils/theme";
 import GlobalSnackbar from "./src/components/GlobalSnackbar";
 import {
   createAndroidChannel,
-  checkFcmToken,
-  checkInstallationId,
+  initializePushNotifications,
   requestNotificationPermission,
+  subscribeToPushTokenRefresh,
 } from "./src/helpers/notification.helper";
-import { setFcmToken_API } from "./src/api/appAPI";
 import { clearCurrentNotificationOrder } from "./src/redux/slices/pushNotificationSlice";
 import { navigationRef } from "./src/helpers/navigation.helper";
 import { permission } from "./src/helpers/permission.helper";
@@ -656,47 +651,23 @@ const App = () => {
       lastRegistrationAttemptAt = Date.now();
 
       try {
-        const permissionGranted = await requestNotificationPermission();
-        if (!permissionGranted) return;
-
-        // Give iOS a moment to finish APNs registration, then make one FCM
-        // request. Firebase throttles repeated token requests on the same device.
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        const [deviceId, token] = await Promise.all([
-          checkInstallationId(),
-          checkFcmToken(),
-        ]);
-
-        if (cancelled) return;
-        if (!deviceId || !token) {
+        const registered = await initializePushNotifications();
+        if (!cancelled && !registered) {
           console.warn("Push notification token was not available.");
           scheduleRegistrationRetry();
-          return;
         }
-
-        await setFcmToken_API({ deviceId, token });
       } finally {
         registrationInFlight = false;
       }
     };
 
+    // Attach the stream first so an iOS token that resolves while the primary
+    // APNs check is waiting cannot be missed.
+    const unsubscribeTokenRefresh = subscribeToPushTokenRefresh();
+
     registerPushToken().catch(() => {
       console.warn("Push notification registration failed.");
     });
-
-    const unsubscribeTokenRefresh = onTokenRefresh(
-      getMessaging(),
-      async (token) => {
-        try {
-          const deviceId = await checkInstallationId();
-          if (!cancelled && deviceId && token) {
-            await setFcmToken_API({ deviceId, token });
-          }
-        } catch (_error) {
-          console.warn("Push notification token refresh could not be saved.");
-        }
-      },
-    );
 
     const appStateSubscription = AppState.addEventListener("change", (state) => {
       if (state === "active") {
