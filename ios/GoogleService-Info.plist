@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyCj7sVXaH5eh_8RuGkY3-_Fas5rOPlJMjo</string>
+	<string>AIzaSyCEavyhfa-Rbhvb-8L_-eoU5IasuJrXcjM</string>
 	<key>GCM_SENDER_ID</key>
 	<string>117353735054</string>
 	<key>PLIST_VERSION</key>
@@ -15,15 +15,15 @@
 	<key>STORAGE_BUCKET</key>
 	<string>rtcvendormobile.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
-	<false></false>
+	<false/>
 	<key>IS_ANALYTICS_ENABLED</key>
-	<false></false>
+	<false/>
 	<key>IS_APPINVITE_ENABLED</key>
-	<true></true>
+	<true/>
 	<key>IS_GCM_ENABLED</key>
-	<true></true>
+	<true/>
 	<key>IS_SIGNIN_ENABLED</key>
-	<true></true>
+	<true/>
 	<key>GOOGLE_APP_ID</key>
 	<string>1:117353735054:ios:e1e9e69149464a65f5fadf</string>
 </dict>

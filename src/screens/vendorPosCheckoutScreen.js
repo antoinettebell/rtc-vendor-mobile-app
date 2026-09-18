@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator as NativeIndicator,
   Alert,
@@ -17,9 +17,12 @@ import StatusBarManager from "../components/StatusBarManager";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 import {
   checkPosTax_API,
+  cancelTapToPayAttempt_API,
   getEmployeeTapToPayTraining_API,
   getVendorComplianceSummary_API,
   placePosOrder_API,
+  prepareTapToPayAttempt_API,
+  startTapToPayAttempt_API,
   validatePosOrder_API,
 } from "../api/appAPI";
 import { clearPosOrder } from "../redux/slices/posOrderSlice";
@@ -89,6 +92,23 @@ const formatNativeErrorDiagnostic = (label, diagnostic) => {
   }
 
   return fields;
+};
+
+const isTapToPayCancellation = (error, diagnostic) => {
+  const cancellationText = [
+    error?.code,
+    error?.message,
+    diagnostic?.outer?.message,
+    diagnostic?.outer?.localizedFailureReason,
+    diagnostic?.outer?.developerInfo,
+    diagnostic?.outer?.underlying?.message,
+    diagnostic?.outer?.underlying?.localizedFailureReason,
+  ]
+    .filter((value) => typeof value === "string")
+    .join(" ")
+    .toLowerCase();
+
+  return cancellationText.includes("cancel");
 };
 
 const toMoneyNumber = (value) => {
@@ -265,8 +285,14 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
   const [taxAmount, setTaxAmount] = useState(0);
   const [cashOrder, setCashOrder] = useState(null);
   const [tapOrder, setTapOrder] = useState(null);
+  const [tapToPayAttempt, setTapToPayAttempt] = useState(null);
+  const [attemptRefreshKey, setAttemptRefreshKey] = useState(0);
+  const [orderSummaryExpanded, setOrderSummaryExpanded] = useState(false);
   const [selectedTipOption, setSelectedTipOption] = useState("10");
   const [customTipInput, setCustomTipInput] = useState("");
+  const checkoutAttemptKey = useRef(
+    `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  );
 
   useEffect(() => {
     let active = true;
@@ -456,6 +482,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
       setLoading(true);
       setCashOrder(null);
       setTapOrder(null);
+      setTapToPayAttempt(null);
       try {
         const taxResponse = await checkPosTax_API({
           foodTruck_id: basePayload.foodTruckId,
@@ -490,10 +517,19 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
           });
 
           if (tapValidation?.success && tapValidation?.data?.order) {
-            setTapOrder(tapValidation.data.order);
+            const validatedTapOrder = tapValidation.data.order;
+            setTapOrder(validatedTapOrder);
+            const prepared = await prepareTapToPayAttempt_API({
+              foodTruckId: basePayload.foodTruckId,
+              checkoutKey: checkoutAttemptKey.current,
+              amount: validatedTapOrder.total,
+              currency: "USD",
+            });
+            setTapToPayAttempt(prepared?.data?.attempt || null);
           }
         } else {
           setTapOrder(null);
+          setTapToPayAttempt(null);
         }
       } catch (error) {
         setCashOrder(null);
@@ -512,6 +548,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
     basePayload.foodTruckId,
     basePayload.locationId,
     basePayload.truckUnitId,
+    attemptRefreshKey,
     canUseTapToPay,
     dispatch,
     isEmployeeSession,
@@ -633,18 +670,36 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
       );
       return;
     }
+    if (!tapToPayAttempt?.id || !tapToPayAttempt?.reference) {
+      Alert.alert(
+        "Tap to Pay is preparing",
+        "Tap to Pay will be ready soon. Please try again in a moment.",
+      );
+      return;
+    }
 
     setPaymentLoading("tap");
     try {
       const amount = toAmount(tapSummary.total || 0);
+      // Do not await this request. The native reader must retain its existing
+      // one-second launch path while backend transaction reconciliation starts
+      // in parallel.
+      void startTapToPayAttempt_API(tapToPayAttempt.id).catch((error) => {
+        console.warn("Tap to Pay timeout could not be started", error?.message);
+      });
       const tapToPayResult = await startTapToPaySale({
         amount,
         currency: "USD",
-        orderNumber: tapOrder?.orderNumber,
+        reference: tapToPayAttempt.reference,
       });
 
       await completeTapToPayPayment(tapToPayResult);
     } catch (error) {
+      void cancelTapToPayAttempt_API(tapToPayAttempt.id).catch(() => {});
+      checkoutAttemptKey.current = `${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}`;
+      setAttemptRefreshKey((value) => value + 1);
       if (error?.code === "E_TAP_TO_PAY_OS_UNSUPPORTED") {
         Alert.alert(
           "Software Update Required",
@@ -655,6 +710,15 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
         return;
       }
       const diagnostic = tapToPayDiagnostic(error);
+      if (isTapToPayCancellation(error, diagnostic)) {
+        Alert.alert(
+          "Tap to Pay Transaction Canceled",
+          "The transaction was canceled and no payment was approved. Ask the customer to approve the transaction and present payment again when ready.",
+          [{ text: "OK" }],
+        );
+        setPaymentLoading(null);
+        return;
+      }
       const outerDiagnostic = diagnostic.outer;
       const firstUnderlying = outerDiagnostic?.underlying;
       const secondUnderlying = firstUnderlying?.underlying;
@@ -685,6 +749,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
         invoiceNumber: payment.invoiceNumber,
         accountNumber: payment.accountNumber,
         accountType: payment.accountType,
+        tapToPayAttemptId: tapToPayAttempt.id,
       });
 
       finishCheckout(createdOrder);
@@ -752,97 +817,129 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.summaryBox}>
-            <Text style={styles.sectionTitle}>Full order</Text>
-            {order.items.map((item, index) => (
-              <View
-                key={`${item._cartLineId || item._id || "checkout-item"}-${index}`}
-                style={styles.checkoutItem}
-              >
-                <View style={styles.checkoutItemHeader}>
-                  <Text style={styles.checkoutItemName}>
-                    {index + 1}. {item.name}
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityState={{ expanded: orderSummaryExpanded }}
+              accessibilityLabel="Expand Order Summary to verify totals"
+              style={styles.summaryToggle}
+              onPress={() => setOrderSummaryExpanded((expanded) => !expanded)}
+            >
+              <View style={styles.summaryToggleCopy}>
+                <IconButton
+                  icon="information-outline"
+                  size={22}
+                  style={styles.summaryInfoIcon}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                />
+                <View style={styles.summaryToggleTextContainer}>
+                  <Text style={styles.summaryToggleTitle}>Order Summary</Text>
+                  <Text style={styles.summaryToggleHint}>
+                    Expand Order Summary to verify totals.
                   </Text>
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <IconButton
-                      icon="pencil"
-                      size={20}
-                      accessibilityLabel={`Edit ${item.name}`}
-                      onPress={() =>
-                        navigation.navigate(
-                          isEmployeeSession
-                            ? "employeePosBoardScreen"
-                            : "vendorPosMenuScreen",
-                          {
-                            editCartLineId: item._cartLineId || item._id,
-                          }
-                        )
-                      }
-                    />
-                    <Text style={styles.checkoutItemPrice}>
-                      ${toAmount(calculateItemTotalWithDiscount(item))}
-                    </Text>
-                  </View>
                 </View>
-                {[
-                  formatSelectedOptionLabels(item, "flavor", "selectedFlavors").join(", "),
-                  formatSelectedOptionLabels(item, "topping", "selectedToppings").join(", "),
-                  formatSelectedSideLabels(item).join(", "),
-                  item.selectedSubItems?.map((value) => value?.name || value?.menuItem?.name).join(", "),
-                  item.customizationInput,
-                ]
-                  .filter(Boolean)
-                  .map((detail, detailIndex) => (
-                    <Text key={`${index}-${detailIndex}`} style={styles.checkoutItemDetail}>
-                      {detail}
-                    </Text>
-                  ))}
               </View>
-            ))}
-          </View>
+              <IconButton
+                icon={orderSummaryExpanded ? "chevron-up" : "chevron-down"}
+                size={24}
+                style={styles.summaryChevron}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+              />
+            </TouchableOpacity>
 
-          <View style={styles.summaryBox}>
-            <Text style={styles.sectionTitle}>Order summary</Text>
-            <SummaryRow
-              label="Item Total"
-              value={`$${toAmount(summary.subTotal)}`}
-            />
-            <SummaryRow
-              label="Discount"
-              value={`-$${toAmount(summary.discount)}`}
-            />
-            <SummaryRow
-              label="Sales Tax"
-              value={`$${toAmount(summary.taxAmount)}`}
-            />
-            <SummaryRow
-              label="Tip"
-              value={`$${toAmount(summary.tipsAmount)}`}
-            />
-            {tapToPayOptionAvailable ? (
-              <SummaryRow
-                label="Payment Processing Fee"
-                value={`$${toAmount(tapSummary.paymentProcessingFee)}`}
-              />
+            {orderSummaryExpanded ? (
+              <>
+                <Text style={styles.expandedSectionTitle}>Full order</Text>
+                {order.items.map((item, index) => (
+                  <View
+                    key={`${item._cartLineId || item._id || "checkout-item"}-${index}`}
+                    style={styles.checkoutItem}
+                  >
+                    <View style={styles.checkoutItemHeader}>
+                      <Text style={styles.checkoutItemName}>
+                        {index + 1}. {item.name}
+                      </Text>
+                      <View style={{ flexDirection: "row", alignItems: "center" }}>
+                        <IconButton
+                          icon="pencil"
+                          size={20}
+                          accessibilityLabel={`Edit ${item.name}`}
+                          onPress={() =>
+                            navigation.navigate(
+                              isEmployeeSession
+                                ? "employeePosBoardScreen"
+                                : "vendorPosMenuScreen",
+                              {
+                                editCartLineId: item._cartLineId || item._id,
+                              }
+                            )
+                          }
+                        />
+                        <Text style={styles.checkoutItemPrice}>
+                          ${toAmount(calculateItemTotalWithDiscount(item))}
+                        </Text>
+                      </View>
+                    </View>
+                    {[
+                      formatSelectedOptionLabels(item, "flavor", "selectedFlavors").join(", "),
+                      formatSelectedOptionLabels(item, "topping", "selectedToppings").join(", "),
+                      formatSelectedSideLabels(item).join(", "),
+                      item.selectedSubItems?.map((value) => value?.name || value?.menuItem?.name).join(", "),
+                      item.customizationInput,
+                    ]
+                      .filter(Boolean)
+                      .map((detail, detailIndex) => (
+                        <Text key={`${index}-${detailIndex}`} style={styles.checkoutItemDetail}>
+                          {detail}
+                        </Text>
+                      ))}
+                  </View>
+                ))}
+
+                <SummaryRow
+                  label="Item Total"
+                  value={`$${toAmount(summary.subTotal)}`}
+                />
+                <SummaryRow
+                  label="Discount"
+                  value={`-$${toAmount(summary.discount)}`}
+                />
+                <SummaryRow
+                  label="Sales Tax"
+                  value={`$${toAmount(summary.taxAmount)}`}
+                />
+                <SummaryRow
+                  label="Tip"
+                  value={`$${toAmount(summary.tipsAmount)}`}
+                />
+                {tapToPayOptionAvailable ? (
+                  <SummaryRow
+                    label="Payment Processing Fee"
+                    value={`$${toAmount(tapSummary.paymentProcessingFee)}`}
+                  />
+                ) : null}
+                <View style={styles.divider} />
+                <SummaryRow
+                  label="Cash Total"
+                  value={`$${toAmount(summary.total)}`}
+                  bold
+                />
+                {tapToPayOptionAvailable ? (
+                  <SummaryRow
+                    label="Tap to Pay on iPhone Total"
+                    value={`$${toAmount(tapSummary.total)}`}
+                    bold
+                  />
+                ) : null}
+                {guestPhone ? (
+                  <Text style={styles.guestText}>Guest phone: {guestPhone}</Text>
+                ) : null}
+                <Text style={styles.guestText}>
+                  Created {moment().format("MM/DD/YYYY h:mm A")}
+                </Text>
+              </>
             ) : null}
-            <View style={styles.divider} />
-            <SummaryRow
-              label="Cash Total"
-              value={`$${toAmount(summary.total)}`}
-              bold
-            />
-            {tapToPayOptionAvailable ? (
-              <SummaryRow
-                label="Tap to Pay on iPhone Total"
-                value={`$${toAmount(tapSummary.total)}`}
-                bold
-              />
-            ) : null}
-            {guestPhone ? (
-              <Text style={styles.guestText}>Guest phone: {guestPhone}</Text>
-            ) : null}
-            <Text style={styles.guestText}>
-              Created {moment().format("MM/DD/YYYY h:mm A")}
-            </Text>
           </View>
 
           <View style={styles.tipBox}>
@@ -961,6 +1058,37 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   sectionTitle: { fontFamily: Mulish700, fontSize: 18, marginBottom: 10 },
+  summaryToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  summaryToggleCopy: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  summaryInfoIcon: { margin: 0, marginRight: 4 },
+  summaryToggleTextContainer: { flex: 1 },
+  summaryToggleTitle: {
+    fontFamily: Mulish700,
+    fontSize: 18,
+    color: AppColor.black,
+  },
+  summaryToggleHint: {
+    fontFamily: Mulish400,
+    color: AppColor.gray,
+    fontSize: 13,
+    marginTop: 2,
+  },
+  summaryChevron: { margin: 0, marginLeft: 8 },
+  expandedSectionTitle: {
+    fontFamily: Mulish700,
+    fontSize: 16,
+    color: AppColor.black,
+    marginTop: 16,
+    marginBottom: 2,
+  },
   checkoutItem: {
     borderTopWidth: 1,
     borderTopColor: AppColor.border,

@@ -37,6 +37,9 @@ import {
   GET_TAX_OF_LOCATION,
   PAYMENT_CHECKOUT,
   PLACE_FOOD_ORDER,
+  PREPARE_TAP_TO_PAY_ATTEMPT,
+  START_TAP_TO_PAY_ATTEMPT,
+  CANCEL_TAP_TO_PAY_ATTEMPT,
   GET_REVIEW_BY_FOODTRUCK_ID,
   GET_REVIEW_STATS_BY_FOODTRUCK_ID,
   GET_USER_DETAILS,
@@ -1223,6 +1226,43 @@ export const placePosOrder_API = async (payload) => {
     const response = await apiClient.post(PLACE_FOOD_ORDER, payload, {
       skipToken: false,
     });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const prepareTapToPayAttempt_API = async (payload) => {
+  try {
+    const response = await apiClient.post(PREPARE_TAP_TO_PAY_ATTEMPT, payload, {
+      skipToken: false,
+    });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const startTapToPayAttempt_API = async (attemptId) => {
+  try {
+    const response = await apiClient.patch(
+      START_TAP_TO_PAY_ATTEMPT(attemptId),
+      {},
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const cancelTapToPayAttempt_API = async (attemptId) => {
+  try {
+    const response = await apiClient.patch(
+      CANCEL_TAP_TO_PAY_ATTEMPT(attemptId),
+      {},
+      { skipToken: false },
+    );
     return response?.data;
   } catch (error) {
     throw error?.response?.data || error;

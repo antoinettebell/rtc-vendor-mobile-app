@@ -214,6 +214,11 @@ export const GET_ORDER_BY_ID = "/order";
 export const UPDATE_ORDER_STATUS = "/order";
 export const VALIDATE_ORDER = "/order/validate-order";
 export const PLACE_FOOD_ORDER = "/order";
+export const PREPARE_TAP_TO_PAY_ATTEMPT = "/order/tap-to-pay-attempts/prepare";
+export const START_TAP_TO_PAY_ATTEMPT = (attemptId) =>
+  `/order/tap-to-pay-attempts/${attemptId}/start`;
+export const CANCEL_TAP_TO_PAY_ATTEMPT = (attemptId) =>
+  `/order/tap-to-pay-attempts/${attemptId}/cancel`;
 export const PAYMENT_CHECKOUT = "/order/payment-checkout";
 export const REFUND_ORDER = (order_id) => `/order/${order_id}/refund`;
 export const GET_TAX_OF_LOCATION = (foodTruck_id, location_id, amount) =>
