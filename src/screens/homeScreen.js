@@ -32,7 +32,6 @@ import {
   getUserDetail_API,
   removeFcmToken_API,
   updateLocationOrdering_API,
-  updateFcmToken_API,
   updateOrderStatusByID_API,
 } from "../api/appAPI";
 import {
@@ -58,7 +57,6 @@ import {
   vendorProfileStatus,
 } from "../utils/constants";
 import { checkInstallationId } from "../helpers/notification.helper";
-import { getMessaging } from "@react-native-firebase/messaging";
 import {
   extractAdvanceOrderLocationAndTime,
   getDisabledStatuses,
@@ -920,25 +918,6 @@ const HomeScreen = ({ navigation }) => {
       getUserDataFromAPI(); // to refresh the active location data
     }, [])
   );
-
-  useEffect(() => {
-    const unsubscribe = getMessaging().onTokenRefresh(async (newToken) => {
-      console.log("FCM-Token Refreshed =>", newToken);
-
-      const deviceId = await checkInstallationId();
-      if (!deviceId) return;
-
-      try {
-        const payload = { token: newToken };
-        const response = await updateFcmToken_API({ deviceId, payload });
-        console.log("response => ", response);
-      } catch (error) {
-        console.log("error => ", error);
-      }
-    });
-
-    return unsubscribe;
-  }, []);
 
   useEffect(() => {
     dispatch(setProfileStatus(user?.requestStatus));

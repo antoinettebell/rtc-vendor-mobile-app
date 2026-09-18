@@ -13,6 +13,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import BootSplash from "react-native-bootsplash";
 import { check, request, RESULTS } from "react-native-permissions";
+import {
+  getMessaging,
+  onTokenRefresh,
+} from "@react-native-firebase/messaging";
 import { AppColor, vendorTheme } from "./src/utils/theme";
 import GlobalSnackbar from "./src/components/GlobalSnackbar";
 import {
@@ -630,44 +634,72 @@ const App = () => {
     }
 
     let cancelled = false;
+    let registrationInFlight = false;
 
     const registerPushToken = async () => {
-      const permissionGranted = await requestNotificationPermission();
-      if (!permissionGranted) {
-        return;
-      }
+      if (registrationInFlight) return;
+      registrationInFlight = true;
 
-      // iOS can receive the APNs registration shortly after the app session is
-      // restored. Retry briefly so a fast sign-in does not skip token upload.
-      for (let attempt = 0; attempt < 3 && !cancelled; attempt += 1) {
-        if (attempt > 0) {
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-        } else {
-          await new Promise((resolve) => setTimeout(resolve, 1500));
+      try {
+        const permissionGranted = await requestNotificationPermission();
+        if (!permissionGranted) return;
+
+        // iOS can receive its APNs token after authentication has completed.
+        // Retry long enough to register that token without requiring a relaunch.
+        for (let attempt = 0; attempt < 6 && !cancelled; attempt += 1) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, attempt === 0 ? 1000 : 2000),
+          );
+
+          const [deviceId, token] = await Promise.all([
+            checkInstallationId(),
+            checkFcmToken(),
+          ]);
+
+          if (cancelled || !deviceId || !token) continue;
+
+          await setFcmToken_API({ deviceId, token });
+          return;
         }
 
-        const [deviceId, token] = await Promise.all([
-          checkInstallationId(),
-          checkFcmToken(),
-        ]);
-
-        if (cancelled || !deviceId || !token) {
-          continue;
+        if (!cancelled) {
+          console.warn("Push notification token was not available.");
         }
-
-        await setFcmToken_API({ deviceId, token });
-        return;
+      } finally {
+        registrationInFlight = false;
       }
-
-      console.warn("Push notification token was not available.");
     };
 
     registerPushToken().catch(() => {
       console.warn("Push notification registration failed.");
     });
 
+    const unsubscribeTokenRefresh = onTokenRefresh(
+      getMessaging(),
+      async (token) => {
+        try {
+          const deviceId = await checkInstallationId();
+          if (!cancelled && deviceId && token) {
+            await setFcmToken_API({ deviceId, token });
+          }
+        } catch (_error) {
+          console.warn("Push notification token refresh could not be saved.");
+        }
+      },
+    );
+
+    const appStateSubscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        registerPushToken().catch(() => {
+          console.warn("Push notification registration failed.");
+        });
+      }
+    });
+
     return () => {
       cancelled = true;
+      unsubscribeTokenRefresh();
+      appStateSubscription.remove();
     };
   }, [isSignedIn, currentUser?._id]);
 
