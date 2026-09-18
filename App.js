@@ -635,36 +635,46 @@ const App = () => {
 
     let cancelled = false;
     let registrationInFlight = false;
+    let retryTimer = null;
+    let lastRegistrationAttemptAt = 0;
+
+    const scheduleRegistrationRetry = () => {
+      if (cancelled || retryTimer) return;
+      retryTimer = setTimeout(() => {
+        retryTimer = null;
+        registerPushToken().catch(() => {
+          console.warn("Push notification registration failed.");
+        });
+      }, 60000);
+    };
 
     const registerPushToken = async () => {
       if (registrationInFlight) return;
+      if (Date.now() - lastRegistrationAttemptAt < 60000) return;
+
       registrationInFlight = true;
+      lastRegistrationAttemptAt = Date.now();
 
       try {
         const permissionGranted = await requestNotificationPermission();
         if (!permissionGranted) return;
 
-        // iOS can receive its APNs token after authentication has completed.
-        // Retry long enough to register that token without requiring a relaunch.
-        for (let attempt = 0; attempt < 6 && !cancelled; attempt += 1) {
-          await new Promise((resolve) =>
-            setTimeout(resolve, attempt === 0 ? 1000 : 2000),
-          );
+        // Give iOS a moment to finish APNs registration, then make one FCM
+        // request. Firebase throttles repeated token requests on the same device.
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        const [deviceId, token] = await Promise.all([
+          checkInstallationId(),
+          checkFcmToken(),
+        ]);
 
-          const [deviceId, token] = await Promise.all([
-            checkInstallationId(),
-            checkFcmToken(),
-          ]);
-
-          if (cancelled || !deviceId || !token) continue;
-
-          await setFcmToken_API({ deviceId, token });
+        if (cancelled) return;
+        if (!deviceId || !token) {
+          console.warn("Push notification token was not available.");
+          scheduleRegistrationRetry();
           return;
         }
 
-        if (!cancelled) {
-          console.warn("Push notification token was not available.");
-        }
+        await setFcmToken_API({ deviceId, token });
       } finally {
         registrationInFlight = false;
       }
@@ -698,6 +708,7 @@ const App = () => {
 
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
       unsubscribeTokenRefresh();
       appStateSubscription.remove();
     };
