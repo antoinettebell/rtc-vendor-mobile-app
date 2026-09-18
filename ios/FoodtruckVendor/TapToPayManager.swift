@@ -8,6 +8,7 @@ import UIKit
 @objc final class TapToPayManager: NSObject {
   private var reader: MposUIReader?
   private var readerEnvironment: MposEnvironment?
+  private var preparedOnlineService: MposUIOnline?
   private var diagnosticTrace: [String] = []
   private let diagnosticLogger = Logger(
     subsystem: Bundle.main.bundleIdentifier ?? "com.rounddacorner.vendor",
@@ -165,7 +166,41 @@ import UIKit
     )
     reader = newReader
     readerEnvironment = environment
+    preparedOnlineService = nil
     return newReader
+  }
+
+  /// CyberSource 3.7.0 does not expose a separate prepare/warm-up method.
+  /// Creating the configured reader and opening its online service performs
+  /// the SDK initialization that would otherwise occur when checkout starts.
+  @MainActor
+  func prepare(environmentName: String) async throws -> [String: Any] {
+    let requestedEnvironment = environment(from: environmentName)
+    let reader = try await configuredReader(environment: requestedEnvironment)
+
+    guard case .activated(let device) = await reader.activationStatus,
+          device.environment == requestedEnvironment else {
+      logStage(
+        "reader_prepare_skipped",
+        details: "reason=not_activated environment=\(String(describing: requestedEnvironment))"
+      )
+      return [
+        "prepared": false,
+        "activated": false,
+        "environment": environmentName,
+      ]
+    }
+
+    preparedOnlineService = try await reader.mposUIOnline()
+    logStage(
+      "reader_prepared",
+      details: "environment=\(String(describing: requestedEnvironment)) device_id_suffix=\(identifierSuffix(device.deviceId))"
+    )
+    return [
+      "prepared": true,
+      "activated": true,
+      "environment": environmentName,
+    ]
   }
 
   private func ensureActivated(
@@ -350,7 +385,14 @@ import UIKit
        let viewController = Self.topViewController() {
       try await showMerchantEducation(from: viewController)
     }
-    let online = try await reader.mposUIOnline()
+    let online: MposUIOnline
+    if let preparedOnlineService {
+      online = preparedOnlineService
+      logStage("prepared_online_session_reused")
+    } else {
+      online = try await reader.mposUIOnline()
+      preparedOnlineService = online
+    }
     logStage("online_session_ready")
     let parameters = ChargeParameters(amount: amount, currency: currency, customIdentifier: reference)
     logStage("charge_started")

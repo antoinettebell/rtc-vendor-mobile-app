@@ -1057,7 +1057,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
   },
-  sectionTitle: { fontFamily: Mulish700, fontSize: 18, marginBottom: 10 },
+  sectionTitle: {
+    fontFamily: Mulish700,
+    fontSize: 18,
+    color: AppColor.black,
+    marginBottom: 10,
+  },
   summaryToggle: {
     flexDirection: "row",
     alignItems: "center",
@@ -1077,7 +1082,7 @@ const styles = StyleSheet.create({
   },
   summaryToggleHint: {
     fontFamily: Mulish400,
-    color: AppColor.gray,
+    color: AppColor.black,
     fontSize: 13,
     marginTop: 2,
   },
@@ -1103,7 +1108,7 @@ const styles = StyleSheet.create({
   checkoutItemPrice: { fontFamily: Mulish600, color: AppColor.black },
   checkoutItemDetail: {
     fontFamily: Mulish400,
-    color: AppColor.gray,
+    color: AppColor.black,
     fontSize: 13,
     marginTop: 3,
   },
@@ -1116,7 +1121,7 @@ const styles = StyleSheet.create({
   summaryValue: { fontFamily: Mulish600, color: AppColor.black },
   summaryBold: { fontFamily: Mulish700, fontSize: 16 },
   divider: { height: 1, backgroundColor: AppColor.border, marginVertical: 10 },
-  guestText: { fontFamily: Mulish400, color: AppColor.gray, marginTop: 8 },
+  guestText: { fontFamily: Mulish400, color: AppColor.black, marginTop: 8 },
   tipBox: {
     borderWidth: 1,
     borderColor: AppColor.border,
@@ -1188,7 +1193,7 @@ const styles = StyleSheet.create({
   },
   paymentButtonSubText: {
     fontFamily: Mulish400,
-    color: AppColor.gray,
+    color: AppColor.black,
     marginTop: 4,
   },
   cashPaymentButtonSubText: {

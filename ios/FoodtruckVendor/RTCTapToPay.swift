@@ -79,6 +79,35 @@ final class RTCTapToPay: NSObject {
     }
   }
 
+  @objc(prepare:resolver:rejecter:)
+  func prepare(
+    _ options: NSDictionary,
+    resolver resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    Task { @MainActor in
+      do {
+        guard #available(iOS 17.6, *) else {
+          throw unsupportedOSVersionError()
+        }
+        let result = try await manager.prepare(
+          environmentName: stringValue(options["environment"], fallback: "production")
+        )
+        resolve(result)
+      } catch let error as NSError {
+        if isOSVersionUnsupported(error) {
+          reject(
+            "E_TAP_TO_PAY_OS_UNSUPPORTED",
+            Self.unsupportedOSVersionMessage,
+            unsupportedOSVersionError(underlying: error)
+          )
+          return
+        }
+        reject(diagnosticCode(for: error), error.localizedDescription, error)
+      }
+    }
+  }
+
   @objc(startSale:resolver:rejecter:)
   func startSale(
     _ options: NSDictionary,
