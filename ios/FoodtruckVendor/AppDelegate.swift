@@ -40,10 +40,6 @@ class AppDelegate: RCTAppDelegate {
     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
   ) {
     Messaging.messaging().apnsToken = deviceToken
-    super.application(
-      application,
-      didRegisterForRemoteNotificationsWithDeviceToken: deviceToken
-    )
   }
 
   override func application(
@@ -51,10 +47,6 @@ class AppDelegate: RCTAppDelegate {
     didFailToRegisterForRemoteNotificationsWithError error: Error
   ) {
     NSLog("APNs registration failed: %@", error.localizedDescription)
-    super.application(
-      application,
-      didFailToRegisterForRemoteNotificationsWithError: error
-    )
   }
 
   override func sourceURL(for bridge: RCTBridge) -> URL? {
