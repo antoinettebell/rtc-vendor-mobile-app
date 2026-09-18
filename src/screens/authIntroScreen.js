@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Dimensions,
   Platform,
@@ -8,11 +8,18 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StatusBarManager from "../components/StatusBarManager";
 import IntroLandingArtwork from "../components/IntroLandingArtwork";
 import { AppColor, BrandColor, Mulish400, Mulish700 } from "../utils/theme";
+import TapToPayLaunchHero from "../components/TapToPayLaunchHero";
+import {
+  getTapToPayHeroStorageKey,
+  TAP_TO_PAY_PREFERRED_PLAN_SLUG,
+  TAP_TO_PAY_SIGNED_OUT_AUDIENCE,
+} from "../helpers/tapToPayMarketing.helper";
 
 const { width, height } = Dimensions.get("window");
 
@@ -45,6 +52,45 @@ const featureItems = [
 
 const AuthIntroScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
+  const [tapToPayHeroVisible, setTapToPayHeroVisible] = useState(false);
+  const tapToPayHeroStorageKey = useMemo(
+    () => getTapToPayHeroStorageKey(TAP_TO_PAY_SIGNED_OUT_AUDIENCE),
+    [],
+  );
+
+  useEffect(() => {
+    let active = true;
+    if (Platform.OS !== "ios") {
+      return () => {
+        active = false;
+      };
+    }
+
+    AsyncStorage.getItem(tapToPayHeroStorageKey)
+      .then((seen) => {
+        if (active && seen !== "1") setTapToPayHeroVisible(true);
+      })
+      .catch(() => {
+        if (active) setTapToPayHeroVisible(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [tapToPayHeroStorageKey]);
+
+  const dismissTapToPayHero = useCallback(() => {
+    setTapToPayHeroVisible(false);
+    AsyncStorage.setItem(tapToPayHeroStorageKey, "1").catch(() => undefined);
+  }, [tapToPayHeroStorageKey]);
+
+  const startTapToPaySignup = useCallback(() => {
+    dismissTapToPayHero();
+    navigation.navigate("authFoodTruckPlansScreen", {
+      signupFlow: true,
+      preferredPlanSlug: TAP_TO_PAY_PREFERRED_PLAN_SLUG,
+    });
+  }, [dismissTapToPayHero, navigation]);
 
   const handleSigninPress = () => {
     navigation.navigate("signin");
@@ -59,6 +105,11 @@ const AuthIntroScreen = ({ navigation }) => {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBarManager />
+      <TapToPayLaunchHero
+        visible={tapToPayHeroVisible}
+        onClose={dismissTapToPayHero}
+        onGetStarted={startTapToPaySignup}
+      />
       <ScrollView
         contentContainerStyle={[
           styles.content,

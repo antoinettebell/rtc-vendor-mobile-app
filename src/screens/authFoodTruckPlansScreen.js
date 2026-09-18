@@ -82,6 +82,7 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
 
   const { selectedPlan, user } = useSelector((state) => state.userReducer);
   const isSignupFlow = route?.params?.signupFlow === true;
+  const preferredPlanSlug = route?.params?.preferredPlanSlug;
   const isOnboardingPlanChange =
     route?.params?.changePlanDuringOnboarding === true;
 
@@ -449,9 +450,18 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
       if (response?.success && response?.data) {
         console.log("response => ", response);
         setPlansData(response.data.planList);
+        const preferredPlan = preferredPlanSlug
+          ? response.data.planList.find(
+              (plan) =>
+                plan?.slug === preferredPlanSlug ||
+                (preferredPlanSlug === "SUB_ELITE" && isElitePlan(plan)),
+            )
+          : null;
         if (selectedPlan) {
           // if selected plan is already set, then set the selected plan id and expanded plan id
           setSelectedPlanId(selectedPlan._id);
+        } else if (preferredPlan) {
+          setSelectedPlanId(preferredPlan._id);
         } else {
           // if selected plan is not set, then set the first plan as selected plan
           setSelectedPlanId(response.data.planList[0]._id);

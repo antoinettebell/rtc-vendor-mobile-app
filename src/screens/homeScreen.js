@@ -74,6 +74,11 @@ import {
   getMarketplaceNotificationDismissalId,
   resolveFoodMarketplaceNotificationDestination,
 } from "../helpers/marketplaceNotificationCenter.helper";
+import TapToPayLaunchHero from "../components/TapToPayLaunchHero";
+import {
+  getTapToPayHeroStorageKey,
+  TAP_TO_PAY_SIGNED_OUT_AUDIENCE,
+} from "../helpers/tapToPayMarketing.helper";
 
 const QuickStatsComponent = ({ title, subTitle, icon, onPress }) => (
   <Pressable style={styles.quickStatsContainer} onPress={onPress}>
@@ -104,7 +109,6 @@ const getNotificationStorageKey = (userId) =>
   `vendorHomeAcknowledgedNotifications:${userId || "anonymous"}`;
 const getClearedNotificationStorageKey = (userId) =>
   `vendorHomeClearedNotifications:${userId || "anonymous"}`;
-
 const HomeScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
@@ -143,9 +147,74 @@ const HomeScreen = ({ navigation }) => {
   const [orderAcceptBtnLoading, setOrderAcceptBtnLoading] = useState(false);
   const [locationTimeAdvanceData, setLocationTimeAdvanceData] = useState(null);
   const [notificationsVisible, setNotificationsVisible] = useState(false);
+  const [tapToPayHeroVisible, setTapToPayHeroVisible] = useState(false);
   const { currentOrderId, orderQueue, availabilityPrompt } = useSelector(
     (state) => state.pushNotificationReducer,
   );
+
+  const tapToPayHeroStorageKey = useMemo(
+    () => getTapToPayHeroStorageKey(user?._id),
+    [user?._id],
+  );
+  const signedOutTapToPayHeroStorageKey = useMemo(
+    () => getTapToPayHeroStorageKey(TAP_TO_PAY_SIGNED_OUT_AUDIENCE),
+    [],
+  );
+  const tapToPayHeroEligible =
+    Platform.OS === "ios" &&
+    profileStatus === vendorProfileStatus.approved &&
+    walkUpAccess.tapToPay === true &&
+    !!user?._id;
+
+  useEffect(() => {
+    let active = true;
+
+    if (!tapToPayHeroEligible) {
+      setTapToPayHeroVisible(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    Promise.all([
+      AsyncStorage.getItem(tapToPayHeroStorageKey),
+      AsyncStorage.getItem(signedOutTapToPayHeroStorageKey),
+    ])
+      .then(([userSeen, signedOutSeen]) => {
+        if (!active) return;
+        if (userSeen === "1" || signedOutSeen === "1") {
+          setTapToPayHeroVisible(false);
+          if (userSeen !== "1" && signedOutSeen === "1") {
+            AsyncStorage.setItem(tapToPayHeroStorageKey, "1").catch(
+              () => undefined,
+            );
+          }
+          return;
+        }
+        setTapToPayHeroVisible(true);
+      })
+      .catch(() => {
+        if (active) setTapToPayHeroVisible(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    signedOutTapToPayHeroStorageKey,
+    tapToPayHeroEligible,
+    tapToPayHeroStorageKey,
+  ]);
+
+  const dismissTapToPayHero = useCallback(() => {
+    setTapToPayHeroVisible(false);
+    AsyncStorage.setItem(tapToPayHeroStorageKey, "1").catch(() => undefined);
+  }, [tapToPayHeroStorageKey]);
+
+  const openTapToPaySetup = useCallback(() => {
+    dismissTapToPayHero();
+    navigation.navigate("authTapToPaySetupScreen");
+  }, [dismissTapToPayHero, navigation]);
 
   const completeSignOut = async () => {
     try {
@@ -964,6 +1033,12 @@ const HomeScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <StatusBarManager />
+
+      <TapToPayLaunchHero
+        visible={tapToPayHeroVisible}
+        onClose={dismissTapToPayHero}
+        onGetStarted={openTapToPaySetup}
+      />
 
       {/* Header */}
       <View
