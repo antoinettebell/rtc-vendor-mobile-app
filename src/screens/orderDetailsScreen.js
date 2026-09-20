@@ -32,6 +32,10 @@ import {
 } from "../utils/constants";
 import { getRewardItemsDisplay } from "../helpers/discount.helper";
 import { printOrderTickets } from "../helpers/print.helper";
+import {
+  getNestedOrderItemDetails,
+  getOrderItemSelectionLines,
+} from "../helpers/orderItemDetails.helper";
 import CustomPrepTimeModal from "../components/CustomPrepTimeModal";
 import {
   calculateTotalPreparationTime,
@@ -697,9 +701,12 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     itm?.selectedDiscountComboSides || [],
                 };
                 const comboItemsList =
-                  menuItem?.comboItems?.length > 0
-                    ? menuItem.comboItems
-                    : itm?.comboItems || [];
+                  itm?.comboItems?.length > 0
+                    ? itm.comboItems
+                    : menuItem?.comboItems || [];
+                const comboItemDetails = getNestedOrderItemDetails({
+                  comboItems: comboItemsList,
+                });
                 const rewardItems = getRewardItemsDisplay(menuItem, itm?.qty);
                 const hasRewardNested = rewardItems.length > 0;
                 const hasComboNested = comboItemsList.length > 0;
@@ -850,7 +857,9 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                         <Text style={styles.nestedSectionLabel}>
                           {comboSectionLabel}
                         </Text>
-                        {comboItemsList.map((comboItem, cIdx) => (
+                        {comboItemsList.map((comboItem, cIdx) => {
+                          const comboDetail = comboItemDetails[cIdx];
+                          return (
                           <View
                             style={[
                               styles.nestedItemRow,
@@ -865,7 +874,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                             />
                             <View style={styles.nestedItemDetails}>
                               <Text style={styles.nestedItemBadgeCombo}>
-                                Combo item
+                                {comboItem?.isAddOn ? "Add On" : "Combo item"}
                               </Text>
                               <Text
                                 style={styles.nestedItemTitle}
@@ -881,20 +890,28 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                                   {comboItem.description}
                                 </Text>
                               ) : null}
+                              {getOrderItemSelectionLines(comboItem).map(
+                                (line, lineIndex) => (
+                                  <Text
+                                    key={`combo-selection-${lineIndex}`}
+                                    style={styles.nestedItemDesc}
+                                  >
+                                    {line}
+                                  </Text>
+                                )
+                              )}
                               <Text style={styles.nestedItemPriceMuted}>
-                                Part of combo
+                                {comboDetail?.costLabel || "Included in combo"}
                               </Text>
                             </View>
                             <View style={styles.nestedRowRight}>
                               <Text
                                 style={styles.nestedQtyText}
-                              >{`×${itm.qty}`}</Text>
-                              <Text style={styles.nestedItemLinePrice}>
-                                {`$${((comboItem?.price || 0) * itm.qty).toFixed(2)}`}
-                              </Text>
+                              >{`×${comboDetail?.qty || 1}`}</Text>
                             </View>
                           </View>
-                        ))}
+                          );
+                        })}
                       </View>
                     ) : null}
                   </View>

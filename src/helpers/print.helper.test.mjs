@@ -48,8 +48,15 @@ const html = buildPrintHtml([
         comboItems: [
           {
             name: "Jazzy Chicken Fried Rice",
-            qty: 1,
+            qty: 2,
             selectedToppings: ["Extra Chicken"],
+          },
+          {
+            name: "Loaded Fried Rice",
+            qty: 1,
+            isAddOn: true,
+            selectedFlavors: ["Beef"],
+            customization: "No peas",
           },
         ],
         selectedDiscountSubItems: [
@@ -85,7 +92,11 @@ for (const expectedText of [
   "Options/add-ons: $5.00",
   "Combo includes",
   "Jazzy Chicken Fried Rice",
+  "2 × Jazzy Chicken Fried Rice",
   "Extra Chicken",
+  "Add On · 1 × Loaded Fried Rice",
+  "Flavors: Beef",
+  "No peas",
   "Discount combo includes",
   "Reward Combo Item",
   "Vegetable Egg Roll",
