@@ -69,6 +69,12 @@ const isOptionSelectionComplete = (hasChoices, selectedOptions, maxCount) => {
  */
 const SubItemRow = memo(({ subItem, isSelected, onToggle }) => {
   const childItem = getComboChildItem(subItem);
+  const configuredQty = Math.max(1, Number(subItem?.qty) || 1);
+  const configuredPrice = subItem?.isAddOn
+    ? `+$${Number(childItem?.price || 0).toFixed(2)}`
+    : subItem?.hasAdditionalCost
+      ? `+$${Number(subItem?.additionalCost || 0).toFixed(2)}`
+      : null;
   return (
   <TouchableOpacity
     style={styles.subItemRowContainer}
@@ -89,11 +95,7 @@ const SubItemRow = memo(({ subItem, isSelected, onToggle }) => {
     </View>
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
       <Text style={styles.subItemPrice}>
-        {subItem?.isAddOn
-          ? `+$${Number(childItem?.price || 0).toFixed(2)}`
-          : subItem?.hasAdditionalCost
-          ? `+$${Number(subItem?.additionalCost || 0).toFixed(2)}`
-          : `x${subItem?.qty}`}
+        {`x${configuredQty}${configuredPrice ? `  ${configuredPrice}` : ""}`}
         {/* {`$${(subItem?.menuItem?.price || 0).toFixed(2)}`} */}
       </Text>
       <View
