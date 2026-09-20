@@ -1,3 +1,5 @@
+import { normalizeMenuOptions } from "./discount.helper.js";
+
 const asArray = (value) => (Array.isArray(value) ? value : []);
 
 const displayValue = (value) => {
@@ -8,19 +10,60 @@ const displayValue = (value) => {
   return String(value.name || value.label || "").trim();
 };
 
-const displayList = (values) =>
-  asArray(values).map(displayValue).filter(Boolean).join(", ");
+const money = (value) => (Number(value) || 0).toFixed(2);
+
+export const formatSelectedOptionLabels = (item, type, selectedKey) => {
+  const pricedOptions = normalizeMenuOptions(item, type);
+  return asArray(item?.[selectedKey]).map((selected) => {
+    const name = displayValue(selected);
+    const match = pricedOptions.find(
+      (option) => option.name.trim().toLowerCase() === name.toLowerCase()
+    );
+    const directCost =
+      typeof selected === "object" && selected?.hasCost !== false
+        ? Number(selected?.cost ?? selected?.price ?? 0) || 0
+        : 0;
+    const cost = match?.hasCost ? Number(match.cost) || 0 : directCost;
+    return cost > 0 ? `${name} +$${money(cost)}` : name;
+  });
+};
+
+export const formatSelectedSideLabels = (item) =>
+  asArray(item?.selectedComboSides).map((selected) => {
+    const name = displayValue(selected);
+    const option = asArray(item?.comboSideOptionCosts).find(
+      (candidate) => candidate?.name === name
+    );
+    const directCost =
+      typeof selected === "object" && selected?.hasCost !== false
+        ? Number(selected?.cost ?? selected?.price ?? 0) || 0
+        : 0;
+    const cost = option?.hasCost ? Number(option.cost) || 0 : directCost;
+    return cost > 0 ? `${name} +$${money(cost)}` : name;
+  });
 
 export const getOrderItemSelectionLines = (item) => {
   const lines = [];
   const addList = (label, values) => {
-    const text = displayList(values);
+    const text = asArray(values).filter(Boolean).join(", ");
     if (text) lines.push(`${label}: ${text}`);
   };
 
-  addList("Flavors", item?.selectedFlavors || item?.displayFlavors);
-  addList("Toppings", item?.selectedToppings || item?.displayToppings);
-  addList("Sides", item?.selectedComboSides || item?.displayComboSides);
+  const flavors = formatSelectedOptionLabels(item, "flavor", "selectedFlavors");
+  const toppings = formatSelectedOptionLabels(item, "topping", "selectedToppings");
+  const sides = formatSelectedSideLabels(item);
+  addList(
+    "Flavors",
+    flavors.length > 0 ? flavors : asArray(item?.displayFlavors).map(displayValue)
+  );
+  addList(
+    "Toppings",
+    toppings.length > 0 ? toppings : asArray(item?.displayToppings).map(displayValue)
+  );
+  addList(
+    "Sides",
+    sides.length > 0 ? sides : asArray(item?.displayComboSides).map(displayValue)
+  );
 
   const customization =
     item?.customizationInput ||

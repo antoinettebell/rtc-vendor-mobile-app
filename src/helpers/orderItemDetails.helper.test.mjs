@@ -21,6 +21,11 @@ const item = {
       price: 6,
       selectedFlavors: ["Beef"],
       selectedToppings: ["Mixed Vegetables", "Extra Chicken"],
+      flavorOptions: [{ name: "Beef", hasCost: true, cost: 1 }],
+      toppingOptions: [
+        { name: "Mixed Vegetables", hasCost: false, cost: 0 },
+        { name: "Extra Chicken", hasCost: true, cost: 3 },
+      ],
       customizationInput: "No peas",
     },
   ],
@@ -35,8 +40,8 @@ assert.equal(nested[1].isAddOn, true);
 assert.equal(nested[0].costLabel, "+$2.00");
 assert.equal(nested[1].costLabel, "+$6.00");
 assert.deepEqual(nested[1].selectionLines, [
-  "Flavors: Beef",
-  "Toppings: Mixed Vegetables, Extra Chicken",
+  "Flavors: Beef +$1.00",
+  "Toppings: Mixed Vegetables, Extra Chicken +$3.00",
   "Customizations: No peas",
 ]);
 assert.deepEqual(getOrderItemSelectionLines(item), []);

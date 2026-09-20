@@ -38,9 +38,10 @@ import {
 } from "../helpers/vendorPaymentCapabilities.helper";
 import {
   calculateItemTotalWithDiscount,
-  normalizeMenuOptions,
 } from "../helpers/discount.helper";
 import {
+  formatSelectedOptionLabels,
+  formatSelectedSideLabels,
   getNestedOrderItemDetails,
 } from "../helpers/orderItemDetails.helper";
 
@@ -123,39 +124,6 @@ const toCents = (value) => Math.round(Math.max(0, Number(value) || 0) * 100);
 const centsToMoney = (value) => Number((Math.max(0, value) / 100).toFixed(2));
 const calculateProcessingFeeAmount = (baseAmount, rate) =>
   centsToMoney(Math.round(toCents(baseAmount) * rate));
-
-const formatSelectedOptionLabels = (item, type, selectedKey) => {
-  const pricedOptions = normalizeMenuOptions(item, type);
-  return (item?.[selectedKey] || []).map((selected) => {
-    const name =
-      typeof selected === "string"
-        ? selected
-        : selected?.name || selected?.label || "";
-    const match = pricedOptions.find(
-      (option) => option.name.trim().toLowerCase() === name.trim().toLowerCase()
-    );
-    const directCost =
-      typeof selected === "object" && selected?.hasCost !== false
-        ? Number(selected?.cost ?? selected?.price ?? 0) || 0
-        : 0;
-    const cost = match?.hasCost ? Number(match.cost) || 0 : directCost;
-    return cost > 0 ? `${name} +$${toAmount(cost)}` : name;
-  });
-};
-
-const formatSelectedSideLabels = (item) =>
-  (item?.selectedComboSides || []).map((selected) => {
-    const name = typeof selected === "string" ? selected : selected?.name || "";
-    const option = (item?.comboSideOptionCosts || []).find(
-      (candidate) => candidate?.name === name
-    );
-    const directCost =
-      typeof selected === "object" && selected?.hasCost !== false
-        ? Number(selected?.cost ?? selected?.price ?? 0) || 0
-        : 0;
-    const cost = option?.hasCost ? Number(option.cost) || 0 : directCost;
-    return cost > 0 ? `${name} +$${toAmount(cost)}` : name;
-  });
 
 const getActiveTruckUnits = (foodTruck) =>
   (foodTruck?.truck_units || []).filter((unit) => !unit.is_archived);
