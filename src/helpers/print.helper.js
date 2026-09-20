@@ -52,7 +52,7 @@ const getNestedItemNotes = (item) =>
     joinList("Sides", item?.selectedComboSides || item?.displayComboSides),
   ].filter(Boolean);
 
-const renderNestedItems = (items, label) => {
+const renderNestedItems = (items, label, showComboKind = false) => {
   if (!Array.isArray(items) || items.length === 0) return "";
 
   return `
@@ -65,7 +65,7 @@ const renderNestedItems = (items, label) => {
           const price = item?.displayPrice;
           return `
             <div class="nested-item">
-              ${escapeHtml(qty)} × ${escapeHtml(getNestedItemName(item))}
+              ${showComboKind ? `${escapeHtml(item?.isAddOn ? "Add On" : "Combo item")} · ` : ""}${escapeHtml(qty)} × ${escapeHtml(getNestedItemName(item))}
               ${price ? ` · ${escapeHtml(price)}` : ""}
               ${notes.length ? `<div>${escapeHtml(notes.join(" | "))}</div>` : ""}
             </div>
@@ -134,10 +134,11 @@ const renderOrderHtml = (order) => {
                         ? `<div class="notes"><strong>Notes:</strong> ${escapeHtml(notes.join(" | "))}</div>`
                         : ""
                     }
-                    ${renderNestedItems(item?.comboItems, "Combo includes")}
+                    ${renderNestedItems(item?.comboItems, "Combo includes", true)}
                     ${renderNestedItems(
                       item?.selectedDiscountSubItems,
-                      "Discount combo includes"
+                      "Discount combo includes",
+                      true
                     )}
                     ${renderNestedItems(rewardItems, "Included with offer")}
                   </td>

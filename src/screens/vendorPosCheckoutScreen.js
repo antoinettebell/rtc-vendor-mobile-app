@@ -40,6 +40,9 @@ import {
   calculateItemTotalWithDiscount,
   normalizeMenuOptions,
 } from "../helpers/discount.helper";
+import {
+  getNestedOrderItemDetails,
+} from "../helpers/orderItemDetails.helper";
 
 const toAmount = (value) => {
   const n = Number(value);
@@ -191,6 +194,10 @@ const buildComboItemPayload = (subItem, fallbackQty = 1) => {
     qty: Number(subItem?.qty || fallbackQty || 1),
   };
 
+  if (typeof subItem?.isAddOn === "boolean") {
+    payload.isAddOn = subItem.isAddOn;
+  }
+
   const customization =
     subItem?.customization || subItem?.customizationInput || "";
   if (typeof customization === "string" && customization.trim()) {
@@ -244,6 +251,7 @@ const buildConfiguredComboPayloads = ({
           ...configuredChild,
           ...selectedItem,
           comboMenuItemId: configuredId,
+          isAddOn: !!configuredItem?.isAddOn,
           qty: configuredItem?.qty || selectedItem?.qty || fallbackQty,
         },
         fallbackQty,
@@ -851,7 +859,9 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
             {orderSummaryExpanded ? (
               <>
                 <Text style={styles.expandedSectionTitle}>Full order</Text>
-                {order.items.map((item, index) => (
+                {order.items.map((item, index) => {
+                  const nestedItems = getNestedOrderItemDetails(item);
+                  return (
                   <View
                     key={`${item._cartLineId || item._id || "checkout-item"}-${index}`}
                     style={styles.checkoutItem}
@@ -882,20 +892,52 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
                       </View>
                     </View>
                     {[
-                      formatSelectedOptionLabels(item, "flavor", "selectedFlavors").join(", "),
-                      formatSelectedOptionLabels(item, "topping", "selectedToppings").join(", "),
-                      formatSelectedSideLabels(item).join(", "),
-                      item.selectedSubItems?.map((value) => value?.name || value?.menuItem?.name).join(", "),
-                      item.customizationInput,
-                    ]
-                      .filter(Boolean)
-                      .map((detail, detailIndex) => (
+                      formatSelectedOptionLabels(item, "flavor", "selectedFlavors").length
+                        ? `Flavors: ${formatSelectedOptionLabels(item, "flavor", "selectedFlavors").join(", ")}`
+                        : null,
+                      formatSelectedOptionLabels(item, "topping", "selectedToppings").length
+                        ? `Toppings: ${formatSelectedOptionLabels(item, "topping", "selectedToppings").join(", ")}`
+                        : null,
+                      formatSelectedSideLabels(item).length
+                        ? `Sides: ${formatSelectedSideLabels(item).join(", ")}`
+                        : null,
+                      item.customizationInput
+                        ? `Customizations: ${item.customizationInput}`
+                        : null,
+                    ].filter(Boolean).map((detail, detailIndex) => (
                         <Text key={`${index}-${detailIndex}`} style={styles.checkoutItemDetail}>
                           {detail}
                         </Text>
                       ))}
+                    {nestedItems.map((nestedItem, nestedIndex) => (
+                      <View
+                        key={`${index}-nested-${nestedIndex}`}
+                        style={styles.checkoutNestedItem}
+                      >
+                        <View style={styles.checkoutNestedHeader}>
+                          <Text style={styles.checkoutNestedName}>
+                            {nestedItem.isAddOn ? "Add On" : "Combo item"}: {nestedItem.name}
+                          </Text>
+                          <Text style={styles.checkoutNestedQty}>
+                            ×{nestedItem.qty}
+                          </Text>
+                        </View>
+                        {nestedItem.selectionLines.map((line, lineIndex) => (
+                          <Text
+                            key={`${index}-nested-${nestedIndex}-${lineIndex}`}
+                            style={styles.checkoutItemDetail}
+                          >
+                            {line}
+                          </Text>
+                        ))}
+                        <Text style={styles.checkoutNestedCost}>
+                          {nestedItem.costLabel}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
-                ))}
+                  );
+                })}
 
                 <SummaryRow
                   label="Item Total"
@@ -1111,6 +1153,35 @@ const styles = StyleSheet.create({
     color: AppColor.black,
     fontSize: 13,
     marginTop: 3,
+  },
+  checkoutNestedItem: {
+    marginTop: 8,
+    marginLeft: 12,
+    paddingLeft: 10,
+    borderLeftWidth: 2,
+    borderLeftColor: AppColor.primary,
+  },
+  checkoutNestedHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  checkoutNestedName: {
+    flex: 1,
+    fontFamily: Mulish600,
+    color: AppColor.black,
+    fontSize: 13,
+  },
+  checkoutNestedQty: {
+    fontFamily: Mulish700,
+    color: AppColor.black,
+    fontSize: 13,
+  },
+  checkoutNestedCost: {
+    marginTop: 3,
+    fontFamily: Mulish600,
+    color: AppColor.gray,
+    fontSize: 12,
   },
   summaryRow: {
     flexDirection: "row",
