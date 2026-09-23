@@ -33,6 +33,7 @@ import {
   isVendorPosOrder,
 } from "../helpers/order.helper";
 import { printOrderTickets } from "../helpers/print.helper";
+import { LIVE_ORDER_REFRESH_INTERVAL_MS } from "../helpers/employeeOrderWorkflow.helper";
 import AppImage from "../components/AppImage";
 
 const isRefundedOrder = (order) =>
@@ -654,11 +655,12 @@ const OrderScreen = ({ navigation }) => {
   // fetch order data from API
   const getOrderDataFromAPI = async (
     page = 1,
-    isLoadMore = false
+    isLoadMore = false,
+    silent = false,
   ) => {
     if (isLoadMore) {
       setIsLoadingMore(true);
-    } else {
+    } else if (!silent) {
       setDataLoading(true);
     }
 
@@ -699,7 +701,7 @@ const OrderScreen = ({ navigation }) => {
         })
       );
     } finally {
-      setDataLoading(false);
+      if (!silent) setDataLoading(false);
       setIsLoadingMore(false);
     }
   };
@@ -714,6 +716,11 @@ const OrderScreen = ({ navigation }) => {
   useFocusEffect(
     React.useCallback(() => {
       getOrderDataFromAPI(1, false);
+      const refreshTimer = setInterval(
+        () => getOrderDataFromAPI(1, false, true),
+        LIVE_ORDER_REFRESH_INTERVAL_MS,
+      );
+      return () => clearInterval(refreshTimer);
     }, [])
   );
 

@@ -79,6 +79,7 @@ import {
   getTapToPayHeroStorageKey,
   TAP_TO_PAY_SIGNED_OUT_AUDIENCE,
 } from "../helpers/tapToPayMarketing.helper";
+import { LIVE_ORDER_REFRESH_INTERVAL_MS } from "../helpers/employeeOrderWorkflow.helper";
 
 const QuickStatsComponent = ({ title, subTitle, icon, onPress }) => (
   <Pressable style={styles.quickStatsContainer} onPress={onPress}>
@@ -734,8 +735,8 @@ const HomeScreen = ({ navigation }) => {
   };
 
   // new order data API
-  const getOrderDataFromAPI = async () => {
-    setNewOrderLoading(true);
+  const getOrderDataFromAPI = async ({ silent = false } = {}) => {
+    if (!silent) setNewOrderLoading(true);
     try {
       const response = await getOrderList_API({
         limit: 1,
@@ -765,7 +766,7 @@ const HomeScreen = ({ navigation }) => {
         })
       );
     } finally {
-      setNewOrderLoading(false);
+      if (!silent) setNewOrderLoading(false);
     }
   };
 
@@ -985,6 +986,11 @@ const HomeScreen = ({ navigation }) => {
       getOrderDataFromAPI();
       getMarketplaceNotificationsFromAPI();
       getUserDataFromAPI(); // to refresh the active location data
+      const refreshTimer = setInterval(
+        () => getOrderDataFromAPI({ silent: true }),
+        LIVE_ORDER_REFRESH_INTERVAL_MS,
+      );
+      return () => clearInterval(refreshTimer);
     }, [])
   );
 
