@@ -48,7 +48,11 @@ import {
   isVendorPosOrder,
 } from "../helpers/order.helper";
 import AppImage from "../components/AppImage";
-import { LIVE_ORDER_REFRESH_INTERVAL_MS } from "../helpers/employeeOrderWorkflow.helper";
+import {
+  LIVE_ORDER_REFRESH_INTERVAL_MS,
+  canEmployeeRejectOrder,
+  getEmployeeNextOrderStatus,
+} from "../helpers/employeeOrderWorkflow.helper";
 
 const POS_REFUNDABLE_STATUSES = [
   orderStatusStrings.preparing,
@@ -105,6 +109,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const params = route.params;
+  const employeeOrderView = params?.employeeOrderView === true;
 
   const [dataLoading, setDataLoading] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -410,11 +415,15 @@ const OrderDetailsScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     if (orderData?.orderStatus) {
-      setNextOrderStatus(getNextOrderStatus(orderData?.orderStatus, orderData));
+      setNextOrderStatus(
+        employeeOrderView
+          ? getEmployeeNextOrderStatus(orderData)
+          : getNextOrderStatus(orderData?.orderStatus, orderData),
+      );
     } else {
       setNextOrderStatus(null);
     }
-  }, [orderData?.orderStatus]);
+  }, [employeeOrderView, orderData]);
 
   const rjctBtnDisabled =
     rejectBtnLoading ||
@@ -436,9 +445,13 @@ const OrderDetailsScreen = ({ navigation, route }) => {
       orderStatusStrings.completed,
     ].includes(orderData?.orderStatus);
   const isWalkUpOrder = isVendorPosOrder(orderData);
-  const canShowLeftAction = !isWalkUpOrder || canRefundPosOrder;
+  const canShowLeftAction = employeeOrderView
+    ? canEmployeeRejectOrder(orderData)
+    : !isWalkUpOrder || canRefundPosOrder;
   const canShowRightAction =
-    !isWalkUpOrder || nextOrderStatus !== orderStatusStrings.accepted;
+    employeeOrderView
+      ? !!nextOrderStatus
+      : !isWalkUpOrder || nextOrderStatus !== orderStatusStrings.accepted;
   const showOrderActions =
     canRefundPosOrder ||
     (!!nextOrderStatus &&

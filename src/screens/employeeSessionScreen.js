@@ -38,6 +38,7 @@ import {
   getEmployeeNextOrderStatus,
   getEmployeeOrderActionLabel,
   getOrderFulfillmentLabel,
+  isCustomerAppOrder,
 } from "../helpers/employeeOrderWorkflow.helper";
 import {
   canEmployeeOperate,
@@ -457,6 +458,13 @@ const EmployeeSessionScreen = ({ navigation }) => {
       activeOpacity={0.85}
       style={styles.orderCard}
       onPress={() => {
+        if (isCustomerAppOrder(item)) {
+          navigation.navigate("orderDetailsScreen", {
+            orderId: item?._id,
+            employeeOrderView: true,
+          });
+          return;
+        }
         if (nextStatus) {
           Alert.alert(
             "Update order status?",
