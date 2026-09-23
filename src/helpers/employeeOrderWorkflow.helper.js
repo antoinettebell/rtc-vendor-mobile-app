@@ -23,10 +23,8 @@ export const getEmployeeNextOrderStatus = (order = {}) => {
     return orderStatusStrings.ready_for_pickup;
   }
   if (
-    [
-      orderStatusStrings.ready_for_pickup,
-      orderStatusStrings.driver_picked_up,
-    ].includes(status)
+    status === orderStatusStrings.ready_for_pickup &&
+    getOrderFulfillmentLabel(order) !== "Delivery"
   ) {
     return orderStatusStrings.completed;
   }

@@ -32,6 +32,7 @@ import {
   getEmployeeNextOrderStatus,
   getEmployeeOrderActionLabel,
   getOrderFulfillmentLabel,
+  isCustomerAppOrder,
 } from "../helpers/employeeOrderWorkflow.helper";
 import { orderStatusStrings } from "../utils/constants";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
@@ -383,6 +384,25 @@ const EmployeeOrderManagementScreen = ({ navigation, route }) => {
           </View>
         ) : null}
         <View style={styles.orderActions}>
+          {isCustomerAppOrder(item) ? (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.secondaryButton}
+              onPress={() =>
+                navigation.navigate("orderDetailsScreen", {
+                  orderId: item?._id,
+                  employeeOrderView: true,
+                })
+              }
+            >
+              <MaterialCommunityIcons
+                name="eye-outline"
+                size={18}
+                color={AppColor.black}
+              />
+              <Text style={styles.secondaryButtonText}>View Details</Text>
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity
             activeOpacity={0.8}
             style={styles.secondaryButton}

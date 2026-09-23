@@ -18,7 +18,7 @@ const runnableSource = source
   .replace('import { orderStatusStrings } from "../utils/constants";\n', "")
   .replaceAll("export const ", "const ")
   .concat(
-    "\nreturn { LIVE_ORDER_REFRESH_INTERVAL_MS, getEmployeeNextOrderStatus, getEmployeeOrderActionLabel, canEmployeeRejectOrder, getOrderFulfillmentLabel };",
+    "\nreturn { LIVE_ORDER_REFRESH_INTERVAL_MS, getEmployeeNextOrderStatus, getEmployeeOrderActionLabel, canEmployeeRejectOrder, getOrderFulfillmentLabel, isCustomerAppOrder };",
   );
 const helper = Function("orderStatusStrings", runnableSource)(orderStatuses);
 
@@ -28,6 +28,14 @@ const delivery = {
   orderStatus: orderStatuses.placed,
 };
 const pickup = { ...delivery, fulfillmentType: "PICKUP" };
+const readyDelivery = {
+  ...delivery,
+  orderStatus: orderStatuses.ready_for_pickup,
+};
+const readyPickup = {
+  ...pickup,
+  orderStatus: orderStatuses.ready_for_pickup,
+};
 const walkUp = {
   orderSource: "WALK_UP_EMPLOYEE",
   orderStatus: orderStatuses.placed,
@@ -39,6 +47,13 @@ assert.equal(helper.getEmployeeOrderActionLabel(delivery), "Accept");
 assert.equal(helper.canEmployeeRejectOrder(delivery), true);
 assert.equal(helper.getOrderFulfillmentLabel(delivery), "Delivery");
 assert.equal(helper.getOrderFulfillmentLabel(pickup), "Pickup");
+assert.equal(helper.isCustomerAppOrder(delivery), true);
+assert.equal(helper.isCustomerAppOrder(walkUp), false);
+assert.equal(helper.getEmployeeNextOrderStatus(readyDelivery), null);
+assert.equal(
+  helper.getEmployeeNextOrderStatus(readyPickup),
+  orderStatuses.completed,
+);
 assert.equal(helper.getEmployeeNextOrderStatus(walkUp), orderStatuses.preparing);
 assert.equal(helper.canEmployeeRejectOrder(walkUp), false);
 
@@ -70,6 +85,8 @@ for (const employeeScreenPath of [
   assert.match(screen, /canEmployeeRejectOrder/);
   assert.match(screen, /getEmployeeNextOrderStatus/);
   assert.match(screen, /getOrderFulfillmentLabel/);
+  assert.match(screen, /isCustomerAppOrder/);
+  assert.match(screen, /navigation\.navigate\("orderDetailsScreen"/);
 }
 
 console.log("employee order workflow tests passed");

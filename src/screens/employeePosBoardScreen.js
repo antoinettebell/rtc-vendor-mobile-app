@@ -57,6 +57,7 @@ import {
   getEmployeeNextOrderStatus,
   getEmployeeOrderActionLabel,
   getOrderFulfillmentLabel,
+  isCustomerAppOrder,
 } from "../helpers/employeeOrderWorkflow.helper";
 import { foodTypeStrings, orderStatusStrings } from "../utils/constants";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
@@ -930,6 +931,24 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
           {formatMoney(getVendorOrderTotal(item))}
         </Text>
         <View style={styles.orderActions}>
+          {isCustomerAppOrder(item) ? (
+            <TouchableOpacity
+              style={styles.secondarySmall}
+              onPress={() =>
+                navigation.navigate("orderDetailsScreen", {
+                  orderId: item?._id,
+                  employeeOrderView: true,
+                })
+              }
+            >
+              <MaterialCommunityIcons
+                name="eye-outline"
+                size={17}
+                color={AppColor.black}
+              />
+              <Text style={styles.secondarySmallText}>View Details</Text>
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity
             style={styles.secondarySmall}
             onPress={() => handlePrintOrder(item)}
