@@ -23,6 +23,34 @@ export const formatSSN = (text) => {
   return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 5)}-${cleaned.slice(5, 9)}`;
 };
 
+export const getTaxIdentifierEditState = (foodTruck = {}) => {
+  const type =
+    String(foodTruck?.tax_identifier_type || "").toLowerCase() === "ssn" ||
+    (!foodTruck?.ein && Boolean(foodTruck?.ssn))
+      ? "ssn"
+      : "ein";
+  const value = type === "ssn" ? foodTruck?.ssn : foodTruck?.ein;
+  const maskedValue = foodTruck?.tax_identifier_masked ||
+    (String(value || "").includes("*") ? value : "");
+
+  return {
+    type,
+    originalType: type,
+    inputValue: maskedValue ? "" : String(value || ""),
+    maskedValue: String(maskedValue || ""),
+    hasExisting: Boolean(maskedValue || value),
+  };
+};
+
+export const buildTaxIdentifierUpdate = ({ type, inputValue }) => {
+  const value = String(inputValue || "").trim();
+  if (!value) return {};
+
+  return type === "ssn"
+    ? { ein: null, ssn: value }
+    : { ein: value, ssn: null };
+};
+
 export const getPhoneDigits = (text = "") => text.replace(/\D/g, "").slice(-10);
 
 export const formatPhoneNumber = (text = "") => {

@@ -12,6 +12,7 @@ import {
   Dimensions,
   TextInput as NativeTextInput,
   ActivityIndicator as NativeIndicator,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
@@ -84,8 +85,26 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
   const addOnActionSheetRef = useRef(null);
   const Params = React.useMemo(() => route.params, [route.params]);
 
-  const { selectedPlan } = useSelector((state) => state.userReducer);
+  const { selectedPlan, user } = useSelector((state) => state.userReducer);
   const canHighlightNewDish = !!selectedPlan?.capabilities?.newDishHighlight;
+  const activeTruckUnits = React.useMemo(
+    () => (user?.foodTruck?.truck_units || []).filter((unit) => !unit.is_archived),
+    [user?.foodTruck?.truck_units]
+  );
+  const primaryTruckUnitId =
+    activeTruckUnits.find((unit) => unit.is_primary)?._id ||
+    activeTruckUnits[0]?._id ||
+    "";
+  const truckAvailabilityOptions = React.useMemo(
+    () => [
+      { label: "All Food Trucks", value: "ALL_ACTIVE_TRUCKS" },
+      ...activeTruckUnits.map((unit) => ({
+        label: unit.name,
+        value: String(unit._id),
+      })),
+    ],
+    [activeTruckUnits]
+  );
 
   const isMeatDisable = React.useMemo(
     () => !isValidCategoryForMeat(Params?.category?.name),
@@ -121,6 +140,10 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [itemName, setItemName] = useState("");
+  const [truckAvailability, setTruckAvailability] = useState(
+    "ALL_ACTIVE_TRUCKS"
+  );
+  const originalTruckAvailabilityRef = useRef("ALL_ACTIVE_TRUCKS");
   const [itemDescription, setItemDescription] = useState("");
   const [itemPrice, setItemPrice] = useState("");
   const [discountEnabled, setDiscountEnabled] = useState(false);
@@ -190,7 +213,17 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
     toppings: "",
   });
 
-  const memoizedMenuList = React.useMemo(() => menuList, [menuList]);
+  const memoizedMenuList = React.useMemo(
+    () => menuList.filter((item) => {
+      if (item.truckServiceScope === "ALL_ACTIVE_TRUCKS") return true;
+      const itemTruckUnitIds = Array.isArray(item.truckUnitIds) && item.truckUnitIds.length
+        ? item.truckUnitIds.map((id) => String(id?._id || id))
+        : [String(primaryTruckUnitId)].filter(Boolean);
+      if (truckAvailability === "ALL_ACTIVE_TRUCKS") return false;
+      return itemTruckUnitIds.includes(String(truckAvailability));
+    }),
+    [menuList, primaryTruckUnitId, truckAvailability]
+  );
 
   // Handle upload photos press
   const onPressUploadPhotos = () => {
@@ -869,7 +902,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
           setActiveSection("pricing");
           return;
         }
-        await saveMenuAPI();
+        await saveMenuAPI(false);
       }
       return;
     }
@@ -899,6 +932,16 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
 
     // Set all the states
     setItemName(item.name);
+    const savedTruckAvailability =
+      item.truckServiceScope === "ALL_ACTIVE_TRUCKS"
+        ? "ALL_ACTIVE_TRUCKS"
+        : item.truckUnitIds?.[0]?._id ||
+          item.truckUnitIds?.[0] ||
+          primaryTruckUnitId;
+    setTruckAvailability(String(savedTruckAvailability || primaryTruckUnitId));
+    originalTruckAvailabilityRef.current = String(
+      savedTruckAvailability || primaryTruckUnitId
+    );
     setItemDescription(item.description);
     setItemPrice(strikePriceString);
     setSelectedDiscountType(item.discountType || "FIXED");
@@ -1056,7 +1099,7 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
   }, [Params?.type, categoryFoodType]);
 
   // Save menu API call (Edit and Add)
-  const saveMenuAPI = async () => {
+  const saveMenuAPI = async (truckChangeConfirmed = false) => {
     // Validate all fields (this part will now only run for the final save after all tabs are validated)
     const newErrors = { ...errors };
 
@@ -1244,6 +1287,25 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
       return;
     }
 
+    if (
+      Params.type === "edit" &&
+      truckAvailability !== originalTruckAvailabilityRef.current &&
+      !truckChangeConfirmed
+    ) {
+      Alert.alert(
+        "Food truck assignment changed",
+        "Please make sure all add-ons and sides are already assigned to the same food truck.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Continue",
+            onPress: () => void saveMenuAPI(true),
+          },
+        ]
+      );
+      return;
+    }
+
     // proceed with saving
     setLoading(true);
     try {
@@ -1260,6 +1322,14 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
         popularDish: popularDishEnabled || false,
         preparationTime: parseInt(prepTime || 0, 10) || 0,
         price: parseFloat(parseFloat(itemPrice).toFixed(2)) || 0, // will change after discount check
+        truckServiceScope:
+          truckAvailability === "ALL_ACTIVE_TRUCKS"
+            ? "ALL_ACTIVE_TRUCKS"
+            : "SELECTED_TRUCKS",
+        truckUnitIds:
+          truckAvailability === "ALL_ACTIVE_TRUCKS"
+            ? []
+            : [truckAvailability],
         ...discountParams,
       };
 
@@ -1657,6 +1727,25 @@ export default function MenuAddDishItemScreen({ navigation, route }) {
                         backgroundColor: AppColor.white,
                       }}
                     >
+                      {/* Food Truck Availability */}
+                      <View style={styles.section}>
+                        <Text style={styles.inputLabel}>
+                          {"Food Truck *"}
+                        </Text>
+                        <Dropdown
+                          style={styles.dropdown}
+                          data={truckAvailabilityOptions}
+                          labelField="label"
+                          valueField="value"
+                          value={truckAvailability}
+                          placeholder="Select food truck"
+                          onChange={(option) =>
+                            setTruckAvailability(option.value)
+                          }
+                          disable={truckAvailabilityOptions.length <= 1}
+                        />
+                      </View>
+
                       {/* Dish/Item Name */}
                       <View style={styles.section}>
                         <Text style={styles.inputLabel}>

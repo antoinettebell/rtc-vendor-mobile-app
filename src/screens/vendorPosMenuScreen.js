@@ -134,6 +134,9 @@ const VendorPosMenuScreen = ({ navigation, route }) => {
   const isEmployeeSession =
     user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
   const walkUpAccess = getWalkUpPosAccess(user, foodTruck);
+  const selectedTruckUnitId = isEmployeeSession
+    ? user?.assignedTruckUnit?._id || user?.assigned_truck_unit_id || null
+    : route?.params?.truckUnitId || null;
 
   const cartItemById = useMemo(() => {
     return order.items.reduce((acc, item) => {
@@ -183,7 +186,7 @@ const VendorPosMenuScreen = ({ navigation, route }) => {
         isEmployeeSession
           ? Promise.resolve(null)
           : getFoodtruckDetail_API(foodTruckId),
-        getAllFoodItem_API(),
+        getAllFoodItem_API({ truckUnitId: selectedTruckUnitId }),
       ]);
 
       if (truckResponse?.success && truckResponse?.data?.foodtruck) {
@@ -198,7 +201,7 @@ const VendorPosMenuScreen = ({ navigation, route }) => {
     } finally {
       setLoading(false);
     }
-  }, [foodTruckId, isEmployeeSession]);
+  }, [foodTruckId, isEmployeeSession, selectedTruckUnitId]);
 
   useEffect(() => {
     loadData();
@@ -384,10 +387,20 @@ const VendorPosMenuScreen = ({ navigation, route }) => {
     const activeTruckUnits = (foodTruck?.truck_units || []).filter(
       (unit) => !unit.is_archived
     );
+    const selectedTruckUnit = activeTruckUnits.find(
+      (unit) => String(unit._id) === String(selectedTruckUnitId)
+    );
     const openTruckUnit = activeTruckUnits.find((unit) =>
       (unit.open_locations || []).some((openLocation) => openLocation.isOrderingOpen)
     );
-    const openLocationId = (openTruckUnit?.open_locations || []).find(
+    const currentTruckUnit = isEmployeeSession
+      ? user?.assignedTruckUnit || null
+      : selectedTruckUnit ||
+        openTruckUnit ||
+        activeTruckUnits.find((unit) => unit.is_primary) ||
+        activeTruckUnits[0] ||
+        null;
+    const openLocationId = (currentTruckUnit?.open_locations || []).find(
       (openLocation) => openLocation.isOrderingOpen
     )?.locationId;
     const currentLocation = isEmployeeSession
@@ -399,13 +412,6 @@ const VendorPosMenuScreen = ({ navigation, route }) => {
           (location) => location._id === foodTruck?.currentLocation
         ) ||
         foodTruck?.locations?.[0];
-    const currentTruckUnit = isEmployeeSession
-      ? user?.assignedTruckUnit || null
-      : openTruckUnit ||
-        activeTruckUnits.find((unit) => unit.is_primary) ||
-        activeTruckUnits[0] ||
-        null;
-
     if (!currentLocation?._id) {
       Alert.alert(
         "Location required",

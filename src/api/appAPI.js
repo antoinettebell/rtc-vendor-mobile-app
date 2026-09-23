@@ -1011,9 +1011,12 @@ export const getFoodItemByID_API = async (fooditem_id) => {
  * Get all food items
  * @returns {Promise<Object>} List of all food items
  */
-export const getAllFoodItem_API = async () => {
+export const getAllFoodItem_API = async ({ truckUnitId } = {}) => {
   try {
-    const URL = `${GET_FOOD_ITEM}?limit=1000`;
+    const truckUnitQuery = truckUnitId
+      ? `&truckUnitId=${encodeURIComponent(String(truckUnitId))}`
+      : "";
+    const URL = `${GET_FOOD_ITEM}?limit=1000${truckUnitQuery}`;
     const response = await apiClient.get(URL, { skipToken: false });
     return response?.data;
   } catch (error) {
