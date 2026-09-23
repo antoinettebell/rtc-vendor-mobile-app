@@ -49,7 +49,12 @@ import {
 } from "../api/appAPI";
 import { setUser, updateFoodTruck } from "../redux/slices/userSlice";
 import { Dropdown } from "react-native-element-dropdown";
-import { formatEIN, formatSSN } from "../helpers/profile.helper";
+import {
+  buildTaxIdentifierUpdate,
+  formatEIN,
+  formatSSN,
+  getTaxIdentifierEditState,
+} from "../helpers/profile.helper";
 import AppImage from "../components/AppImage";
 import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
@@ -303,6 +308,9 @@ const EditProfileScreen = ({ navigation }) => {
   const [foodTruckName, setFoodTruckName] = useState("");
   const [selectedEmpNumberType, setSelectedEmpNumberType] = useState("ein");
   const [selectedEmpNumberText, setSelectedEmpNumberText] = useState("");
+  const [originalEmpNumberType, setOriginalEmpNumberType] = useState("ein");
+  const [existingEmpNumberMasked, setExistingEmpNumberMasked] = useState("");
+  const [hasExistingEmpNumber, setHasExistingEmpNumber] = useState(false);
   const [email, setEmail] = useState("");
   const [countryPickerVisible, setCountryPickerVisible] = useState(false);
   const [countryCode, setCountryCode] = useState("+1");
@@ -754,16 +762,12 @@ const EditProfileScreen = ({ navigation }) => {
     setFoodTruckName(FOOD_TRUCK_DATA?.name ? FOOD_TRUCK_DATA.name : "");
 
     // manage emp number
-    setSelectedEmpNumberText(
-      FOOD_TRUCK_DATA?.ein
-        ? FOOD_TRUCK_DATA.ein
-        : FOOD_TRUCK_DATA?.ssn
-          ? FOOD_TRUCK_DATA.ssn
-          : ""
-    );
-    setSelectedEmpNumberType(
-      FOOD_TRUCK_DATA?.ein ? "ein" : FOOD_TRUCK_DATA?.ssn ? "ssn" : "ein"
-    );
+    const taxIdentifierState = getTaxIdentifierEditState(FOOD_TRUCK_DATA);
+    setSelectedEmpNumberText(taxIdentifierState.inputValue);
+    setSelectedEmpNumberType(taxIdentifierState.type);
+    setOriginalEmpNumberType(taxIdentifierState.originalType);
+    setExistingEmpNumberMasked(taxIdentifierState.maskedValue);
+    setHasExistingEmpNumber(taxIdentifierState.hasExisting);
 
     // manage social media links
     processSocialMediaResponse(
@@ -906,7 +910,11 @@ const EditProfileScreen = ({ navigation }) => {
     const foodTruckNameError = validateFoodTruckName(foodTruckName);
     const mobileNumberError = validateMobileNumber(mobileNumber);
     const empNumberError =
-      selectedEmpNumberText?.length > 0
+      hasExistingEmpNumber &&
+      !selectedEmpNumberText?.length &&
+      selectedEmpNumberType !== originalEmpNumberType
+        ? `Please enter a valid 9-digit ${selectedEmpNumberType.toUpperCase()}`
+        : selectedEmpNumberText?.length > 0
         ? selectedEmpNumberType === "ein"
           ? validateEinNumber(selectedEmpNumberText)
           : validateSsnNumber(selectedEmpNumberText)
@@ -987,18 +995,15 @@ const EditProfileScreen = ({ navigation }) => {
         infoType: infoType === "Food Truck" ? "truck" : "caterer",
         socialMedia: createSocialMediaPayload().socialMedia,
       };
-      if (selectedEmpNumberText?.length > 0) {
-        if (selectedEmpNumberType === "ein") {
-          foodTruckPayload.ein = selectedEmpNumberText;
-          foodTruckPayload.ssn = null;
-        } else {
-          foodTruckPayload.ein = null;
-          foodTruckPayload.ssn = selectedEmpNumberText;
-        }
-      } else {
-        foodTruckPayload.ein = null;
-        foodTruckPayload.ssn = null;
-      }
+      Object.assign(
+        foodTruckPayload,
+        buildTaxIdentifierUpdate({
+          type: selectedEmpNumberType,
+          originalType: originalEmpNumberType,
+          inputValue: selectedEmpNumberText,
+          hasExisting: hasExistingEmpNumber,
+        })
+      );
       //   manage logo image upload
       if (selectedLogo && selectedLogo.old === undefined) {
         // for new file
@@ -1658,9 +1663,12 @@ const EditProfileScreen = ({ navigation }) => {
                     }}
                     style={styles.inputForMedia}
                     placeholder={
-                      selectedEmpNumberType === "ein"
-                        ? "XX-XXXXXXX"
-                        : "XXX-XX-XXXX"
+                      existingEmpNumberMasked &&
+                      selectedEmpNumberType === originalEmpNumberType
+                        ? existingEmpNumberMasked
+                        : selectedEmpNumberType === "ein"
+                          ? "XX-XXXXXXX"
+                          : "XXX-XX-XXXX"
                     }
                     placeholderTextColor={AppColor.placeholderTextColor}
                     keyboardType="number-pad"

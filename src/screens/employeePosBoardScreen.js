@@ -357,7 +357,10 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
   }, []);
 
   const loadMenu = useCallback(async () => {
-    const response = await getAllFoodItem_API();
+    const response = await getAllFoodItem_API({
+      truckUnitId:
+        assignedTruckUnit?._id || user?.assigned_truck_unit_id || null,
+    });
     if (response?.success && response?.data?.menuList) {
       const menuItems = response.data.menuList
         .filter((item) => item.available !== false)
@@ -367,7 +370,7 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
         );
       setItems(menuItems);
     }
-  }, []);
+  }, [assignedTruckUnit?._id, user?.assigned_truck_unit_id]);
 
   const loadOrders = useCallback(async () => {
     const response = await getEmployeeOrders_API();

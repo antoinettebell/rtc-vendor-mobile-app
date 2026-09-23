@@ -1599,7 +1599,11 @@ const HomeScreen = ({ navigation }) => {
                     title={"Takeout POS"}
                     subTitle={"Create walk-up orders"}
                     icon={require("../assets/images/cutlery.png")}
-                    onPress={() => navigation.navigate("vendorPosMenuScreen")}
+                    onPress={() =>
+                      navigation.navigate("vendorPosMenuScreen", {
+                        truckUnitId: selectedTruckUnit,
+                      })
+                    }
                   /> : null}
                   {/* <QuickStatsComponent
                     title={"Active Customers"}
