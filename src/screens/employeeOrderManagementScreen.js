@@ -26,6 +26,13 @@ import {
 } from "../api/appAPI";
 import { printOrderTickets } from "../helpers/print.helper";
 import { getVendorOrderTotal } from "../helpers/order.helper";
+import {
+  LIVE_ORDER_REFRESH_INTERVAL_MS,
+  canEmployeeRejectOrder,
+  getEmployeeNextOrderStatus,
+  getEmployeeOrderActionLabel,
+  getOrderFulfillmentLabel,
+} from "../helpers/employeeOrderWorkflow.helper";
 import { orderStatusStrings } from "../utils/constants";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 
@@ -167,20 +174,27 @@ const EmployeeOrderManagementScreen = ({ navigation, route }) => {
     }
   }, []);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const refresh = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       await Promise.all([loadOrders(), loadRequests()]);
     } catch (error) {
-      Alert.alert("Orders unavailable", error?.message || "Could not load orders.");
+      if (!silent) {
+        Alert.alert("Orders unavailable", error?.message || "Could not load orders.");
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [loadOrders, loadRequests]);
 
   useFocusEffect(
     useCallback(() => {
       refresh();
+      const refreshTimer = setInterval(
+        () => refresh({ silent: true }),
+        LIVE_ORDER_REFRESH_INTERVAL_MS,
+      );
+      return () => clearInterval(refreshTimer);
     }, [refresh]),
   );
 
@@ -201,32 +215,6 @@ const EmployeeOrderManagementScreen = ({ navigation, route }) => {
     [orders, selectedBucketConfig],
   );
 
-  const getNextOrderStatus = (status) => {
-    if ([orderStatusStrings.placed, orderStatusStrings.accepted].includes(status)) {
-      return orderStatusStrings.preparing;
-    }
-    if (status === orderStatusStrings.preparing) {
-      return orderStatusStrings.ready_for_pickup;
-    }
-    if (
-      [
-        orderStatusStrings.ready_for_pickup,
-        orderStatusStrings.driver_picked_up,
-      ].includes(status)
-    ) {
-      return orderStatusStrings.completed;
-    }
-    return null;
-  };
-
-  const getNextOrderStatusLabel = (status) => {
-    const next = getNextOrderStatus(status);
-    if (next === orderStatusStrings.preparing) return "Start Preparing";
-    if (next === orderStatusStrings.ready_for_pickup) return "Mark Ready";
-    if (next === orderStatusStrings.completed) return "Complete";
-    return null;
-  };
-
   const updateOrderStatus = async (order, nextStatus) => {
     if (!nextStatus) return;
     setActionLoadingId(order?._id);
@@ -243,6 +231,21 @@ const EmployeeOrderManagementScreen = ({ navigation, route }) => {
     } finally {
       setActionLoadingId(null);
     }
+  };
+
+  const rejectOrder = (order) => {
+    Alert.alert(
+      "Reject Order",
+      "Are you sure you want to reject this order?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Reject",
+          style: "destructive",
+          onPress: () => updateOrderStatus(order, orderStatusStrings.rejected),
+        },
+      ],
+    );
   };
 
   const handlePrintOrder = (order) => {
@@ -335,14 +338,16 @@ const EmployeeOrderManagementScreen = ({ navigation, route }) => {
   };
 
   const renderOrder = ({ item }) => {
-    const nextStatus = getNextOrderStatus(item?.orderStatus);
-    const nextStatusLabel = getNextOrderStatusLabel(item?.orderStatus);
+    const nextStatus = getEmployeeNextOrderStatus(item);
+    const nextStatusLabel = getEmployeeOrderActionLabel(item);
+    const canReject = canEmployeeRejectOrder(item);
     const isRefundPending = item?.refundStatus === "PENDING";
     const isRefunded = isRefundedOrder(item);
     const canRequestRefundCancel =
       !isRefunded &&
       !getOrderRequest(item?._id) &&
-      !isCompletedRefundWindowExpired(item);
+      !isCompletedRefundWindowExpired(item) &&
+      !canReject;
     const existingRequest = getOrderRequest(item?._id);
 
     return (
@@ -359,7 +364,7 @@ const EmployeeOrderManagementScreen = ({ navigation, route }) => {
           <Text style={styles.orderStatus}>{getDisplayOrderStatus(item)}</Text>
         </View>
         <Text style={styles.orderMeta}>
-          {(item?.items || []).length} items | ${getVendorOrderTotal(item).toFixed(2)}
+          {getOrderFulfillmentLabel(item)} | {(item?.items || []).length} items | ${getVendorOrderTotal(item).toFixed(2)}
         </Text>
         {(item?.items || []).length ? (
           <View style={styles.orderItemsBox}>
@@ -400,6 +405,16 @@ const EmployeeOrderManagementScreen = ({ navigation, route }) => {
               <Text style={styles.primarySmallButtonText}>
                 {actionLoadingId === item?._id ? "Updating..." : nextStatusLabel}
               </Text>
+            </TouchableOpacity>
+          ) : null}
+          {canReject && !isRefundPending && !isRefunded ? (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.dangerButton}
+              disabled={actionLoadingId === item?._id}
+              onPress={() => rejectOrder(item)}
+            >
+              <Text style={styles.dangerButtonText}>Reject</Text>
             </TouchableOpacity>
           ) : null}
           <TouchableOpacity

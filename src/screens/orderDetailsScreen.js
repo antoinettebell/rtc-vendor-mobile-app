@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Platform,
   ScrollView,
@@ -10,6 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import { ActivityIndicator, Divider, IconButton } from "react-native-paper";
 import moment from "moment";
 import FastImage from "@d11/react-native-fast-image";
@@ -47,6 +48,7 @@ import {
   isVendorPosOrder,
 } from "../helpers/order.helper";
 import AppImage from "../components/AppImage";
+import { LIVE_ORDER_REFRESH_INTERVAL_MS } from "../helpers/employeeOrderWorkflow.helper";
 
 const POS_REFUNDABLE_STATUSES = [
   orderStatusStrings.preparing,
@@ -342,10 +344,10 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     }
   };
 
-  const getOrderDetailsFromAPI = async () => {
-    setDataLoading(true);
+  const getOrderDetailsFromAPI = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setDataLoading(true);
     try {
-      const order_id = params.orderId;
+      const order_id = params?.orderId;
       const response = await getOrderByID_API(order_id);
       console.log("response => ", response);
       if (response?.success && response?.data) {
@@ -366,9 +368,9 @@ const OrderDetailsScreen = ({ navigation, route }) => {
         })
       );
     } finally {
-      setDataLoading(false);
+      if (!silent) setDataLoading(false);
     }
-  };
+  }, [dispatch, params?.orderId]);
 
   const printOrderDetails = async () => {
     if (!orderData || printing) return;
@@ -395,10 +397,16 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     ]);
   };
 
-  useEffect(() => {
-    console.log("params => ", params);
-    getOrderDetailsFromAPI();
-  }, [params]);
+  useFocusEffect(
+    useCallback(() => {
+      getOrderDetailsFromAPI();
+      const refreshTimer = setInterval(
+        () => getOrderDetailsFromAPI({ silent: true }),
+        LIVE_ORDER_REFRESH_INTERVAL_MS,
+      );
+      return () => clearInterval(refreshTimer);
+    }, [getOrderDetailsFromAPI]),
+  );
 
   useEffect(() => {
     if (orderData?.orderStatus) {

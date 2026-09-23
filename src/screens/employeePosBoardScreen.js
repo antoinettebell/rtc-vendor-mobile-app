@@ -51,6 +51,13 @@ import {
   getEmployeeOperationalBlock,
 } from "../helpers/employeeOperationalAccess.helper";
 import { WALK_UP_PLAN_MESSAGE } from "../helpers/vendorPaymentCapabilities.helper";
+import {
+  LIVE_ORDER_REFRESH_INTERVAL_MS,
+  canEmployeeRejectOrder,
+  getEmployeeNextOrderStatus,
+  getEmployeeOrderActionLabel,
+  getOrderFulfillmentLabel,
+} from "../helpers/employeeOrderWorkflow.helper";
 import { foodTypeStrings, orderStatusStrings } from "../utils/constants";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 
@@ -238,29 +245,6 @@ const getItemCategory = (item) =>
   item?.categoryId?.categoriesId?.name ||
   "Other";
 
-const getNextEmployeeStatus = (status) => {
-  if (
-    [orderStatusStrings.placed, orderStatusStrings.accepted].includes(status)
-  ) {
-    return orderStatusStrings.preparing;
-  }
-  if (status === orderStatusStrings.preparing) {
-    return orderStatusStrings.ready_for_pickup;
-  }
-  if (status === orderStatusStrings.ready_for_pickup) {
-    return orderStatusStrings.completed;
-  }
-  return null;
-};
-
-const getNextStatusLabel = (status) => {
-  const next = getNextEmployeeStatus(status);
-  if (next === orderStatusStrings.preparing) return "Start Preparing";
-  if (next === orderStatusStrings.ready_for_pickup) return "Mark Ready";
-  if (next === orderStatusStrings.completed) return "Complete";
-  return null;
-};
-
 const EmployeePosBoardScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -386,8 +370,8 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
     }
   }, []);
 
-  const refreshBoard = useCallback(async () => {
-    setLoading(true);
+  const refreshBoard = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const nextDashboard = await loadDashboard();
       const canOperate = canEmployeeOperate({
@@ -402,12 +386,14 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
       }
       await Promise.all([loadMenu(), loadOrders(), loadRequests()]);
     } catch (error) {
-      Alert.alert(
-        "POS unavailable",
-        error?.message || "Could not load POS board.",
-      );
+      if (!silent) {
+        Alert.alert(
+          "POS unavailable",
+          error?.message || "Could not load POS board.",
+        );
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [loadDashboard, loadMenu, loadOrders, loadRequests]);
 
@@ -430,6 +416,11 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
   useFocusEffect(
     useCallback(() => {
       refreshBoard();
+      const refreshTimer = setInterval(
+        () => refreshBoard({ silent: true }),
+        LIVE_ORDER_REFRESH_INTERVAL_MS,
+      );
+      return () => clearInterval(refreshTimer);
     }, [refreshBoard]),
   );
 
@@ -740,6 +731,23 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
     }
   };
 
+  const rejectOrder = (orderItem) => {
+    if (!requireOperationalAccess()) return;
+    Alert.alert(
+      "Reject Order",
+      "Are you sure you want to reject this order?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Reject",
+          style: "destructive",
+          onPress: () =>
+            updateOrderStatus(orderItem, orderStatusStrings.rejected),
+        },
+      ],
+    );
+  };
+
   const handlePrintOrder = (orderItem) => {
     Alert.alert(
       "Print order?",
@@ -896,12 +904,13 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
   };
 
   const renderOrder = ({ item }) => {
-    const nextStatus = getNextEmployeeStatus(item.orderStatus);
-    const nextLabel = getNextStatusLabel(item.orderStatus);
+    const nextStatus = getEmployeeNextOrderStatus(item);
+    const nextLabel = getEmployeeOrderActionLabel(item);
+    const canReject = canEmployeeRejectOrder(item);
     const existingRequest = getOrderRequest(item?._id);
     const isRefundPending = item?.refundStatus === "PENDING";
     const canRequestRefundCancel =
-      !existingRequest && !isCompletedRefundWindowExpired(item);
+      !existingRequest && !isCompletedRefundWindowExpired(item) && !canReject;
 
     return (
       <View style={styles.orderCard}>
@@ -917,7 +926,7 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
           <Text style={styles.orderStatus}>{getDisplayOrderStatus(item)}</Text>
         </View>
         <Text style={styles.orderMeta}>
-          {(item?.items || []).length} items |{" "}
+          {getOrderFulfillmentLabel(item)} | {(item?.items || []).length} items |{" "}
           {formatMoney(getVendorOrderTotal(item))}
         </Text>
         <View style={styles.orderActions}>
@@ -941,6 +950,15 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
               <Text style={styles.primarySmallText}>
                 {actionLoadingId === item?._id ? "Updating..." : nextLabel}
               </Text>
+            </TouchableOpacity>
+          ) : null}
+          {canReject && !isRefundPending ? (
+            <TouchableOpacity
+              style={styles.dangerSmall}
+              disabled={actionLoadingId === item?._id}
+              onPress={() => rejectOrder(item)}
+            >
+              <Text style={styles.dangerSmallText}>Reject</Text>
             </TouchableOpacity>
           ) : null}
           <TouchableOpacity
