@@ -37,6 +37,7 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
   const isTapToPayUpgradeFlow = route?.params?.tapToPayUpgradeFlow === true;
   const isEmployeeSession =
     user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
+  const isMarketplaceVendor = user?.vendorSubtype === "EVENT_VENDOR";
   const [compliance, setCompliance] = useState(null);
   const [loadingCompliance, setLoadingCompliance] = useState(true);
   const [complianceLoadFailed, setComplianceLoadFailed] = useState(false);
@@ -46,9 +47,12 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
   const [hasPaymentDetails, setHasPaymentDetails] = useState(null);
   const [employeeTraining, setEmployeeTraining] = useState(null);
   const [loadingEmployeeTraining, setLoadingEmployeeTraining] = useState(isEmployeeSession);
-  const terminalSerial = user?.foodTruck?.tap_to_pay_serial_number || "";
-  const isCompliant = compliance?.eligible === true
-    && Number(compliance?.score) === 100;
+  const terminalSerial = isMarketplaceVendor
+    ? user?.eventVendorProfile?.tap_to_pay_serial_number || ""
+    : user?.foodTruck?.tap_to_pay_serial_number || "";
+  const isCompliant = isMarketplaceVendor || (
+    compliance?.eligible === true && Number(compliance?.score) === 100
+  );
   const isReadyForSetup = isCompliant
     && (!isEmployeeSession || employeeTraining?.compliant === true);
   const canActivate = Platform.OS === "ios"
@@ -58,6 +62,12 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
     && !loadingEmployeeTraining;
 
   const loadCompliance = useCallback(async () => {
+    if (isMarketplaceVendor) {
+      setCompliance({ eligible: true, score: 100 });
+      setComplianceLoadFailed(false);
+      setLoadingCompliance(false);
+      return;
+    }
     setLoadingCompliance(true);
     setComplianceLoadFailed(false);
     try {
@@ -74,7 +84,7 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
     } finally {
       setLoadingCompliance(false);
     }
-  }, [isEmployeeSession, user?.foodTruck?._id]);
+  }, [isEmployeeSession, isMarketplaceVendor, user?.foodTruck?._id]);
 
   useEffect(() => {
     loadCompliance();
@@ -206,7 +216,7 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
     if (!canActivate) return;
     setActivating(true);
     try {
-      const result = await activateTapToPay();
+      const result = await activateTapToPay({ marketplaceVendor: isMarketplaceVendor });
       setTerminalSuffix(result?.terminalSerialSuffix || "");
       setTerminalReady(result?.activated !== false);
 
@@ -246,7 +256,9 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
       : isEmployeeSession && !employeeTraining?.compliant
         ? "Complete the annual Tap to Pay training in your employee profile before setting up this iPhone."
     : isCompliant
-      ? "Compliance complete — this iPhone is eligible for setup."
+      ? isMarketplaceVendor
+        ? "Marketplace Vendor account approved — this iPhone is eligible for setup."
+        : "Compliance complete — this iPhone is eligible for setup."
       : "Complete all required compliance items before activating Tap to Pay on iPhone.";
 
   return (
