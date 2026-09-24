@@ -370,6 +370,16 @@ export default function EventVendorProfileScreen({ navigation }) {
       {presentation.showApprovedStatus ? (
         <Text style={s.approved}>Profile approved. Material changes require another review.</Text>
       ) : null}
+      {access.canUseMarketplace ? (
+        <>
+          <TouchableOpacity style={s.checkout} onPress={() => navigation.navigate("eventVendorGeneralPurchaseScreen")}>
+            <Text style={s.buttonText}>Checkout</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.tapSetup} onPress={() => navigation.navigate("authTapToPaySetupScreen")}>
+            <Text style={s.tapSetupText}>Tap to Pay Setup</Text>
+          </TouchableOpacity>
+        </>
+      ) : null}
       <TouchableOpacity
         style={s.primary}
         onPress={approvedPresentation.readOnly ? () => setIsEditing(true) : requestSave}
@@ -451,6 +461,9 @@ const s = StyleSheet.create({
   setupNotice: { color: "#475569", backgroundColor: "#f1f5f9", padding: 12, borderRadius: 10, marginBottom: 12 },
   disabled: { opacity: 0.5 },
   approved: { color: "#166534", backgroundColor: "#dcfce7", padding: 12, borderRadius: 10, marginTop: 12 },
+  checkout: { backgroundColor: "#166534", padding: 15, borderRadius: 12, alignItems: "center", marginTop: 14 },
+  tapSetup: { borderWidth: 1, borderColor: "#166534", padding: 13, borderRadius: 12, alignItems: "center", marginTop: 10 },
+  tapSetupText: { color: "#166534", fontWeight: "800" },
   logoButton: {
     height: 120,
     borderRadius: 14,

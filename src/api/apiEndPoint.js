@@ -115,6 +115,10 @@ export const MARKETPLACE_EVENT_BY_ID = (event_id) =>
   `/marketplace/events/${event_id}`;
 export const MARKETPLACE_EVENT_BIDS = (event_id) =>
   `/marketplace/events/${event_id}/bids`;
+export const MARKETPLACE_AWARD_AMENDMENTS = (event_id) =>
+  `/marketplace/events/${event_id}/award-amendments`;
+export const MARKETPLACE_AWARD_AMENDMENT_RESPONSE = (amendment_id) =>
+  `/marketplace/award-amendments/${amendment_id}/respond`;
 export const MARKETPLACE_EVENT_APPLICATIONS = (event_id) =>
   `/marketplace/events/${event_id}/applications`;
 export const MARKETPLACE_EVENT_QUESTIONS = (event_id) =>
@@ -204,6 +208,14 @@ export const EVENT_VENDOR_APPLICATIONS = "/marketplace/event-vendor/applications
 export const EVENT_VENDOR_APPLY = (eventId) => `/marketplace/event-vendor/events/${eventId}/applications`;
 export const EVENT_VENDOR_WITHDRAW_APPLICATION = (applicationId) =>
   `/marketplace/event-vendor/applications/${applicationId}/withdraw`;
+export const EVENT_VENDOR_TAP_TO_PAY_ACTIVATION_CODE = "/marketplace/event-vendor/tap-to-pay/activation-code";
+export const EVENT_VENDOR_TAP_TO_PAY_TERMINAL = "/marketplace/event-vendor/tap-to-pay/terminal";
+export const EVENT_VENDOR_TAP_TO_PAY_TERMINAL_STATUS = "/marketplace/event-vendor/tap-to-pay/terminal-status";
+export const EVENT_VENDOR_GENERAL_PURCHASE_PREPARE = "/marketplace/event-vendor/general-purchases/prepare";
+export const EVENT_VENDOR_GENERAL_PURCHASE_COMPLETE = (purchaseId) => `/marketplace/event-vendor/general-purchases/${purchaseId}/complete`;
+export const EVENT_VENDOR_GENERAL_PURCHASE_CANCEL = (purchaseId) => `/marketplace/event-vendor/general-purchases/${purchaseId}/cancel`;
+export const EVENT_VENDOR_GENERAL_PURCHASE_REFUND = (purchaseId) => `/marketplace/event-vendor/general-purchases/${purchaseId}/refund`;
+export const EVENT_VENDOR_GENERAL_PURCHASES = "/marketplace/event-vendor/general-purchases";
 
 // Diet
 export const GET_DIET_LIST = "/public/diet";

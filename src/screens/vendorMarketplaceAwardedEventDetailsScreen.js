@@ -5,6 +5,7 @@ import {
   Linking,
   ScrollView,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -12,7 +13,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StatusBarManager from "../components/StatusBarManager";
 import AppImage from "../components/AppImage";
 import MarketplaceImageViewer from "../components/MarketplaceImageViewer";
-import { createMarketplaceFinalPayment_API } from "../api/appAPI";
+import {
+  createMarketplaceFinalPayment_API,
+  getMarketplaceAwardAmendments_API,
+  respondToMarketplaceAwardAmendment_API,
+} from "../api/appAPI";
 import { getPublicEventImages } from "../helpers/eventVendorPresentation.helper";
 import {
   MarketplaceHeader,
@@ -368,6 +373,9 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
   const [closingEvent, setClosingEvent] = useState(false);
   const [imageViewerIndex, setImageViewerIndex] = useState(null);
   const [currentTime, setCurrentTime] = useState(Date.now());
+  const [awardAmendments, setAwardAmendments] = useState([]);
+  const [amendedAmounts, setAmendedAmounts] = useState({});
+  const [amendmentActionId, setAmendmentActionId] = useState(null);
   const closeState = record?.vendor_event_close || {};
   const closeAvailableAt = closeState.available_at
     ? new Date(closeState.available_at).getTime()
@@ -395,6 +403,59 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
     const interval = setInterval(() => setCurrentTime(Date.now()), 30000);
     return () => clearInterval(interval);
   }, [closeAvailableAt, showVendorCloseEvent]);
+
+  const eventId = event?.event_id || bid?.event_id;
+  const loadAwardAmendments = async () => {
+    if (!eventId || itemType !== "BID") return;
+    try {
+      const response = await getMarketplaceAwardAmendments_API(eventId);
+      setAwardAmendments(response?.data?.amendments || []);
+    } catch (error) {
+      Alert.alert("Award Amendment", error?.message || "Unable to load award amendments.");
+    }
+  };
+
+  useEffect(() => {
+    loadAwardAmendments();
+  }, [eventId, itemType]);
+
+  const submitAmendmentResponse = (amendment, responseType) => {
+    const proposedAmount = amendedAmounts[amendment.amendment_id];
+    if (responseType === "REVISED" && (
+      proposedAmount === undefined || proposedAmount === "" ||
+      !Number.isFinite(Number(proposedAmount)) || Number(proposedAmount) < 0
+    )) {
+      Alert.alert("Award Amendment", "Enter a valid amended price.");
+      return;
+    }
+    Alert.alert(
+      responseType === "RECONFIRMED" ? "Reconfirm Award" : "Submit Amended Price",
+      responseType === "RECONFIRMED"
+        ? "Reconfirm your current awarded price for the updated VIP guest count?"
+        : "Submit this amended price to the event coordinator for review?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Submit",
+          onPress: async () => {
+            setAmendmentActionId(amendment.amendment_id);
+            try {
+              await respondToMarketplaceAwardAmendment_API({
+                amendment_id: amendment.amendment_id,
+                response_type: responseType,
+                proposed_amount: proposedAmount,
+              });
+              await loadAwardAmendments();
+            } catch (error) {
+              Alert.alert("Award Amendment", error?.message || "Unable to submit your response.");
+            } finally {
+              setAmendmentActionId(null);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const openCoordinatorPaymentCheckout = async () => {
     if (!canVendorCloseEvent || closingEvent) return;
@@ -515,6 +576,70 @@ const VendorMarketplaceAwardedEventDetailsScreen = ({ navigation, route }) => {
             </>
           )}
         </View>
+
+        {itemType === "BID" && awardAmendments.length ? (
+          <View style={styles.card}>
+            <Text style={styles.title}>Award Amendment</Text>
+            <Text style={styles.meta}>
+              Your existing award remains active until the coordinator accepts an amended price.
+            </Text>
+            {awardAmendments.map((amendment) => (
+              <View
+                key={amendment.amendment_id}
+                style={{ borderTopWidth: 1, borderTopColor: "#E5E7EB", marginTop: 14, paddingTop: 14 }}
+              >
+                <DetailRow label="Status" value={formatStatusLabel(amendment.status)} />
+                <DetailRow
+                  label="VIP Guest Count"
+                  value={`${amendment.previous_vip_guest_count} to ${amendment.requested_vip_guest_count}`}
+                />
+                <DetailRow label="Current Awarded Price" value={formatMoney(amendment.original_amount)} />
+                {amendment.proposed_amount != null ? (
+                  <DetailRow label="Submitted Price" value={formatMoney(amendment.proposed_amount)} />
+                ) : null}
+                {amendment.status === "AWAITING_VENDOR" ? (
+                  <>
+                    <Text style={styles.label}>Amended Price</Text>
+                    <TextInput
+                      accessibilityLabel="Amended awarded price"
+                      keyboardType="decimal-pad"
+                      placeholder="Enter amount only if revising"
+                      value={amendedAmounts[amendment.amendment_id] || ""}
+                      onChangeText={(value) => setAmendedAmounts((current) => ({
+                        ...current,
+                        [amendment.amendment_id]: value.replace(/[^0-9.]/g, ""),
+                      }))}
+                      style={styles.input}
+                    />
+                    <View style={[styles.row, { marginTop: 12 }]}>
+                      <TouchableOpacity
+                        style={[styles.secondaryButton, styles.flex]}
+                        disabled={amendmentActionId === amendment.amendment_id}
+                        onPress={() => submitAmendmentResponse(amendment, "RECONFIRMED")}
+                      >
+                        <Text style={styles.secondaryButtonText}>Reconfirm Current Price</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.button, styles.flex]}
+                        disabled={amendmentActionId === amendment.amendment_id}
+                        onPress={() => submitAmendmentResponse(amendment, "REVISED")}
+                      >
+                        {amendmentActionId === amendment.amendment_id ? (
+                          <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                          <Text style={styles.buttonText}>Submit Amended Price</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                ) : null}
+                {amendment.rejection_reason ? (
+                  <DetailRow label="Coordinator Note" value={amendment.rejection_reason} />
+                ) : null}
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         <View style={styles.card}>
           <Text style={styles.title}>Event Coordinator</Text>

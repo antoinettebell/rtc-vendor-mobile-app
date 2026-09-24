@@ -34,6 +34,14 @@ import {
   EVENT_VENDOR_APPLICATIONS,
   EVENT_VENDOR_APPLY,
   EVENT_VENDOR_WITHDRAW_APPLICATION,
+  EVENT_VENDOR_TAP_TO_PAY_ACTIVATION_CODE,
+  EVENT_VENDOR_TAP_TO_PAY_TERMINAL,
+  EVENT_VENDOR_TAP_TO_PAY_TERMINAL_STATUS,
+  EVENT_VENDOR_GENERAL_PURCHASE_PREPARE,
+  EVENT_VENDOR_GENERAL_PURCHASE_COMPLETE,
+  EVENT_VENDOR_GENERAL_PURCHASE_CANCEL,
+  EVENT_VENDOR_GENERAL_PURCHASE_REFUND,
+  EVENT_VENDOR_GENERAL_PURCHASES,
   GET_TAX_OF_LOCATION,
   PAYMENT_CHECKOUT,
   PLACE_FOOD_ORDER,
@@ -55,6 +63,8 @@ import {
   MARKETPLACE_BID_WITHDRAW,
   MARKETPLACE_EVENT_APPLICATIONS,
   MARKETPLACE_EVENT_BIDS,
+  MARKETPLACE_AWARD_AMENDMENTS,
+  MARKETPLACE_AWARD_AMENDMENT_RESPONSE,
   MARKETPLACE_EVENT_BY_ID,
   MARKETPLACE_EVENT_QUESTIONS,
   MARKETPLACE_FINAL_EVENT_PAYMENT,
@@ -556,6 +566,37 @@ export const getMarketplaceAwardedBids_API = async () => {
     const response = await apiClient.get(MARKETPLACE_AWARDED_BIDS, {
       skipToken: false,
     });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const getMarketplaceAwardAmendments_API = async (event_id) => {
+  try {
+    const response = await apiClient.get(MARKETPLACE_AWARD_AMENDMENTS(event_id), {
+      skipToken: false,
+    });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const respondToMarketplaceAwardAmendment_API = async ({
+  amendment_id,
+  response_type,
+  proposed_amount,
+}) => {
+  try {
+    const response = await apiClient.post(
+      MARKETPLACE_AWARD_AMENDMENT_RESPONSE(amendment_id),
+      {
+        response_type,
+        ...(response_type === "REVISED" ? { proposed_amount } : {}),
+      },
+      { skipToken: false },
+    );
     return response?.data;
   } catch (error) {
     throw error?.response?.data || error;
@@ -2067,3 +2108,19 @@ export const getEventVendorApplications_API = async () => (await apiClient.get(E
 export const submitEventVendorApplication_API = async (eventId, payload) => (await apiClient.post(EVENT_VENDOR_APPLY(eventId), payload, { skipToken: false }))?.data;
 export const withdrawEventVendorApplication_API = async (applicationId) =>
   (await apiClient.patch(EVENT_VENDOR_WITHDRAW_APPLICATION(applicationId), {}, { skipToken: false }))?.data;
+export const createEventVendorTapToPayActivationCode_API = async () =>
+  (await apiClient.post(EVENT_VENDOR_TAP_TO_PAY_ACTIVATION_CODE, {}, { skipToken: false }))?.data;
+export const registerEventVendorTapToPayTerminal_API = async (payload) =>
+  (await apiClient.put(EVENT_VENDOR_TAP_TO_PAY_TERMINAL, payload, { skipToken: false }))?.data;
+export const getEventVendorTapToPayTerminalStatus_API = async (params) =>
+  (await apiClient.get(EVENT_VENDOR_TAP_TO_PAY_TERMINAL_STATUS, { skipToken: false, params }))?.data;
+export const prepareEventVendorGeneralPurchase_API = async (payload) =>
+  (await apiClient.post(EVENT_VENDOR_GENERAL_PURCHASE_PREPARE, payload, { skipToken: false }))?.data;
+export const completeEventVendorGeneralPurchase_API = async (purchaseId, payload) =>
+  (await apiClient.post(EVENT_VENDOR_GENERAL_PURCHASE_COMPLETE(purchaseId), payload, { skipToken: false }))?.data;
+export const cancelEventVendorGeneralPurchase_API = async (purchaseId) =>
+  (await apiClient.post(EVENT_VENDOR_GENERAL_PURCHASE_CANCEL(purchaseId), {}, { skipToken: false }))?.data;
+export const refundEventVendorGeneralPurchase_API = async (purchaseId) =>
+  (await apiClient.post(EVENT_VENDOR_GENERAL_PURCHASE_REFUND(purchaseId), {}, { skipToken: false }))?.data;
+export const getEventVendorGeneralPurchases_API = async () =>
+  (await apiClient.get(EVENT_VENDOR_GENERAL_PURCHASES, { skipToken: false }))?.data;

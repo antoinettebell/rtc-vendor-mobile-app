@@ -106,6 +106,7 @@ import EventVendorPhotosScreen from "./src/screens/eventVendorPhotosScreen";
 import EventVendorMarketplaceScreen from "./src/screens/eventVendorMarketplaceScreen";
 import EventVendorApplicationScreen from "./src/screens/eventVendorApplicationScreen";
 import EventVendorSubmissionDetailsScreen from "./src/screens/eventVendorSubmissionDetailsScreen";
+import EventVendorGeneralPurchaseScreen from "./src/screens/eventVendorGeneralPurchaseScreen";
 import MoreMenuScreen from "./src/screens/moreMenuScreen";
 import OperationsScreen from "./src/screens/operationsScreen";
 import OperationalFormScreen from "./src/screens/operationalFormScreen";
@@ -332,6 +333,7 @@ const MainAppNavigator = ({ insets }) => (
     <Stack.Screen name="eventVendorPhotosScreen" component={EventVendorPhotosScreen} />
     <Stack.Screen name="eventVendorApplicationScreen" component={EventVendorApplicationScreen} />
     <Stack.Screen name="eventVendorSubmissionDetailsScreen" component={EventVendorSubmissionDetailsScreen} />
+    <Stack.Screen name="eventVendorGeneralPurchaseScreen" component={EventVendorGeneralPurchaseScreen} />
     <Stack.Screen name="bottomRoot">
       {() => <BottomTabNavigator insets={insets} />}
     </Stack.Screen>
