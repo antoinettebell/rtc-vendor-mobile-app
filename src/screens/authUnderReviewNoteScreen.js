@@ -31,16 +31,12 @@ import {
 } from "../helpers/eventVendorProfile.helper";
 import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
 import { getEventVendorSignOutKeys } from "../helpers/eventVendorApplicationDraft.helper";
-import {
-  getEffectiveFoodVendorPlan,
-  isTapToPaySetupEligible,
-} from "../helpers/foodVendorGuidedSetup.helper";
 
 export default function AuthUnderReviewNoteScreen() {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const navigation = useNavigation();
-  const { user, selectedPlan } = useSelector((state) => state.userReducer);
+  const { selectedSignupAddOns, user } = useSelector((state) => state.userReducer);
 
   const [loading, setLoading] = useState(false);
   const approvalHandledRef = useRef(false);
@@ -119,25 +115,19 @@ export default function AuthUnderReviewNoteScreen() {
         ).toUpperCase();
 
         if (requestStatus === "APPROVED") {
-          const effectivePlan = getEffectiveFoodVendorPlan({
-            user: refreshedUser,
-            selectedPlan,
-          });
-          const requiresTapToPayCompliance =
-            Platform.OS === "ios" && isTapToPaySetupEligible(effectivePlan);
-          const nextStep = requiresTapToPayCompliance ? "COMPLIANCE" : "PAYMENT";
           approvalHandledRef.current = true;
           dispatch(onOnBoard(true));
           dispatch(onUnderReview(false));
-          dispatch(setVendorOnboardingStep(nextStep));
+          dispatch(setVendorOnboardingStep("PROFILE"));
           navigation.reset({
             index: 0,
             routes: [
               {
-                name: requiresTapToPayCompliance
-                  ? "vendorComplianceScreen"
-                  : "authFoodTruckBankDetailScreen",
-                params: { onboardingFlow: true },
+                name: "authFoodTruckProfileScreen",
+                params: {
+                  onboardingFlow: true,
+                  addOns: selectedSignupAddOns,
+                },
               },
             ],
           });
@@ -173,7 +163,7 @@ export default function AuthUnderReviewNoteScreen() {
         setLoading(false);
       }
     }
-  }, [dispatch, navigation, selectedPlan, user?._id]);
+  }, [dispatch, navigation, selectedSignupAddOns, user?._id]);
 
   useEffect(() => {
     checkApprovalStatus({ silent: true });

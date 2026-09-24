@@ -165,22 +165,27 @@ const SplashScreen = () => {
           { includeTapToPay: Platform.OS === "ios" },
         );
         if (guidedStep !== vendorOnboardingStep) dispatch(setVendorOnboardingStep(guidedStep));
-        if (guidedStep === "COMPLIANCE") {
-        navigation.replace("vendorComplianceScreen", {
-          onboardingFlow: true,
-        });
+        if (guidedStep === "PROFILE") {
+          navigation.replace("authFoodTruckProfileScreen", {
+            onboardingFlow: true,
+            addOns: selectedSignupAddOns,
+          });
+        } else if (guidedStep === "COMPLIANCE") {
+          navigation.replace("vendorComplianceScreen", {
+            onboardingFlow: true,
+          });
         } else if (guidedStep === "TAP_TO_PAY") {
-        navigation.replace("authTapToPaySetupScreen", {
-          onboardingFlow: true,
-        });
+          navigation.replace("authTapToPaySetupScreen", {
+            onboardingFlow: true,
+          });
         } else if (guidedStep === "PAYMENT") {
-        navigation.replace("authFoodTruckBankDetailScreen", {
-          onboardingFlow: true,
-        });
+          navigation.replace("authFoodTruckBankDetailScreen", {
+            onboardingFlow: true,
+          });
         } else if (guidedStep === "MENU") {
-        navigation.replace("authMenuSetupPromptScreen");
+          navigation.replace("authMenuSetupPromptScreen");
         } else if (guidedStep === "EMPLOYEES") {
-        navigation.replace("authMenuSetupPromptScreen", { setupStep: "EMPLOYEES" });
+          navigation.replace("authMenuSetupPromptScreen", { setupStep: "EMPLOYEES" });
         }
       } else if (selectedPlan) {
         navigation.replace(

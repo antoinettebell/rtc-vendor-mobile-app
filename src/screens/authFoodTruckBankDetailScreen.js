@@ -43,7 +43,11 @@ import {
   onUnderReview,
   setVendorOnboardingStep,
 } from "../redux/slices/authSlice";
-import { getEffectiveFoodVendorPlan, getNextFoodVendorGuidedStep } from "../helpers/foodVendorGuidedSetup.helper";
+import {
+  getEffectiveFoodVendorPlan,
+  getNextFoodVendorGuidedStep,
+  getPreviousFoodVendorGuidedStep,
+} from "../helpers/foodVendorGuidedSetup.helper";
 import { setBankStatus, setProfileStatus } from "../redux/slices/userSlice";
 import StatePickerModal from "../components/StatePickerModal";
 import { getStateCode } from "../utils/usStates";
@@ -293,12 +297,22 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
           size={24}
           onPress={() => {
             if (isOnboardingFlow) {
-              dispatch(setVendorOnboardingStep("PROFILE"));
+              const previousStep = getPreviousFoodVendorGuidedStep(
+                getEffectiveFoodVendorPlan({ user, selectedPlan }),
+                "PAYMENT",
+                { includeTapToPay: Platform.OS === "ios" },
+              ) || "PROFILE";
+              const previousRoute = previousStep === "TAP_TO_PAY"
+                ? "authTapToPaySetupScreen"
+                : previousStep === "COMPLIANCE"
+                  ? "vendorComplianceScreen"
+                  : "authFoodTruckProfileScreen";
+              dispatch(setVendorOnboardingStep(previousStep));
               navigation.reset({
                 index: 0,
                 routes: [
                   {
-                    name: "authFoodTruckProfileScreen",
+                    name: previousRoute,
                     params: {
                       onboardingFlow: true,
                       addOns: selectedSignupAddOns,

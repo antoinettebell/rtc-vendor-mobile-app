@@ -41,7 +41,16 @@ import {
 import MediaPickerDialog from "../components/MediaPickerDialog";
 import StatusBarManager from "../components/StatusBarManager";
 import { useFocusEffect } from "@react-navigation/native";
-import { formatEIN, formatSSN } from "../helpers/profile.helper";
+import {
+  buildTaxIdentifierUpdate,
+  formatEIN,
+  formatSSN,
+  getTaxIdentifierEditState,
+} from "../helpers/profile.helper";
+import {
+  getEffectiveFoodVendorPlan,
+  getNextFoodVendorGuidedStep,
+} from "../helpers/foodVendorGuidedSetup.helper";
 import { empNumberList } from "../utils/constants";
 import AppImage from "../components/AppImage";
 import {
@@ -327,6 +336,23 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
     location: "",
   });
 
+  const savedTaxIdentifier = getTaxIdentifierEditState(user?.foodTruck);
+  const hasValidSavedTaxIdentifier = Boolean(savedTaxIdentifier.maskedValue)
+    || String(savedTaxIdentifier.inputValue || "").replace(/\D/g, "").length === 9;
+  const hasUsableSavedTaxIdentifier = hasValidSavedTaxIdentifier
+    && selectedEmpNumberType === savedTaxIdentifier.originalType
+    && !selectedEmpNumberText;
+
+  useEffect(() => {
+    if (!selectedEmpNumberText && savedTaxIdentifier.hasExisting) {
+      setSelectedEmpNumberType(savedTaxIdentifier.type);
+    }
+  }, [
+    savedTaxIdentifier.hasExisting,
+    savedTaxIdentifier.type,
+    selectedEmpNumberText,
+  ]);
+
   const onPressUploadLogo = () => {
     setSelectedMediaType("logo");
     setModalVisible(true);
@@ -586,7 +612,9 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
             : validateSsnNumber(selectedEmpNumberText)
               ? ""
               : "Please enter a valid 9-digit SSN"
-          : "",
+          : isOnboardingFlow && !hasUsableSavedTaxIdentifier
+            ? "A valid 9-digit EIN or SSN is required"
+            : "",
       cuisine:
         selectedCuisine.length > 0 ? "" : "At least one Cuisine is required",
       location:
@@ -668,18 +696,13 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
         locations: selectedLocations?.length ? selectedLocations : [],
       };
 
-      if (selectedEmpNumberText?.length > 0) {
-        if (selectedEmpNumberType === "ein") {
-          payload.ein = selectedEmpNumberText;
-          payload.ssn = null;
-        } else {
-          payload.ein = null;
-          payload.ssn = selectedEmpNumberText;
-        }
-      } else {
-        payload.ein = null;
-        payload.ssn = null;
-      }
+      payload = {
+        ...payload,
+        ...buildTaxIdentifierUpdate({
+          type: selectedEmpNumberType,
+          inputValue: selectedEmpNumberText,
+        }),
+      };
 
       if (logoResult) {
         payload.logo = logoResult.serverResponse;
@@ -724,12 +747,19 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
             });
           }
         } else if (isOnboardingFlow) {
-          dispatch(setVendorOnboardingStep("PAYMENT"));
+          const nextStep = getNextFoodVendorGuidedStep(
+            getEffectiveFoodVendorPlan({ user: { ...user, foodTruck: updatedFoodTruck }, selectedPlan }),
+            "PROFILE",
+            { includeTapToPay: Platform.OS === "ios" },
+          ) || "PAYMENT";
+          dispatch(setVendorOnboardingStep(nextStep));
           navigation.reset({
             index: 0,
             routes: [
               {
-                name: "authFoodTruckBankDetailScreen",
+                name: nextStep === "COMPLIANCE"
+                  ? "vendorComplianceScreen"
+                  : "authFoodTruckBankDetailScreen",
                 params: { onboardingFlow: true },
               },
             ],

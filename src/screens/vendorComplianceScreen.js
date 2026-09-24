@@ -622,12 +622,15 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       return;
     }
     if (isOnboardingFlow) {
-      dispatch(setVendorOnboardingStep("PAYMENT"));
+      dispatch(setVendorOnboardingStep("PROFILE"));
       navigation.reset({
         index: 0,
         routes: [{
-          name: "authFoodTruckBankDetailScreen",
-          params: { onboardingFlow: true },
+          name: "authFoodTruckProfileScreen",
+          params: {
+            onboardingFlow: true,
+            addOns: selectedSignupAddOns,
+          },
         }],
       });
       return;
