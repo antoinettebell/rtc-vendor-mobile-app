@@ -3,10 +3,11 @@ import { readFile } from "node:fs/promises";
 
 const source = await readFile(new URL("./foodVendorGuidedSetup.helper.js", import.meta.url), "utf8");
 const helper = await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`);
-assert.deepEqual(helper.getFoodVendorGuidedSteps({ slug: "SUB_BASIC" }), ["PAYMENT", "MENU"]);
-assert.deepEqual(helper.getFoodVendorGuidedSteps({ slug: "SUB_PLATINUM" }), ["PAYMENT", "EMPLOYEES", "MENU"]);
+assert.deepEqual(helper.getFoodVendorGuidedSteps({ slug: "SUB_BASIC" }), ["PROFILE", "PAYMENT", "MENU"]);
+assert.deepEqual(helper.getFoodVendorGuidedSteps({ slug: "SUB_PLATINUM" }), ["PROFILE", "PAYMENT", "EMPLOYEES", "MENU"]);
 assert.equal(helper.getNextFoodVendorGuidedStep({ slug: "SUB_BASIC" }, "MENU"), null);
 assert.equal(helper.getNextFoodVendorGuidedStep({ slug: "SUB_PLATINUM" }, "PAYMENT"), "EMPLOYEES");
+assert.equal(helper.getPreviousFoodVendorGuidedStep({ slug: "SUB_BASIC" }, "PAYMENT"), "PROFILE");
 assert.equal(helper.getResumableFoodVendorGuidedStep({ slug: "SUB_PLATINUM" }, "EMPLOYEES"), "EMPLOYEES");
 assert.equal(helper.getResumableFoodVendorGuidedStep({ slug: "SUB_BASIC" }, "EMPLOYEES"), "MENU");
 const tapToPayPlan = {
@@ -17,8 +18,27 @@ const tapToPayPlan = {
     walkUpPosPaymentMethods: ["CASH", "TAP_TO_PAY"],
   },
 };
-assert.deepEqual(helper.getFoodVendorGuidedSteps(tapToPayPlan), ["COMPLIANCE", "PAYMENT", "EMPLOYEES", "MENU"]);
+assert.deepEqual(
+  helper.getFoodVendorGuidedSteps(tapToPayPlan, { includeTapToPay: true }),
+  ["PROFILE", "COMPLIANCE", "TAP_TO_PAY", "PAYMENT", "EMPLOYEES", "MENU"],
+);
 assert.equal(helper.isTapToPaySetupEligible(tapToPayPlan), true);
+assert.equal(
+  helper.getNextFoodVendorGuidedStep(
+    tapToPayPlan,
+    "COMPLIANCE",
+    { includeTapToPay: true },
+  ),
+  "TAP_TO_PAY",
+);
+assert.equal(
+  helper.getPreviousFoodVendorGuidedStep(
+    tapToPayPlan,
+    "PAYMENT",
+    { includeTapToPay: true },
+  ),
+  "TAP_TO_PAY",
+);
 assert.equal(
   helper.getResumableFoodVendorGuidedStep(
     tapToPayPlan,
@@ -29,12 +49,12 @@ assert.equal(
 );
 assert.equal(
   helper.getResumableFoodVendorGuidedStep(tapToPayPlan, "TAP_TO_PAY"),
-  "COMPLIANCE",
+  "PROFILE",
   "non-iPhone sessions do not resume the iPhone-only setup stage",
 );
 assert.equal(
   helper.getResumableFoodVendorGuidedStep({ slug: "SUB_BASIC" }, "COMPLIANCE"),
-  "PAYMENT",
+  "PROFILE",
   "non-Tap-to-Pay tiers bypass compliance",
 );
 assert.equal(

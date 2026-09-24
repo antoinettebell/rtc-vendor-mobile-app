@@ -21,17 +21,37 @@ export const getEffectiveFoodVendorPlan = ({ user, selectedPlan } = {}) => {
   return hasTierIdentity ? backendPlan : selectedPlan || backendPlan || null;
 };
 
-export const getFoodVendorGuidedSteps = (plan) => [
-  ...(isTapToPaySetupEligible(plan) ? ["COMPLIANCE"] : []),
+export const getFoodVendorGuidedSteps = (
+  plan,
+  { includeTapToPay = false } = {},
+) => [
+  "PROFILE",
+  ...(isTapToPaySetupEligible(plan)
+    ? ["COMPLIANCE", ...(includeTapToPay ? ["TAP_TO_PAY"] : [])]
+    : []),
   "PAYMENT",
   ...(isEmployeeSetupEligible(plan) ? ["EMPLOYEES"] : []),
   "MENU",
 ];
 
-export const getNextFoodVendorGuidedStep = (plan, currentStep) => {
-  const steps = getFoodVendorGuidedSteps(plan);
+export const getNextFoodVendorGuidedStep = (
+  plan,
+  currentStep,
+  options,
+) => {
+  const steps = getFoodVendorGuidedSteps(plan, options);
   const index = steps.indexOf(currentStep);
   return index >= 0 ? steps[index + 1] || null : steps[0];
+};
+
+export const getPreviousFoodVendorGuidedStep = (
+  plan,
+  currentStep,
+  options,
+) => {
+  const steps = getFoodVendorGuidedSteps(plan, options);
+  const index = steps.indexOf(currentStep);
+  return index > 0 ? steps[index - 1] : null;
 };
 
 export const getResumableFoodVendorGuidedStep = (
@@ -39,14 +59,7 @@ export const getResumableFoodVendorGuidedStep = (
   checkpoint,
   { includeTapToPay = false } = {},
 ) => {
-  const steps = getFoodVendorGuidedSteps(plan);
-  if (
-    checkpoint === "TAP_TO_PAY"
-    && includeTapToPay
-    && isTapToPaySetupEligible(plan)
-  ) {
-    return "TAP_TO_PAY";
-  }
+  const steps = getFoodVendorGuidedSteps(plan, { includeTapToPay });
   if (checkpoint === "EMPLOYEES" && !isEmployeeSetupEligible(plan)) return "MENU";
   return steps.includes(checkpoint) ? checkpoint : steps[0] || null;
 };
