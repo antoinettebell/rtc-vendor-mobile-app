@@ -19,6 +19,7 @@ import {
   SupportedNetworkEnum,
 } from "@rnw-community/react-native-payments";
 import StatusBarManager from "../components/StatusBarManager";
+import TapToPayCheckoutButtonContent from "../components/TapToPayCheckoutButtonContent";
 import Config from "react-native-config";
 import { AppColor } from "../utils/theme";
 import {
@@ -529,12 +530,20 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
                 style={styles.button}
                 disabled={!!paymentLoading}
                 onPress={payWithTapToPay}
+                accessibilityRole="button"
+                accessibilityLabel="Tap to Pay on iPhone"
+                accessibilityHint={`Total ${formatMoney(payment?.total_amount || 0)}`}
               >
-                <Text style={styles.buttonText}>
-                  {paymentLoading === "tapToPay"
-                    ? "Processing..."
-                    : `Tap to Pay ${formatMoney(payment?.total_amount || 0)}`}
-                </Text>
+                {paymentLoading === "tapToPay" ? (
+                  <Text style={styles.buttonText}>Processing...</Text>
+                ) : (
+                  <TapToPayCheckoutButtonContent
+                    color={AppColor.white}
+                    labelStyle={styles.buttonText}
+                    total={`Total ${formatMoney(payment?.total_amount || 0)}`}
+                    totalStyle={[styles.buttonText, { fontSize: 13, marginTop: 2 }]}
+                  />
+                )}
               </TouchableOpacity>
             ) : null}
 
