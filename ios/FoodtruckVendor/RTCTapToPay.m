@@ -1,4 +1,12 @@
 #import <React/RCTBridgeModule.h>
+#import <React/RCTViewManager.h>
+
+@interface RCT_EXTERN_MODULE(RTCTapToPaySymbolManager, RCTViewManager)
+
+RCT_EXPORT_VIEW_PROPERTY(symbolColor, UIColor)
+RCT_EXPORT_VIEW_PROPERTY(pointSize, NSNumber)
+
+@end
 
 @interface RCT_EXTERN_MODULE(RTCTapToPay, NSObject)
 

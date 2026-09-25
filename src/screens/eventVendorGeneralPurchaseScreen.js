@@ -4,6 +4,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StatusBarManager from "../components/StatusBarManager";
+import TapToPayCheckoutButtonContent from "../components/TapToPayCheckoutButtonContent";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 import {
   cancelEventVendorGeneralPurchase_API,
@@ -137,7 +138,25 @@ export default function EventVendorGeneralPurchaseScreen({ navigation }) {
         <Text style={s.note}>Enter the sales-tax rate that applies to this purchase. Maximum 25%.</Text>
         <Text style={s.label}>Customer Mobile Number (Optional)</Text><TextInput style={s.input} value={customerPhone} onChangeText={setCustomerPhone} keyboardType="phone-pad" placeholder="For an SMS receipt" />
         <View style={s.summary}><View style={s.rowBetween}><Text>Subtotal</Text><Text>{currency(totals.subtotal)}</Text></View><View style={s.rowBetween}><Text>Sales Tax Amount</Text><Text>{currency(totals.taxAmount)}</Text></View><View style={[s.rowBetween, s.totalRow]}><Text style={s.total}>Final Amount Due</Text><Text style={s.total}>{currency(totals.total)}</Text></View></View>
-        <TouchableOpacity style={[s.primary, processing && s.disabled]} onPress={checkout} disabled={processing}>{processing ? <ActivityIndicator color="#fff" /> : <Text style={s.primaryText}>Tap to Pay {currency(totals.total)}</Text>}</TouchableOpacity>
+        <TouchableOpacity
+          style={[s.primary, processing && s.disabled]}
+          onPress={checkout}
+          disabled={processing}
+          accessibilityRole="button"
+          accessibilityLabel="Tap to Pay on iPhone"
+          accessibilityHint={`Total ${currency(totals.total)}`}
+        >
+          {processing ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <TapToPayCheckoutButtonContent
+              color="#fff"
+              labelStyle={s.primaryText}
+              total={`Total ${currency(totals.total)}`}
+              totalStyle={s.primaryTotalText}
+            />
+          )}
+        </TouchableOpacity>
         {history.length ? <><Text style={s.sectionTitle}>Recent General Purchases</Text>{history.map((purchase) => <View key={purchase.purchase_id} style={s.historyCard}><View style={s.rowBetween}><Text style={s.cardTitle}>{currency(purchase.total)}</Text><Text style={s.status}>{String(purchase.status).replaceAll("_", " ")}</Text></View><Text style={s.note}>{new Date(purchase.createdAt).toLocaleString()}</Text>{purchase.status === "COMPLETED" ? <TouchableOpacity style={s.refundButton} onPress={() => refund(purchase)}><Text style={s.remove}>Refund</Text></TouchableOpacity> : null}</View>)}</> : null}
       </ScrollView>
     </View>
@@ -145,5 +164,5 @@ export default function EventVendorGeneralPurchaseScreen({ navigation }) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" }, header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, borderBottomWidth: 1, borderBottomColor: "#e2e8f0" }, headerTitle: { fontFamily: Mulish700, fontSize: 20, color: "#172033" }, content: { padding: 18, gap: 12 }, instructions: { fontFamily: Mulish400, color: "#475569", lineHeight: 20 }, card: { borderWidth: 1, borderColor: "#cbd5e1", borderRadius: 12, padding: 14 }, cardTitle: { fontFamily: Mulish700, fontSize: 16, color: "#172033" }, rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }, taxLabelRow: { flexDirection: "row", alignItems: "center", gap: 6 }, label: { fontFamily: Mulish600, color: "#172033", marginTop: 10, marginBottom: 6 }, input: { borderWidth: 1, borderColor: "#cbd5e1", borderRadius: 10, padding: 12, color: "#172033" }, twoColumns: { flexDirection: "row", gap: 12 }, column: { flex: 1 }, lineTotal: { textAlign: "right", fontFamily: Mulish600, marginTop: 10 }, remove: { color: "#b91c1c", fontFamily: Mulish700 }, secondary: { borderWidth: 1, borderColor: AppColor.primary, borderRadius: 10, padding: 13, alignItems: "center" }, secondaryText: { color: AppColor.primary, fontFamily: Mulish700 }, note: { color: "#64748b", fontFamily: Mulish400, fontSize: 13 }, summary: { backgroundColor: "#f8fafc", borderRadius: 12, padding: 16, gap: 10 }, totalRow: { borderTopWidth: 1, borderTopColor: "#cbd5e1", paddingTop: 10 }, total: { fontFamily: Mulish700, fontSize: 18 }, primary: { backgroundColor: AppColor.primary, borderRadius: 12, padding: 16, alignItems: "center" }, primaryText: { color: "#fff", fontFamily: Mulish700, fontSize: 17 }, disabled: { opacity: 0.6 }, sectionTitle: { fontFamily: Mulish700, fontSize: 20, marginTop: 18, color: "#172033" }, historyCard: { borderWidth: 1, borderColor: "#e2e8f0", borderRadius: 10, padding: 12, gap: 6 }, status: { fontFamily: Mulish600, color: "#166534" }, refundButton: { alignSelf: "flex-start", marginTop: 6, paddingVertical: 6 },
+  container: { flex: 1, backgroundColor: "#fff" }, header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, borderBottomWidth: 1, borderBottomColor: "#e2e8f0" }, headerTitle: { fontFamily: Mulish700, fontSize: 20, color: "#172033" }, content: { padding: 18, gap: 12 }, instructions: { fontFamily: Mulish400, color: "#475569", lineHeight: 20 }, card: { borderWidth: 1, borderColor: "#cbd5e1", borderRadius: 12, padding: 14 }, cardTitle: { fontFamily: Mulish700, fontSize: 16, color: "#172033" }, rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }, taxLabelRow: { flexDirection: "row", alignItems: "center", gap: 6 }, label: { fontFamily: Mulish600, color: "#172033", marginTop: 10, marginBottom: 6 }, input: { borderWidth: 1, borderColor: "#cbd5e1", borderRadius: 10, padding: 12, color: "#172033" }, twoColumns: { flexDirection: "row", gap: 12 }, column: { flex: 1 }, lineTotal: { textAlign: "right", fontFamily: Mulish600, marginTop: 10 }, remove: { color: "#b91c1c", fontFamily: Mulish700 }, secondary: { borderWidth: 1, borderColor: AppColor.primary, borderRadius: 10, padding: 13, alignItems: "center" }, secondaryText: { color: AppColor.primary, fontFamily: Mulish700 }, note: { color: "#64748b", fontFamily: Mulish400, fontSize: 13 }, summary: { backgroundColor: "#f8fafc", borderRadius: 12, padding: 16, gap: 10 }, totalRow: { borderTopWidth: 1, borderTopColor: "#cbd5e1", paddingTop: 10 }, total: { fontFamily: Mulish700, fontSize: 18 }, primary: { backgroundColor: AppColor.primary, borderRadius: 12, padding: 16, alignItems: "center" }, primaryText: { color: "#fff", fontFamily: Mulish700, fontSize: 17 }, primaryTotalText: { color: "#fff", fontFamily: Mulish600, fontSize: 13, marginTop: 2 }, disabled: { opacity: 0.6 }, sectionTitle: { fontFamily: Mulish700, fontSize: 20, marginTop: 18, color: "#172033" }, historyCard: { borderWidth: 1, borderColor: "#e2e8f0", borderRadius: 10, padding: 12, gap: 6 }, status: { fontFamily: Mulish600, color: "#166534" }, refundButton: { alignSelf: "flex-start", marginTop: 6, paddingVertical: 6 },
 });

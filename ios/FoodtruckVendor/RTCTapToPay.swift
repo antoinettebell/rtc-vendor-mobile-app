@@ -1,6 +1,67 @@
 import Foundation
 import ProximityReader
 import React
+import UIKit
+
+@objc(RTCTapToPaySymbolManager)
+final class RTCTapToPaySymbolManager: RCTViewManager {
+  override func view() -> UIView! {
+    RTCTapToPaySymbolView()
+  }
+
+  @objc
+  override static func requiresMainQueueSetup() -> Bool {
+    true
+  }
+}
+
+private final class RTCTapToPaySymbolView: UIView {
+  private let imageView = UIImageView()
+
+  @objc var symbolColor: UIColor = .label {
+    didSet { imageView.tintColor = symbolColor }
+  }
+
+  @objc var pointSize: NSNumber = 20 {
+    didSet { updateImage() }
+  }
+
+  override init(frame: CGRect) {
+    super.init(frame: frame)
+    isAccessibilityElement = false
+    imageView.isAccessibilityElement = false
+    imageView.contentMode = .scaleAspectFit
+    imageView.tintColor = symbolColor
+    addSubview(imageView)
+    updateImage()
+  }
+
+  required init?(coder: NSCoder) {
+    super.init(coder: coder)
+    isAccessibilityElement = false
+    imageView.isAccessibilityElement = false
+    imageView.contentMode = .scaleAspectFit
+    imageView.tintColor = symbolColor
+    addSubview(imageView)
+    updateImage()
+  }
+
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    imageView.frame = bounds
+  }
+
+  private func updateImage() {
+    let configuration = UIImage.SymbolConfiguration(
+      pointSize: CGFloat(truncating: pointSize),
+      weight: .semibold
+    )
+    imageView.image = UIImage(
+      systemName: "wave.3.right.circle.fill",
+      withConfiguration: configuration
+    )
+  }
+}
 
 @objc(RTCTapToPay)
 final class RTCTapToPay: NSObject {

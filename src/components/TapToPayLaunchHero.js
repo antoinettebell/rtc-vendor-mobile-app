@@ -77,6 +77,9 @@ const styles = StyleSheet.create({
   getStartedButton: {
     alignItems: "center",
     backgroundColor: AppColor.white,
+    borderColor: AppColor.black,
+    borderRadius: 999,
+    borderWidth: 1.5,
     height: "5.4%",
     justifyContent: "center",
     left: "10.2%",

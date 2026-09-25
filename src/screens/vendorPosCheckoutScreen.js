@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IconButton } from "react-native-paper";
 import moment from "moment";
 import StatusBarManager from "../components/StatusBarManager";
+import TapToPayCheckoutButtonContent from "../components/TapToPayCheckoutButtonContent";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 import {
   checkPosTax_API,
@@ -1000,15 +1001,20 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
               style={styles.paymentButton}
               onPress={handleTapToPay}
               disabled={!!paymentLoading}
+              accessibilityRole="button"
+              accessibilityLabel="Tap to Pay on iPhone"
+              accessibilityHint={`Total $${toAmount(tapSummary.total)}`}
             >
-              <Text style={styles.paymentButtonText}>
-                {paymentLoading === "tap"
-                  ? "Processing..."
-                  : `Tap to Pay $${toAmount(tapSummary.total)}`}
-              </Text>
-              <Text style={styles.paymentButtonSubText}>
-                Card-present gateway payment
-              </Text>
+              {paymentLoading === "tap" ? (
+                <Text style={styles.paymentButtonText}>Processing...</Text>
+              ) : (
+                <TapToPayCheckoutButtonContent
+                  color={AppColor.black}
+                  labelStyle={styles.paymentButtonText}
+                  total={`Total $${toAmount(tapSummary.total)}`}
+                  totalStyle={styles.paymentButtonSubText}
+                />
+              )}
             </TouchableOpacity>
           ) : null}
 
