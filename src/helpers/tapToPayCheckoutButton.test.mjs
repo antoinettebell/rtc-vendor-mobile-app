@@ -43,5 +43,7 @@ assert.match(launchHero, />Get started</);
 assert.match(launchHero, /borderColor: AppColor\.black/);
 assert.match(launchHero, /borderRadius: 999/);
 assert.match(launchHero, /borderWidth: 1\.5/);
+assert.match(launchHero, /placeholderMask/);
+assert.match(launchHero, /pointerEvents="none"/);
 
 console.log("Tap to Pay checkout button tests passed.");

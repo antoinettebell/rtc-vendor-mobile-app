@@ -29,6 +29,7 @@ const TapToPayLaunchHero = ({ visible, onClose, onGetStarted }) => {
             accessible
             accessibilityLabel="Tap to Pay on iPhone. Accept physical debit and credit cards as well as Apple Pay and other digital wallets, right on your iPhone."
           />
+          <View pointerEvents="none" style={styles.placeholderMask} />
           <TouchableOpacity
             activeOpacity={0.8}
             style={styles.getStartedButton}
@@ -86,6 +87,14 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: "79.4%",
     width: "26.5%",
+  },
+  placeholderMask: {
+    backgroundColor: AppColor.white,
+    height: "7.2%",
+    left: "8.8%",
+    position: "absolute",
+    top: "78.5%",
+    width: "30%",
   },
   getStartedButtonText: {
     color: AppColor.black,

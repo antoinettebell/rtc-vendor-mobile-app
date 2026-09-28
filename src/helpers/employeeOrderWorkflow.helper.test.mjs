@@ -89,4 +89,15 @@ for (const employeeScreenPath of [
   assert.match(screen, /navigation\.navigate\("orderDetailsScreen"/);
 }
 
+const employeeSessionScreen = await readFile(
+  new URL("../screens/employeeSessionScreen.js", import.meta.url),
+  "utf8",
+);
+assert.match(employeeSessionScreen, />View Details</);
+assert.doesNotMatch(
+  employeeSessionScreen,
+  /<TouchableOpacity[\s\S]*?style=\{styles\.orderCard\}/,
+  "employee order status buttons must not be nested inside a clickable order card",
+);
+
 console.log("employee order workflow tests passed");

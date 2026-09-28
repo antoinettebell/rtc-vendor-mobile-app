@@ -454,32 +454,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
       !canReject;
 
     return (
-    <TouchableOpacity
-      activeOpacity={0.85}
-      style={styles.orderCard}
-      onPress={() => {
-        if (isCustomerAppOrder(item)) {
-          navigation.navigate("orderDetailsScreen", {
-            orderId: item?._id,
-            employeeOrderView: true,
-          });
-          return;
-        }
-        if (nextStatus) {
-          Alert.alert(
-            "Update order status?",
-            `Move order #${item?.orderNumber || item?._id} to ${nextStatusLabel}?`,
-            [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: nextStatusLabel,
-                onPress: () => updateOrderStatus(item, nextStatus),
-              },
-            ],
-          );
-        }
-      }}
-    >
+    <View style={styles.orderCard}>
       {(() => {
         const existingRequest = getOrderRequest(item?._id);
         return existingRequest ? (
@@ -517,6 +492,25 @@ const EmployeeSessionScreen = ({ navigation }) => {
         </View>
       ) : null}
       <View style={styles.orderActions}>
+        {isCustomerAppOrder(item) ? (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.orderSecondaryButton}
+            onPress={() =>
+              navigation.navigate("orderDetailsScreen", {
+                orderId: item?._id,
+                employeeOrderView: true,
+              })
+            }
+          >
+            <MaterialCommunityIcons
+              name="eye-outline"
+              size={18}
+              color={AppColor.black}
+            />
+            <Text style={styles.orderSecondaryButtonText}>View Details</Text>
+          </TouchableOpacity>
+        ) : null}
         <TouchableOpacity
           activeOpacity={0.8}
           style={styles.orderSecondaryButton}
@@ -565,7 +559,7 @@ const EmployeeSessionScreen = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+    </View>
     );
   };
 
