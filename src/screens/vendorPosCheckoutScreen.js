@@ -255,6 +255,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
       : ownerPaymentCapabilities.tapToPay;
   const [loading, setLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState(null);
+  const [tapToPayApprovalPending, setTapToPayApprovalPending] = useState(false);
   const [tapToPayCompliance, setTapToPayCompliance] = useState(null);
   const [tapToPayComplianceLoading, setTapToPayComplianceLoading] = useState(true);
   const [employeeTapToPayTraining, setEmployeeTapToPayTraining] = useState(null);
@@ -670,6 +671,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
         reference: tapToPayAttempt.reference,
       });
 
+      setTapToPayApprovalPending(true);
       await completeTapToPayPayment(tapToPayResult);
     } catch (error) {
       void cancelTapToPayAttempt_API(tapToPayAttempt.id).catch(() => {});
@@ -730,10 +732,10 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
       });
 
       finishCheckout(createdOrder);
-    } catch (error) {
+    } catch {
       Alert.alert(
-        "Tap to Pay on iPhone failed",
-        error?.message || "Please try again.",
+        "Payment Approved — Order Pending",
+        "The card payment was approved, but RTC could not finish creating the order. Do not charge the customer again. Check Payment Transactions or contact RTC support.",
       );
     } finally {
       setPaymentLoading(null);
@@ -998,14 +1000,21 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
           <Text style={styles.sectionTitle}>Payment method</Text>
           {tapToPayOptionAvailable ? (
             <TouchableOpacity
-              style={styles.paymentButton}
+              style={[
+                styles.paymentButton,
+                tapToPayApprovalPending && styles.paymentButtonDisabled,
+              ]}
               onPress={handleTapToPay}
-              disabled={!!paymentLoading}
+              disabled={!!paymentLoading || tapToPayApprovalPending}
               accessibilityRole="button"
               accessibilityLabel="Tap to Pay on iPhone"
               accessibilityHint={`Total $${toAmount(tapSummary.total)}`}
             >
-              {paymentLoading === "tap" ? (
+              {tapToPayApprovalPending ? (
+                <Text style={styles.paymentButtonText}>
+                  Payment Approved — Pending
+                </Text>
+              ) : paymentLoading === "tap" ? (
                 <Text style={styles.paymentButtonText}>Processing...</Text>
               ) : (
                 <TapToPayCheckoutButtonContent
@@ -1022,10 +1031,11 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
             style={[
               styles.paymentButton,
               styles.cashPaymentButton,
-              (!cashOrder || !!paymentLoading) && styles.paymentButtonDisabled,
+              (!cashOrder || !!paymentLoading || tapToPayApprovalPending) &&
+                styles.paymentButtonDisabled,
             ]}
             onPress={handleCash}
-            disabled={!cashOrder || !!paymentLoading}
+            disabled={!cashOrder || !!paymentLoading || tapToPayApprovalPending}
           >
             <Text style={[styles.paymentButtonText, styles.cashPaymentButtonText]}>
               {paymentLoading === "cash"
