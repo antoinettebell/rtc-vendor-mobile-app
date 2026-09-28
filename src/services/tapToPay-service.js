@@ -79,6 +79,24 @@ export const getLocalTapToPayActivationStatus = async () => {
   });
 };
 
+export const getTapToPayTerminalState = async ({
+  deviceId,
+  marketplaceVendor = false,
+} = {}) => {
+  const normalizedDeviceId = String(deviceId || "").trim();
+  if (!normalizedDeviceId) {
+    return {
+      known: false,
+      status: "UNREGISTERED",
+      activation_status: "UNKNOWN",
+      reactivation_required: false,
+    };
+  }
+  return responseData(await (marketplaceVendor
+    ? getEventVendorTapToPayTerminalStatus_API
+    : getTapToPayTerminalStatus_API)({ deviceId: normalizedDeviceId }));
+};
+
 export const syncTapToPayTerminalStatus = async ({ marketplaceVendor = false } = {}) => {
   const local = await getLocalTapToPayActivationStatus();
   const deviceId = String(local?.deviceId || "").trim();
@@ -88,10 +106,9 @@ export const syncTapToPayTerminalStatus = async ({ marketplaceVendor = false } =
     deviceId,
     deviceLabel,
     environment: tapToPayConfig.environment,
+    activationStatus: "SUCCEEDED",
   });
-  const server = responseData(await (marketplaceVendor
-    ? getEventVendorTapToPayTerminalStatus_API
-    : getTapToPayTerminalStatus_API)({ deviceId }));
+  const server = await getTapToPayTerminalState({ deviceId, marketplaceVendor });
   return { ...server, activated: true, deviceId, deviceLabel };
 };
 
@@ -112,9 +129,7 @@ const ensureTerminalReady = async ({ marketplaceVendor = false } = {}) => {
     await activateTapToPay({ marketplaceVendor });
     return;
   }
-  const server = responseData(await (marketplaceVendor
-    ? getEventVendorTapToPayTerminalStatus_API
-    : getTapToPayTerminalStatus_API)({ deviceId }));
+  const server = await getTapToPayTerminalState({ deviceId, marketplaceVendor });
   if (server?.status === "HISTORICAL") {
     throw new Error("This iPhone is marked as a historical Tap to Pay device. Contact RTC support to restore it.");
   }
@@ -126,6 +141,7 @@ const ensureTerminalReady = async ({ marketplaceVendor = false } = {}) => {
     deviceId,
     deviceLabel: await getDeviceLabel(),
     environment: tapToPayConfig.environment,
+    activationStatus: "SUCCEEDED",
   });
 };
 
@@ -208,7 +224,10 @@ export const startTapToPaySale = async ({
   const deviceId = String(result?.deviceId || "").trim();
   if (deviceId) {
     try {
-      await (marketplaceVendor ? registerEventVendorTapToPayTerminal_API : registerTapToPayTerminal_API)({ deviceId });
+      await (marketplaceVendor ? registerEventVendorTapToPayTerminal_API : registerTapToPayTerminal_API)({
+        deviceId,
+        activationStatus: "SUCCEEDED",
+      });
     } catch {
       // Terminal registration is retried on the next Tap to Pay transaction.
       // A bookkeeping failure must not invalidate a completed card payment.
@@ -243,7 +262,7 @@ export const activateTapToPay = async ({
     }, marketplaceVendor);
     const activationResponse = await (marketplaceVendor
       ? createEventVendorTapToPayActivationCode_API
-      : createTapToPayActivationCode_API)();
+      : createTapToPayActivationCode_API)({ deviceId: existingDeviceId });
     const activationCode = String(
       activationResponse?.data?.activation_code
         || activationResponse?.activation_code
@@ -251,6 +270,14 @@ export const activateTapToPay = async ({
     ).trim();
     if (!activationCode) {
       throw new Error("A secure Tap to Pay activation code could not be generated. Please try again.");
+    }
+    if (marketplaceVendor && existingDeviceId) {
+      await registerEventVendorTapToPayTerminal_API({
+        deviceId: existingDeviceId,
+        deviceLabel,
+        environment: tapToPayConfig.environment,
+        activationStatus: "PENDING",
+      });
     }
     const result = await nativeTapToPay.activate({
       environment: tapToPayConfig.environment,
@@ -265,6 +292,23 @@ export const activateTapToPay = async ({
     }, marketplaceVendor);
     return registered;
   } catch (error) {
+    const failedDeviceId = String(
+      error?.deviceId || error?.userInfo?.deviceId || existingDeviceId || "",
+    ).trim();
+    if (marketplaceVendor && failedDeviceId) {
+      try {
+        await registerEventVendorTapToPayTerminal_API({
+          deviceId: failedDeviceId,
+          deviceLabel,
+          environment: tapToPayConfig.environment,
+          activationStatus: /status code 400/i.test(String(error?.message || ""))
+            ? "PENDING"
+            : "FAILED",
+        });
+      } catch {
+        // The setup screen still reports the SDK failure if status sync fails.
+      }
+    }
     void recordActivationEvent("ACTIVATION_FAILED", {
       device_id: existingDeviceId,
       device_label: deviceLabel,

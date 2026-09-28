@@ -5,6 +5,7 @@ const sharedLanding = await readFile(new URL("../components/VendorMarketplaceLan
 const primitives = await readFile(new URL("../components/VendorMarketplacePrimitives.js", import.meta.url), "utf8");
 const foodLanding = await readFile(new URL("../screens/vendorMarketplaceScreen.js", import.meta.url), "utf8");
 const eventLanding = await readFile(new URL("../screens/eventVendorMarketplaceScreen.js", import.meta.url), "utf8");
+const eventProfile = await readFile(new URL("../screens/eventVendorProfileScreen.js", import.meta.url), "utf8");
 const foodNearMe = await readFile(new URL("../screens/vendorMarketplaceNearMeScreen.js", import.meta.url), "utf8");
 const foodBids = await readFile(new URL("../screens/vendorMarketplaceMyBidsScreen.js", import.meta.url), "utf8");
 const foodApplications = await readFile(new URL("../screens/vendorMarketplaceMyApplicationsScreen.js", import.meta.url), "utf8");
@@ -64,6 +65,10 @@ assert.match(eventLanding, /VendorMarketplaceActionRow/);
 assert.match(eventLanding, /item\.key !== "BIDS"/);
 assert.doesNotMatch(eventLanding, /BIDS: "My Bids"/);
 assert.match(eventLanding, /track applications, and manage awarded events/);
+assert.match(eventLanding, /General Purchase Checkout/);
+assert.match(eventLanding, /eventVendorGeneralPurchaseScreen/);
+assert.doesNotMatch(eventProfile, />Checkout</);
+assert.match(eventProfile, />Tap to Pay Setup</);
 assert.match(
   eventLanding,
   /hideBack=\{!section\}/,

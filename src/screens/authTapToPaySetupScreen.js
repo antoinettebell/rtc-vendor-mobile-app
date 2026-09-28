@@ -25,6 +25,8 @@ import { setUser } from "../redux/slices/userSlice";
 import {
   activateTapToPay,
   getLocalTapToPayActivationStatus,
+  getTapToPayTerminalState,
+  syncTapToPayTerminalStatus,
 } from "../services/tapToPay-service";
 import tapToPayConfig from "../services/tapToPay-config";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
@@ -44,6 +46,8 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
   const [activating, setActivating] = useState(false);
   const [terminalReady, setTerminalReady] = useState(false);
   const [terminalSuffix, setTerminalSuffix] = useState("");
+  const [terminalActivationStatus, setTerminalActivationStatus] = useState("UNKNOWN");
+  const [reactivationRequired, setReactivationRequired] = useState(false);
   const [hasPaymentDetails, setHasPaymentDetails] = useState(null);
   const [employeeTraining, setEmployeeTraining] = useState(null);
   const [loadingEmployeeTraining, setLoadingEmployeeTraining] = useState(isEmployeeSession);
@@ -115,17 +119,51 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
   useEffect(() => {
     let active = true;
     getLocalTapToPayActivationStatus()
-      .then((status) => {
-        if (!active || !status?.activated) return;
-        const deviceId = String(status?.deviceId || "").trim();
-        setTerminalReady(true);
-        if (deviceId) setTerminalSuffix(deviceId.slice(-4));
+      .then(async (localStatus) => {
+        if (!active) return;
+        const deviceId = String(
+          isMarketplaceVendor
+            ? terminalSerial || localStatus?.deviceId || ""
+            : localStatus?.deviceId || terminalSerial || "",
+        ).trim();
+        if (!deviceId) return;
+        setTerminalSuffix(deviceId.slice(-4));
+        let serverStatus = await getTapToPayTerminalState({
+          deviceId,
+          marketplaceVendor: isMarketplaceVendor,
+        });
+        if (
+          localStatus?.activated &&
+          !isMarketplaceVendor &&
+          !serverStatus?.reactivation_required
+        ) {
+          serverStatus = await syncTapToPayTerminalStatus({
+            marketplaceVendor: isMarketplaceVendor,
+          });
+        }
+        if (!active) return;
+        const confirmed =
+          localStatus?.activated === true &&
+          serverStatus?.status === "ACTIVE" &&
+          serverStatus?.activation_status === "SUCCEEDED" &&
+          serverStatus?.reactivation_required !== true;
+        setTerminalReady(confirmed);
+        setTerminalActivationStatus(
+          serverStatus?.activation_status ||
+            (confirmed ? "SUCCEEDED" : "UNKNOWN"),
+        );
+        setReactivationRequired(serverStatus?.reactivation_required === true);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (active && terminalSerial) {
+          setTerminalSuffix(terminalSerial.slice(-4));
+          setTerminalReady(false);
+        }
+      });
     return () => {
       active = false;
     };
-  }, []);
+  }, [isMarketplaceVendor, terminalSerial]);
 
   const loadPaymentDetails = useCallback(async () => {
     try {
@@ -216,9 +254,26 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
     if (!canActivate) return;
     setActivating(true);
     try {
-      const result = await activateTapToPay({ marketplaceVendor: isMarketplaceVendor });
+      const localStatus = await getLocalTapToPayActivationStatus().catch(() => null);
+      const existingDeviceId = String(
+        localStatus?.deviceId || terminalSerial || "",
+      ).trim();
+      const serverStatus = existingDeviceId
+        ? await getTapToPayTerminalState({
+            deviceId: existingDeviceId,
+            marketplaceVendor: isMarketplaceVendor,
+          }).catch(() => null)
+        : null;
+      const result = await activateTapToPay({
+        marketplaceVendor: isMarketplaceVendor,
+        forceReactivation:
+          reactivationRequired || serverStatus?.reactivation_required === true,
+        existingDeviceId: existingDeviceId || null,
+      });
       setTerminalSuffix(result?.terminalSerialSuffix || "");
-      setTerminalReady(result?.activated !== false);
+      setTerminalReady(result?.activated === true);
+      setTerminalActivationStatus("SUCCEEDED");
+      setReactivationRequired(false);
 
       // Activation is complete once the SDK result has been registered. Keep
       // the profile refresh best-effort so a slow follow-up request cannot
@@ -238,9 +293,24 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
         "This iPhone is activated and its terminal serial ID has been saved to your RDC profile.",
       );
     } catch (error) {
+      const rawMessage = String(
+        error?.message || error?.error?.message || error?.data?.message || "",
+      );
+      const isOwnershipConflict = /already in use on another vendor account/i.test(
+        rawMessage,
+      );
+      const isPendingActivation =
+        isOwnershipConflict || /status code 400/i.test(rawMessage);
+      setTerminalReady(false);
+      setTerminalActivationStatus(isPendingActivation ? "PENDING" : "FAILED");
+      const message = isOwnershipConflict
+        ? "This phone is already in use on another vendor account. Activation remains pending. Contact RTC support or an administrator for device reassignment."
+        : isPendingActivation
+          ? "Tap to Pay activation is pending. Ask RTC support to resend the reactivation request, then try again."
+        : rawMessage || "Tap to Pay on iPhone could not be activated. Please try again.";
       Alert.alert(
-        "Tap to Pay Setup",
-        error?.message || "Tap to Pay on iPhone could not be activated. Please try again.",
+        isPendingActivation ? "Pending Activation" : "Tap to Pay Setup",
+        message,
       );
     } finally {
       setActivating(false);
@@ -306,10 +376,20 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
         </View>
 
         {terminalSerial || terminalSuffix ? (
-          <View style={styles.readyCard}>
-            <Ionicons name="checkmark-circle" size={24} color={AppColor.primary} />
+          <View style={terminalReady ? styles.readyCard : styles.pendingCard}>
+            <Ionicons
+              name={terminalReady ? "checkmark-circle" : "time-outline"}
+              size={24}
+              color={terminalReady ? AppColor.primary : "#9A6700"}
+            />
             <View style={styles.readyTextContainer}>
-              <Text style={styles.readyTitle}>Terminal registered</Text>
+              <Text style={terminalReady ? styles.readyTitle : styles.pendingTitle}>
+                {terminalReady
+                  ? "Tap to Pay Active"
+                  : terminalActivationStatus === "FAILED"
+                    ? "Activation Not Completed"
+                    : "Pending Activation"}
+              </Text>
               <Text style={styles.readyText}>
                 Serial ID ending in {terminalSuffix || terminalSerial.slice(-4)}
               </Text>
@@ -330,7 +410,11 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
             <ActivityIndicator color={AppColor.white} />
           ) : (
             <Text style={styles.primaryButtonText}>
-              {terminalSerial ? "Verify or Set Up This iPhone" : "Set Up Tap to Pay on iPhone"}
+              {reactivationRequired
+                ? "Reactivate Tap to Pay on iPhone"
+                : terminalSerial
+                  ? "Verify or Set Up This iPhone"
+                  : "Set Up Tap to Pay on iPhone"}
             </Text>
           )}
         </TouchableOpacity>
@@ -425,8 +509,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
+  pendingCard: {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: "#FFF8E6",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
   readyTextContainer: { flex: 1 },
   readyTitle: { fontFamily: Mulish700, fontSize: 16, color: AppColor.primary },
+  pendingTitle: { fontFamily: Mulish700, fontSize: 16, color: "#9A6700" },
   readyText: { marginTop: 2, fontFamily: Mulish400, fontSize: 14, color: AppColor.text },
   primaryButton: {
     minHeight: 52,

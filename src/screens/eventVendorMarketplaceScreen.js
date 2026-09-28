@@ -51,6 +51,15 @@ export default function EventVendorMarketplaceScreen({ navigation, route }) {
   const marketplaceVendorNavigation = VENDOR_MARKETPLACE_NAVIGATION.filter(
     (item) => item.key !== "BIDS",
   );
+  const marketplaceLandingCards = [
+    {
+      key: "CHECKOUT",
+      title: "General Purchase Checkout",
+      subtitle: "Enter a purchase description and total to accept a Tap to Pay payment.",
+      icon: "point-of-sale",
+    },
+    ...marketplaceVendorNavigation,
+  ];
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -173,11 +182,17 @@ export default function EventVendorMarketplaceScreen({ navigation, route }) {
       {!section ? (
         <ScrollView contentContainerStyle={styles.body}>
           <VendorMarketplaceLanding
-            intro="Discover event opportunities, track applications, and manage awarded events."
-            cards={marketplaceVendorNavigation.map((item) => item.key === "MARKETPLACE"
+            intro="Accept general purchases, discover event opportunities, track applications, and manage awarded events."
+            cards={marketplaceLandingCards.map((item) => item.key === "MARKETPLACE"
               ? { ...item, subtitle: "View sourcing events and Marketplace Vendor opportunities near you." }
               : item)}
-            onSelect={(item) => navigation.setParams({ section: item.key })}
+            onSelect={(item) => {
+              if (item.key === "CHECKOUT") {
+                navigation.navigate("eventVendorGeneralPurchaseScreen");
+                return;
+              }
+              navigation.setParams({ section: item.key });
+            }}
           />
         </ScrollView>
       ) : loading ? (

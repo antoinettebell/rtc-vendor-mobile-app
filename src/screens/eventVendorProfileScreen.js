@@ -372,9 +372,6 @@ export default function EventVendorProfileScreen({ navigation }) {
       ) : null}
       {access.canUseMarketplace ? (
         <>
-          <TouchableOpacity style={s.checkout} onPress={() => navigation.navigate("eventVendorGeneralPurchaseScreen")}>
-            <Text style={s.buttonText}>Checkout</Text>
-          </TouchableOpacity>
           <TouchableOpacity style={s.tapSetup} onPress={() => navigation.navigate("authTapToPaySetupScreen")}>
             <Text style={s.tapSetupText}>Tap to Pay Setup</Text>
           </TouchableOpacity>

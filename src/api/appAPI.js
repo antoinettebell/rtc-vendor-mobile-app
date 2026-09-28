@@ -843,11 +843,11 @@ export const recordTapToPayTerminalEvent_API = async (payload) => {
   }
 };
 
-export const createTapToPayActivationCode_API = async () => {
+export const createTapToPayActivationCode_API = async ({ deviceId } = {}) => {
   try {
     const response = await apiClient.post(
       CREATE_TAP_TO_PAY_ACTIVATION_CODE,
-      {},
+      { device_id: deviceId || null },
       { skipToken: false },
     );
     return response?.data;
@@ -2108,12 +2108,48 @@ export const getEventVendorApplications_API = async () => (await apiClient.get(E
 export const submitEventVendorApplication_API = async (eventId, payload) => (await apiClient.post(EVENT_VENDOR_APPLY(eventId), payload, { skipToken: false }))?.data;
 export const withdrawEventVendorApplication_API = async (applicationId) =>
   (await apiClient.patch(EVENT_VENDOR_WITHDRAW_APPLICATION(applicationId), {}, { skipToken: false }))?.data;
-export const createEventVendorTapToPayActivationCode_API = async () =>
-  (await apiClient.post(EVENT_VENDOR_TAP_TO_PAY_ACTIVATION_CODE, {}, { skipToken: false }))?.data;
-export const registerEventVendorTapToPayTerminal_API = async (payload) =>
-  (await apiClient.put(EVENT_VENDOR_TAP_TO_PAY_TERMINAL, payload, { skipToken: false }))?.data;
-export const getEventVendorTapToPayTerminalStatus_API = async (params) =>
-  (await apiClient.get(EVENT_VENDOR_TAP_TO_PAY_TERMINAL_STATUS, { skipToken: false, params }))?.data;
+export const createEventVendorTapToPayActivationCode_API = async ({ deviceId } = {}) => {
+  try {
+    return (await apiClient.post(
+      EVENT_VENDOR_TAP_TO_PAY_ACTIVATION_CODE,
+      { device_id: deviceId || null },
+      { skipToken: false },
+    ))?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+export const registerEventVendorTapToPayTerminal_API = async ({
+  deviceId,
+  deviceLabel,
+  environment,
+  activationStatus,
+}) => {
+  try {
+    return (await apiClient.put(
+      EVENT_VENDOR_TAP_TO_PAY_TERMINAL,
+      {
+        device_id: deviceId,
+        device_label: deviceLabel || null,
+        environment: environment || "production",
+        activation_status: activationStatus || "UNKNOWN",
+      },
+      { skipToken: false },
+    ))?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+export const getEventVendorTapToPayTerminalStatus_API = async ({ deviceId }) => {
+  try {
+    return (await apiClient.get(EVENT_VENDOR_TAP_TO_PAY_TERMINAL_STATUS, {
+      skipToken: false,
+      params: { device_id: deviceId },
+    }))?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
 export const prepareEventVendorGeneralPurchase_API = async (payload) =>
   (await apiClient.post(EVENT_VENDOR_GENERAL_PURCHASE_PREPARE, payload, { skipToken: false }))?.data;
 export const completeEventVendorGeneralPurchase_API = async (purchaseId, payload) =>
