@@ -51,6 +51,7 @@ import {
   getBidBlockingReasons,
   supportsCoordinatorBid,
 } from "../helpers/marketplaceBidEligibility.helper";
+import { buildMarketplaceImageUploadFile } from "../helpers/marketplaceUploadFile.helper";
 
 const ReadOnlyRow = ({ label, value }) => (
   <View style={{ marginTop: 12 }}>
@@ -177,6 +178,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   const [menuPdf, setMenuPdf] = useState(null);
   const [bidImages, setBidImages] = useState([]);
   const isLeavingRef = useRef(false);
+  const submissionCompletedRef = useRef(false);
   const initialDraftRef = useRef(normalizeBidDraftSnapshot(initialDraft));
   const { checkAndRequestPermission: photosPermissionStatus } = usePermission(
     permission.photos
@@ -563,16 +565,22 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   }
 
   const finalizeBidSubmission = async () => {
+    const existingBidId = savedBidRef.current?.bid_id;
+    if (existingBidId) {
+      await uploadBidFiles(existingBidId);
+    }
+
     const response = await submitMarketplaceBid_API({
       event_id: eventId,
       payload: buildBidPayload("SUBMITTED"),
     });
 
     if (response?.success) {
-      const bidId = response.data?.marketplaceBid?.bid_id;
-      if (bidId) {
-        await uploadBidFiles(bidId);
-      }
+      const submittedBid = response.data?.marketplaceBid || savedBidRef.current;
+      setSavedBid(submittedBid);
+      savedBidRef.current = submittedBid;
+      submissionCompletedRef.current = true;
+      isLeavingRef.current = true;
       Alert.alert("Bid Submitted", "Your bid has been submitted.", [
         {
           text: "OK",
@@ -582,7 +590,10 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
             },
           },
         ]);
+      return submittedBid;
     }
+
+    throw new Error(response?.message || "The bid could not be submitted.");
   };
 
   const { beginSigning: beginAgreementSigning } =
@@ -599,7 +610,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
     });
 
   const submitBid = async () => {
-    if (!canSubmit || submitting) return;
+    if (!canSubmit || submitting || submissionCompletedRef.current) return;
 
     setSubmitting(true);
     try {
@@ -657,12 +668,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
         return;
       }
       const image = await ImagePicker.openPicker({ mediaType: "photo" });
-      setSelectedMenuFile({
-        uri: image?.path,
-        name: image?.filename || image?.path?.split("/").pop() || "menu.jpg",
-        type: image?.mime || "image/jpeg",
-        size: image?.size,
-      });
+      setSelectedMenuFile(buildMarketplaceImageUploadFile(image, "menu"));
     } catch (error) {
       if (error?.code !== "E_PICKER_CANCELLED") {
         Alert.alert("Photo Not Selected", error?.message || "Please try again.");
@@ -678,12 +684,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
         cropping: false,
         mediaType: "photo",
       });
-      setSelectedMenuFile({
-        uri: image?.path,
-        name: image?.filename || image?.path?.split("/").pop() || "menu.jpg",
-        type: image?.mime || "image/jpeg",
-        size: image?.size,
-      });
+      setSelectedMenuFile(buildMarketplaceImageUploadFile(image, "menu"));
     } catch (error) {
       if (error?.code !== "E_PICKER_CANCELLED") {
         Alert.alert("Photo Not Taken", error?.message || "Please try again.");
@@ -796,14 +797,9 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
         return;
       }
       const image = await ImagePicker.openPicker({ mediaType: "photo" });
-      await uploadSelectedRequirementFile({
-        uri: image?.path,
-        name:
-          image?.filename ||
-          image?.path?.split("/").pop() ||
-          `${selectedRequirementLabel}.jpg`,
-        type: image?.mime || "image/jpeg",
-      });
+      await uploadSelectedRequirementFile(
+        buildMarketplaceImageUploadFile(image, selectedRequirementLabel),
+      );
     } catch (error) {
       if (error?.code !== "E_PICKER_CANCELLED") {
         Alert.alert("Photo Not Selected", error?.message || "Please try again.");
@@ -819,14 +815,9 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
         cropping: false,
         mediaType: "photo",
       });
-      await uploadSelectedRequirementFile({
-        uri: image?.path,
-        name:
-          image?.filename ||
-          image?.path?.split("/").pop() ||
-          `${selectedRequirementLabel}.jpg`,
-        type: image?.mime || "image/jpeg",
-      });
+      await uploadSelectedRequirementFile(
+        buildMarketplaceImageUploadFile(image, selectedRequirementLabel),
+      );
     } catch (error) {
       if (error?.code !== "E_PICKER_CANCELLED") {
         Alert.alert("Photo Not Taken", error?.message || "Please try again.");
@@ -876,18 +867,8 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
         multiple: true,
         mediaType: "photo",
       });
-      const selectedImages = images.map((image) =>
-        Platform.OS === "ios"
-          ? {
-              uri: image?.sourceURL || image?.path,
-              name: image?.filename || `${Date.now()}.jpg`,
-              type: image.mime,
-            }
-          : {
-              uri: image?.path,
-              name: `${image?.path?.split("/").pop()}`,
-              type: image.mime,
-            }
+      const selectedImages = images.map((image, index) =>
+        buildMarketplaceImageUploadFile(image, `bid-image-${Date.now()}-${index}`),
       );
       setBidImages((prev) => [...prev, ...selectedImages]);
     } catch (error) {
