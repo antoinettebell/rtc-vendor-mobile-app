@@ -33,6 +33,7 @@ assert.equal(normalizeMarketplaceRequirementLabel("Health Permit"), "Sanitation 
 assert.equal(matchesMarketplaceSubmissionStatus("DRAFT", "ALL"), true);
 assert.equal(matchesMarketplaceSubmissionStatus("DRAFT", "DRAFT"), true);
 assert.equal(matchesMarketplaceSubmissionStatus("draft", "DRAFT"), true);
+assert.equal(matchesMarketplaceSubmissionStatus("PENDING_SIGNATURE", "DRAFT"), true);
 assert.equal(matchesMarketplaceSubmissionStatus("SUBMITTED", "DRAFT"), false);
 assert.equal(matchesMarketplaceSubmissionStatus("DECLINED", "NOT_AWARDED"), true);
 

@@ -27,6 +27,7 @@ import {
   vendorProfileStatus,
 } from "../utils/constants";
 import {
+  calculateTotalPreparationTime,
   extractAdvanceOrderLocationAndTime,
   getDisabledStatuses,
   getVendorOrderTotal,
@@ -75,10 +76,14 @@ const ACTIVE_ORDER_STATUSES = [
 ];
 
 const getOrderUpdateErrorMessage = (error) =>
-  error?.message ||
-  error?.error?.message ||
-  error?.data?.message ||
-  "Unable to update order status.";
+  [error?.message, error?.error?.message, error?.data?.message]
+    .filter(Boolean)
+    .some((message) => String(message).includes("pickupTime"))
+    ? "Unable to start preparing this order. Please try again."
+    : error?.message ||
+      error?.error?.message ||
+      error?.data?.message ||
+      "Unable to update order status.";
 
 const OrderScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -510,6 +515,7 @@ const OrderScreen = ({ navigation }) => {
       updateOrderStatusAPI({
         order_id: item?._id,
         status: status,
+        order: item,
       });
     }
   };
@@ -618,13 +624,13 @@ const OrderScreen = ({ navigation }) => {
   };
 
   // update order status API
-  const updateOrderStatusAPI = async ({ order_id, status }) => {
+  const updateOrderStatusAPI = async ({ order_id, status, order }) => {
     try {
       let payload = {
         orderStatus: status,
       };
       if (status === "PREPARING") {
-        payload.pickupTime = "00";
+        payload.pickupTime = `${calculateTotalPreparationTime(order)}`;
       }
       const response = await updateOrderStatusByID_API({
         order_id,

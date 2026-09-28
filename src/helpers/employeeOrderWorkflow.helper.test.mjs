@@ -89,4 +89,26 @@ for (const employeeScreenPath of [
   assert.match(screen, /navigation\.navigate\("orderDetailsScreen"/);
 }
 
+const appSource = await readFile(new URL("../../App.js", import.meta.url), "utf8");
+const orderScreenSource = await readFile(
+  new URL("../screens/orderScreen.js", import.meta.url),
+  "utf8",
+);
+const employeeNavigatorSource = appSource.slice(
+  appSource.indexOf("const EmployeeAppNavigator"),
+  appSource.indexOf("const ManagerHomeNavigator"),
+);
+const managerNavigatorSource = appSource.slice(
+  appSource.indexOf("const ManagerHomeNavigator"),
+  appSource.indexOf("const RootNavigator"),
+);
+assert.match(employeeNavigatorSource, /name="orderDetailsScreen"/);
+assert.match(managerNavigatorSource, /name="orderDetailsScreen"/);
+assert.match(orderScreenSource, /calculateTotalPreparationTime\(order\)/);
+assert.doesNotMatch(orderScreenSource, /pickupTime\s*=\s*"00"/);
+assert.match(
+  orderScreenSource,
+  /Unable to start preparing this order\. Please try again\./,
+);
+
 console.log("employee order workflow tests passed");
