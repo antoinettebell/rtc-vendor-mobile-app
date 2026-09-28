@@ -523,6 +523,7 @@ const EmployeeAppNavigator = () => (
       name="vendorPosCheckoutScreen"
       component={VendorPosCheckoutScreen}
     />
+    <Stack.Screen name="orderDetailsScreen" component={OrderDetailsScreen} />
   </Stack.Navigator>
 );
 
@@ -546,6 +547,7 @@ const ManagerHomeNavigator = () => (
     />
     <Stack.Screen name="vendorPosMenuScreen" component={VendorPosMenuScreen} />
     <Stack.Screen name="vendorPosCheckoutScreen" component={VendorPosCheckoutScreen} />
+    <Stack.Screen name="orderDetailsScreen" component={OrderDetailsScreen} />
   </Stack.Navigator>
 );
 
