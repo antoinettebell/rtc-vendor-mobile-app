@@ -70,6 +70,8 @@ const [homeScreen, nearMeScreen, marketplaceShared] = await Promise.all([
   readFile(new URL("../screens/vendorMarketplaceShared.js", import.meta.url), "utf8"),
 ]);
 assert.match(homeScreen, /resolveFoodMarketplaceNotificationDestination/);
+assert.match(homeScreen, /item\.type === "MARKETPLACE_AWARD_AMENDMENT"/);
+assert.match(homeScreen, /item\.type === "MARKETPLACE_EVENT_UPDATED"/);
 assert.match(nearMeScreen, /resolveFoodMarketplaceNotificationDestination/);
 assert.match(marketplaceShared, /event\?\.paymentType/);
 assert.doesNotMatch(marketplaceShared, /event\.paymentType/);
