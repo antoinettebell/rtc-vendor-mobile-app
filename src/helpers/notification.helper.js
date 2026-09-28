@@ -140,11 +140,12 @@ export const requestNotificationPermission = async () => {
 
 export const createAndroidChannel = async () => {
   await notifee.createChannel({
-    id: "rtc-notifications-v2",
+    id: "rtc-notifications-v3",
     name: "RTC Notifications",
     importance: AndroidImportance.HIGH,
     sound: "default",
     vibration: true,
+    vibrationPattern: [300, 500],
   });
 };
 
@@ -154,7 +155,7 @@ export const onDisplayNotification = async (remoteMessage) => {
       title: remoteMessage.notification.title,
       body: remoteMessage.notification.body,
       android: {
-        channelId: "rtc-notifications-v2",
+        channelId: "rtc-notifications-v3",
         importance: AndroidImportance.HIGH,
         sound: "default",
         vibrationPattern: [300, 500],
