@@ -957,7 +957,9 @@ const HomeScreen = ({ navigation }) => {
     if (
       item.type === "MARKETPLACE_BID" ||
       item.type === "MARKETPLACE_APPLICATION" ||
-      item.type === "MARKETPLACE_EVENT_CLOSED"
+      item.type === "MARKETPLACE_EVENT_CLOSED" ||
+      item.type === "MARKETPLACE_AWARD_AMENDMENT" ||
+      item.type === "MARKETPLACE_EVENT_UPDATED"
     ) {
       try {
         const destination = await resolveFoodMarketplaceNotificationDestination({
