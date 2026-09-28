@@ -53,9 +53,11 @@ import {
 import { WALK_UP_PLAN_MESSAGE } from "../helpers/vendorPaymentCapabilities.helper";
 import {
   LIVE_ORDER_REFRESH_INTERVAL_MS,
+  buildEmployeeOrderStatusPayload,
   canEmployeeRejectOrder,
   getEmployeeNextOrderStatus,
   getEmployeeOrderActionLabel,
+  getEmployeeOrderUpdateErrorMessage,
   getOrderFulfillmentLabel,
   isCustomerAppOrder,
 } from "../helpers/employeeOrderWorkflow.helper";
@@ -717,7 +719,7 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
     try {
       const response = await updateOrderStatusByID_API({
         order_id: orderItem?._id,
-        payload: { orderStatus: nextStatus },
+        payload: buildEmployeeOrderStatusPayload(orderItem, nextStatus),
       });
       if (response?.success) {
         await Promise.all([loadOrders(), loadDashboard()]);
@@ -725,7 +727,7 @@ const EmployeePosBoardScreen = ({ navigation, route }) => {
     } catch (error) {
       Alert.alert(
         "Order update failed",
-        error?.message || "Could not update order.",
+        getEmployeeOrderUpdateErrorMessage(error),
       );
     } finally {
       setActionLoadingId(null);

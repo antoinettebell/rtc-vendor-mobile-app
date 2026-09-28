@@ -29,16 +29,17 @@ const TapToPayLaunchHero = ({ visible, onClose, onGetStarted }) => {
             accessible
             accessibilityLabel="Tap to Pay on iPhone. Accept physical debit and credit cards as well as Apple Pay and other digital wallets, right on your iPhone."
           />
-          <View pointerEvents="none" style={styles.placeholderMask} />
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={styles.getStartedButton}
-            onPress={onGetStarted}
-            accessibilityRole="button"
-            accessibilityLabel="Get started with Tap to Pay on iPhone"
-          >
-            <Text style={styles.getStartedButtonText}>Get started</Text>
-          </TouchableOpacity>
+          <View style={styles.ctaLayer}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.getStartedButton}
+              onPress={onGetStarted}
+              accessibilityRole="button"
+              accessibilityLabel="Get started with Tap to Pay on iPhone"
+            >
+              <Text style={styles.getStartedButtonText}>Get started</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         <TouchableOpacity
           activeOpacity={0.8}
@@ -80,21 +81,21 @@ const styles = StyleSheet.create({
     backgroundColor: AppColor.white,
     borderColor: AppColor.black,
     borderRadius: 999,
-    borderWidth: 1.5,
-    height: "5.4%",
+    borderWidth: 2,
+    height: "64%",
     justifyContent: "center",
-    left: "10.2%",
-    position: "absolute",
-    top: "79.4%",
-    width: "26.5%",
+    width: "72%",
   },
-  placeholderMask: {
+  ctaLayer: {
+    alignItems: "center",
     backgroundColor: AppColor.white,
-    height: "7.2%",
-    left: "8.8%",
+    height: "8.8%",
+    justifyContent: "center",
+    left: "6%",
     position: "absolute",
-    top: "78.5%",
-    width: "30%",
+    top: "77.6%",
+    width: "38%",
+    zIndex: 2,
   },
   getStartedButtonText: {
     color: AppColor.black,

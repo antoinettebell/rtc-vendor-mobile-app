@@ -16,11 +16,21 @@ const orderStatuses = Object.fromEntries(
 );
 const runnableSource = source
   .replace('import { orderStatusStrings } from "../utils/constants";\n', "")
+  .replace('import { calculateTotalPreparationTime } from "./order.helper";\n', "")
   .replaceAll("export const ", "const ")
   .concat(
-    "\nreturn { LIVE_ORDER_REFRESH_INTERVAL_MS, getEmployeeNextOrderStatus, getEmployeeOrderActionLabel, canEmployeeRejectOrder, getOrderFulfillmentLabel, isCustomerAppOrder };",
+    "\nreturn { LIVE_ORDER_REFRESH_INTERVAL_MS, getEmployeeNextOrderStatus, getEmployeeOrderActionLabel, buildEmployeeOrderStatusPayload, getEmployeeOrderUpdateErrorMessage, canEmployeeRejectOrder, getOrderFulfillmentLabel, isCustomerAppOrder };",
   );
-const helper = Function("orderStatusStrings", runnableSource)(orderStatuses);
+const calculateTotalPreparationTime = (order = {}) =>
+  (order.items || []).reduce(
+    (total, item) => total + Number(item.qty || 0) * Number(item.menuItem?.preparationTime || 0),
+    0,
+  );
+const helper = Function(
+  "orderStatusStrings",
+  "calculateTotalPreparationTime",
+  runnableSource,
+)(orderStatuses, calculateTotalPreparationTime);
 
 const delivery = {
   orderSource: "CUSTOMER_APP",
@@ -56,6 +66,21 @@ assert.equal(
 );
 assert.equal(helper.getEmployeeNextOrderStatus(walkUp), orderStatuses.preparing);
 assert.equal(helper.canEmployeeRejectOrder(walkUp), false);
+assert.deepEqual(
+  helper.buildEmployeeOrderStatusPayload(
+    { items: [{ qty: 2, menuItem: { preparationTime: 15 } }] },
+    orderStatuses.preparing,
+  ),
+  { orderStatus: orderStatuses.preparing, pickupTime: "30" },
+);
+assert.deepEqual(
+  helper.buildEmployeeOrderStatusPayload(pickup, orderStatuses.ready_for_pickup),
+  { orderStatus: orderStatuses.ready_for_pickup },
+);
+assert.equal(
+  helper.getEmployeeOrderUpdateErrorMessage({ message: "Please enter valid pickupTime" }),
+  "Unable to calculate the pickup time. Refresh the order and try again.",
+);
 
 for (const screenPath of [
   "../screens/employeeSessionScreen.js",
@@ -86,6 +111,7 @@ for (const employeeScreenPath of [
   assert.match(screen, /getEmployeeNextOrderStatus/);
   assert.match(screen, /getOrderFulfillmentLabel/);
   assert.match(screen, /isCustomerAppOrder/);
+  assert.match(screen, /buildEmployeeOrderStatusPayload/);
   assert.match(screen, /navigation\.navigate\("orderDetailsScreen"/);
 }
 
