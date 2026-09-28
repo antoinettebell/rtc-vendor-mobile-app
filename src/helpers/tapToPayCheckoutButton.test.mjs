@@ -42,6 +42,9 @@ assert.match(launchHero, /tapToPayHeroCardToIPhone9x16\.jpg/);
 assert.match(launchHero, />Get started</);
 assert.match(launchHero, /borderColor: AppColor\.black/);
 assert.match(launchHero, /borderRadius: 999/);
-assert.match(launchHero, /borderWidth: 1\.5/);
+assert.match(launchHero, /borderWidth: 2/);
+assert.match(launchHero, /ctaLayer/);
+assert.match(launchHero, /width: "38%"/);
+assert.doesNotMatch(launchHero, /placeholderMask/);
 
 console.log("Tap to Pay checkout button tests passed.");

@@ -1,4 +1,5 @@
 import { orderStatusStrings } from "../utils/constants";
+import { calculateTotalPreparationTime } from "./order.helper";
 
 export const LIVE_ORDER_REFRESH_INTERVAL_MS = 5000;
 
@@ -39,6 +40,18 @@ export const getEmployeeOrderActionLabel = (order = {}) => {
   if (next === orderStatusStrings.completed) return "Complete";
   return null;
 };
+
+export const buildEmployeeOrderStatusPayload = (order = {}, nextStatus) => ({
+  orderStatus: nextStatus,
+  ...(nextStatus === orderStatusStrings.preparing
+    ? { pickupTime: `${calculateTotalPreparationTime(order)}` }
+    : {}),
+});
+
+export const getEmployeeOrderUpdateErrorMessage = (error) =>
+  String(error?.message || "").includes("pickupTime")
+    ? "Unable to calculate the pickup time. Refresh the order and try again."
+    : error?.message || "Could not update order.";
 
 export const canEmployeeRejectOrder = (order = {}) =>
   isCustomerAppOrder(order) &&

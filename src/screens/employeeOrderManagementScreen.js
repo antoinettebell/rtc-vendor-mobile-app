@@ -28,9 +28,11 @@ import { printOrderTickets } from "../helpers/print.helper";
 import { getVendorOrderTotal } from "../helpers/order.helper";
 import {
   LIVE_ORDER_REFRESH_INTERVAL_MS,
+  buildEmployeeOrderStatusPayload,
   canEmployeeRejectOrder,
   getEmployeeNextOrderStatus,
   getEmployeeOrderActionLabel,
+  getEmployeeOrderUpdateErrorMessage,
   getOrderFulfillmentLabel,
   isCustomerAppOrder,
 } from "../helpers/employeeOrderWorkflow.helper";
@@ -222,13 +224,13 @@ const EmployeeOrderManagementScreen = ({ navigation, route }) => {
     try {
       const response = await updateOrderStatusByID_API({
         order_id: order?._id,
-        payload: { orderStatus: nextStatus },
+        payload: buildEmployeeOrderStatusPayload(order, nextStatus),
       });
       if (response?.success) {
         await loadOrders();
       }
     } catch (error) {
-      Alert.alert("Order update failed", error?.message || "Could not update order.");
+      Alert.alert("Order update failed", getEmployeeOrderUpdateErrorMessage(error));
     } finally {
       setActionLoadingId(null);
     }
