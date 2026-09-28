@@ -1,6 +1,25 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { resolveFoodMarketplaceNotificationDestination } from "./marketplaceNotificationCenter.helper.js";
+import {
+  normalizeMarketplacePushNotification,
+  resolveFoodMarketplaceNotificationDestination,
+} from "./marketplaceNotificationCenter.helper.js";
+
+assert.deepEqual(
+  normalizeMarketplacePushNotification({
+    notificationType: "MARKETPLACE_AWARD_AMENDMENT_REQUESTED",
+    eventId: "event-1",
+    bidId: "bid-rejected",
+    amendmentId: "amendment-1",
+  }),
+  {
+    type: "MARKETPLACE_AWARD_AMENDMENT",
+    event_id: "event-1",
+    bid_id: "bid-rejected",
+    application_id: null,
+    amendment_id: "amendment-1",
+  },
+);
 
 const rejectedBid = {
   bid_id: "bid-rejected",
@@ -15,6 +34,18 @@ const bidDestination = await resolveFoodMarketplaceNotificationDestination({
 assert.equal(bidDestination.route, "VendorBidDetailScreen");
 assert.equal(bidDestination.params.bid, rejectedBid);
 assert.equal(bidDestination.params.event.event_id, "event-1");
+
+const amendmentDestination = await resolveFoodMarketplaceNotificationDestination({
+  notification: {
+    type: "MARKETPLACE_AWARD_AMENDMENT",
+    event_id: "event-1",
+    bid_id: "bid-rejected",
+  },
+  loadBids: async () => ({ data: { marketplaceBidList: [rejectedBid] } }),
+  loadApplications: async () => { throw new Error("application lookup should not run"); },
+});
+assert.equal(amendmentDestination.route, "VendorAwardedEventDetailsScreen");
+assert.equal(amendmentDestination.params.bid, rejectedBid);
 
 const rejectedApplication = {
   application_id: "application-rejected",

@@ -17,7 +17,15 @@ import {
   showAvailabilityPrompt,
 } from "../redux/slices/pushNotificationSlice";
 import { navigate } from "./navigation.helper";
-import { setFcmToken_API } from "../api/appAPI";
+import {
+  getMarketplaceMyApplications_API,
+  getMarketplaceMyBids_API,
+  setFcmToken_API,
+} from "../api/appAPI";
+import {
+  normalizeMarketplacePushNotification,
+  resolveFoodMarketplaceNotificationDestination,
+} from "./marketplaceNotificationCenter.helper";
 
 const installationsInstance = getInstallations();
 const messagingInstance = getMessaging();
@@ -173,11 +181,41 @@ export const onDisplayNotification = async (remoteMessage) => {
   }
 };
 
-export const handleNotificationAction = async (notification) => {
+export const handleNotificationAction = async (
+  notification,
+  { userInitiated = true } = {},
+) => {
   console.log("handleNotificationAction => ", notification);
 
   if (!notification?.data) return;
   const notificationData = notification.data;
+
+  const marketplaceNotification = normalizeMarketplacePushNotification(
+    notificationData,
+  );
+  if (marketplaceNotification && userInitiated) {
+    const isSignedIn = store.getState().authReducer.isSignedIn;
+    if (!isSignedIn) return;
+    try {
+      const destination = await resolveFoodMarketplaceNotificationDestination({
+        notification: marketplaceNotification,
+        loadBids: getMarketplaceMyBids_API,
+        loadApplications: getMarketplaceMyApplications_API,
+      });
+      navigate(destination.route, destination.params);
+    } catch (error) {
+      console.log("Marketplace push navigation error => ", error);
+      navigate(
+        marketplaceNotification.bid_id
+          ? "VendorMyBidsScreen"
+          : "vendorMarketplaceEventDetailsScreen",
+        marketplaceNotification.bid_id
+          ? {}
+          : { eventId: marketplaceNotification.event_id },
+      );
+    }
+    return;
+  }
 
   if (notificationData?.activityType === notificationTypes.new_order) {
     const isSignedIn = store.getState().authReducer.isSignedIn;

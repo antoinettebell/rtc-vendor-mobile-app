@@ -31,6 +31,7 @@ import {
 } from "./vendorMarketplaceShared";
 import { VendorMarketplaceCard, VendorMarketplaceStatusBadge } from "../components/VendorMarketplacePrimitives";
 import { getMarketplaceEventSupportId } from "../helpers/marketplaceSupportId.helper";
+import { getMarketplaceSubmissionDisplayStatus } from "../helpers/marketplaceSubmissionDisplay.helper";
 
 const TIME_FILTERS = [
   { label: "Upcoming", value: "UPCOMING" },
@@ -116,7 +117,10 @@ const buildAwardItems = (bids, applications) => {
       paymentType: MARKETPLACE_PAYMENT_TYPES.COORDINATOR_PAYS_VENDOR,
       event,
       bid,
-      statusLabel: getBidPayoutStatus(bid, event),
+      statusLabel: getMarketplaceSubmissionDisplayStatus(
+        bid,
+        getBidPayoutStatus(bid, event),
+      ),
       eventDate: event?.event_date,
     };
   });

@@ -3,6 +3,13 @@ import { getMarketplaceSubmissionDisplayStatus } from "./marketplaceSubmissionDi
 
 assert.equal(
   getMarketplaceSubmissionDisplayStatus(
+    { bid_status: "AWARDED", award_amendment_status: "AWAITING_VENDOR" },
+    "AWARDED",
+  ),
+  "REVISED",
+);
+assert.equal(
+  getMarketplaceSubmissionDisplayStatus(
     { award_revoked_at: "2026-08-16T12:00:00.000Z" },
     "NOT_SELECTED",
   ),

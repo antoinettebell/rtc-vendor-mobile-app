@@ -17,6 +17,23 @@ export const getMarketplaceNotificationRouteParams = (notification) => ({
   applicationId: notification?.application_id || null,
 });
 
+const MARKETPLACE_PUSH_TYPES = {
+  MARKETPLACE_AWARD_AMENDMENT_REQUESTED: "MARKETPLACE_AWARD_AMENDMENT",
+  MARKETPLACE_EVENT_UPDATED: "MARKETPLACE_EVENT_UPDATED",
+};
+
+export const normalizeMarketplacePushNotification = (data = {}) => {
+  const type = MARKETPLACE_PUSH_TYPES[data.notificationType];
+  if (!type) return null;
+  return {
+    type,
+    event_id: data.eventId || data.event_id || null,
+    bid_id: data.bidId || data.bid_id || null,
+    application_id: data.applicationId || data.application_id || null,
+    amendment_id: data.amendmentId || data.amendment_id || null,
+  };
+};
+
 export const getMarketplaceNotificationDismissalId = (notification = {}) =>
   [
     notification.id || [
@@ -54,6 +71,16 @@ export const resolveFoodMarketplaceNotificationDestination = async ({
     const bids = response?.data?.marketplaceBidList || [];
     const bid = bids.find((item) => item?.bid_id === notification.bid_id);
     if (bid) {
+      if (notification?.type === "MARKETPLACE_AWARD_AMENDMENT") {
+        return {
+          route: "VendorAwardedEventDetailsScreen",
+          params: {
+            itemType: "BID",
+            bid,
+            event: submissionEvent(bid),
+          },
+        };
+      }
       return {
         route: "VendorBidDetailScreen",
         params: { bid, event: submissionEvent(bid) },

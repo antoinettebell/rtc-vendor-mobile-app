@@ -35,7 +35,7 @@ const setupNotificationListeners = () => {
     const unsubscribeMessage = messaging.onMessage(async (notification) => {
       console.log("Forground Remote-Message => ", notification);
       await onDisplayNotification(notification);
-      await handleNotificationAction(notification);
+      await handleNotificationAction(notification, { userInitiated: false });
     });
 
     const unsubscribeOpened =
