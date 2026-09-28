@@ -1,8 +1,9 @@
 const PUBLIC_IMAGE_KEYS = ["images", "event_images", "public_images"];
 
 export const getPublicEventImages = (event = {}) => {
+  const source = event && typeof event === "object" ? event : {};
   const candidates = PUBLIC_IMAGE_KEYS.flatMap((key) =>
-    Array.isArray(event[key]) ? event[key] : [],
+    Array.isArray(source[key]) ? source[key] : [],
   );
   return candidates
     .map((image) => ({

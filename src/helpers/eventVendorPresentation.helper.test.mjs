@@ -58,6 +58,11 @@ assert.deepEqual(
   [{ image_id: "public", image_url: "https://public/image.jpg" }],
   "the viewer receives public event images only",
 );
+assert.deepEqual(
+  helper.getPublicEventImages(null),
+  [],
+  "event details tolerate an unloaded or unavailable event",
+);
 
 assert.deepEqual(helper.getApprovedProfilePresentation({ review_status: "APPROVED" }, false), {
   approved: true, readOnly: true, primaryAction: "Edit Profile", showCancel: false,

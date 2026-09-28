@@ -39,6 +39,7 @@ const BID_STATUS_FILTERS = [
   { label: "Draft", value: "DRAFT" },
   { label: "Submitted", value: "SUBMITTED" },
   { label: "Under Review", value: "UNDER_REVIEW" },
+  { label: "Revised", value: "REVISED" },
   { label: "Awarded", value: "AWARDED" },
   { label: "Not Selected", value: "NOT_AWARDED" },
   { label: "Withdrawn", value: "WITHDRAWN" },
@@ -91,9 +92,13 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
 
   const filteredBids = useMemo(
     () =>
-      bids.filter((bid) =>
-        matchesMarketplaceSubmissionStatus(bid.bid_status, statusFilter),
-      ),
+      bids.filter((bid) => {
+        const displayStatus = getMarketplaceSubmissionDisplayStatus(
+          bid,
+          bid.bid_status,
+        );
+        return matchesMarketplaceSubmissionStatus(displayStatus, statusFilter);
+      }),
     [bids, statusFilter],
   );
 
@@ -146,10 +151,20 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
   const renderBid = ({ item }) => {
     const event = getBidEvent(item);
     const specialtyUpdateAvailable = !!item.specialty_update_available_at;
+    const awardAmendmentAwaitingVendor =
+      item.award_amendment_status === "AWAITING_VENDOR";
     const editable = isEditableBid(item) || specialtyUpdateAvailable;
     const eventId = item.event_id || event?.event_id;
     const supportId = getMarketplaceEventSupportId(event, item);
     const openBid = () => {
+      if (awardAmendmentAwaitingVendor) {
+        navigation.navigate("VendorAwardedEventDetailsScreen", {
+          itemType: "BID",
+          bid: item,
+          event,
+        });
+        return;
+      }
       if (editable) {
         navigation.navigate("VendorBidResponseScreen", {
           eventId,
@@ -204,6 +219,11 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
           Total Bid Amount: {formatMoney(getMarketplaceBidTotal(item))}
         </Text>
         {specialtyUpdateAvailable ? <Text style={styles.meta}>Coordinator has made some additional changes: Dessert and Drinks are now needed.</Text> : null}
+        {awardAmendmentAwaitingVendor ? (
+          <Text style={styles.meta}>
+            Action required: review the increased headcount and reconfirm or revise your awarded price.
+          </Text>
+        ) : null}
         <Text style={styles.meta}>
           Submitted Date:{" "}
           {item.submitted_at ? formatDate(item.submitted_at) : "Not submitted"}
@@ -214,7 +234,9 @@ const VendorMarketplaceMyBidsScreen = ({ navigation }) => {
           onPress={openBid}
         >
           <Text style={styles.secondaryButtonText}>
-            {isBidRevisionRequested(item)
+            {awardAmendmentAwaitingVendor
+              ? "Review Headcount Change"
+              : isBidRevisionRequested(item)
               ? "Revise Bid"
               : specialtyUpdateAvailable
                 ? "Update Bid"

@@ -66,6 +66,32 @@ export const resolveFoodMarketplaceNotificationDestination = async ({
   loadBids,
   loadApplications,
 }) => {
+  if (
+    notification?.type === "MARKETPLACE_AWARD_AMENDMENT" &&
+    !notification?.bid_id
+  ) {
+    const response = await loadBids();
+    const bids = response?.data?.marketplaceBidList || [];
+    const bid = bids.find(
+      (item) =>
+        item?.award_amendment_status === "AWAITING_VENDOR" &&
+        (!notification?.event_id ||
+          submissionEvent(item)?.event_id === notification.event_id ||
+          item?.event_id === notification.event_id),
+    );
+    if (bid) {
+      return {
+        route: "VendorAwardedEventDetailsScreen",
+        params: {
+          itemType: "BID",
+          bid,
+          event: submissionEvent(bid),
+        },
+      };
+    }
+    return { route: "VendorMyBidsScreen", params: {} };
+  }
+
   if (notification?.bid_id) {
     const response = await loadBids();
     const bids = response?.data?.marketplaceBidList || [];

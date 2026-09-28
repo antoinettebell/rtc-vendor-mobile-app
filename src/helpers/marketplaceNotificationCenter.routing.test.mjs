@@ -47,6 +47,28 @@ const amendmentDestination = await resolveFoodMarketplaceNotificationDestination
 assert.equal(amendmentDestination.route, "VendorAwardedEventDetailsScreen");
 assert.equal(amendmentDestination.params.bid, rejectedBid);
 
+const amendmentWithoutBidIdDestination = await resolveFoodMarketplaceNotificationDestination({
+  notification: {
+    type: "MARKETPLACE_AWARD_AMENDMENT",
+    event_id: "event-1",
+  },
+  loadBids: async () => ({
+    data: {
+      marketplaceBidList: [
+        {
+          ...rejectedBid,
+          award_amendment_status: "AWAITING_VENDOR",
+        },
+      ],
+    },
+  }),
+  loadApplications: async () => { throw new Error("application lookup should not run"); },
+});
+assert.equal(
+  amendmentWithoutBidIdDestination.route,
+  "VendorAwardedEventDetailsScreen",
+);
+
 const rejectedApplication = {
   application_id: "application-rejected",
   application_status: "NOT_SELECTED",
@@ -95,10 +117,14 @@ const closedApplicationDestination = await resolveFoodMarketplaceNotificationDes
 assert.equal(closedApplicationDestination.route, "VendorApplicationDetailScreen");
 assert.equal(closedApplicationDestination.params.application, rejectedApplication);
 
-const [homeScreen, nearMeScreen, marketplaceShared] = await Promise.all([
+const [homeScreen, nearMeScreen, marketplaceShared, awardedDetailsScreen] = await Promise.all([
   readFile(new URL("../screens/homeScreen.js", import.meta.url), "utf8"),
   readFile(new URL("../screens/vendorMarketplaceNearMeScreen.js", import.meta.url), "utf8"),
   readFile(new URL("../screens/vendorMarketplaceShared.js", import.meta.url), "utf8"),
+  readFile(
+    new URL("../screens/vendorMarketplaceAwardedEventDetailsScreen.js", import.meta.url),
+    "utf8",
+  ),
 ]);
 assert.match(homeScreen, /resolveFoodMarketplaceNotificationDestination/);
 assert.match(homeScreen, /item\.type === "MARKETPLACE_AWARD_AMENDMENT"/);
@@ -108,5 +134,7 @@ assert.match(marketplaceShared, /event\?\.paymentType/);
 assert.doesNotMatch(marketplaceShared, /event\.paymentType/);
 assert.match(marketplaceShared, /event\?\.payment_responsibility/);
 assert.doesNotMatch(marketplaceShared, /event\.payment_responsibility/);
+assert.match(awardedDetailsScreen, /Reconfirm Current Price/);
+assert.match(awardedDetailsScreen, /Submit Amended Price/);
 
 console.log("marketplace notification routing tests passed");
