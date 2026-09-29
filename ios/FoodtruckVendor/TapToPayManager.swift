@@ -388,10 +388,14 @@ import UIKit
     let online: MposUIOnline
     if let preparedOnlineService {
       online = preparedOnlineService
-      logStage("prepared_online_session_reused")
+      // A prepared online service is a single transaction session. Clear it
+      // before starting the charge so a later checkout cannot reuse a
+      // completed or failed MposUI session.
+      self.preparedOnlineService = nil
+      logStage("prepared_online_session_consumed")
     } else {
       online = try await reader.mposUIOnline()
-      preparedOnlineService = online
+      logStage("fresh_online_session_created")
     }
     logStage("online_session_ready")
     let parameters = ChargeParameters(amount: amount, currency: currency, customIdentifier: reference)
