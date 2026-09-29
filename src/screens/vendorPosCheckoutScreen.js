@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator as NativeIndicator,
   Alert,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -50,6 +51,9 @@ const toAmount = (value) => {
   const n = Number(value);
   return Number.isFinite(n) ? n.toFixed(2) : "0.00";
 };
+
+const RTC_SUPPORT_PHONE_DISPLAY = "(800) 410-7053";
+const RTC_SUPPORT_PHONE_URL = "tel:8004107053";
 
 const tapToPayDiagnostic = (error) => {
   const parts = typeof error?.code === "string" ? error.code.split("|") : [];
@@ -734,8 +738,22 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
       finishCheckout(createdOrder);
     } catch {
       Alert.alert(
-        "Payment Approved — Order Pending",
-        "The card payment was approved, but RTC could not finish creating the order. Do not charge the customer again. Check Payment Transactions or contact RTC support.",
+        "Unable to Confirm Payment",
+        `Do not retry or charge the customer again. Contact Round Da' Corner Support at ${RTC_SUPPORT_PHONE_DISPLAY}.`,
+        [
+          { text: "Close", style: "cancel" },
+          {
+            text: "Call RTC Support",
+            onPress: () => {
+              Linking.openURL(RTC_SUPPORT_PHONE_URL).catch(() => {
+                Alert.alert(
+                  "RTC Support",
+                  `Please call ${RTC_SUPPORT_PHONE_DISPLAY}.`,
+                );
+              });
+            },
+          },
+        ],
       );
     } finally {
       setPaymentLoading(null);
