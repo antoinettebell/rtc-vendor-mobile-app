@@ -54,22 +54,36 @@ import UIKit
     return diagnostic
   }
 
-  private func safeDeveloperInfo(from error: Error, nativeError: NSError) -> String? {
-    if let value = nativeError.userInfo["developerInfo"] as? String {
-      return safeDiagnosticText(value)
+  private func mposUIFailureDetails(
+    _ error: MposUIError
+  ) -> (category: String, developerInfo: String?) {
+    switch error {
+    case .enrollmentError(let message):
+      return ("enrollment_error", safeDiagnosticText(message))
+    case .transactionFailed(let developerInfo):
+      return ("transaction_failed", safeDiagnosticText(developerInfo))
+    case .inconclusive(let identifier):
+      return (
+        "inconclusive",
+        identifier?.isEmpty == false
+          ? "CyberSource returned an inconclusive transaction identifier."
+          : "CyberSource returned an inconclusive transaction result."
+      )
+    case .networkError:
+      return ("network_error", "CyberSource reported a network error.")
+    case .authError(let developerInfo):
+      return ("authentication_error", safeDiagnosticText(developerInfo))
+    @unknown default:
+      return ("unknown_sdk_error", "CyberSource returned an unknown Tap to Pay error.")
     }
-
-    let reflected = String(describing: error)
-    guard let range = reflected.range(of: "developerInfo:") else {
-      return nil
-    }
-    return safeDiagnosticText(String(reflected[range.upperBound...]))
   }
 
-  private func transactionFailure(_ error: Error) -> NSError {
+  private func transactionFailure(_ error: MposUIError) -> NSError {
     let nativeError = error as NSError
     var diagnostic = safeNSErrorDiagnostic(nativeError)
-    let developerInfo = safeDeveloperInfo(from: error, nativeError: nativeError)
+    let failureDetails = mposUIFailureDetails(error)
+    diagnostic["failureCategory"] = failureDetails.category
+    let developerInfo = failureDetails.developerInfo
     if let developerInfo {
       diagnostic["developerInfo"] = developerInfo
     }

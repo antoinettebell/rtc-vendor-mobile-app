@@ -96,8 +96,20 @@ const formatNativeErrorDiagnostic = (label, diagnostic) => {
     fields.push(`${label} failure reason: ${diagnostic.localizedFailureReason}`);
   }
 
+  if (typeof diagnostic.failureCategory === "string") {
+    fields.push(`${label} failure category: ${diagnostic.failureCategory}`);
+  }
+
+  if (typeof diagnostic.developerInfo === "string") {
+    fields.push(`${label} developer info: ${diagnostic.developerInfo}`);
+  }
+
   if (Array.isArray(diagnostic.userInfoKeys)) {
     fields.push(`${label} userInfo keys: ${diagnostic.userInfoKeys.filter((key) => typeof key === "string").join(", ") || "None"}`);
+  }
+
+  if (Array.isArray(diagnostic.trace)) {
+    fields.push(`${label} trace: ${diagnostic.trace.filter((entry) => typeof entry === "string").join(" → ") || "None"}`);
   }
 
   return fields;

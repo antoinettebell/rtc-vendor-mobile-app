@@ -18,5 +18,8 @@ assert.doesNotMatch(completionSource, /Tap to Pay on iPhone failed/);
 assert.match(source, /setTapToPayApprovalPending\(true\)/);
 assert.match(source, /disabled=\{!!paymentLoading \|\| tapToPayApprovalPending\}/);
 assert.match(source, /Payment Approved — Pending/);
+assert.match(source, /failure category:/);
+assert.match(source, /developer info:/);
+assert.match(source, /diagnostic\.trace/);
 
 console.log("Tap to Pay post-approval screen tests passed");
