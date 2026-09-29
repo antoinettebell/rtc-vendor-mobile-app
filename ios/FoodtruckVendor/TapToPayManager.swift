@@ -353,6 +353,14 @@ import UIKit
       forceReactivationRequested: forceReactivation
     )
 
+    // Activation can replace the device credentials stored by the SDK.  Any
+    // online service prepared before that point still carries the superseded
+    // authentication context and will fail its JWT request even though the
+    // device reactivation succeeded.  Force checkout to create a fresh online
+    // service from the newly activated reader.
+    preparedOnlineService = nil
+    logStage("prepared_online_session_invalidated_after_activation")
+
     guard case .activated(let device) = await reader.activationStatus,
           device.environment == requestedEnvironment else {
       throw NSError(domain: "RTCTapToPay", code: 409, userInfo: [

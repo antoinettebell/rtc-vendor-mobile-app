@@ -32,6 +32,7 @@ assert.match(foregroundSync, /server\?\.status === "HISTORICAL"/);
 assert.match(manager, /preparedOnlineService/);
 assert.match(manager, /preparedOnlineService = try await reader\.mposUIOnline\(\)/);
 assert.match(manager, /prepared_online_session_reused/);
+assert.match(manager, /preparedOnlineService = nil\s+logStage\("prepared_online_session_invalidated_after_activation"\)/);
 assert.match(manager, /private var activeOperation: String\?/);
 assert.match(manager, /keychain loading error/);
 assert.doesNotMatch(manager, /validateReaderSession/);
