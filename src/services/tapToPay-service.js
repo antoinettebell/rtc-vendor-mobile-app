@@ -102,14 +102,24 @@ export const syncTapToPayTerminalStatus = async ({ marketplaceVendor = false } =
   const deviceId = String(local?.deviceId || "").trim();
   if (!local?.activated || !deviceId) return { activated: false, known: false };
   const deviceLabel = await getDeviceLabel();
+
+  // Read the server-owned control state before reporting the locally cached
+  // activation. Registering SUCCEEDED clears a pending admin reactivation
+  // request, so doing that first would silently acknowledge a reactivation
+  // that the SDK never performed.
+  const server = await getTapToPayTerminalState({ deviceId, marketplaceVendor });
+  if (server?.reactivation_required || server?.status === "HISTORICAL") {
+    return { ...server, activated: true, deviceId, deviceLabel };
+  }
+
   await (marketplaceVendor ? registerEventVendorTapToPayTerminal_API : registerTapToPayTerminal_API)({
     deviceId,
     deviceLabel,
     environment: tapToPayConfig.environment,
     activationStatus: "SUCCEEDED",
   });
-  const server = await getTapToPayTerminalState({ deviceId, marketplaceVendor });
-  return { ...server, activated: true, deviceId, deviceLabel };
+  const refreshedServer = await getTapToPayTerminalState({ deviceId, marketplaceVendor });
+  return { ...refreshedServer, activated: true, deviceId, deviceLabel };
 };
 
 export const prepareTapToPayReader = async () => {
