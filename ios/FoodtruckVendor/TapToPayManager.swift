@@ -8,6 +8,7 @@ import UIKit
 @objc final class TapToPayManager: NSObject {
   private var reader: MposUIReader?
   private var readerEnvironment: MposEnvironment?
+  private var preparedOnlineService: MposUIOnline?
   private var diagnosticTrace: [String] = []
   private let diagnosticLogger = Logger(
     subsystem: Bundle.main.bundleIdentifier ?? "com.rounddacorner.vendor",
@@ -54,36 +55,22 @@ import UIKit
     return diagnostic
   }
 
-  private func mposUIFailureDetails(
-    _ error: MposUIError
-  ) -> (category: String, developerInfo: String?) {
-    switch error {
-    case .enrollmentError(let message):
-      return ("enrollment_error", safeDiagnosticText(message))
-    case .transactionFailed(let developerInfo):
-      return ("transaction_failed", safeDiagnosticText(developerInfo))
-    case .inconclusive(let identifier):
-      return (
-        "inconclusive",
-        identifier?.isEmpty == false
-          ? "CyberSource returned an inconclusive transaction identifier."
-          : "CyberSource returned an inconclusive transaction result."
-      )
-    case .networkError:
-      return ("network_error", "CyberSource reported a network error.")
-    case .authError(let developerInfo):
-      return ("authentication_error", safeDiagnosticText(developerInfo))
-    @unknown default:
-      return ("unknown_sdk_error", "CyberSource returned an unknown Tap to Pay error.")
+  private func safeDeveloperInfo(from error: Error, nativeError: NSError) -> String? {
+    if let value = nativeError.userInfo["developerInfo"] as? String {
+      return safeDiagnosticText(value)
     }
+
+    let reflected = String(describing: error)
+    guard let range = reflected.range(of: "developerInfo:") else {
+      return nil
+    }
+    return safeDiagnosticText(String(reflected[range.upperBound...]))
   }
 
-  private func transactionFailure(_ error: MposUIError) -> NSError {
+  private func transactionFailure(_ error: Error) -> NSError {
     let nativeError = error as NSError
     var diagnostic = safeNSErrorDiagnostic(nativeError)
-    let failureDetails = mposUIFailureDetails(error)
-    diagnostic["failureCategory"] = failureDetails.category
-    let developerInfo = failureDetails.developerInfo
+    let developerInfo = safeDeveloperInfo(from: error, nativeError: nativeError)
     if let developerInfo {
       diagnostic["developerInfo"] = developerInfo
     }
@@ -179,12 +166,13 @@ import UIKit
     )
     reader = newReader
     readerEnvironment = environment
+    preparedOnlineService = nil
     return newReader
   }
 
   /// CyberSource 3.7.0 does not expose a separate prepare/warm-up method.
-  /// Build and retain the reader, but create the online payment service only
-  /// when a checkout starts so no transaction state is carried between sales.
+  /// Creating the configured reader and opening its online service performs
+  /// the SDK initialization that would otherwise occur when checkout starts.
   @MainActor
   func prepare(environmentName: String) async throws -> [String: Any] {
     let requestedEnvironment = environment(from: environmentName)
@@ -203,6 +191,7 @@ import UIKit
       ]
     }
 
+    preparedOnlineService = try await reader.mposUIOnline()
     logStage(
       "reader_prepared",
       details: "environment=\(String(describing: requestedEnvironment)) device_id_suffix=\(identifierSuffix(device.deviceId))"
@@ -396,8 +385,14 @@ import UIKit
        let viewController = Self.topViewController() {
       try await showMerchantEducation(from: viewController)
     }
-    let online = try await reader.mposUIOnline()
-    logStage("fresh_online_session_created")
+    let online: MposUIOnline
+    if let preparedOnlineService {
+      online = preparedOnlineService
+      logStage("prepared_online_session_reused")
+    } else {
+      online = try await reader.mposUIOnline()
+      preparedOnlineService = online
+    }
     logStage("online_session_ready")
     let parameters = ChargeParameters(amount: amount, currency: currency, customIdentifier: reference)
     logStage("charge_started")

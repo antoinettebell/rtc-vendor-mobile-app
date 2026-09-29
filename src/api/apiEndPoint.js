@@ -229,8 +229,6 @@ export const PLACE_FOOD_ORDER = "/order";
 export const PREPARE_TAP_TO_PAY_ATTEMPT = "/order/tap-to-pay-attempts/prepare";
 export const START_TAP_TO_PAY_ATTEMPT = (attemptId) =>
   `/order/tap-to-pay-attempts/${attemptId}/start`;
-export const RECONCILE_TAP_TO_PAY_ATTEMPT = (attemptId) =>
-  `/order/tap-to-pay-attempts/${attemptId}/reconcile`;
 export const CANCEL_TAP_TO_PAY_ATTEMPT = (attemptId) =>
   `/order/tap-to-pay-attempts/${attemptId}/cancel`;
 export const PAYMENT_CHECKOUT = "/order/payment-checkout";

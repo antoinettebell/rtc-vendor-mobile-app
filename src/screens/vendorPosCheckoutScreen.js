@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator as NativeIndicator,
   Alert,
-  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -24,7 +23,6 @@ import {
   getVendorComplianceSummary_API,
   placePosOrder_API,
   prepareTapToPayAttempt_API,
-  reconcileTapToPayAttempt_API,
   startTapToPayAttempt_API,
   validatePosOrder_API,
 } from "../api/appAPI";
@@ -53,13 +51,6 @@ const toAmount = (value) => {
   return Number.isFinite(n) ? n.toFixed(2) : "0.00";
 };
 
-const RTC_SUPPORT_PHONE_DISPLAY = "(800) 410-7053";
-const RTC_SUPPORT_PHONE_URL = "tel:8004107053";
-const TAP_TO_PAY_RECONCILIATION_ATTEMPTS = 8;
-const TAP_TO_PAY_RECONCILIATION_DELAY_MS = 2000;
-const wait = (milliseconds) =>
-  new Promise((resolve) => setTimeout(resolve, milliseconds));
-
 const tapToPayDiagnostic = (error) => {
   const parts = typeof error?.code === "string" ? error.code.split("|") : [];
   const hasNativeDiagnostic = parts.length >= 5 && parts[0] === "TAP_TO_PAY";
@@ -81,6 +72,31 @@ const tapToPayDiagnostic = (error) => {
       message: error?.message || "Tap to Pay on iPhone could not be completed.",
     },
   };
+};
+
+const safeDiagnosticText = (value) =>
+  typeof value === "string" || typeof value === "number"
+    ? String(value)
+    : "Unavailable";
+
+const formatNativeErrorDiagnostic = (label, diagnostic) => {
+  if (!diagnostic) return [];
+
+  const fields = [
+    `${label} domain: ${safeDiagnosticText(diagnostic.domain)}`,
+    `${label} code: ${safeDiagnosticText(diagnostic.code)}`,
+    `${label} message: ${safeDiagnosticText(diagnostic.message)}`,
+  ];
+
+  if (typeof diagnostic.localizedFailureReason === "string") {
+    fields.push(`${label} failure reason: ${diagnostic.localizedFailureReason}`);
+  }
+
+  if (Array.isArray(diagnostic.userInfoKeys)) {
+    fields.push(`${label} userInfo keys: ${diagnostic.userInfoKeys.filter((key) => typeof key === "string").join(", ") || "None"}`);
+  }
+
+  return fields;
 };
 
 const isTapToPayCancellation = (error, diagnostic) => {
@@ -239,7 +255,6 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
       : ownerPaymentCapabilities.tapToPay;
   const [loading, setLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState(null);
-  const [tapToPayApprovalPending, setTapToPayApprovalPending] = useState(false);
   const [tapToPayCompliance, setTapToPayCompliance] = useState(null);
   const [tapToPayComplianceLoading, setTapToPayComplianceLoading] = useState(true);
   const [employeeTapToPayTraining, setEmployeeTapToPayTraining] = useState(null);
@@ -655,15 +670,14 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
         reference: tapToPayAttempt.reference,
       });
 
-      setTapToPayApprovalPending(true);
       await completeTapToPayPayment(tapToPayResult);
     } catch (error) {
+      void cancelTapToPayAttempt_API(tapToPayAttempt.id).catch(() => {});
+      checkoutAttemptKey.current = `${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}`;
+      setAttemptRefreshKey((value) => value + 1);
       if (error?.code === "E_TAP_TO_PAY_OS_UNSUPPORTED") {
-        void cancelTapToPayAttempt_API(tapToPayAttempt.id).catch(() => {});
-        checkoutAttemptKey.current = `${Date.now()}-${Math.random()
-          .toString(36)
-          .slice(2)}`;
-        setAttemptRefreshKey((value) => value + 1);
         Alert.alert(
           "Software Update Required",
           error?.message ||
@@ -674,11 +688,6 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
       }
       const diagnostic = tapToPayDiagnostic(error);
       if (isTapToPayCancellation(error, diagnostic)) {
-        void cancelTapToPayAttempt_API(tapToPayAttempt.id).catch(() => {});
-        checkoutAttemptKey.current = `${Date.now()}-${Math.random()
-          .toString(36)
-          .slice(2)}`;
-        setAttemptRefreshKey((value) => value + 1);
         Alert.alert(
           "Tap to Pay Transaction Canceled",
           "The transaction was canceled and no payment was approved. Ask the customer to approve the transaction and present payment again when ready.",
@@ -687,60 +696,17 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
         setPaymentLoading(null);
         return;
       }
-
-      // Some successful CyberSource charges return a generic MposUI failure.
-      // Keep the durable attempt active and reconcile it by RTC's unique
-      // merchant reference before deciding whether the payment failed.
-      setTapToPayApprovalPending(true);
-      console.warn("Tap to Pay returned an ambiguous native result", {
-        stage: diagnostic.stage,
-        domain: diagnostic.outer?.domain,
-        code: diagnostic.outer?.code,
-      });
-      for (let index = 0; index < TAP_TO_PAY_RECONCILIATION_ATTEMPTS; index += 1) {
-        try {
-          const reconciliation = await reconcileTapToPayAttempt_API(
-            tapToPayAttempt.id,
-          );
-          const result = reconciliation?.data;
-          if (result?.confirmed && result?.payment?.transactionId) {
-            await completeTapToPayPayment(result.payment);
-            return;
-          }
-          if (result?.declined) {
-            checkoutAttemptKey.current = `${Date.now()}-${Math.random()
-              .toString(36)
-              .slice(2)}`;
-            setAttemptRefreshKey((value) => value + 1);
-            setTapToPayApprovalPending(false);
-            Alert.alert(
-              "Payment Declined",
-              "The payment was not approved. Ask the customer for another payment method.",
-            );
-            setPaymentLoading(null);
-            return;
-          }
-        } catch (reconciliationError) {
-          console.warn(
-            "Tap to Pay reconciliation is still pending",
-            reconciliationError?.message,
-          );
-        }
-        if (index < TAP_TO_PAY_RECONCILIATION_ATTEMPTS - 1) {
-          await wait(TAP_TO_PAY_RECONCILIATION_DELAY_MS);
-        }
-      }
-
+      const outerDiagnostic = diagnostic.outer;
+      const firstUnderlying = outerDiagnostic?.underlying;
+      const secondUnderlying = firstUnderlying?.underlying;
       Alert.alert(
-        "Unable to Confirm Payment",
-        `Do not retry or charge the customer again. Contact Round Da' Corner Support at ${RTC_SUPPORT_PHONE_DISPLAY}.`,
+        "Tap to Pay on iPhone Diagnostic",
         [
-          { text: "Close", style: "cancel" },
-          {
-            text: "Call RTC Support",
-            onPress: () => Linking.openURL(RTC_SUPPORT_PHONE_URL),
-          },
-        ],
+          `Stage: ${diagnostic.stage}`,
+          ...formatNativeErrorDiagnostic("Outer", outerDiagnostic),
+          ...formatNativeErrorDiagnostic("Underlying 1", firstUnderlying),
+          ...formatNativeErrorDiagnostic("Underlying 2", secondUnderlying),
+        ].join("\n\n"),
       );
       setPaymentLoading(null);
     }
@@ -764,24 +730,10 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
       });
 
       finishCheckout(createdOrder);
-    } catch {
+    } catch (error) {
       Alert.alert(
-        "Unable to Confirm Payment",
-        `Do not retry or charge the customer again. Contact Round Da' Corner Support at ${RTC_SUPPORT_PHONE_DISPLAY}.`,
-        [
-          { text: "Close", style: "cancel" },
-          {
-            text: "Call RTC Support",
-            onPress: () => {
-              Linking.openURL(RTC_SUPPORT_PHONE_URL).catch(() => {
-                Alert.alert(
-                  "RTC Support",
-                  `Please call ${RTC_SUPPORT_PHONE_DISPLAY}.`,
-                );
-              });
-            },
-          },
-        ],
+        "Tap to Pay on iPhone failed",
+        error?.message || "Please try again.",
       );
     } finally {
       setPaymentLoading(null);
@@ -1046,21 +998,14 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
           <Text style={styles.sectionTitle}>Payment method</Text>
           {tapToPayOptionAvailable ? (
             <TouchableOpacity
-              style={[
-                styles.paymentButton,
-                tapToPayApprovalPending && styles.paymentButtonDisabled,
-              ]}
+              style={styles.paymentButton}
               onPress={handleTapToPay}
-              disabled={!!paymentLoading || tapToPayApprovalPending}
+              disabled={!!paymentLoading}
               accessibilityRole="button"
               accessibilityLabel="Tap to Pay on iPhone"
               accessibilityHint={`Total $${toAmount(tapSummary.total)}`}
             >
-              {tapToPayApprovalPending ? (
-                <Text style={styles.paymentButtonText}>
-                  Payment Approved — Pending
-                </Text>
-              ) : paymentLoading === "tap" ? (
+              {paymentLoading === "tap" ? (
                 <Text style={styles.paymentButtonText}>Processing...</Text>
               ) : (
                 <TapToPayCheckoutButtonContent
@@ -1077,11 +1022,10 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
             style={[
               styles.paymentButton,
               styles.cashPaymentButton,
-              (!cashOrder || !!paymentLoading || tapToPayApprovalPending) &&
-                styles.paymentButtonDisabled,
+              (!cashOrder || !!paymentLoading) && styles.paymentButtonDisabled,
             ]}
             onPress={handleCash}
-            disabled={!cashOrder || !!paymentLoading || tapToPayApprovalPending}
+            disabled={!cashOrder || !!paymentLoading}
           >
             <Text style={[styles.paymentButtonText, styles.cashPaymentButtonText]}>
               {paymentLoading === "cash"

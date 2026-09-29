@@ -47,7 +47,6 @@ import {
   PLACE_FOOD_ORDER,
   PREPARE_TAP_TO_PAY_ATTEMPT,
   START_TAP_TO_PAY_ATTEMPT,
-  RECONCILE_TAP_TO_PAY_ATTEMPT,
   CANCEL_TAP_TO_PAY_ATTEMPT,
   GET_REVIEW_BY_FOODTRUCK_ID,
   GET_REVIEW_STATS_BY_FOODTRUCK_ID,
@@ -1292,19 +1291,6 @@ export const startTapToPayAttempt_API = async (attemptId) => {
   try {
     const response = await apiClient.patch(
       START_TAP_TO_PAY_ATTEMPT(attemptId),
-      {},
-      { skipToken: false },
-    );
-    return response?.data;
-  } catch (error) {
-    throw error?.response?.data || error;
-  }
-};
-
-export const reconcileTapToPayAttempt_API = async (attemptId) => {
-  try {
-    const response = await apiClient.post(
-      RECONCILE_TAP_TO_PAY_ATTEMPT(attemptId),
       {},
       { skipToken: false },
     );
