@@ -303,6 +303,9 @@ final class RTCTapToPay: NSObject {
   }
 
   private func diagnosticCode(for error: NSError) -> String {
+    if error.userInfo["tapToPayRepairRequired"] as? Bool == true {
+      return "E_TAP_TO_PAY_SETUP_REPAIR_REQUIRED"
+    }
     guard let stage = error.userInfo["tapToPayStage"] as? String,
           let domain = error.userInfo["tapToPayErrorDomain"] as? String,
           let code = error.userInfo["tapToPayErrorCode"] as? Int,

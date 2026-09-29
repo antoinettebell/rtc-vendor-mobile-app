@@ -112,16 +112,6 @@ export const syncTapToPayTerminalStatus = async ({ marketplaceVendor = false } =
   return { ...server, activated: true, deviceId, deviceLabel };
 };
 
-export const prepareTapToPayReader = async () => {
-  if (!isTapToPayAvailable() || !nativeTapToPay?.prepare) {
-    return { prepared: false, available: false };
-  }
-
-  return nativeTapToPay.prepare({
-    environment: tapToPayConfig.environment,
-  });
-};
-
 const ensureTerminalReady = async ({ marketplaceVendor = false } = {}) => {
   const local = await getLocalTapToPayActivationStatus();
   const deviceId = String(local?.deviceId || "").trim();

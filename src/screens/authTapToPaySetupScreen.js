@@ -37,6 +37,7 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
   const { user } = useSelector((state) => state.userReducer);
   const isOnboardingFlow = route?.params?.onboardingFlow === true;
   const isTapToPayUpgradeFlow = route?.params?.tapToPayUpgradeFlow === true;
+  const repairRequested = route?.params?.repairRequired === true;
   const isEmployeeSession =
     user?.userType === "EMPLOYEE" || user?.role === "EMPLOYEE";
   const isMarketplaceVendor = user?.vendorSubtype === "EVENT_VENDOR";
@@ -47,7 +48,7 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
   const [terminalReady, setTerminalReady] = useState(false);
   const [terminalSuffix, setTerminalSuffix] = useState("");
   const [terminalActivationStatus, setTerminalActivationStatus] = useState("UNKNOWN");
-  const [reactivationRequired, setReactivationRequired] = useState(false);
+  const [reactivationRequired, setReactivationRequired] = useState(repairRequested);
   const [hasPaymentDetails, setHasPaymentDetails] = useState(null);
   const [employeeTraining, setEmployeeTraining] = useState(null);
   const [loadingEmployeeTraining, setLoadingEmployeeTraining] = useState(isEmployeeSession);
@@ -146,13 +147,16 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
           localStatus?.activated === true &&
           serverStatus?.status === "ACTIVE" &&
           serverStatus?.activation_status === "SUCCEEDED" &&
-          serverStatus?.reactivation_required !== true;
+          serverStatus?.reactivation_required !== true &&
+          !repairRequested;
         setTerminalReady(confirmed);
         setTerminalActivationStatus(
           serverStatus?.activation_status ||
             (confirmed ? "SUCCEEDED" : "UNKNOWN"),
         );
-        setReactivationRequired(serverStatus?.reactivation_required === true);
+        setReactivationRequired(
+          repairRequested || serverStatus?.reactivation_required === true,
+        );
       })
       .catch(() => {
         if (active && terminalSerial) {
@@ -267,7 +271,9 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
       const result = await activateTapToPay({
         marketplaceVendor: isMarketplaceVendor,
         forceReactivation:
-          reactivationRequired || serverStatus?.reactivation_required === true,
+          repairRequested ||
+            reactivationRequired ||
+            serverStatus?.reactivation_required === true,
         existingDeviceId: existingDeviceId || null,
       });
       setTerminalSuffix(result?.terminalSerialSuffix || "");

@@ -686,6 +686,23 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
         setPaymentLoading(null);
         return;
       }
+      if (error?.code === "E_TAP_TO_PAY_SETUP_REPAIR_REQUIRED") {
+        Alert.alert(
+          "Tap to Pay Setup Needs Repair",
+          "This iPhone's existing Tap to Pay terminal must be reactivated before accepting another payment. The customer was not charged.",
+          [
+            { text: "Not Now", style: "cancel" },
+            {
+              text: "Repair Setup",
+              onPress: () => navigation.navigate("authTapToPaySetupScreen", {
+                repairRequired: true,
+              }),
+            },
+          ],
+        );
+        setPaymentLoading(null);
+        return;
+      }
       const diagnostic = tapToPayDiagnostic(error);
       if (isTapToPayCancellation(error, diagnostic)) {
         Alert.alert(

@@ -8,7 +8,7 @@ import UIKit
 @objc final class TapToPayManager: NSObject {
   private var reader: MposUIReader?
   private var readerEnvironment: MposEnvironment?
-  private var preparedOnlineService: MposUIOnline?
+  private var activeOperation: String?
   private var diagnosticTrace: [String] = []
   private let diagnosticLogger = Logger(
     subsystem: Bundle.main.bundleIdentifier ?? "com.rounddacorner.vendor",
@@ -81,12 +81,24 @@ import UIKit
       "[TapToPayDiagnostic] stage=charge_result domain=\(nativeError.domain, privacy: .public) code=\(nativeError.code, privacy: .public) developer_info=\(developerInfoForLog, privacy: .public)"
     )
 
-    return NSError(domain: "RTCTapToPay", code: 502, userInfo: [
-      NSLocalizedDescriptionKey: "Tap to Pay on iPhone transaction failed: \(nativeError.localizedDescription)",
+    let errorDescription = [
+      nativeError.localizedDescription,
+      developerInfo ?? "",
+      String(describing: error),
+    ].joined(separator: " ").lowercased()
+    let setupNeedsRepair = errorDescription.contains("keychainloadingerror")
+      || errorDescription.contains("keychain loading error")
+    let userMessage = setupNeedsRepair
+      ? "Tap to Pay setup on this iPhone needs repair. Reactivate the existing terminal before accepting another payment."
+      : "Tap to Pay on iPhone transaction failed: \(nativeError.localizedDescription)"
+
+    return NSError(domain: "RTCTapToPay", code: setupNeedsRepair ? 428 : 502, userInfo: [
+      NSLocalizedDescriptionKey: userMessage,
       "tapToPayStage": "charge_result",
       "tapToPayErrorDomain": nativeError.domain,
       "tapToPayErrorCode": nativeError.code,
       "tapToPayErrorDiagnostic": diagnostic,
+      "tapToPayRepairRequired": setupNeedsRepair,
     ])
   }
 
@@ -166,13 +178,11 @@ import UIKit
     )
     reader = newReader
     readerEnvironment = environment
-    preparedOnlineService = nil
     return newReader
   }
 
-  /// CyberSource 3.7.0 does not expose a separate prepare/warm-up method.
-  /// Creating the configured reader and opening its online service performs
-  /// the SDK initialization that would otherwise occur when checkout starts.
+  /// Retained for bridge compatibility. Do not open or cache an MposUIOnline
+  /// service here; each checkout owns exactly one fresh payment session.
   @MainActor
   func prepare(environmentName: String) async throws -> [String: Any] {
     let requestedEnvironment = environment(from: environmentName)
@@ -191,9 +201,8 @@ import UIKit
       ]
     }
 
-    preparedOnlineService = try await reader.mposUIOnline()
     logStage(
-      "reader_prepared",
+      "reader_status_ready",
       details: "environment=\(String(describing: requestedEnvironment)) device_id_suffix=\(identifierSuffix(device.deviceId))"
     )
     return [
@@ -318,6 +327,14 @@ import UIKit
     activationCode: String,
     forceReactivation: Bool = false
   ) async throws -> [String: Any] {
+    guard activeOperation == nil else {
+      throw NSError(domain: "RTCTapToPay", code: 409, userInfo: [
+        NSLocalizedDescriptionKey: "Another Tap to Pay operation is already in progress. Please wait and try again."
+      ])
+    }
+    activeOperation = "activation"
+    defer { activeOperation = nil }
+
     let requestedEnvironment = environment(from: environmentName)
     diagnosticTrace.removeAll(keepingCapacity: true)
     logStage(
@@ -363,6 +380,13 @@ import UIKit
         NSLocalizedDescriptionKey: "Transaction amount must be greater than zero."
       ])
     }
+    guard activeOperation == nil else {
+      throw NSError(domain: "RTCTapToPay", code: 409, userInfo: [
+        NSLocalizedDescriptionKey: "Another Tap to Pay operation is already in progress. Please wait and try again."
+      ])
+    }
+    activeOperation = "sale"
+    defer { activeOperation = nil }
 
     let requestedEnvironment = environment(from: environmentName)
     diagnosticTrace.removeAll(keepingCapacity: true)
@@ -385,14 +409,8 @@ import UIKit
        let viewController = Self.topViewController() {
       try await showMerchantEducation(from: viewController)
     }
-    let online: MposUIOnline
-    if let preparedOnlineService {
-      online = preparedOnlineService
-      logStage("prepared_online_session_reused")
-    } else {
-      online = try await reader.mposUIOnline()
-      preparedOnlineService = online
-    }
+    let online = try await reader.mposUIOnline()
+    logStage("fresh_online_session_created")
     logStage("online_session_ready")
     let parameters = ChargeParameters(amount: amount, currency: currency, customIdentifier: reference)
     logStage("charge_started")
