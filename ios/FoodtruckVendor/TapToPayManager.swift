@@ -436,9 +436,37 @@ import UIKit
 
     switch result {
     case .success(let transaction):
-      logStage("charge_succeeded", details: "transaction_id_present=\(!transaction.identifier.isEmpty)")
+      let processorRequestId = [
+        transaction.processingDetails?.identifier,
+        transaction.transactionDetails?.metadata?["requestID"],
+        transaction.transactionDetails?.metadata?["requestId"],
+      ]
+        .compactMap { value -> String? in
+          guard let value else { return nil }
+          let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines)
+          return normalized.isEmpty ? nil : normalized
+        }
+        .first
+
+      guard let processorRequestId else {
+        logStage(
+          "charge_succeeded_missing_processor_request_id",
+          details: "partner_transaction_id_present=\(!transaction.identifier.isEmpty)"
+        )
+        throw NSError(domain: "RTCTapToPay", code: 502, userInfo: [
+          NSLocalizedDescriptionKey:
+            "Payment was approved, but CyberSource did not return its Request ID. Do not charge the customer again. Contact Round Da' Corner Support."
+        ])
+      }
+
+      logStage(
+        "charge_succeeded",
+        details:
+          "processor_request_id_present=true partner_transaction_id_present=\(!transaction.identifier.isEmpty)"
+      )
       var response: [String: Any] = [
-        "transactionId": transaction.identifier,
+        "transactionId": processorRequestId,
+        "partnerTransactionId": transaction.identifier,
         "provider": "CYBERSOURCE",
         "environment": environmentName,
         "reference": reference
