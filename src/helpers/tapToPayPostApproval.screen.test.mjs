@@ -18,8 +18,17 @@ assert.doesNotMatch(completionSource, /Tap to Pay on iPhone failed/);
 assert.match(source, /setTapToPayApprovalPending\(true\)/);
 assert.match(source, /disabled=\{!!paymentLoading \|\| tapToPayApprovalPending\}/);
 assert.match(source, /Payment Approved — Pending/);
-assert.match(source, /failure category:/);
-assert.match(source, /developer info:/);
-assert.match(source, /diagnostic\.trace/);
+assert.match(source, /reconcileTapToPayAttempt_API/);
+assert.match(source, /result\?\.confirmed/);
+assert.match(source, /result\?\.declined/);
+assert.match(source, /Some successful CyberSource charges return a generic MposUI failure/);
+
+const catchStart = source.indexOf("} catch (error) {", source.indexOf("const handleTapToPay"));
+const completionFunctionStart = source.indexOf("const completeTapToPayPayment", catchStart);
+const catchSource = source.slice(catchStart, completionFunctionStart);
+const cancellationStart = catchSource.indexOf("if (isTapToPayCancellation");
+assert(cancellationStart >= 0);
+assert.match(catchSource.slice(cancellationStart), /cancelTapToPayAttempt_API/);
+assert.match(catchSource, /Keep the durable attempt active/);
 
 console.log("Tap to Pay post-approval screen tests passed");
