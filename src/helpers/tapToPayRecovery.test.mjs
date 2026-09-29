@@ -16,12 +16,14 @@ const [app, manager, bridge, setup, posCheckout, marketplaceCheckout] =
     read("src/screens/vendorMarketplacePaymentScreen.js"),
   ]);
 
-assert.doesNotMatch(app, /prepareTapToPayReader/);
-assert.doesNotMatch(manager, /preparedOnlineService/);
-assert.match(manager, /let online = try await reader\.mposUIOnline\(\)/);
-assert.match(manager, /fresh_online_session_created/);
+assert.match(app, /prepareTapToPayReader/);
+assert.match(manager, /preparedOnlineService/);
+assert.match(manager, /preparedOnlineService = try await reader\.mposUIOnline\(\)/);
+assert.match(manager, /prepared_online_session_reused/);
 assert.match(manager, /private var activeOperation: String\?/);
 assert.match(manager, /keychain loading error/);
+assert.doesNotMatch(manager, /validateReaderSession/);
+assert.doesNotMatch(manager, /offline\.syncSession\(\)/);
 assert.match(bridge, /E_TAP_TO_PAY_SETUP_REPAIR_REQUIRED/);
 assert.match(setup, /repairRequested/);
 assert.match(setup, /forceReactivation:/);

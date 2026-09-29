@@ -8,6 +8,7 @@ import UIKit
 @objc final class TapToPayManager: NSObject {
   private var reader: MposUIReader?
   private var readerEnvironment: MposEnvironment?
+  private var preparedOnlineService: MposUIOnline?
   private var activeOperation: String?
   private var diagnosticTrace: [String] = []
   private let diagnosticLogger = Logger(
@@ -178,11 +179,13 @@ import UIKit
     )
     reader = newReader
     readerEnvironment = environment
+    preparedOnlineService = nil
     return newReader
   }
 
-  /// Retained for bridge compatibility. Do not open or cache an MposUIOnline
-  /// service here; each checkout owns exactly one fresh payment session.
+  /// CyberSource 3.7.0 does not expose a separate prepare/warm-up method.
+  /// Creating the configured reader and opening its online service performs
+  /// the SDK initialization that would otherwise occur when checkout starts.
   @MainActor
   func prepare(environmentName: String) async throws -> [String: Any] {
     let requestedEnvironment = environment(from: environmentName)
@@ -201,8 +204,9 @@ import UIKit
       ]
     }
 
+    preparedOnlineService = try await reader.mposUIOnline()
     logStage(
-      "reader_status_ready",
+      "reader_prepared",
       details: "environment=\(String(describing: requestedEnvironment)) device_id_suffix=\(identifierSuffix(device.deviceId))"
     )
     return [
@@ -409,8 +413,14 @@ import UIKit
        let viewController = Self.topViewController() {
       try await showMerchantEducation(from: viewController)
     }
-    let online = try await reader.mposUIOnline()
-    logStage("fresh_online_session_created")
+    let online: MposUIOnline
+    if let preparedOnlineService {
+      online = preparedOnlineService
+      logStage("prepared_online_session_reused")
+    } else {
+      online = try await reader.mposUIOnline()
+      preparedOnlineService = online
+    }
     logStage("online_session_ready")
     let parameters = ChargeParameters(amount: amount, currency: currency, customIdentifier: reference)
     logStage("charge_started")

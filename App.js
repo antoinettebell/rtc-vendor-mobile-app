@@ -25,6 +25,11 @@ import { clearCurrentNotificationOrder } from "./src/redux/slices/pushNotificati
 import { navigationRef } from "./src/helpers/navigation.helper";
 import { permission } from "./src/helpers/permission.helper";
 import NewOrderPopup from "./src/components/NewOrderPopup";
+import {
+  prepareTapToPayReader,
+  syncTapToPayTerminalStatus,
+} from "./src/services/tapToPay-service";
+
 import SigninScreen from "./src/screens/signinScreen";
 import SignupScreen from "./src/screens/signupScreen";
 import OtpVerificationScreen from "./src/screens/otpVerificationScreen";
@@ -685,6 +690,23 @@ const App = () => {
       unsubscribeTokenRefresh();
       appStateSubscription.remove();
     };
+  }, [isSignedIn, currentUser?._id]);
+
+  useEffect(() => {
+    if (!isSignedIn || Platform.OS !== "ios") return undefined;
+    const sync = () => {
+      syncTapToPayTerminalStatus().catch(() => {
+        // Setup and checkout present actionable errors; foreground sync stays quiet.
+      });
+      prepareTapToPayReader().catch(() => {
+        // Warm-up is best effort. Checkout retains its initializing/error UI.
+      });
+    };
+    sync();
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") sync();
+    });
+    return () => subscription.remove();
   }, [isSignedIn, currentUser?._id]);
 
   return (
