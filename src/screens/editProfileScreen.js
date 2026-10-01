@@ -58,41 +58,29 @@ import {
 import AppImage from "../components/AppImage";
 import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
+import {
+  SOCIAL_MEDIA_PLATFORMS,
+  blankSocialMedia,
+  displaySocialMediaHandle,
+  normalizeSocialMediaHandle,
+  normalizeSocialMediaObject,
+} from "../helpers/socialMedia.helper";
 
-const dropdownData = [
-  {
-    label: "Facebook",
-    value: "facebook",
-    icon: require("../assets/images/facebook.png"),
-    type: "social",
-    txt: "",
-    disable: false,
-  },
-  {
-    label: "Twitter",
-    value: "twitter",
-    icon: require("../assets/images/twitter.png"),
-    type: "social",
-    txt: "",
-    disable: false,
-  },
-  {
-    label: "Instagram",
-    value: "instagram",
-    icon: require("../assets/images/instagram.png"),
-    type: "social",
-    txt: "",
-    disable: false,
-  },
-  {
-    label: "Website",
-    value: "website",
-    icon: require("../assets/images/global.png"),
-    type: "web",
-    txt: "",
-    disable: false,
-  },
-];
+const SOCIAL_ICON_NAMES = {
+  instagram: "instagram",
+  facebook: "facebook",
+  x: "x-twitter",
+  threads: "threads",
+  tiktok: "tiktok",
+};
+
+const dropdownData = SOCIAL_MEDIA_PLATFORMS.map((platform) => ({
+  ...platform,
+  value: platform.key,
+  iconName: SOCIAL_ICON_NAMES[platform.key],
+  txt: "",
+  disable: false,
+}));
 
 const { width } = Dimensions.get("window");
 
@@ -117,56 +105,6 @@ const MediaLinksComponent = ({
   socialMediaLink,
   setSocialMediaLink,
 }) => {
-  // Handle onChange for website links
-  const handleTextChange = (txt) => {
-    if (selectedSocialMedia?.type === "web") {
-      // If user is entering a website URL
-      if (txt === "") {
-        // If user clears the field, reset to https://
-        setSocialMediaLink("https://");
-      } else if (
-        socialMediaLink === "https://" &&
-        !txt.startsWith("https://")
-      ) {
-        // If current value is just https:// and new text doesn't start with it, don't allow clearing it
-        setSocialMediaLink("https://");
-      } else if (txt.startsWith("https://https://")) {
-        // Fix for duplicate https:// prefix
-        setSocialMediaLink("https://" + txt.substring(16));
-      } else if (txt.startsWith("https://http://")) {
-        // Fix for malformed duplicate prefix
-        setSocialMediaLink("https://" + txt.substring(15));
-      } else if (txt.startsWith("https://")) {
-        // If text already has https://, use it as is
-        setSocialMediaLink(txt);
-      } else if (txt.startsWith("http://")) {
-        // If text has http://, convert to https://
-        setSocialMediaLink("https://" + txt.substring(7));
-      } else {
-        // If text doesn't have any protocol, prepend https://
-        setSocialMediaLink("https://" + txt);
-      }
-    } else {
-      // For non-website links, just set the value as is
-      setSocialMediaLink(txt);
-    }
-  };
-
-  // Initialize website fields with https://
-  React.useEffect(() => {
-    if (selectedSocialMedia?.type === "web" && !socialMediaLink) {
-      setSocialMediaLink("https://");
-    }
-  }, [selectedSocialMedia]);
-
-  // For website type, prepopulate with https:// in placeholder
-  const getPlaceholder = () => {
-    if (selectedSocialMedia?.type === "web") {
-      return `Enter ${selectedSocialMedia?.label} Link (https://...)`;
-    }
-    return `Enter ${selectedSocialMedia?.label} Link`;
-  };
-
   return (
     <View
       style={{
@@ -185,13 +123,10 @@ const MediaLinksComponent = ({
             height: 46,
           }}
         >
-          <FastImage
-            source={
-              selectedSocialMedia
-                ? selectedSocialMedia.icon
-                : dropdownData[0].icon
-            }
-            style={{ width: 24, height: 24 }}
+          <FontAwesome6
+            name={selectedSocialMedia?.iconName || dropdownData[0].iconName}
+            size={24}
+            color={AppColor.textHighlighter}
           />
         </View>
         <Dropdown
@@ -201,12 +136,7 @@ const MediaLinksComponent = ({
           value={selectedSocialMedia}
           onChange={(item) => {
             setSelectedSocialMedia(item);
-            // Initialize with https:// for website type, otherwise clear
-            if (item.type === "web") {
-              setSocialMediaLink("https://");
-            } else {
-              setSocialMediaLink("");
-            }
+            setSocialMediaLink("");
           }}
           placeholder=""
           style={styles.dropdownForMedia}
@@ -229,7 +159,11 @@ const MediaLinksComponent = ({
                 opacity: !item.disable ? 1 : 0.5,
               }}
             >
-              <FastImage source={item.icon} style={{ width: 24, height: 24 }} />
+              <FontAwesome6
+                name={item.iconName}
+                size={24}
+                color={AppColor.textHighlighter}
+              />
               <Text style={styles.dropdownText}>{item.label}</Text>
             </Pressable>
           )}
@@ -246,22 +180,13 @@ const MediaLinksComponent = ({
 
       <NativeTextInput
         value={socialMediaLink}
-        onChangeText={handleTextChange}
+        onChangeText={setSocialMediaLink}
         style={styles.inputForMedia}
-        placeholder={getPlaceholder()}
+        placeholder={`${selectedSocialMedia?.label || "Social media"} handle`}
         placeholderTextColor={AppColor.placeholderTextColor}
         autoCapitalize="none"
-        onKeyPress={({ nativeEvent }) => {
-          // Prevent deleting or modifying the https:// prefix for website type
-          if (
-            selectedSocialMedia?.type === "web" &&
-            (socialMediaLink === "https://" || socialMediaLink.length <= 8) &&
-            nativeEvent.key === "Backspace"
-          ) {
-            // Prevent default behavior - don't allow deleting the https:// prefix
-            return;
-          }
-        }}
+        autoCorrect={false}
+        maxLength={(selectedSocialMedia?.maxLength || 75) + 1}
       />
     </View>
   );
@@ -336,6 +261,7 @@ const EditProfileScreen = ({ navigation }) => {
     email: "",
     logo: "",
     photos: "",
+    socialMedia: "",
   });
 
   const validateFirstName = (value) => {
@@ -708,29 +634,22 @@ const EditProfileScreen = ({ navigation }) => {
 
   const processSocialMediaResponse = (response, plan) => {
     if (!plan) return;
-    console.log("response => ", response);
-    console.log("plan => ", plan);
-
-    response.forEach((item, index) => {
-      const mediaType = item.mediaType.toLowerCase();
-      const url = item.mediaUrl;
-      const dropdownItem =
-        dropdownData.find((d) => d.value === mediaType) ||
-        (mediaType === "web" ? dropdownData[3] : dropdownData[0]);
-
-      if (index === 0) {
-        setSelectedType1(dropdownItem);
-        setMediaLink1(url);
-      } else if (index === 1 && (plan === "platinum" || plan === "elite")) {
-        setSelectedType2(dropdownItem);
-        setMediaLink2(url);
-      } else if (index === 2 && plan === "elite") {
-        setSelectedType3(dropdownItem);
-        setMediaLink3(url);
-      } else if (index === 3 && plan === "elite") {
-        setSelectedType4(dropdownItem);
-        setMediaLink4(url);
-      }
+    const limit = plan === "elite" ? 4 : plan === "platinum" ? 2 : 1;
+    const normalized = normalizeSocialMediaObject(response);
+    const entries = SOCIAL_MEDIA_PLATFORMS
+      .filter(({ key }) => normalized[key])
+      .slice(0, limit);
+    const setters = [
+      [setSelectedType1, setMediaLink1],
+      [setSelectedType2, setMediaLink2],
+      [setSelectedType3, setMediaLink3],
+      [setSelectedType4, setMediaLink4],
+    ];
+    setters.forEach(([setType, setLink], index) => {
+      const entry = entries[index];
+      const platform = dropdownData.find((item) => item.value === entry?.key) || dropdownData[0];
+      setType(platform);
+      setLink(entry ? displaySocialMediaHandle(normalized[entry.key], entry.key) : "");
     });
   };
 
@@ -811,96 +730,21 @@ const EditProfileScreen = ({ navigation }) => {
   };
 
   const createSocialMediaPayload = () => {
-    const socialMedia = [];
-
-    // Helper function to convert your format to the API's expected format
-    const convertMediaType = (value) => {
-      switch (value.toLowerCase()) {
-        case "facebook":
-          return "FACEBOOK";
-        case "instagram":
-          return "INSTAGRAM";
-        case "twitter":
-          return "TWITTER";
-        case "linkedin":
-          return "LINKEDIN";
-        case "tiktok":
-          return "TIKTOK";
-        case "youtube":
-          return "YOUTUBE";
-        case "snapchat":
-          return "SNAPCHAT";
-        case "pinterest":
-          return "PINTEREST";
-        case "reddit":
-          return "REDDIT";
-        case "website":
-          return "WEB";
-        default:
-          return value.toUpperCase(); // fallback
+    const socialMedia = blankSocialMedia();
+    const slots = [
+      [selectedType1, mediaLink1],
+      ...(!isBasicPlan ? [[selectedType2, mediaLink2]] : []),
+      ...(isElitePlan ? [[selectedType3, mediaLink3], [selectedType4, mediaLink4]] : []),
+    ];
+    for (const [platform, value] of slots) {
+      const handle = normalizeSocialMediaHandle(value, platform.value);
+      if (!handle) continue;
+      if (socialMedia[platform.value]) {
+        throw new Error(`Choose ${platform.label} only once.`);
       }
-    };
-
-    // Helper function to ensure website URLs have https:// and return null if only https:// is present
-    const formatWebsiteUrl = (url, type) => {
-      if (type.toLowerCase() === "website" || type.toUpperCase() === "WEB") {
-        // If URL is just https:// with nothing after it, return null
-        if (url === "https://" || url.trim() === "https://") {
-          return null;
-        }
-        // If URL doesn't start with http:// or https://, add https://
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
-          return `https://${url}`;
-        } else if (url.startsWith("http://")) {
-          // Convert http:// to https://
-          return `https://${url.substring(7)}`;
-        }
-      }
-      return url; // Return unchanged for non-website URLs
-    };
-
-    // Check each media link and add to payload if not empty and not just https://
-    if (mediaLink1) {
-      const formattedUrl = formatWebsiteUrl(mediaLink1, selectedType1.value);
-      if (formattedUrl) {
-        socialMedia.push({
-          mediaType: convertMediaType(selectedType1.value),
-          mediaUrl: formattedUrl,
-        });
-      }
+      socialMedia[platform.value] = handle;
     }
-
-    if (mediaLink2 && !isBasicPlan) {
-      const formattedUrl = formatWebsiteUrl(mediaLink2, selectedType2.value);
-      if (formattedUrl) {
-        socialMedia.push({
-          mediaType: convertMediaType(selectedType2.value),
-          mediaUrl: formattedUrl,
-        });
-      }
-    }
-
-    if (mediaLink3 && isElitePlan) {
-      const formattedUrl = formatWebsiteUrl(mediaLink3, selectedType3.value);
-      if (formattedUrl) {
-        socialMedia.push({
-          mediaType: convertMediaType(selectedType3.value),
-          mediaUrl: formattedUrl,
-        });
-      }
-    }
-
-    if (mediaLink4 && isElitePlan) {
-      const formattedUrl = formatWebsiteUrl(mediaLink4, selectedType4.value);
-      if (formattedUrl) {
-        socialMedia.push({
-          mediaType: convertMediaType(selectedType4.value),
-          mediaUrl: formattedUrl,
-        });
-      }
-    }
-
-    return { socialMedia };
+    return socialMedia;
   };
 
   const handleUpdatePress = async () => {
@@ -924,6 +768,13 @@ const EditProfileScreen = ({ navigation }) => {
     let logoError = "";
     let photosError = "";
     let emailError = "";
+    let socialMediaError = "";
+    let normalizedSocialMedia = null;
+    try {
+      normalizedSocialMedia = createSocialMediaPayload();
+    } catch (error) {
+      socialMediaError = error.message;
+    }
 
     if (!selectedLogo?.uri) {
       logoError = "Logo is required";
@@ -949,6 +800,7 @@ const EditProfileScreen = ({ navigation }) => {
       email: emailError,
       logo: logoError,
       photos: photosError,
+      socialMedia: socialMediaError,
     });
 
     // Check if there are any errors
@@ -960,7 +812,8 @@ const EditProfileScreen = ({ navigation }) => {
       empNumberError ||
       emailError ||
       logoError ||
-      photosError;
+      photosError ||
+      socialMediaError;
 
     if (hasErrors) {
       return; // Don't proceed if there are errors
@@ -993,7 +846,7 @@ const EditProfileScreen = ({ navigation }) => {
       let foodTruckPayload = {
         name: foodTruckName,
         infoType: infoType === "Food Truck" ? "truck" : "caterer",
-        socialMedia: createSocialMediaPayload().socialMedia,
+        socialMedia: normalizedSocialMedia,
       };
       Object.assign(
         foodTruckPayload,
@@ -1688,7 +1541,17 @@ const EditProfileScreen = ({ navigation }) => {
 
               {/* Social Media */}
               <View style={[styles.section, { gap: 10 }]}>
-                <Text style={styles.sectionSubtitle}>Social Media Handle</Text>
+                <View style={styles.infoHeadingRow}>
+                  <Text style={styles.sectionSubtitle}>Social Media Handles</Text>
+                  <AntDesign
+                    name="infocirlceo"
+                    size={16}
+                    color={AppColor.textHighlighter}
+                  />
+                </View>
+                <Text style={styles.socialMediaHelpText}>
+                  Enter handles only. These may be used to tag your social account in customized marketing ads featuring your business.
+                </Text>
 
                 {/* media link 1 */}
                 <MediaLinksComponent
@@ -1765,6 +1628,11 @@ const EditProfileScreen = ({ navigation }) => {
                     setSocialMediaLink={setMediaLink4}
                   />
                 ) : null}
+                {!!errors.socialMedia && (
+                  <HelperText type="error" visible style={styles.helper}>
+                    {errors.socialMedia}
+                  </HelperText>
+                )}
               </View>
 
               {/* Mobile Number Input */}
@@ -1933,6 +1801,16 @@ const styles = StyleSheet.create({
     fontFamily: Mulish400,
     color: AppColor.textHighlighter,
     marginBottom: 2,
+  },
+  infoHeadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  socialMediaHelpText: {
+    fontSize: 13,
+    fontFamily: Mulish400,
+    color: AppColor.textHighlighter,
   },
 
   //   Logo, Photos

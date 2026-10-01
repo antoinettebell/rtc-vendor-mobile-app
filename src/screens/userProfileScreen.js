@@ -16,6 +16,7 @@ import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import AntDesign from "react-native-vector-icons/AntDesign";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
@@ -28,7 +29,6 @@ import {
 } from "../api/appAPI";
 import { Divider, IconButton } from "react-native-paper";
 import { setSelectedPlan, setUser, updateFoodTruck } from "../redux/slices/userSlice";
-import FastImage from "@d11/react-native-fast-image";
 import {
   setSelectedCuisine,
   setSelectedLocations,
@@ -41,12 +41,20 @@ import {
 } from "../helpers/profile.helper";
 import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
 import AppImage from "../components/AppImage";
+import {
+  SOCIAL_MEDIA_PLATFORMS,
+  blankSocialMedia,
+  displaySocialMediaHandle,
+  normalizeSocialMediaObject,
+  socialMediaProfileUrl,
+} from "../helpers/socialMedia.helper";
 
-const MEDIA_IMAGE_TYPE = {
-  INSTAGRAM: require("../assets/images/instagram.png"),
-  FACEBOOK: require("../assets/images/facebook.png"),
-  TWITTER: require("../assets/images/twitter.png"),
-  WEB: require("../assets/images/global.png"),
+const SOCIAL_ICON_NAMES = {
+  instagram: "instagram",
+  facebook: "facebook",
+  x: "x-twitter",
+  threads: "threads",
+  tiktok: "tiktok",
 };
 
 const canUseMultipleTruckUnits = (plan) => {
@@ -107,7 +115,7 @@ const UserProfileScreen = ({ navigation }) => {
   const isEmployeeProfile = !!user?.employee_internal_id;
 
   const [getUserDetailLoading, setGetUserDetailLoading] = useState(false);
-  const [socialMedia, setSocialMedia] = useState([]);
+  const [socialMedia, setSocialMedia] = useState(blankSocialMedia());
   const [truckSaving, setTruckSaving] = useState(false);
   const [truckNameModal, setTruckNameModal] = useState(null);
   const [truckNameInput, setTruckNameInput] = useState("");
@@ -147,19 +155,22 @@ const UserProfileScreen = ({ navigation }) => {
   const employeeSchedule = employeeDashboard?.employee_schedule || [];
   const employeeTapToPayTraining = employeeDashboard?.tap_to_pay_training || null;
   const employeeTapToPayEligible = !!user?.employeeCapabilities?.tapToPay;
+  const socialMediaEntries = SOCIAL_MEDIA_PLATFORMS.filter(
+    ({ key }) => socialMedia[key],
+  );
 
   const updateStateOnDataFetch = (USER_DATA, FOOD_TRUCK_DATA) => {
-    setSocialMedia(FOOD_TRUCK_DATA?.socialMedia || []);
+    setSocialMedia(normalizeSocialMediaObject(FOOD_TRUCK_DATA?.socialMedia || {}));
 
     dispatch(setSelectedCuisine(FOOD_TRUCK_DATA?.cuisine));
     dispatch(setSelectedLocations(FOOD_TRUCK_DATA?.locations));
     dispatch(setSelectedPlan(FOOD_TRUCK_DATA?.plan));
   };
 
-  const onSocialLinkPress = async (url) => {
+  const onSocialLinkPress = async (platformKey, handle) => {
     try {
-      // Add https:// if missing
-      const processedUrl = url.includes("://") ? url : `https://${url}`;
+      const processedUrl = socialMediaProfileUrl(platformKey, handle);
+      if (!processedUrl) throw new Error("Invalid social media handle");
 
       const supported = await Linking.canOpenURL(processedUrl);
       if (supported) {
@@ -369,7 +380,7 @@ const UserProfileScreen = ({ navigation }) => {
 
   useEffect(() => {
     if (user?.foodTruck?.socialMedia) {
-      setSocialMedia(user?.foodTruck?.socialMedia);
+      setSocialMedia(normalizeSocialMediaObject(user.foodTruck.socialMedia));
     }
   }, [user?.foodTruck?.socialMedia]);
 
@@ -728,24 +739,25 @@ const UserProfileScreen = ({ navigation }) => {
                     : null}
                 </View>
 
-                {socialMedia?.length > 0 && <Divider />}
+                {socialMediaEntries.length > 0 && <Divider />}
 
-                {socialMedia?.length > 0 && (
+                {socialMediaEntries.length > 0 && (
                   <View style={styles.socialMediaContainer}>
                     <Text style={styles.socialMediaTitle}>Social Media</Text>
-                    {socialMedia?.map((item, index) => (
+                    {socialMediaEntries.map(({ key, label }) => (
                       <TouchableOpacity
-                        key={index}
+                        key={key}
                         activeOpacity={0.7}
-                        onPress={() => onSocialLinkPress(item.mediaUrl)}
+                        onPress={() => onSocialLinkPress(key, socialMedia[key])}
                         style={styles.socialMediaItem}
                       >
-                        <FastImage
-                          source={MEDIA_IMAGE_TYPE[item.mediaType]}
-                          style={styles.socialMediaIcon}
+                        <FontAwesome6
+                          name={SOCIAL_ICON_NAMES[key]}
+                          size={22}
+                          color={AppColor.textHighlighter}
                         />
                         <Text style={styles.socialMediaText} numberOfLines={1}>
-                          {item.mediaUrl}
+                          {label}: {displaySocialMediaHandle(socialMedia[key], key)}
                         </Text>
                       </TouchableOpacity>
                     ))}
