@@ -1,0 +1,12 @@
+diff --git a/node_modules/react-native-print/android/build.gradle b/node_modules/react-native-print/android/build.gradle
+--- a/node_modules/react-native-print/android/build.gradle
++++ b/node_modules/react-native-print/android/build.gradle
+@@ -6,6 +6,7 @@
+     defaultConfig {
+         minSdkVersion = 21
+-        compileSdkVersion = 31
++        // Match the application SDK. Newer AndroidX dependencies require API 34+.
++        compileSdkVersion = rootProject.ext.compileSdkVersion
+         targetSdkVersion 29
+         versionCode 1
+         versionName "1.0"
