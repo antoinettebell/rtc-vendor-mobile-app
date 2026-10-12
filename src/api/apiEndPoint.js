@@ -38,6 +38,10 @@ export const VENDOR_COMPLIANCE_SUBMIT = (foodtruck_id) =>
   `/vendor-compliance/food-truck/${foodtruck_id}/submit`;
 export const VENDOR_COMPLIANCE_HISTORY = (foodtruck_id) =>
   `/vendor-compliance/food-truck/${foodtruck_id}/history`;
+export const VENDOR_COMPLIANCE_W9_SIGNING = (foodtruck_id) =>
+  `/vendor-compliance/food-truck/${foodtruck_id}/w9/signing`;
+export const VENDOR_COMPLIANCE_W9_COMPLETE = (foodtruck_id) =>
+  `/vendor-compliance/food-truck/${foodtruck_id}/w9/complete`;
 
 // Subscription
 export const UPDATE_SUBSCRIPTION_PLAN = "/food-truck/change-plan";

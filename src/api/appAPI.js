@@ -128,6 +128,8 @@ import {
   VENDOR_COMPLIANCE_HISTORY,
   VENDOR_COMPLIANCE_ME,
   VENDOR_COMPLIANCE_REQUIREMENTS,
+  VENDOR_COMPLIANCE_W9_SIGNING,
+  VENDOR_COMPLIANCE_W9_COMPLETE,
   VENDOR_COMPLIANCE_SUBMIT,
   VENDOR_EMPLOYEE_SHIFT_HISTORY_ITEM,
   ARCHIVE_VENDOR_EMPLOYEE_SHIFT_HISTORY,
@@ -265,6 +267,32 @@ export const submitVendorComplianceForOcr_API = async ({ foodtruck_id }) => {
     const response = await apiClient.post(
       VENDOR_COMPLIANCE_SUBMIT(foodtruck_id),
       {},
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const startVendorComplianceW9Signing_API = async ({ foodtruck_id }) => {
+  try {
+    const response = await apiClient.post(
+      VENDOR_COMPLIANCE_W9_SIGNING(foodtruck_id),
+      {},
+      { skipToken: false },
+    );
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const completeVendorComplianceW9Signing_API = async ({ foodtruck_id, envelope_id }) => {
+  try {
+    const response = await apiClient.post(
+      VENDOR_COMPLIANCE_W9_COMPLETE(foodtruck_id),
+      { envelope_id },
       { skipToken: false },
     );
     return response?.data;

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
 	  ActivityIndicator,
 	  Alert,
@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import DocumentPicker, { types } from "react-native-document-picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import ImagePicker from "react-native-image-crop-picker";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { RESULTS } from "react-native-permissions";
@@ -22,6 +23,8 @@ import {
   getVendorFoodTruckList_API,
   getVendorComplianceSummary_API,
   submitVendorComplianceForOcr_API,
+  startVendorComplianceW9Signing_API,
+  completeVendorComplianceW9Signing_API,
   uploadVendorComplianceDocument_API,
 } from "../api/appAPI";
 import StatusBarManager from "../components/StatusBarManager";
@@ -66,6 +69,7 @@ const REQUIRED_EXPIRATION_DOCUMENT_TYPES = new Set([
 const SANITATION_GRADE_OPTIONS = ["A", "B", "C", "D", "F"].map(
   (grade) => ({ label: grade, value: grade })
 );
+const w9SigningStorageKey = (foodTruckId) => `vendor-compliance-w9-envelope:${foodTruckId}`;
 
 const buildJpegPickerFile = (image, fallbackPrefix) => {
   const pathName = image?.path?.split("/").pop();
@@ -221,6 +225,8 @@ const VendorComplianceScreen = ({ navigation, route }) => {
   const [uploadedRevisionTypes, setUploadedRevisionTypes] = useState({});
   const [expandedDocuments, setExpandedDocuments] = useState({});
   const [datePickerSelection, setDatePickerSelection] = useState(null);
+  const [signingW9, setSigningW9] = useState(false);
+  const pendingW9EnvelopeRef = useRef(null);
   const { checkAndRequestPermission: cameraPermissionStatus } = usePermission(
     permission.camera
   );
@@ -290,6 +296,45 @@ const VendorComplianceScreen = ({ navigation, route }) => {
   useEffect(() => {
     loadCompliance();
   }, [loadCompliance]);
+
+  const completeW9Signing = useCallback(async (envelopeId) => {
+    if (!envelopeId || !foodTruckId) return;
+    setSigningW9(true);
+    let completed = false;
+    try {
+      const response = await completeVendorComplianceW9Signing_API({
+        foodtruck_id: foodTruckId,
+        envelope_id: envelopeId,
+      });
+      setSummary(response?.data?.compliance || summary);
+      Alert.alert(
+        "W-9 Submitted",
+        "Your signed W-9 was received. We will verify that its EIN or SSN matches your vendor profile."
+      );
+      await loadCompliance();
+      completed = true;
+    } catch (error) {
+      Alert.alert("W-9 Verification", error?.message || "We could not confirm the signed W-9 yet.");
+    } finally {
+      if (completed) {
+        pendingW9EnvelopeRef.current = null;
+        await AsyncStorage.removeItem(w9SigningStorageKey(foodTruckId));
+      }
+      setSigningW9(false);
+    }
+  }, [foodTruckId, loadCompliance, summary]);
+
+  useEffect(() => {
+    const handleUrl = async ({ url }) => {
+      if (!String(url || "").includes("docusign/return")) return;
+      const envelopeId =
+        pendingW9EnvelopeRef.current ||
+        (await AsyncStorage.getItem(w9SigningStorageKey(foodTruckId)));
+      if (envelopeId) completeW9Signing(envelopeId);
+    };
+    const subscription = Linking.addEventListener("url", handleUrl);
+    return () => subscription.remove();
+  }, [completeW9Signing, foodTruckId]);
 
   useEffect(() => {
     const shouldRefresh = (summary?.requirements || []).some((requirement) => {
@@ -463,6 +508,26 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       { text: "Files", onPress: () => pickFileAndUpload(requirement) },
       { text: "Cancel", style: "cancel" },
     ]);
+  };
+
+  const startW9Signing = async () => {
+    if (!foodTruckId) return;
+    setSigningW9(true);
+    try {
+      const response = await startVendorComplianceW9Signing_API({ foodtruck_id: foodTruckId });
+      const data = response?.data || response || {};
+      if (!data.signing_url || !data.envelope_id) {
+        throw new Error("DocuSign did not provide a W-9 signing session.");
+      }
+      pendingW9EnvelopeRef.current = data.envelope_id;
+      await AsyncStorage.setItem(w9SigningStorageKey(foodTruckId), data.envelope_id);
+      await Linking.openURL(data.signing_url);
+    } catch (error) {
+      pendingW9EnvelopeRef.current = null;
+      Alert.alert("W-9 Signing", error?.message || "Unable to start DocuSign.");
+    } finally {
+      setSigningW9(false);
+    }
   };
 
   const startDocumentRevision = (requirement) => {
@@ -1102,8 +1167,12 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	                      </View>
 	                    ) : null}
 	                    <TouchableOpacity
-	                      disabled={isUploading}
+	                      disabled={isUploading || (requirement.type === "W9" && signingW9)}
 	                      onPress={() => {
+                          if (requirement.type === "W9") {
+                            startW9Signing();
+                            return;
+                          }
                           if (document && !isDocumentRevision) {
                             startDocumentRevision(requirement);
                             return;
@@ -1112,7 +1181,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                         }}
 	                      style={styles.uploadButton}
 	                    >
-	                      {isUploading ? (
+	                      {isUploading || (requirement.type === "W9" && signingW9) ? (
 	                        <ActivityIndicator size="small" color={AppColor.white} />
 	                      ) : (
 	                        <>
@@ -1126,7 +1195,9 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                                 color={AppColor.white}
                               />
 	                          <Text style={styles.uploadButtonText}>
-	                            {document
+	                            {requirement.type === "W9"
+                                  ? document ? "Replace W-9" : "Sign W-9"
+                                  : document
                                   ? isDocumentRevision
                                     ? "Upload Replacement"
                                     : "Replace Document"
