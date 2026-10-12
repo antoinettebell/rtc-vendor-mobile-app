@@ -142,6 +142,7 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+    implementation("com.google.android.gms:play-services-wallet:19.5.0")
     implementation("io.payworks:paybutton-android:2.115.0")
     implementation("io.payworks:mpos.android.taptophone:2.115.0")
 

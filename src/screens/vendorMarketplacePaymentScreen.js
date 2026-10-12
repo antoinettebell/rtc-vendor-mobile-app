@@ -8,6 +8,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  requireNativeComponent,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -31,6 +32,7 @@ import {
 } from "../api/appAPI";
 import { startTapToPaySale } from "../services/tapToPay-service";
 import { getVendorPaymentCapabilities } from "../helpers/vendorPaymentCapabilities.helper";
+import { assertGooglePayConfiguration } from "../helpers/googlePayConfiguration.helper";
 import {
   MarketplaceHeader,
   formatMoney,
@@ -42,6 +44,17 @@ const APPLE_PAY_MERCHANT_ID =
   Config.APPLE_PAY_MERCHANT_ID || "merchant.roundthecorner.vendor";
 const PAYMENT_COUNTRY_CODE = Config.PAYMENT_COUNTRY_CODE || "US";
 const PAYMENT_CURRENCY_CODE = Config.PAYMENT_CURRENCY_CODE || "USD";
+const NativeGooglePayButton =
+  Platform.OS === "android" ? requireNativeComponent("RTCGooglePayButton") : null;
+const GOOGLE_PAY_ALLOWED_PAYMENT_METHODS = JSON.stringify([
+  {
+    type: "CARD",
+    parameters: {
+      allowedAuthMethods: ["PAN_ONLY", "CRYPTOGRAM_3DS"],
+      allowedCardNetworks: ["VISA", "MASTERCARD"],
+    },
+  },
+]);
 
 const tapToPayDiagnostic = (error) => {
   const parts = typeof error?.code === "string" ? error.code.split("|") : [];
@@ -128,6 +141,7 @@ const ANDROID_PAY_METHOD_DATA = {
     requestBillingAddress: false,
     requestPayerEmail: false,
     requestShipping: false,
+    merchantId: Config.GOOGLE_PAY_MERCHANT_ID,
     gatewayConfig: {
       gateway: Config.GOOGLE_PAY_GATEWAY,
       gatewayMerchantId: Config.CYBERSOURCE_MERCHANT_ID,
@@ -251,6 +265,7 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
         return;
       }
 
+      if (Platform.OS === "android") assertGooglePayConfiguration(Config);
       paymentResponse = await paymentRequest.show();
       const paymentRawToken =
         Platform.OS === "ios"
@@ -591,16 +606,12 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
                 </Text>
               </TouchableOpacity>
             ) : !isFinalEventPayment ? (
-              <TouchableOpacity
-                activeOpacity={0.7}
-                style={styles.button}
+              <NativeGooglePayButton
+                allowedPaymentMethods={GOOGLE_PAY_ALLOWED_PAYMENT_METHODS}
                 disabled={!!paymentLoading}
-                onPress={() => payWithWallet("googlePay")}
-              >
-                <Text style={styles.buttonText}>
-                  {paymentLoading === "googlePay" ? "Processing..." : "Google Pay"}
-                </Text>
-              </TouchableOpacity>
+                onGooglePayPress={() => payWithWallet("googlePay")}
+                style={{ height: 48, marginTop: 12, width: "100%" }}
+              />
             ) : null}
 
             {!isFinalEventPayment ? (
