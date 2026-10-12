@@ -22,6 +22,7 @@ import {
   orderCurrentStatusNames,
   PROFILE_AVATAR,
   orderStatusStrings,
+  foodTypeStrings,
 } from "../utils/constants";
 import CustomPrepTimeModal from "./CustomPrepTimeModal";
 import {
