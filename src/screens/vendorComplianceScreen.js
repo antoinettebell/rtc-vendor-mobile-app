@@ -333,6 +333,9 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       if (envelopeId) completeW9Signing(envelopeId);
     };
     const subscription = Linking.addEventListener("url", handleUrl);
+    // DocuSign can relaunch the app rather than resume its existing JS runtime.
+    // Recover the stored envelope in that cold-start case as well.
+    Linking.getInitialURL().then((url) => handleUrl({ url }));
     return () => subscription.remove();
   }, [completeW9Signing, foodTruckId]);
 
