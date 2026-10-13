@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
 	  ActivityIndicator,
 	  Alert,
+	  AppState,
 	  Linking,
 	  Platform,
 	  ScrollView,
@@ -70,6 +71,17 @@ const SANITATION_GRADE_OPTIONS = ["A", "B", "C", "D", "F"].map(
   (grade) => ({ label: grade, value: grade })
 );
 const w9SigningStorageKey = (foodTruckId) => `vendor-compliance-w9-envelope:${foodTruckId}`;
+
+const parsePendingW9Signing = (value) => {
+  if (!value) return null;
+  try {
+    return JSON.parse(value)?.envelope_id || null;
+  } catch (_error) {
+    // Preserve recovery for signing sessions created by the prior client,
+    // which stored the envelope id as a plain string.
+    return value;
+  }
+};
 
 const buildJpegPickerFile = (image, fallbackPrefix) => {
   const pathName = image?.path?.split("/").pop();
@@ -227,6 +239,9 @@ const VendorComplianceScreen = ({ navigation, route }) => {
   const [datePickerSelection, setDatePickerSelection] = useState(null);
   const [signingW9, setSigningW9] = useState(false);
   const pendingW9EnvelopeRef = useRef(null);
+  const completingW9Ref = useRef(false);
+  const w9RecoveryRetryRef = useRef(null);
+  const w9RecoveryAttemptRef = useRef(0);
   const { checkAndRequestPermission: cameraPermissionStatus } = usePermission(
     permission.camera
   );
@@ -297,8 +312,24 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     loadCompliance();
   }, [loadCompliance]);
 
-  const completeW9Signing = useCallback(async (envelopeId) => {
-    if (!envelopeId || !foodTruckId) return;
+  const clearW9RecoveryRetry = useCallback(() => {
+    if (w9RecoveryRetryRef.current) {
+      clearTimeout(w9RecoveryRetryRef.current);
+      w9RecoveryRetryRef.current = null;
+    }
+  }, []);
+
+  const getPendingW9EnvelopeId = useCallback(async () => {
+    if (pendingW9EnvelopeRef.current) return pendingW9EnvelopeRef.current;
+    const storedValue = await AsyncStorage.getItem(w9SigningStorageKey(foodTruckId));
+    const envelopeId = parsePendingW9Signing(storedValue);
+    if (envelopeId) pendingW9EnvelopeRef.current = envelopeId;
+    return envelopeId;
+  }, [foodTruckId]);
+
+  const completeW9Signing = useCallback(async (envelopeId, { quiet = false } = {}) => {
+    if (!envelopeId || !foodTruckId || completingW9Ref.current) return false;
+    completingW9Ref.current = true;
     setSigningW9(true);
     let completed = false;
     try {
@@ -313,31 +344,67 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       );
       await loadCompliance();
       completed = true;
+      return true;
     } catch (error) {
-      Alert.alert("W-9 Verification", error?.message || "We could not confirm the signed W-9 yet.");
+      if (!quiet) {
+        Alert.alert("W-9 Verification", error?.message || "We could not confirm the signed W-9 yet.");
+      }
+      return false;
     } finally {
       if (completed) {
+        clearW9RecoveryRetry();
+        w9RecoveryAttemptRef.current = 0;
         pendingW9EnvelopeRef.current = null;
         await AsyncStorage.removeItem(w9SigningStorageKey(foodTruckId));
       }
+      completingW9Ref.current = false;
       setSigningW9(false);
     }
-  }, [foodTruckId, loadCompliance, summary]);
+  }, [clearW9RecoveryRetry, foodTruckId, loadCompliance, summary]);
+
+  const reconcilePendingW9 = useCallback(async ({ quiet = true } = {}) => {
+    const envelopeId = await getPendingW9EnvelopeId();
+    if (!envelopeId || completingW9Ref.current) return false;
+    const completed = await completeW9Signing(envelopeId, { quiet });
+    if (completed) return true;
+
+    // DocuSign may return to the app milliseconds before its API reports the
+    // envelope as completed. Mirror the marketplace agreement recovery flow
+    // with a small, bounded retry rather than losing the signed W-9.
+    const retryDelays = [1500, 4000, 8000];
+    const delay = retryDelays[w9RecoveryAttemptRef.current];
+    if (delay !== undefined) {
+      w9RecoveryAttemptRef.current += 1;
+      clearW9RecoveryRetry();
+      w9RecoveryRetryRef.current = setTimeout(() => {
+        reconcilePendingW9({ quiet: true }).catch(() => {});
+      }, delay);
+    }
+    return false;
+  }, [clearW9RecoveryRetry, completeW9Signing, getPendingW9EnvelopeId]);
 
   useEffect(() => {
     const handleUrl = async ({ url }) => {
       if (!String(url || "").includes("docusign/return")) return;
-      const envelopeId =
-        pendingW9EnvelopeRef.current ||
-        (await AsyncStorage.getItem(w9SigningStorageKey(foodTruckId)));
-      if (envelopeId) completeW9Signing(envelopeId);
+      reconcilePendingW9({ quiet: false }).catch(() => {});
     };
     const subscription = Linking.addEventListener("url", handleUrl);
+    const appStateSubscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") reconcilePendingW9({ quiet: true }).catch(() => {});
+    });
     // DocuSign can relaunch the app rather than resume its existing JS runtime.
-    // Recover the stored envelope in that cold-start case as well.
-    Linking.getInitialURL().then((url) => handleUrl({ url }));
-    return () => subscription.remove();
-  }, [completeW9Signing, foodTruckId]);
+    // Recover the stored envelope in that cold-start case, then also reconcile
+    // an in-progress session if the browser did not deliver a deep link.
+    Linking.getInitialURL().then((url) => {
+      if (url) handleUrl({ url });
+      else reconcilePendingW9({ quiet: true }).catch(() => {});
+    });
+    return () => {
+      clearW9RecoveryRetry();
+      subscription.remove();
+      appStateSubscription.remove();
+    };
+  }, [clearW9RecoveryRetry, reconcilePendingW9]);
 
   useEffect(() => {
     const shouldRefresh = (summary?.requirements || []).some((requirement) => {
@@ -523,7 +590,11 @@ const VendorComplianceScreen = ({ navigation, route }) => {
         throw new Error("DocuSign did not provide a W-9 signing session.");
       }
       pendingW9EnvelopeRef.current = data.envelope_id;
-      await AsyncStorage.setItem(w9SigningStorageKey(foodTruckId), data.envelope_id);
+      w9RecoveryAttemptRef.current = 0;
+      await AsyncStorage.setItem(
+        w9SigningStorageKey(foodTruckId),
+        JSON.stringify({ envelope_id: data.envelope_id, started_at: new Date().toISOString() }),
+      );
       await Linking.openURL(data.signing_url);
     } catch (error) {
       pendingW9EnvelopeRef.current = null;
