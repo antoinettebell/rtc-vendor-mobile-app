@@ -171,8 +171,19 @@ const getOcrIssueDate = (document = {}) => {
 const getExpiringDocumentStatus = (requirement = {}) => {
   const rawType = String(requirement.type || "").toUpperCase();
   const daysUntilExpiration = requirement.days_until_expiration;
+  const reviewStatus = String(requirement.status || "").toLowerCase();
   const hasExpirationStatus =
     EXPIRING_DOCUMENT_TYPES.has(rawType) && daysUntilExpiration !== null;
+
+  // An unexpired date is not the same as a verified compliance document.
+  // Keep the server's review/OCR state visible until validation completes.
+  if (reviewStatus && reviewStatus !== "verified") {
+    return {
+      label: formatLabel(reviewStatus),
+      countdown: reviewStatus === "expired" ? "Expired" : "",
+      tone: reviewStatus === "expired" ? "expired" : "neutral",
+    };
+  }
 
   if (!hasExpirationStatus) {
     return {
@@ -678,7 +689,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     }));
   };
 
-  const submitForOcr = async () => {
+  const submitForOcr = async (documentTypes = []) => {
     if (!foodTruckId) return;
     const replacementAwaitingUpload = requirements.find(
       (requirement) =>
@@ -696,11 +707,14 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     try {
       const response = await submitVendorComplianceForOcr_API({
         foodtruck_id: foodTruckId,
+        document_types: documentTypes,
       });
       setSummary(response?.data?.compliance || summary);
       Alert.alert(
         "Compliance Saved",
-        "Your documents were saved and submitted for OCR review."
+        documentTypes.length
+          ? "The selected document was submitted for OCR review."
+          : "Your changed documents were submitted for OCR review."
       );
       await loadCompliance();
       setDocumentRevisionTypes({});
@@ -743,6 +757,15 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	    SCORE_FALLBACK[summary?.score_color] ||
 	    AppColor.primary;
 	  const requirements = summary?.requirements || [];
+	  const coreComponents = summary?.core_components || [];
+	  const verifiedCoreComponents = coreComponents.filter((component) => component.verified).length;
+	  const incompleteCoreLabels = coreComponents
+	    .filter((component) => !component.verified)
+	    .map((component) => component.label)
+	    .join(" • ");
+	  const changedDocumentTypes = Object.keys(uploadedRevisionTypes).filter(
+	    (type) => uploadedRevisionTypes[type]
+	  );
 	  const missingOnboardingDocuments = requirements.filter(
 	    (requirement) => requirement.required && !requirement.document
 	  );
@@ -896,7 +919,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 
           <View style={[styles.scorePanel, { borderColor: scoreColor }]}>
             <View style={[styles.scoreBadge, { backgroundColor: scoreColor }]}>
-              <Text style={styles.scoreValue}>{summary?.score || 0}</Text>
+              <Text style={styles.scoreValue}>{summary?.score || 0}%</Text>
             </View>
             <View style={styles.scoreTextContainer}>
               <Text style={styles.scoreTitle}>{summary?.score_label || "Incomplete"}</Text>
@@ -908,6 +931,12 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	              <TouchableOpacity onPress={callSupport} activeOpacity={0.7}>
 	                <Text style={styles.supportText}>Support {supportPhone}</Text>
 	              </TouchableOpacity>
+	              {coreComponents.length ? (
+	                <Text style={styles.coreComplianceText}>
+	                  Core compliance: {verifiedCoreComponents}/{coreComponents.length} verified
+	                  {incompleteCoreLabels ? ` · Remaining: ${incompleteCoreLabels}` : ""}
+	                </Text>
+	              ) : null}
             </View>
           </View>
 
@@ -1280,6 +1309,16 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	                        </>
 	                      )}
 	                    </TouchableOpacity>
+	                    {document && ["failed", "revalidation_needed", "manual_review"].includes(document.ocr_status) ? (
+	                      <TouchableOpacity
+	                        onPress={() => submitForOcr([requirement.type])}
+	                        disabled={submittingOcr}
+	                        style={[styles.retryOcrButton, submittingOcr && styles.disabledButton]}
+	                      >
+	                        <Ionicons name="refresh-outline" size={18} color={AppColor.primary} />
+	                        <Text style={styles.retryOcrButtonText}>Run OCR Again</Text>
+	                      </TouchableOpacity>
+	                    ) : null}
 	                  </>
 	                ) : null}
 	              </View>
@@ -1288,7 +1327,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 
 	          <TouchableOpacity
 	            disabled={submittingOcr}
-	            onPress={submitForOcr}
+	            onPress={() => submitForOcr(changedDocumentTypes)}
 	            style={[styles.saveButton, submittingOcr && styles.disabledButton]}
 	          >
 	            {submittingOcr ? (
@@ -1296,7 +1335,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	            ) : (
 	              <>
 	                <Ionicons name="save-outline" size={18} color={AppColor.white} />
-	                <Text style={styles.saveButtonText}>Save & Run OCR</Text>
+	                <Text style={styles.saveButtonText}>Save & Run Changed OCR</Text>
 	              </>
 	            )}
 	          </TouchableOpacity>
@@ -1470,6 +1509,12 @@ const styles = StyleSheet.create({
 	    color: AppColor.primary,
 	    marginTop: 8,
 	  },
+  coreComplianceText: {
+    fontFamily: Mulish400,
+    fontSize: 12,
+    color: AppColor.subText,
+    marginTop: 8,
+  },
   sectionTitle: {
     fontFamily: Mulish700,
     fontSize: 16,
@@ -1684,6 +1729,22 @@ const styles = StyleSheet.create({
 	    color: AppColor.white,
 	    marginLeft: 8,
 	  },
+  retryOcrButton: {
+    height: 42,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: AppColor.primary,
+    marginTop: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+  },
+  retryOcrButtonText: {
+    fontFamily: Mulish700,
+    fontSize: 14,
+    color: AppColor.primary,
+    marginLeft: 8,
+  },
 	  saveButton: {
 	    height: 46,
 	    borderRadius: 8,

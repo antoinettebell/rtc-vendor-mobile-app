@@ -262,11 +262,11 @@ export const getVendorComplianceHistory_API = async ({ foodtruck_id }) => {
   }
 };
 
-export const submitVendorComplianceForOcr_API = async ({ foodtruck_id }) => {
+export const submitVendorComplianceForOcr_API = async ({ foodtruck_id, document_types = [] }) => {
   try {
     const response = await apiClient.post(
       VENDOR_COMPLIANCE_SUBMIT(foodtruck_id),
-      {},
+      document_types.length ? { document_types } : {},
       { skipToken: false },
     );
     return response?.data;
