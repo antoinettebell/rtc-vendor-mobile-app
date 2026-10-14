@@ -657,7 +657,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     }));
   };
 
-  const submitForOcr = async (documentTypes = []) => {
+  const submitForOcr = async () => {
     if (!foodTruckId) return;
     const replacementAwaitingUpload = requirements.find(
       (requirement) =>
@@ -675,14 +675,11 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     try {
       const response = await submitVendorComplianceForOcr_API({
         foodtruck_id: foodTruckId,
-        document_types: documentTypes,
       });
       setSummary(response?.data?.compliance || summary);
       Alert.alert(
         "Compliance Saved",
-        documentTypes.length
-          ? "The selected document was submitted for OCR review."
-          : "Your changed documents were submitted for OCR review."
+        "Your changed documents were submitted for OCR review."
       );
       await loadCompliance();
       setDocumentRevisionTypes({});
@@ -726,9 +723,6 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	    .filter((component) => !component.verified)
 	    .map((component) => component.label)
 	    .join(" • ");
-	  const changedDocumentTypes = Object.keys(uploadedRevisionTypes).filter(
-	    (type) => uploadedRevisionTypes[type]
-	  );
 	  const missingOnboardingDocuments = requirements.filter(
 	    (requirement) => requirement.required && !requirement.document
 	  );
@@ -1230,16 +1224,6 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	                        </>
 	                      )}
 	                    </TouchableOpacity>
-	                    {document && ["failed", "revalidation_needed", "manual_review"].includes(document.ocr_status) ? (
-	                      <TouchableOpacity
-	                        onPress={() => submitForOcr([requirement.type])}
-	                        disabled={submittingOcr}
-	                        style={[styles.retryOcrButton, submittingOcr && styles.disabledButton]}
-	                      >
-	                        <Ionicons name="refresh-outline" size={18} color={AppColor.primary} />
-	                        <Text style={styles.retryOcrButtonText}>Run OCR Again</Text>
-	                      </TouchableOpacity>
-	                    ) : null}
 	                  </>
 	                ) : null}
 	              </View>
@@ -1248,7 +1232,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 
 	          <TouchableOpacity
 	            disabled={submittingOcr}
-	            onPress={() => submitForOcr(changedDocumentTypes)}
+	            onPress={submitForOcr}
 	            style={[styles.saveButton, submittingOcr && styles.disabledButton]}
 	          >
 	            {submittingOcr ? (
@@ -1256,7 +1240,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	            ) : (
 	              <>
 	                <Ionicons name="save-outline" size={18} color={AppColor.white} />
-	                <Text style={styles.saveButtonText}>Save & Run Changed OCR</Text>
+	                <Text style={styles.saveButtonText}>Save & Run OCR</Text>
 	              </>
 	            )}
 	          </TouchableOpacity>
@@ -1648,22 +1632,6 @@ const styles = StyleSheet.create({
 	    color: AppColor.white,
 	    marginLeft: 8,
 	  },
-  retryOcrButton: {
-    height: 42,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: AppColor.primary,
-    marginTop: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-  },
-  retryOcrButtonText: {
-    fontFamily: Mulish700,
-    fontSize: 14,
-    color: AppColor.primary,
-    marginLeft: 8,
-  },
 	  saveButton: {
 	    height: 46,
 	    borderRadius: 8,
