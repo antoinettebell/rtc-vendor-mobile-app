@@ -1388,7 +1388,7 @@ const styles = StyleSheet.create({
   },
   scoreValue: {
     fontFamily: Mulish700,
-    fontSize: 20,
+    fontSize: 16,
     color: AppColor.white,
   },
   scoreTextContainer: {
