@@ -688,7 +688,6 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       setDocumentRevisionTypes({});
       setUploadedRevisionTypes({});
       setExpirationDates({});
-      setIssueDates({});
       setManualSanitationGrades({});
     } catch (error) {
       Alert.alert(
@@ -703,11 +702,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
   const handleExpirationDateConfirm = (date) => {
     const requirementType = datePickerSelection?.requirement?.type;
     if (requirementType) {
-      if (datePickerSelection.field === "issue") {
-        setIssueDates((prev) => ({ ...prev, [requirementType]: date }));
-      } else {
-        setExpirationDates((prev) => ({ ...prev, [requirementType]: date }));
-      }
+      setExpirationDates((prev) => ({ ...prev, [requirementType]: date }));
     }
     setDatePickerSelection(null);
   };
