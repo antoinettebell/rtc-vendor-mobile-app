@@ -203,14 +203,14 @@ const VendorMarketplaceEventDetailsScreen = ({ navigation, route }) => {
           String(bid.bid_status || "").toUpperCase() !== "WITHDRAWN",
       );
 
-      if (isApplication && existingBid) {
+      if (isApplication && existingBid && !bothPay) {
         Alert.alert(
           "Bid Option Already Selected",
           "You already chose the coordinator-paid bid option for this event. You cannot also submit an application.",
         );
         return;
       }
-      if (!isApplication && existingApplication) {
+      if (!isApplication && existingApplication && !bothPay) {
         Alert.alert(
           "Application Option Already Selected",
           "You already chose the vendor-paid application option for this event. You cannot also submit a bid.",

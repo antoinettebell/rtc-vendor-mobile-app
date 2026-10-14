@@ -195,14 +195,23 @@ export const getComplianceRequirementLabel = (documentType) => {
   return normalizeMarketplaceRequirementLabel(documentType);
 };
 
+// Marketplace applications may only disclose public business compliance
+// evidence. Tax and identity records are never candidates for an attachment.
+const isMarketplaceShareableComplianceLabel = (label) =>
+  [
+    "insurance",
+    "certificate of insurance",
+    "sanitation grade",
+    "business license",
+    "business license/permit",
+    "city permit",
+    "city permits",
+  ].includes(String(label || "").trim().toLowerCase());
+
 export const getVerifiedComplianceRequirementFiles = (
   compliance,
   requiredLabels = [],
 ) => {
-  const isExcludedLabel = (label) =>
-    ["ein", "w9", "w-9", "w_9", "form w9", "form w-9", "tax id", "tax_id"].includes(
-      String(label || "").trim().toLowerCase(),
-    );
   const requiredSet = new Set(
     (requiredLabels || [])
       .map((label) => normalizeMarketplaceRequirementLabel(label))
@@ -227,7 +236,7 @@ export const getVerifiedComplianceRequirementFiles = (
 
       if (
         !label ||
-        isExcludedLabel(label) ||
+        !isMarketplaceShareableComplianceLabel(label) ||
         (requiredSet.size && !requiredSet.has(label)) ||
         requirement?.status !== "verified" ||
         !document?.file_url ||
@@ -254,15 +263,11 @@ export const getVerifiedComplianceRequirementFiles = (
 
 export const getMarketplaceRequirementLabels = (event = {}) => {
   const labels = [];
-  const isExcludedLabel = (label) =>
-    ["ein", "w9", "w-9", "w_9", "form w9", "form w-9", "tax id", "tax_id"].includes(
-      String(label || "").trim().toLowerCase(),
-    );
   const addLabel = (label) => {
     const normalizedLabel = normalizeMarketplaceRequirementLabel(label);
     if (
       normalizedLabel &&
-      !isExcludedLabel(normalizedLabel) &&
+      isMarketplaceShareableComplianceLabel(normalizedLabel) &&
       !labels.includes(normalizedLabel)
     ) {
       labels.push(normalizedLabel);
@@ -277,16 +282,6 @@ export const getMarketplaceRequirementLabels = (event = {}) => {
         addLabel(permit);
       }
     });
-  }
-
-  if (
-    event?.alcohol_required ||
-    (Array.isArray(event?.permits_required) &&
-      event.permits_required.some(
-        (permit) => String(permit || "").trim().toLowerCase() === "alcohol",
-      ))
-  ) {
-    addLabel("Liquor License");
   }
 
   return labels;
@@ -320,6 +315,14 @@ export const getEventPaymentType = (event = {}) => {
     explicitType.includes("BID") ||
     explicitType.includes("COORDINATOR_PAYS_VENDOR")
   ) {
+    return MARKETPLACE_PAYMENT_TYPES.COORDINATOR_PAYS_VENDOR;
+  }
+
+  const paymentResponsibility = String(event?.payment_responsibility || "").toUpperCase();
+  if (paymentResponsibility === "VENDOR") {
+    return MARKETPLACE_PAYMENT_TYPES.VENDOR_PAYS_TO_ATTEND;
+  }
+  if (paymentResponsibility === "COORDINATOR") {
     return MARKETPLACE_PAYMENT_TYPES.COORDINATOR_PAYS_VENDOR;
   }
 
