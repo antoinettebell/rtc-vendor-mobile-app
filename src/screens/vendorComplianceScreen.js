@@ -57,15 +57,11 @@ const EXPIRING_DOCUMENT_TYPES = new Set([
   "CERTIFICATE_OF_INSURANCE",
   "LIQUOR_LICENSE",
 ]);
-const REQUIRED_ISSUE_DATE_DOCUMENT_TYPES = new Set([
+const REQUIRED_EXPIRATION_DOCUMENT_TYPES = new Set([
   "BUSINESS_LICENSE",
   "COI",
   "CERTIFICATE_OF_INSURANCE",
   "LIQUOR_LICENSE",
-]);
-const REQUIRED_EXPIRATION_DOCUMENT_TYPES = new Set([
-  "COI",
-  "CERTIFICATE_OF_INSURANCE",
 ]);
 const SANITATION_GRADE_OPTIONS = ["A", "B", "C", "D", "F"].map(
   (grade) => ({ label: grade, value: grade })
@@ -242,7 +238,6 @@ const VendorComplianceScreen = ({ navigation, route }) => {
   const [submittingOcr, setSubmittingOcr] = useState(false);
   const [summary, setSummary] = useState(null);
   const [expirationDates, setExpirationDates] = useState({});
-  const [issueDates, setIssueDates] = useState({});
   const [manualSanitationGrades, setManualSanitationGrades] = useState({});
   const [documentRevisionTypes, setDocumentRevisionTypes] = useState({});
   const [uploadedRevisionTypes, setUploadedRevisionTypes] = useState({});
@@ -433,7 +428,6 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     setExpirationDates({});
-    setIssueDates({});
     setManualSanitationGrades({});
     setDocumentRevisionTypes({});
     setUploadedRevisionTypes({});
@@ -454,20 +448,11 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 
   const uploadComplianceFile = async (requirement, file) => {
     const selectedExpirationDate = expirationDates[requirement.type];
-    const selectedIssueDate = issueDates[requirement.type];
     const isHealthPermit = requirement.type === "HEALTH_PERMIT";
-    const requiresIssueDate = REQUIRED_ISSUE_DATE_DOCUMENT_TYPES.has(requirement.type);
     if (isHealthPermit && !selectedExpirationDate) {
       Alert.alert(
         "Inspection Date Required",
         "Please enter the inspection date shown on the document before uploading."
-      );
-      return;
-    }
-    if (requiresIssueDate && !selectedIssueDate) {
-      Alert.alert(
-        "Issue Date Required",
-        "Please enter the issue date shown on the document before uploading."
       );
       return;
     }
@@ -497,9 +482,6 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       payload.append("issue_date", formatDateForPayload(selectedExpirationDate));
     } else if (selectedExpirationDate) {
       payload.append("expiration_date", formatDateForPayload(selectedExpirationDate));
-    }
-    if (selectedIssueDate && requiresIssueDate) {
-      payload.append("issue_date", formatDateForPayload(selectedIssueDate));
     }
     if (requirement.type === "HEALTH_PERMIT") {
       payload.append("sanitation_grade", sanitationGrade);
@@ -633,12 +615,6 @@ const VendorComplianceScreen = ({ navigation, route }) => {
         [requirement.type]: parseDateOnly(existingDocumentDate),
       }));
     }
-    if (REQUIRED_ISSUE_DATE_DOCUMENT_TYPES.has(requirement.type) && requirement.document?.issue_date) {
-      setIssueDates((current) => ({
-        ...current,
-        [requirement.type]: parseDateOnly(requirement.document.issue_date),
-      }));
-    }
     setManualSanitationGrades((current) => ({
       ...current,
       [requirement.type]:
@@ -661,11 +637,6 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       delete next[requirement.type];
       return next;
     });
-    setIssueDates((current) => {
-      const next = { ...current };
-      delete next[requirement.type];
-      return next;
-    });
     setManualSanitationGrades((current) => ({
       ...current,
       [requirement.type]: String(
@@ -678,9 +649,6 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     setDatePickerSelection({ requirement, field: "expiration" });
   };
 
-  const openIssueDatePicker = (requirement) => {
-    setDatePickerSelection({ requirement, field: "issue" });
-  };
 
   const toggleDocumentExpanded = (requirementType) => {
     setExpandedDocuments((current) => ({
@@ -958,16 +926,6 @@ const VendorComplianceScreen = ({ navigation, route }) => {
               : isHealthPermit
                 ? document?.issue_date
                 : document?.expiration_date;
-            const requiresIssueDate = REQUIRED_ISSUE_DATE_DOCUMENT_TYPES.has(
-              requirement.type
-            );
-            const selectedIssueDate = issueDates[requirement.type];
-            const displayIssueDate = Object.prototype.hasOwnProperty.call(
-              issueDates,
-              requirement.type
-            )
-              ? selectedIssueDate
-              : document?.issue_date;
             const isExpanded =
               expandedDocuments[requirement.type] ?? !document;
             const isDocumentRevision =
@@ -1022,11 +980,6 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                           Inspected {formatDate(document?.issue_date)}
                         </Text>
                       ) : null}
-                      {requiresIssueDate ? (
-                        <Text style={styles.documentMeta}>
-                          Issued {formatDate(document?.issue_date)}
-                        </Text>
-                      ) : null}
                       {requiresExpirationDate ? (
                         <Text style={styles.documentMeta}>
                           Expires {formatDate(document?.expiration_date)}
@@ -1038,33 +991,6 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	                      Grade {String(getSanitationGradeFromDocument(document)).toUpperCase()}
 	                    </Text>
 	                  ) : null}
-	                  {requiresIssueDate ? (
-	                      <View style={styles.expirationInputGroup}>
-	                        <Text style={styles.expirationInputLabel}>
-                              Issue date on document *
-	                        </Text>
-	                        <TouchableOpacity
-	                          activeOpacity={0.7}
-	                          disabled={!areDocumentFieldsEditable}
-	                          onPress={() => openIssueDatePicker(requirement)}
-	                          style={[
-                              styles.expirationDateButton,
-                              !areDocumentFieldsEditable && styles.readOnlyInput,
-                            ]}
-	                        >
-	                          <Text
-	                            style={[
-	                              styles.expirationDateText,
-	                              !displayIssueDate &&
-	                                styles.expirationDatePlaceholder,
-	                            ]}
-	                          >
-	                            {getSelectedDateLabel(displayIssueDate, true).replace("inspection", "issue")}
-	                          </Text>
-	                          <Ionicons name="calendar-outline" size={18} color={AppColor.primary} />
-	                        </TouchableOpacity>
-	                      </View>
-	                    ) : null}
 	                  {requiresExpirationDate || isHealthPermit ? (
 		                      <View style={styles.expirationInputGroup}>
 		                        <View style={styles.fieldLabelRow}>
@@ -1378,9 +1304,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                 : undefined
             }
             date={
-              datePickerSelection?.field === "issue"
-                ? issueDates[datePickerSelection?.requirement?.type] || new Date()
-                : expirationDates[datePickerSelection?.requirement?.type] || new Date()
+              expirationDates[datePickerSelection?.requirement?.type] || new Date()
             }
             onConfirm={handleExpirationDateConfirm}
             onCancel={() => setDatePickerSelection(null)}
