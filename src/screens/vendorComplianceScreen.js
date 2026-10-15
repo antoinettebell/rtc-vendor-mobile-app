@@ -1268,11 +1268,11 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	            )}
 	          </TouchableOpacity>
 	          <TouchableOpacity
-	            disabled={!summary?.internal_core_compliant || requestingVerification || ["PENDING", "PASSED"].includes(summary?.external_verification?.status)}
+	            disabled={!summary?.internal_core_compliant || requestingVerification || summary?.external_verification?.status === "PASSED" || (summary?.external_verification?.status === "PENDING" && summary?.external_verification?.provider !== "COMPLYCUBE")}
 	            onPress={requestVerification}
 	            style={[
 	              styles.saveButton,
-	              (!summary?.internal_core_compliant || requestingVerification || ["PENDING", "PASSED"].includes(summary?.external_verification?.status)) && styles.disabledButton,
+	              (!summary?.internal_core_compliant || requestingVerification || summary?.external_verification?.status === "PASSED" || (summary?.external_verification?.status === "PENDING" && summary?.external_verification?.provider !== "COMPLYCUBE")) && styles.disabledButton,
 	            ]}
 	          >
 	            {requestingVerification ? (
@@ -1280,7 +1280,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	            ) : (
 	              <Text style={styles.saveButtonText}>
 	                {summary?.external_verification?.status === "PENDING"
-	                  ? "Verification Pending"
+	                  ? summary?.external_verification?.provider === "COMPLYCUBE" ? "Check Verification Status" : "Verification Pending"
 	                  : summary?.external_verification?.status === "PASSED"
 	                    ? "Verification Complete"
 	                    : "Verification"}
