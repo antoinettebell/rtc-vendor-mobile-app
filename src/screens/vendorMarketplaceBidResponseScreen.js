@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import ImagePicker from "react-native-image-crop-picker";
 import { RESULTS } from "react-native-permissions";
 import DocumentPicker, { types } from "react-native-document-picker";
@@ -42,6 +43,7 @@ import {
   getVerifiedComplianceRequirementFiles,
   isBidRevisionRequested,
   isVendorPaysToAttendEvent,
+  listText,
   normalizeMarketplaceRequirementLabel,
   styles,
 } from "./vendorMarketplaceShared";
@@ -177,6 +179,7 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
   );
   const [menuPdf, setMenuPdf] = useState(null);
   const [bidImages, setBidImages] = useState([]);
+  const [summaryExpanded, setSummaryExpanded] = useState(true);
   const isLeavingRef = useRef(false);
   const submissionCompletedRef = useRef(false);
   const initialDraftRef = useRef(normalizeBidDraftSnapshot(initialDraft));
@@ -893,33 +896,66 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
         >
           <ScrollView contentContainerStyle={styles.body}>
             <View style={[styles.card, styles.summaryCard]}>
-              <Text style={styles.sectionHeader}>Event Summary</Text>
-              <Text style={styles.title}>{event?.event_name || "Event Bid"}</Text>
-              <ReadOnlyRow label="Event Type" value={event?.event_type} />
-              <ReadOnlyRow label="Event Date" value={formatDate(event?.event_date)} />
-              <ReadOnlyRow label="Event Time" value={formatTimeRange(event?.event_time)} />
-              <ReadOnlyRow label="Duration" value={formatDuration(event)} />
-              <ReadOnlyRow label="Location" value={getEventLocation(event)} />
-              {getFoodVendorMarketplaceGuestRows({ event, participationPath: guestCoverage === "BOTH" ? "BOTH" : "BID", coverage: guestCoverage }).map((row) => <ReadOnlyRow key={row.label} label={row.label} value={row.value} />)}
-              <ReadOnlyRow label="Application/Bid Deadline" value={formatEventDeadlineDate(getFoodVendorMarketplaceCloseDate(event), event)} />
-              <ReadOnlyRow
-                label="Event Budget"
-                value={formatMoney(event?.budgeted_amount)}
-              />
-              <ReadOnlyRow
-                label="Free Food Offered"
-                value={boolText(event?.free_food_offered)}
-              />
-              {event?.free_food_offered === true ? (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={styles.rowBetween}
+                onPress={() => setSummaryExpanded((expanded) => !expanded)}
+              >
+                <Text style={styles.sectionHeader}>Event Summary</Text>
+                <MaterialIcons
+                  name={summaryExpanded ? "expand-less" : "expand-more"}
+                  size={24}
+                  color={AppColor.primary}
+                />
+              </TouchableOpacity>
+              {summaryExpanded ? (
                 <>
+                  <Text style={styles.title}>{event?.event_name || "Event Bid"}</Text>
+                  <ReadOnlyRow label="Event Type" value={event?.event_type} />
                   <ReadOnlyRow
-                    label="Free Food Provider"
-                    value={event?.free_food_provider || "Not set"}
+                    label="Service Types"
+                    value={Array.isArray(event?.service_types) && event.service_types.length
+                      ? listText(event.service_types)
+                      : event?.service_type}
                   />
                   <ReadOnlyRow
-                    label="Vendors Must Give Away Food"
-                    value={boolText(event?.vendors_required_to_giveaway_food)}
+                    label="Primary Service Style"
+                    value={event?.primary_service_style}
                   />
+                  {event?.primary_service_style === "Buffet" ? (
+                    <ReadOnlyRow label="Buffet Options" value={listText(event?.buffet_options)} />
+                  ) : null}
+                  <ReadOnlyRow
+                    label="Dietary Restrictions"
+                    value={listText(event?.dietary_restrictions)}
+                  />
+                  <ReadOnlyRow label="Equipment Needed" value={listText(event?.equipment_needed)} />
+                  <ReadOnlyRow label="Power Requirements" value={listText(event?.power_required)} />
+                  <ReadOnlyRow
+                    label="Cuisine Preferences"
+                    value={listText(event?.cuisine_preferences)}
+                  />
+                  <ReadOnlyRow
+                    label="Vendors Needed"
+                    value={`${event?.number_of_vendors_needed || 0}`}
+                  />
+                  <ReadOnlyRow label="Event Date" value={formatDate(event?.event_date)} />
+                  <ReadOnlyRow label="Event Time" value={formatTimeRange(event?.event_time)} />
+                  <ReadOnlyRow label="Duration" value={formatDuration(event)} />
+                  <ReadOnlyRow label="Location" value={getEventLocation(event)} />
+                  {getFoodVendorMarketplaceGuestRows({ event, participationPath: guestCoverage === "BOTH" ? "BOTH" : "BID", coverage: guestCoverage }).map((row) => <ReadOnlyRow key={row.label} label={row.label} value={row.value} />)}
+                  <ReadOnlyRow label="Application/Bid Deadline" value={formatEventDeadlineDate(getFoodVendorMarketplaceCloseDate(event), event)} />
+                  <ReadOnlyRow label="Event Budget" value={formatMoney(event?.budgeted_amount)} />
+                  <ReadOnlyRow label="Free Food Offered" value={boolText(event?.free_food_offered)} />
+                  {event?.free_food_offered === true ? (
+                    <>
+                      <ReadOnlyRow label="Free Food Provider" value={event?.free_food_provider || "Not set"} />
+                      <ReadOnlyRow
+                        label="Vendors Must Give Away Food"
+                        value={boolText(event?.vendors_required_to_giveaway_food)}
+                      />
+                    </>
+                  ) : null}
                 </>
               ) : null}
             </View>
