@@ -920,6 +920,26 @@ const VendorComplianceScreen = ({ navigation, route }) => {
             </View>
           </View>
 
+          <View style={styles.externalVerificationRow}>
+            <Text style={styles.externalVerificationLabel}>External Verification</Text>
+            <View style={[
+              styles.externalVerificationPill,
+              summary?.external_verification?.status === "PASSED" ? styles.externalVerificationPassed
+                : summary?.external_verification?.status === "PENDING" ? styles.externalVerificationPending
+                  : summary?.external_verification?.status === "MANUAL_REVIEW" ? styles.externalVerificationReview
+                    : summary?.external_verification?.status === "FAILED" ? styles.externalVerificationFailed
+                      : styles.externalVerificationNotStarted,
+            ]}>
+              <Text style={styles.externalVerificationPillText}>
+                {summary?.external_verification?.status === "PASSED" ? "Passed"
+                  : summary?.external_verification?.status === "PENDING" ? "Pending"
+                    : summary?.external_verification?.status === "MANUAL_REVIEW" ? "Manual Review"
+                      : summary?.external_verification?.status === "FAILED" ? "Not Verified"
+                        : "Not Started"}
+              </Text>
+            </View>
+          </View>
+
           <Text style={styles.sectionTitle}>Compliance Documents</Text>
           {requirements.map((requirement) => {
             const document = requirement.document;
@@ -1438,6 +1458,37 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
   },
+  externalVerificationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#e2e6ea",
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    marginBottom: 18,
+  },
+  externalVerificationLabel: {
+    fontFamily: Mulish700,
+    fontSize: 14,
+    color: AppColor.black,
+  },
+  externalVerificationPill: {
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  externalVerificationPillText: {
+    fontFamily: Mulish700,
+    fontSize: 12,
+    color: AppColor.white,
+  },
+  externalVerificationPassed: { backgroundColor: "#176B43" },
+  externalVerificationPending: { backgroundColor: "#B77900" },
+  externalVerificationReview: { backgroundColor: "#B77900" },
+  externalVerificationFailed: { backgroundColor: "#C53030" },
+  externalVerificationNotStarted: { backgroundColor: "#64748B" },
   scoreTitle: {
     fontFamily: Mulish700,
     fontSize: 18,
