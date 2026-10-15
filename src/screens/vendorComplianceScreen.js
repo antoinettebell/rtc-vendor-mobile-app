@@ -741,6 +741,13 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	    AppColor.primary;
 	  const requirements = summary?.requirements || [];
 	  const coreComponents = summary?.core_components || [];
+	  const cobaltChecksByType = Object.fromEntries(
+	    (summary?.external_verification?.checks || []).map((check) => [check.check_type, check]),
+	  );
+	  const cobaltVerificationChecks = [
+	    { type: "TIN", label: "EIN Verification" },
+	    { type: "SOS", label: "State Verification" },
+	  ].map((item) => ({ ...item, status: cobaltChecksByType[item.type]?.status || "NOT_STARTED" }));
 	  const verifiedCoreComponents = coreComponents.filter((component) => component.verified).length;
 	  const incompleteCoreLabels = coreComponents
 	    .filter((component) => !component.verified)
@@ -920,7 +927,16 @@ const VendorComplianceScreen = ({ navigation, route }) => {
             </View>
           </View>
 
-          <View style={styles.externalVerificationRow}>
+          {summary?.external_verification?.provider === "COBALT" ? <View style={[styles.externalVerificationRow, styles.cobaltExternalVerificationRow]}>
+            <Text style={styles.externalVerificationLabel}>External Verification</Text>
+            <View style={styles.verificationChecks}>
+              {cobaltVerificationChecks.map((check) => <View key={check.type} style={styles.verificationCheck}>
+                <Ionicons name={check.status === "PASSED" ? "checkbox" : "square-outline"} size={19} color={check.status === "PASSED" ? "#176B43" : "#64748B"} />
+                <Text style={styles.verificationCheckText}>{check.label}</Text>
+                <Text style={styles.verificationCheckStatus}>{String(check.status).replace(/_/g, " ")}</Text>
+              </View>)}
+            </View>
+          </View> : <View style={styles.externalVerificationRow}>
             <Text style={styles.externalVerificationLabel}>External Verification</Text>
             <View style={[
               styles.externalVerificationPill,
@@ -938,7 +954,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                         : "Not Started"}
               </Text>
             </View>
-          </View>
+          </View>}
 
           <Text style={styles.sectionTitle}>Compliance Documents</Text>
           {requirements.map((requirement) => {
@@ -1468,6 +1484,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 11,
     marginBottom: 18,
+  },
+  cobaltExternalVerificationRow: {
+    alignItems: "stretch",
+    flexDirection: "column",
+    gap: 10,
+  },
+  verificationChecks: {
+    gap: 8,
+  },
+  verificationCheck: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  verificationCheckText: {
+    color: AppColor.black,
+    flex: 1,
+    fontFamily: Mulish700,
+    fontSize: 13,
+  },
+  verificationCheckStatus: {
+    color: AppColor.subText,
+    fontFamily: Mulish400,
+    fontSize: 12,
   },
   externalVerificationLabel: {
     fontFamily: Mulish700,
