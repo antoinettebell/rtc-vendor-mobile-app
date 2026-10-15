@@ -24,6 +24,7 @@ import {
   getVendorFoodTruckList_API,
   getVendorComplianceSummary_API,
   submitVendorComplianceForOcr_API,
+  startVendorComplianceVerification_API,
   startVendorComplianceW9Signing_API,
   completeVendorComplianceW9Signing_API,
   uploadVendorComplianceDocument_API,
@@ -236,6 +237,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [uploadingType, setUploadingType] = useState(null);
   const [submittingOcr, setSubmittingOcr] = useState(false);
+  const [requestingVerification, setRequestingVerification] = useState(false);
   const [summary, setSummary] = useState(null);
   const [expirationDates, setExpirationDates] = useState({});
   const [manualSanitationGrades, setManualSanitationGrades] = useState({});
@@ -417,7 +419,8 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       const document = requirement?.document;
       return ["queued", "processing"].includes(document?.ocr_status);
     });
-    if (!shouldRefresh) return undefined;
+    const hasPendingProviderVerification = summary?.external_verification?.status === "PENDING";
+    if (!shouldRefresh && !hasPendingProviderVerification) return undefined;
     const timer = setTimeout(() => loadCompliance({ silent: true }), 5000);
     return () => clearTimeout(timer);
   }, [loadCompliance, summary]);
@@ -693,6 +696,26 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       );
     } finally {
       setSubmittingOcr(false);
+    }
+  };
+
+  const requestVerification = async () => {
+    if (!foodTruckId) return;
+    setRequestingVerification(true);
+    try {
+      const response = await startVendorComplianceVerification_API({
+        foodtruck_id: foodTruckId,
+      });
+      setSummary(response?.data?.compliance || summary);
+      await loadCompliance({ silent: true });
+      Alert.alert(
+        "Verification Requested",
+        "Your identity verification request was submitted. The compliance status will update when the provider responds.",
+      );
+    } catch (error) {
+      Alert.alert("Verification", error?.message || "Unable to request identity verification.");
+    } finally {
+      setRequestingVerification(false);
     }
   };
 
@@ -1242,6 +1265,26 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	                <Ionicons name="save-outline" size={18} color={AppColor.white} />
 	                <Text style={styles.saveButtonText}>Save & Run OCR</Text>
 	              </>
+	            )}
+	          </TouchableOpacity>
+	          <TouchableOpacity
+	            disabled={!summary?.internal_core_compliant || requestingVerification || ["PENDING", "PASSED"].includes(summary?.external_verification?.status)}
+	            onPress={requestVerification}
+	            style={[
+	              styles.saveButton,
+	              (!summary?.internal_core_compliant || requestingVerification || ["PENDING", "PASSED"].includes(summary?.external_verification?.status)) && styles.disabledButton,
+	            ]}
+	          >
+	            {requestingVerification ? (
+	              <ActivityIndicator size="small" color={AppColor.white} />
+	            ) : (
+	              <Text style={styles.saveButtonText}>
+	                {summary?.external_verification?.status === "PENDING"
+	                  ? "Verification Pending"
+	                  : summary?.external_verification?.status === "PASSED"
+	                    ? "Verification Complete"
+	                    : "Verification"}
+	              </Text>
 	            )}
 	          </TouchableOpacity>
           {isRequiredSetupFlow ? (
