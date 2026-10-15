@@ -922,6 +922,10 @@ const VendorMarketplaceBidResponseScreen = ({ navigation, route }) => {
                     label="Primary Service Style"
                     value={event?.primary_service_style}
                   />
+                  <ReadOnlyRow
+                    label="Service Styles"
+                    value={listText(event?.service_styles)}
+                  />
                   {event?.primary_service_style === "Buffet" ? (
                     <ReadOnlyRow label="Buffet Options" value={listText(event?.buffet_options)} />
                   ) : null}
