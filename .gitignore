@@ -35,6 +35,8 @@ build/
 .idea
 .gradle
 local.properties
+android/gradle.properties
+TapToPay.local.properties
 credentials.json
 credentials/
 *.iml

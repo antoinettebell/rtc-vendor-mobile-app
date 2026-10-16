@@ -48,4 +48,4 @@ android.newDsl=false
 MYAPP_UPLOAD_STORE_FILE=rtc-vendor-release.keystore
 MYAPP_UPLOAD_KEY_ALIAS=rtcvendor
 MYAPP_UPLOAD_STORE_PASSWORD=your_store_password_here
-MYAPP_UPLOAD_KEY_PASSWORD=your_store_key_here
+MYAPP_UPLOAD_KEY_PASSWORD=your_key_password_here
