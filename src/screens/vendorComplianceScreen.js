@@ -750,6 +750,11 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	  ].map((item) => ({ ...item, status: cobaltChecksByType[item.type]?.status || "NOT_STARTED" }));
 	  const cobaltStateCanRetry = summary?.external_verification?.provider === "COBALT" && ["FAILED", "RETRYABLE_ERROR"].includes(cobaltChecksByType.SOS?.status);
 	  const cobaltStateCanRefresh = summary?.external_verification?.provider === "COBALT" && cobaltChecksByType.SOS?.status === "PENDING" && Boolean(cobaltChecksByType.SOS?.provider_reference);
+	  const cobaltTinCanRetry = summary?.external_verification?.provider === "COBALT"
+	    && cobaltChecksByType.TIN?.status === "PENDING"
+	    && !cobaltChecksByType.TIN?.provider_reference
+	    && cobaltChecksByType.TIN?.submitted_at
+	    && Date.now() - new Date(cobaltChecksByType.TIN.submitted_at).getTime() >= 15 * 60 * 1000;
 	  const verifiedCoreComponents = coreComponents.filter((component) => component.verified).length;
 	  const incompleteCoreLabels = coreComponents
 	    .filter((component) => !component.verified)
@@ -1306,11 +1311,11 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	            )}
 	          </TouchableOpacity>
 	          <TouchableOpacity
-	            disabled={!summary?.internal_core_compliant || requestingVerification || summary?.external_verification?.status === "PASSED" || (summary?.external_verification?.status === "PENDING" && summary?.external_verification?.provider !== "COMPLYCUBE" && !cobaltStateCanRetry && !cobaltStateCanRefresh)}
+	            disabled={!summary?.internal_core_compliant || requestingVerification || summary?.external_verification?.status === "PASSED" || (summary?.external_verification?.status === "PENDING" && summary?.external_verification?.provider !== "COMPLYCUBE" && !cobaltTinCanRetry && !cobaltStateCanRetry && !cobaltStateCanRefresh)}
 	            onPress={requestVerification}
 	            style={[
 	              styles.saveButton,
-	              (!summary?.internal_core_compliant || requestingVerification || summary?.external_verification?.status === "PASSED" || (summary?.external_verification?.status === "PENDING" && summary?.external_verification?.provider !== "COMPLYCUBE" && !cobaltStateCanRetry && !cobaltStateCanRefresh)) && styles.disabledButton,
+	              (!summary?.internal_core_compliant || requestingVerification || summary?.external_verification?.status === "PASSED" || (summary?.external_verification?.status === "PENDING" && summary?.external_verification?.provider !== "COMPLYCUBE" && !cobaltTinCanRetry && !cobaltStateCanRetry && !cobaltStateCanRefresh)) && styles.disabledButton,
 	            ]}
 	          >
 	            {requestingVerification ? (
@@ -1318,7 +1323,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	            ) : (
 	              <Text style={styles.saveButtonText}>
 	                {summary?.external_verification?.status === "PENDING"
-	                  ? cobaltStateCanRetry ? "Retry State Verification" : cobaltStateCanRefresh ? "Check State Verification Status" : summary?.external_verification?.provider === "COMPLYCUBE" ? "Check Verification Status" : "Verification Pending"
+	                  ? cobaltTinCanRetry ? "Retry EIN Verification" : cobaltStateCanRetry ? "Retry State Verification" : cobaltStateCanRefresh ? "Check State Verification Status" : summary?.external_verification?.provider === "COMPLYCUBE" ? "Check Verification Status" : "Verification Pending"
 	                  : summary?.external_verification?.status === "PASSED"
 	                    ? "Verification Complete"
 	                    : "Verification"}
