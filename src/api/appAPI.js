@@ -276,11 +276,11 @@ export const submitVendorComplianceForOcr_API = async ({ foodtruck_id, document_
   }
 };
 
-export const startVendorComplianceVerification_API = async ({ foodtruck_id }) => {
+export const startVendorComplianceVerification_API = async ({ foodtruck_id, check_type = null }) => {
   try {
     const response = await apiClient.post(
       VENDOR_COMPLIANCE_VERIFICATION(foodtruck_id),
-      {},
+      check_type ? { check_type } : {},
       { skipToken: false },
     );
     return response?.data;

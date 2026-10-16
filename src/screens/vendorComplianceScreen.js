@@ -705,6 +705,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     try {
       const response = await startVendorComplianceVerification_API({
         foodtruck_id: foodTruckId,
+        check_type: cobaltTinCanRetry ? "TIN" : (cobaltStateCanRetry || cobaltStateCanRefresh ? "SOS" : null),
       });
       setSummary(response?.data?.compliance || summary);
       await loadCompliance({ silent: true });
