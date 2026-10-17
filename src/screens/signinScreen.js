@@ -53,6 +53,7 @@ import {
   parseEventVendorApplicationReturn,
 } from "../helpers/eventVendorApplicationDraft.helper";
 import { getEffectiveFoodVendorPlan, getResumableFoodVendorGuidedStep } from "../helpers/foodVendorGuidedSetup.helper";
+import { isTapToPayReleased } from "../services/tapToPay-release";
 
 const SignInScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -238,7 +239,7 @@ const SignInScreen = ({ navigation, route }) => {
               getResumableFoodVendorGuidedStep(
                 effectivePlan,
                 vendorOnboardingStep,
-                { includeTapToPay: Platform.OS === "ios" },
+                { includeTapToPay: Platform.OS === "ios" && isTapToPayReleased },
               )
             ));
           }

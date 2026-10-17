@@ -26,7 +26,7 @@
       android:value="AIzaSyCdjHeKOYBUcpocHw5-NsdfMy2-dHkBoFY" />
     <meta-data
       android:name="com.rtc.tap_to_pay.provider"
-      android:value="AUTHORIZE_NET" />
+      android:value="CYBERSOURCE" />
 
     <activity
       android:name=".MainActivity"

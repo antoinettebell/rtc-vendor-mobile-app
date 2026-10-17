@@ -73,12 +73,42 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+// Tap to Pay credentials belong in the ignored native configuration file (or
+// the secure build environment), never in JavaScript or a committed .env file.
+// The SDK itself requires these values to create its native MposUi instance.
+def tapToPayProperties = new Properties()
+def tapToPayPropertiesFile = rootProject.file("TapToPay.local.properties")
+if (tapToPayPropertiesFile.exists()) {
+    tapToPayPropertiesFile.withInputStream { tapToPayProperties.load(it) }
+}
+// Local workstations that already have the approved iOS native configuration
+// can use it as a read-only fallback. EAS writes the Android file explicitly.
+def iosTapToPayValues = [:]
+def iosTapToPayPropertiesFile = rootProject.file("../ios/FoodtruckVendor/TapToPay.local.xcconfig")
+if (iosTapToPayPropertiesFile.exists()) {
+    iosTapToPayPropertiesFile.eachLine { line ->
+        def matcher = (line =~ /^\s*(CYBERSOURCE_TTP_(?:MERCHANT_ID|ACCEPTANCE_DEVICE_SECRET))\s*=\s*(.*?)\s*$/)
+        if (matcher.matches()) iosTapToPayValues[matcher.group(1)] = matcher.group(2)
+    }
+}
+def tapToPayBuildValue = { String key ->
+    (System.getenv(key) ?: tapToPayProperties.getProperty(key) ?: iosTapToPayValues[key] ?: "").trim()
+}
+def asBuildConfigString = { String value ->
+    "\"${value.replace("\\", "\\\\").replace("\"", "\\\"")}\""
+}
+def cybersourceTapToPayMerchantId = tapToPayBuildValue("CYBERSOURCE_TTP_MERCHANT_ID")
+def cybersourceTapToPayAcceptanceDeviceSecret = tapToPayBuildValue("CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET")
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.ea.rtcvendor"
+    buildFeatures {
+        buildConfig true
+    }
     packaging {
         resources {
             excludes += ["META-INF/*", "LICENSE.txt", "asm-license.txt"]
@@ -96,6 +126,8 @@ android {
         versionCode 20
         versionName "1.7"
         vectorDrawables.useSupportLibrary = true
+        buildConfigField "String", "CYBERSOURCE_TTP_MERCHANT_ID", asBuildConfigString(cybersourceTapToPayMerchantId)
+        buildConfigField "String", "CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET", asBuildConfigString(cybersourceTapToPayAcceptanceDeviceSecret)
     }
     flavorDimensions "distribution"
     productFlavors {

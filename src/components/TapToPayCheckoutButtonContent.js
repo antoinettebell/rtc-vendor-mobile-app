@@ -26,7 +26,9 @@ const TapToPayCheckoutButtonContent = ({
           style={styles.symbol}
         />
       ) : null}
-      <Text style={labelStyle}>Tap to Pay on iPhone</Text>
+      <Text style={labelStyle}>
+        {Platform.OS === "ios" ? "Tap to Pay on iPhone" : "Tap to Pay"}
+      </Text>
     </View>
     {total ? <Text style={totalStyle}>{total}</Text> : null}
   </View>

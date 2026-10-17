@@ -20,6 +20,7 @@ import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
+import { isTapToPayReleased } from "../services/tapToPay-release";
 import StatusBarManager from "../components/StatusBarManager";
 import {
 	  getUserDetail_API,
@@ -508,7 +509,8 @@ const UserProfileScreen = ({ navigation }) => {
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => {
+                  disabled={!isTapToPayReleased}
+                  onPress={isTapToPayReleased ? () => {
                     if (!employeeTapToPayEligible) {
                       Alert.alert(
                         "Tap to Pay Not Authorized",
@@ -531,11 +533,11 @@ const UserProfileScreen = ({ navigation }) => {
                       return;
                     }
                     navigation.navigate("authTapToPaySetupScreen");
-                  }}
-                  style={styles.setupTapToPayButton}
+                  } : undefined}
+                  style={[styles.setupTapToPayButton, !isTapToPayReleased && { opacity: 0.5 }]}
                 >
                   <Text style={styles.setupTapToPayButtonText}>
-                    Set Up Tap to Pay on iPhone
+                    {isTapToPayReleased ? "Set Up Tap to Pay on iPhone" : "Tap to Pay — Coming Soon"}
                   </Text>
                 </TouchableOpacity>
               </View>

@@ -90,8 +90,16 @@ const VENDOR_PROFILE_DOCUMENT_TYPES = [
   { label: "Certificate of Insurance", value: "COI" },
   { label: "Liquor License", value: "LIQUOR_LICENSE" },
   { label: "EIN", value: "EIN" },
+  { label: "Social Security Card", value: "SSN_CARD" },
   { label: "W-9", value: "W9" },
   { label: "Other", value: "OTHER" },
+];
+
+const LEGAL_BUSINESS_TYPES = [
+  { label: "Sole Proprietor", value: "SOLE_PROPRIETOR" },
+  { label: "LLC", value: "LLC" },
+  { label: "Corporation", value: "CORPORATION" },
+  { label: "Partnership", value: "PARTNERSHIP" },
 ];
 
 const documentTypeLabel = (value) =>
@@ -231,6 +239,11 @@ const EditProfileScreen = ({ navigation }) => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [foodTruckName, setFoodTruckName] = useState("");
+  const [legalBusinessName, setLegalBusinessName] = useState("");
+  const [dba, setDba] = useState("");
+  const [legalBusinessType, setLegalBusinessType] = useState(null);
+  const [taxedAsSCorporation, setTaxedAsSCorporation] = useState(false);
+  const [businessRegistrationState, setBusinessRegistrationState] = useState("");
   const [selectedEmpNumberType, setSelectedEmpNumberType] = useState("ein");
   const [selectedEmpNumberText, setSelectedEmpNumberText] = useState("");
   const [originalEmpNumberType, setOriginalEmpNumberType] = useState("ein");
@@ -679,6 +692,11 @@ const EditProfileScreen = ({ navigation }) => {
 
     // manage food truck name
     setFoodTruckName(FOOD_TRUCK_DATA?.name ? FOOD_TRUCK_DATA.name : "");
+    setLegalBusinessName(FOOD_TRUCK_DATA?.legal_business_name || "");
+    setDba(FOOD_TRUCK_DATA?.dba || "");
+    setLegalBusinessType(FOOD_TRUCK_DATA?.legal_business_type || null);
+    setTaxedAsSCorporation(Boolean(FOOD_TRUCK_DATA?.taxed_as_s_corporation));
+    setBusinessRegistrationState(FOOD_TRUCK_DATA?.business_registration_state || "");
 
     // manage emp number
     const taxIdentifierState = getTaxIdentifierEditState(FOOD_TRUCK_DATA);
@@ -845,6 +863,15 @@ const EditProfileScreen = ({ navigation }) => {
       const foodTruckId = user?.foodTruck?._id;
       let foodTruckPayload = {
         name: foodTruckName,
+        legal_business_name: legalBusinessName.trim() || null,
+        dba: dba.trim() || null,
+        legal_business_type: selectedEmpNumberType === "ein" ? legalBusinessType : null,
+        taxed_as_s_corporation:
+          selectedEmpNumberType === "ein" && ["LLC", "CORPORATION"].includes(legalBusinessType)
+            ? taxedAsSCorporation
+            : false,
+        business_registration_state:
+          selectedEmpNumberType === "ein" ? businessRegistrationState.trim().toUpperCase() || null : null,
         infoType: infoType === "Food Truck" ? "truck" : "caterer",
         socialMedia: normalizedSocialMedia,
       };
@@ -1418,6 +1445,87 @@ const EditProfileScreen = ({ navigation }) => {
                   </HelperText>
                 )}
               </View>
+
+              <View style={styles.section}>
+                <Text style={styles.inputLabel}>Legal Business Name</Text>
+                <TextInput
+                  dense
+                  value={legalBusinessName}
+                  onChangeText={setLegalBusinessName}
+                  style={styles.input}
+                  contentStyle={styles.inputText}
+                  placeholder="Name used on your W-9 and license"
+                  placeholderTextColor={AppColor.placeholderTextColor}
+                  mode="outlined"
+                  outlineColor={AppColor.border}
+                  activeOutlineColor={AppColor.primary}
+                  outlineStyle={{ borderRadius: 8 }}
+                  autoCapitalize="words"
+                />
+                <Text style={styles.helper}>Use the legal name shown on your compliance documents.</Text>
+                <Text style={[styles.inputLabel, { marginTop: 12 }]}>DBA (optional)</Text>
+                <TextInput
+                  dense
+                  value={dba}
+                  onChangeText={setDba}
+                  style={styles.input}
+                  contentStyle={styles.inputText}
+                  placeholder="Doing business as"
+                  placeholderTextColor={AppColor.placeholderTextColor}
+                  mode="outlined"
+                  outlineColor={AppColor.border}
+                  activeOutlineColor={AppColor.primary}
+                  outlineStyle={{ borderRadius: 8 }}
+                  autoCapitalize="words"
+                />
+              </View>
+
+              {selectedEmpNumberType === "ein" ? (
+                <View style={styles.section}>
+                  <Text style={styles.inputLabel}>Legal Business Type</Text>
+                  <Dropdown
+                    data={LEGAL_BUSINESS_TYPES}
+                    labelField="label"
+                    valueField="value"
+                    value={legalBusinessType}
+                    onChange={(item) => {
+                      setLegalBusinessType(item.value);
+                      if (!["LLC", "CORPORATION"].includes(item.value)) setTaxedAsSCorporation(false);
+                    }}
+                    placeholder="Select business type"
+                    style={[styles.input, { paddingHorizontal: 12 }]}
+                    containerStyle={{ width: width - 34 }}
+                    placeholderStyle={{ fontFamily: Mulish400, color: AppColor.placeholderTextColor }}
+                    selectedTextStyle={{ fontFamily: Mulish400 }}
+                    itemTextStyle={{ fontFamily: Mulish400 }}
+                  />
+                  <Text style={[styles.inputLabel, { marginTop: 12 }]}>Registration State</Text>
+                  <TextInput
+                    dense
+                    value={businessRegistrationState}
+                    onChangeText={(text) => setBusinessRegistrationState(text.replace(/[^a-z]/gi, "").slice(0, 2).toUpperCase())}
+                    style={styles.input}
+                    contentStyle={styles.inputText}
+                    placeholder="Two-letter state code (for example, GA)"
+                    placeholderTextColor={AppColor.placeholderTextColor}
+                    mode="outlined"
+                    outlineColor={AppColor.border}
+                    activeOutlineColor={AppColor.primary}
+                    outlineStyle={{ borderRadius: 8 }}
+                    autoCapitalize="characters"
+                    maxLength={2}
+                  />
+                  {["LLC", "CORPORATION"].includes(legalBusinessType) ? (
+                    <TouchableOpacity
+                      style={{ flexDirection: "row", alignItems: "center", marginTop: 14 }}
+                      onPress={() => setTaxedAsSCorporation((value) => !value)}
+                    >
+                      <FontAwesome6 name={taxedAsSCorporation ? "square-check" : "square"} size={20} color={AppColor.primary} />
+                      <Text style={[styles.inputLabel, { marginLeft: 10, marginBottom: 0 }]}>Taxed as an S-Corporation</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              ) : null}
 
               {/* EIN/SSN Number */}
               <View style={styles.section}>

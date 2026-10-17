@@ -20,6 +20,7 @@ import {
   uploadEventVendorLogo_API,
 } from "../api/appAPI";
 import { AppColor } from "../utils/theme";
+import { isTapToPayReleased } from "../services/tapToPay-release";
 import {
   getEventVendorAccessState,
   getProfileOnboardingDestination,
@@ -372,8 +373,14 @@ export default function EventVendorProfileScreen({ navigation }) {
       ) : null}
       {access.canUseMarketplace ? (
         <>
-          <TouchableOpacity style={s.tapSetup} onPress={() => navigation.navigate("authTapToPaySetupScreen")}>
-            <Text style={s.tapSetupText}>Tap to Pay Setup</Text>
+          <TouchableOpacity
+            style={[s.tapSetup, !isTapToPayReleased && { opacity: 0.5 }]}
+            disabled={!isTapToPayReleased}
+            onPress={isTapToPayReleased ? () => navigation.navigate("authTapToPaySetupScreen") : undefined}
+          >
+            <Text style={s.tapSetupText}>
+              {isTapToPayReleased ? "Tap to Pay Setup" : "Tap to Pay — Coming Soon"}
+            </Text>
           </TouchableOpacity>
         </>
       ) : null}

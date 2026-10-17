@@ -51,14 +51,16 @@ import AppImage from "../components/AppImage";
 import { updateUserKey } from "../redux/slices/userInfoSlice";
 import { formatVendorRating } from "../helpers/rating.helper";
 import { showTapToPayMerchantEducation } from "../services/tapToPay-service";
+import { isTapToPayReleased } from "../services/tapToPay-release";
 import tapToPayConfig from "../services/tapToPay-config";
 import { getVendorPaymentCapabilities } from "../helpers/vendorPaymentCapabilities.helper";
 
-const ItemComponent = ({ imageUri, label, rightIcon, isRed, onPress }) => (
+const ItemComponent = ({ imageUri, label, rightIcon, isRed, onPress, disabled = false }) => (
   <TouchableOpacity
     activeOpacity={0.7}
+    disabled={disabled}
     onPress={onPress}
-    style={styles.componentContainer}
+    style={[styles.componentContainer, disabled && { opacity: 0.5 }]}
   >
     <FastImage
       source={imageUri}
@@ -920,9 +922,10 @@ const ProfileMenuScreen = ({ navigation }) => {
                 <>
                   <ItemComponent
                     rightIcon
-                    label="Set Up Tap to Pay on iPhone"
+                    label={isTapToPayReleased ? "Set Up Tap to Pay on iPhone" : "Tap to Pay — Coming Soon"}
                     imageUri={PROFILE_MENU_IMAGES.helpSupportTC}
-                    onPress={() => navigation.navigate("authTapToPaySetupScreen")}
+                    disabled={!isTapToPayReleased}
+                    onPress={isTapToPayReleased ? () => navigation.navigate("authTapToPaySetupScreen") : undefined}
                   />
                   <HR />
                 </>

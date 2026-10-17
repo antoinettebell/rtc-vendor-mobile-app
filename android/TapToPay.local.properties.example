@@ -1,0 +1,6 @@
+# Copy to android/TapToPay.local.properties for local Android builds.
+# That file is ignored by Git. Production builds must inject the same values
+# through secure CYBERSOURCE_TTP_* build environment variables.
+# Never put either value in JavaScript, a committed .env file, or source code.
+CYBERSOURCE_TTP_MERCHANT_ID=REPLACE_WITH_ACCEPTANCE_DEVICES_MERCHANT_ID
+CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET=REPLACE_WITH_ACCEPTANCE_DEVICES_SECRET_KEY

@@ -14,6 +14,7 @@ import {
   refundEventVendorGeneralPurchase_API,
 } from "../api/appAPI";
 import { isTapToPayAvailable, startTapToPaySale } from "../services/tapToPay-service";
+import { isTapToPayReleased } from "../services/tapToPay-release";
 import {
   GENERAL_PURCHASE_TAX_INFORMATION,
   addGeneralPurchaseItem,
@@ -55,7 +56,7 @@ export default function EventVendorGeneralPurchaseScreen({ navigation }) {
   const checkout = async () => {
     const validation = validateGeneralPurchase({ items, taxRate });
     if (validation) return Alert.alert("General Purchase", validation);
-    if (!isTapToPayAvailable()) return Alert.alert("Tap to Pay unavailable", "Tap to Pay on iPhone is not enabled or available on this device.");
+    if (!isTapToPayAvailable()) return Alert.alert("Tap to Pay unavailable", "Tap to Pay is not enabled or available on this device.");
     setProcessing(true);
     let prepared;
     let paymentApproved = false;
@@ -139,14 +140,16 @@ export default function EventVendorGeneralPurchaseScreen({ navigation }) {
         <Text style={s.label}>Customer Mobile Number (Optional)</Text><TextInput style={s.input} value={customerPhone} onChangeText={setCustomerPhone} keyboardType="phone-pad" placeholder="For an SMS receipt" />
         <View style={s.summary}><View style={s.rowBetween}><Text>Subtotal</Text><Text>{currency(totals.subtotal)}</Text></View><View style={s.rowBetween}><Text>Sales Tax Amount</Text><Text>{currency(totals.taxAmount)}</Text></View><View style={[s.rowBetween, s.totalRow]}><Text style={s.total}>Final Amount Due</Text><Text style={s.total}>{currency(totals.total)}</Text></View></View>
         <TouchableOpacity
-          style={[s.primary, processing && s.disabled]}
-          onPress={checkout}
-          disabled={processing}
+          style={[s.primary, (!isTapToPayReleased || processing) && s.disabled]}
+          onPress={isTapToPayReleased ? checkout : undefined}
+          disabled={!isTapToPayReleased || processing}
           accessibilityRole="button"
-          accessibilityLabel="Tap to Pay on iPhone"
+          accessibilityLabel="Tap to Pay coming soon"
           accessibilityHint={`Total ${currency(totals.total)}`}
         >
-          {processing ? (
+          {!isTapToPayReleased ? (
+            <Text style={s.primaryText}>Tap to Pay — Coming Soon</Text>
+          ) : processing ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <TapToPayCheckoutButtonContent

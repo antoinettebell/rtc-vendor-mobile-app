@@ -38,6 +38,7 @@ import {
   getEffectiveFoodVendorPlan,
   isTapToPaySetupEligible,
 } from "../helpers/foodVendorGuidedSetup.helper";
+import { isTapToPayReleased } from "../services/tapToPay-release";
 import {
   formatDateOnly,
   parseDateOnly,
@@ -807,7 +808,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 
   const continueToPayment = ({ skip = false } = {}) => {
     const effectivePlan = getEffectiveFoodVendorPlan({ user });
-    const requiresTapToPaySetup = Platform.OS === "ios"
+    const requiresTapToPaySetup = isTapToPayReleased && Platform.OS === "ios"
       && isTapToPaySetupEligible(effectivePlan);
     if (!skip && missingOnboardingDocuments.length > 0) {
       Alert.alert(
@@ -1335,14 +1336,14 @@ const VendorComplianceScreen = ({ navigation, route }) => {
             <>
               <TouchableOpacity onPress={continueToPayment} style={styles.onboardingContinueButton}>
                 <Text style={styles.onboardingContinueButtonText}>
-                  {Platform.OS === "ios"
+                  {isTapToPayReleased && Platform.OS === "ios"
                     && isTapToPaySetupEligible(getEffectiveFoodVendorPlan({ user }))
                     ? "Next: Set Up Tap to Pay"
                     : "Next: Payment Details"}
                 </Text>
                 <Ionicons name="arrow-forward" size={18} color={AppColor.white} />
               </TouchableOpacity>
-              {isOnboardingFlow && (Platform.OS !== "ios"
+              {isOnboardingFlow && (!isTapToPayReleased || Platform.OS !== "ios"
                 || !isTapToPaySetupEligible(getEffectiveFoodVendorPlan({ user }))) ? (
                 <TouchableOpacity onPress={() => continueToPayment({ skip: true })} style={styles.onboardingSkipButton}>
                   <Text style={styles.onboardingSkipButtonText}>Skip</Text>

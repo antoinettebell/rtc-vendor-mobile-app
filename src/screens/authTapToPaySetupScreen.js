@@ -29,6 +29,7 @@ import {
   syncTapToPayTerminalStatus,
 } from "../services/tapToPay-service";
 import tapToPayConfig from "../services/tapToPay-config";
+import { isTapToPayReleased } from "../services/tapToPay-release";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 
 const AuthTapToPaySetupScreen = ({ navigation, route }) => {
@@ -186,7 +187,7 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
     if (!isCompliant || !terminalReady) {
       Alert.alert(
         "Tap to Pay Setup Required",
-        "Complete Tap to Pay activation on this iPhone before continuing to Payment Details.",
+        "Complete Tap to Pay activation on this device before continuing to Payment Details.",
       );
       return;
     }
@@ -296,7 +297,7 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
 
       Alert.alert(
         "Tap to Pay Is Ready",
-        "This iPhone is activated and its terminal serial ID has been saved to your RDC profile.",
+        "This device is activated and its terminal serial ID has been saved to your RDC profile.",
       );
     } catch (error) {
       const rawMessage = String(
@@ -313,7 +314,7 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
         ? "This phone is already in use on another vendor account. Activation remains pending. Contact RTC support or an administrator for device reassignment."
         : isPendingActivation
           ? "Tap to Pay activation is pending. Ask RTC support to resend the reactivation request, then try again."
-        : rawMessage || "Tap to Pay on iPhone could not be activated. Please try again.";
+        : rawMessage || "Tap to Pay could not be activated. Please try again.";
       Alert.alert(
         isPendingActivation ? "Pending Activation" : "Tap to Pay Setup",
         message,
@@ -330,12 +331,12 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
     : isEmployeeSession && loadingEmployeeTraining
       ? "Checking annual employee training…"
       : isEmployeeSession && !employeeTraining?.compliant
-        ? "Complete the annual Tap to Pay training in your employee profile before setting up this iPhone."
+        ? "Complete the annual Tap to Pay training in your employee profile before setting up this device."
     : isCompliant
       ? isMarketplaceVendor
-        ? "Marketplace Vendor account approved — this iPhone is eligible for setup."
-        : "Compliance complete — this iPhone is eligible for setup."
-      : "Complete all required compliance items before activating Tap to Pay on iPhone.";
+        ? "Marketplace Vendor account approved — this device is eligible for setup."
+        : "Compliance complete — this device is eligible for setup."
+      : "Complete all required compliance items before activating Tap to Pay.";
 
   return (
     <View style={styles.container}>
@@ -355,9 +356,9 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
         <View style={styles.iconContainer}>
           <Ionicons name="phone-portrait-outline" size={48} color={AppColor.primary} />
         </View>
-        <Text style={styles.title}>Set Up Tap to Pay on iPhone</Text>
+        <Text style={styles.title}>Set Up Tap to Pay</Text>
         <Text style={styles.subtitle}>
-          Accept contactless debit cards, credit cards, and digital wallets directly on a compatible iPhone.
+          Accept contactless debit cards, credit cards, and digital wallets directly on a compatible device.
         </Text>
 
         <View style={styles.statusCard}>
@@ -405,22 +406,24 @@ const AuthTapToPaySetupScreen = ({ navigation, route }) => {
 
         <TouchableOpacity
           activeOpacity={0.7}
-          disabled={!canActivate || activating}
-          onPress={handleActivation}
+          disabled={!isTapToPayReleased || !canActivate || activating}
+          onPress={isTapToPayReleased ? handleActivation : undefined}
           style={[
             styles.primaryButton,
-            (!canActivate || activating) && styles.disabledButton,
+            (!isTapToPayReleased || !canActivate || activating) && styles.disabledButton,
           ]}
         >
-          {activating ? (
+          {!isTapToPayReleased ? (
+            <Text style={styles.primaryButtonText}>Tap to Pay — Coming Soon</Text>
+          ) : activating ? (
             <ActivityIndicator color={AppColor.white} />
           ) : (
             <Text style={styles.primaryButtonText}>
               {reactivationRequired
-                ? "Reactivate Tap to Pay on iPhone"
+                ? "Reactivate Tap to Pay"
                 : terminalSerial
-                  ? "Verify or Set Up This iPhone"
-                  : "Set Up Tap to Pay on iPhone"}
+                  ? "Verify or Set Up This Device"
+                  : "Set Up Tap to Pay"}
             </Text>
           )}
         </TouchableOpacity>

@@ -32,6 +32,7 @@ import {
 } from "../helpers/eventVendorProfile.helper";
 import { clearUserSlice, updateUser } from "../redux/slices/userSlice";
 import { getEffectiveFoodVendorPlan, getResumableFoodVendorGuidedStep } from "../helpers/foodVendorGuidedSetup.helper";
+import { isTapToPayReleased } from "../services/tapToPay-release";
 
 const SplashScreen = () => {
   const insets = useSafeAreaInsets();
@@ -162,7 +163,7 @@ const SplashScreen = () => {
         const guidedStep = getResumableFoodVendorGuidedStep(
           effectivePlan,
           vendorOnboardingStep,
-          { includeTapToPay: Platform.OS === "ios" },
+          { includeTapToPay: Platform.OS === "ios" && isTapToPayReleased },
         );
         if (guidedStep !== vendorOnboardingStep) dispatch(setVendorOnboardingStep(guidedStep));
         if (guidedStep === "PROFILE") {

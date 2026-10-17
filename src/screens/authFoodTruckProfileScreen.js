@@ -51,6 +51,7 @@ import {
   getEffectiveFoodVendorPlan,
   getNextFoodVendorGuidedStep,
 } from "../helpers/foodVendorGuidedSetup.helper";
+import { isTapToPayReleased } from "../services/tapToPay-release";
 import { empNumberList } from "../utils/constants";
 import AppImage from "../components/AppImage";
 import {
@@ -80,6 +81,13 @@ const dropdownData = SOCIAL_MEDIA_PLATFORMS.map((platform) => ({
   txt: "",
   disable: false,
 }));
+
+const LEGAL_BUSINESS_TYPES = [
+  { label: "Sole Proprietor", value: "SOLE_PROPRIETOR" },
+  { label: "LLC", value: "LLC" },
+  { label: "Corporation", value: "CORPORATION" },
+  { label: "Partnership", value: "PARTNERSHIP" },
+];
 
 const { width } = Dimensions.get("window");
 
@@ -221,6 +229,11 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
         foodTruck.photos.map((photo) => ({ uri: photo, old: true }))
       );
     }
+    setLegalBusinessName(foodTruck.legal_business_name || "");
+    setDba(foodTruck.dba || "");
+    setLegalBusinessType(foodTruck.legal_business_type || null);
+    setTaxedAsSCorporation(Boolean(foodTruck.taxed_as_s_corporation));
+    setBusinessRegistrationState(foodTruck.business_registration_state || "");
 
     const normalized = normalizeSocialMediaObject(foodTruck.socialMedia || {});
     const planLimit = selectedPlan?.slug === "SUB_ELITE"
@@ -269,6 +282,11 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
   const [selectedPhotos, setSelectedPhotos] = useState([]);
   const [selectedEmpNumberType, setSelectedEmpNumberType] = useState("ein");
   const [selectedEmpNumberText, setSelectedEmpNumberText] = useState("");
+  const [legalBusinessName, setLegalBusinessName] = useState("");
+  const [dba, setDba] = useState("");
+  const [legalBusinessType, setLegalBusinessType] = useState(null);
+  const [taxedAsSCorporation, setTaxedAsSCorporation] = useState(false);
+  const [businessRegistrationState, setBusinessRegistrationState] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedType1, setSelectedType1] = useState(dropdownData[0]);
   const [selectedType2, setSelectedType2] = useState(dropdownData[0]);
@@ -582,6 +600,15 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
 
       payload = {
         ...payload,
+        legal_business_name: legalBusinessName.trim() || null,
+        dba: dba.trim() || null,
+        legal_business_type: selectedEmpNumberType === "ein" ? legalBusinessType : null,
+        taxed_as_s_corporation:
+          selectedEmpNumberType === "ein" && ["LLC", "CORPORATION"].includes(legalBusinessType)
+            ? taxedAsSCorporation
+            : false,
+        business_registration_state:
+          selectedEmpNumberType === "ein" ? businessRegistrationState.trim().toUpperCase() || null : null,
         ...buildTaxIdentifierUpdate({
           type: selectedEmpNumberType,
           inputValue: selectedEmpNumberText,
@@ -634,7 +661,7 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
           const nextStep = getNextFoodVendorGuidedStep(
             getEffectiveFoodVendorPlan({ user: { ...user, foodTruck: updatedFoodTruck }, selectedPlan }),
             "PROFILE",
-            { includeTapToPay: Platform.OS === "ios" },
+            { includeTapToPay: Platform.OS === "ios" && isTapToPayReleased },
           ) || "PAYMENT";
           dispatch(setVendorOnboardingStep(nextStep));
           navigation.reset({
@@ -902,6 +929,83 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
                   </HelperText>
                 )}
               </View>
+
+              <View style={styles.section}>
+                <Text style={styles.paperInputLabel}>Legal Business Name</Text>
+                <TextInput
+                  dense
+                  value={legalBusinessName}
+                  onChangeText={setLegalBusinessName}
+                  style={styles.input}
+                  contentStyle={styles.inputText}
+                  placeholder="Name used on your W-9 and license"
+                  placeholderTextColor={AppColor.placeholderTextColor}
+                  mode="outlined"
+                  outlineColor={AppColor.border}
+                  activeOutlineColor={AppColor.primary}
+                  outlineStyle={{ borderRadius: 8 }}
+                  autoCapitalize="words"
+                />
+                <Text style={[styles.paperInputLabel, { marginTop: 12 }]}>DBA (optional)</Text>
+                <TextInput
+                  dense
+                  value={dba}
+                  onChangeText={setDba}
+                  style={styles.input}
+                  contentStyle={styles.inputText}
+                  placeholder="Doing business as"
+                  placeholderTextColor={AppColor.placeholderTextColor}
+                  mode="outlined"
+                  outlineColor={AppColor.border}
+                  activeOutlineColor={AppColor.primary}
+                  outlineStyle={{ borderRadius: 8 }}
+                  autoCapitalize="words"
+                />
+              </View>
+
+              {selectedEmpNumberType === "ein" ? (
+                <View style={styles.section}>
+                  <Text style={styles.paperInputLabel}>Legal Business Type</Text>
+                  <Dropdown
+                    data={LEGAL_BUSINESS_TYPES}
+                    labelField="label"
+                    valueField="value"
+                    value={legalBusinessType}
+                    onChange={(item) => {
+                      setLegalBusinessType(item.value);
+                      if (!["LLC", "CORPORATION"].includes(item.value)) setTaxedAsSCorporation(false);
+                    }}
+                    placeholder="Select business type"
+                    style={[styles.input, { paddingHorizontal: 12 }]}
+                    containerStyle={{ width: width - 50 }}
+                    placeholderStyle={{ fontFamily: Mulish400, color: AppColor.placeholderTextColor }}
+                    selectedTextStyle={{ fontFamily: Mulish400 }}
+                    itemTextStyle={{ fontFamily: Mulish400 }}
+                  />
+                  <Text style={[styles.paperInputLabel, { marginTop: 12 }]}>Registration State</Text>
+                  <TextInput
+                    dense
+                    value={businessRegistrationState}
+                    onChangeText={(text) => setBusinessRegistrationState(text.replace(/[^a-z]/gi, "").slice(0, 2).toUpperCase())}
+                    style={styles.input}
+                    contentStyle={styles.inputText}
+                    placeholder="Two-letter state code (for example, GA)"
+                    placeholderTextColor={AppColor.placeholderTextColor}
+                    mode="outlined"
+                    outlineColor={AppColor.border}
+                    activeOutlineColor={AppColor.primary}
+                    outlineStyle={{ borderRadius: 8 }}
+                    autoCapitalize="characters"
+                    maxLength={2}
+                  />
+                  {["LLC", "CORPORATION"].includes(legalBusinessType) ? (
+                    <TouchableOpacity style={{ flexDirection: "row", alignItems: "center", marginTop: 14 }} onPress={() => setTaxedAsSCorporation((value) => !value)}>
+                      <FontAwesome6 name={taxedAsSCorporation ? "square-check" : "square"} size={20} color={AppColor.primary} />
+                      <Text style={[styles.paperInputLabel, { marginLeft: 10, marginBottom: 0 }]}>Taxed as an S-Corporation</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              ) : null}
 
               {/* EIN/SSN Number */}
               <View style={styles.section}>

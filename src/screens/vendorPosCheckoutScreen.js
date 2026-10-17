@@ -32,6 +32,7 @@ import {
   isTapToPayAvailable,
   startTapToPaySale,
 } from "../services/tapToPay-service";
+import { isTapToPayReleased } from "../services/tapToPay-release";
 import {
   getVendorPaymentCapabilities,
   getWalkUpPosAccess,
@@ -69,7 +70,7 @@ const tapToPayDiagnostic = (error) => {
     outer: nativeDiagnostic || {
       domain: hasNativeDiagnostic ? parts[2] : "unavailable",
       code: hasNativeDiagnostic ? parts[3] : "unavailable",
-      message: error?.message || "Tap to Pay on iPhone could not be completed.",
+      message: error?.message || "Tap to Pay could not be completed.",
     },
   };
 };
@@ -621,7 +622,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
     if (isEmployeeSession && !employeeTapToPayTraining?.compliant) {
       Alert.alert(
         "Tap to Pay Training Required",
-        "Complete the Tap to Pay on iPhone Training and acknowledgment in your employee profile before accepting a Tap to Pay payment.",
+        "Complete the Tap to Pay training and acknowledgment in your employee profile before accepting a Tap to Pay payment.",
         [
           { text: "Cancel", style: "cancel" },
           {
@@ -634,16 +635,16 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
     }
     if (!canUseTapToPay) {
       Alert.alert(
-        "Tap to Pay on iPhone unavailable",
+        "Tap to Pay unavailable",
         tapToPayComplianceLoading
-          ? "Checking Tap to Pay on iPhone compliance status."
+          ? "Checking Tap to Pay compliance status."
           : !isTapToPayCompliant
-          ? "Please complete your compliance paperwork to receive Tap to Pay on iPhone services."
+          ? "Please complete your compliance paperwork to receive Tap to Pay services."
           : !vendorCanUseTapToPay && isEmployeeSession
-          ? "Tap to Pay on iPhone is only available to employees on the Elite plan."
+          ? "Tap to Pay is only available to employees on the Elite plan."
           : !vendorCanUseTapToPay
-            ? "Tap to Pay on iPhone is not available for your current vendor plan."
-            : "Tap to Pay on iPhone is not enabled in this build or this device is not ready.",
+            ? "Tap to Pay is not available for your current vendor plan."
+            : "Tap to Pay is not enabled in this build or this device is not ready.",
       );
       return;
     }
@@ -717,7 +718,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
       const firstUnderlying = outerDiagnostic?.underlying;
       const secondUnderlying = firstUnderlying?.underlying;
       Alert.alert(
-        "Tap to Pay on iPhone Diagnostic",
+            "Tap to Pay Diagnostic",
         [
           `Stage: ${diagnostic.stage}`,
           ...formatNativeErrorDiagnostic("Outer", outerDiagnostic),
@@ -749,7 +750,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
       finishCheckout(createdOrder);
     } catch (error) {
       Alert.alert(
-        "Tap to Pay on iPhone failed",
+        "Tap to Pay failed",
         error?.message || "Please try again.",
       );
     } finally {
@@ -955,7 +956,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
                 />
                 {tapToPayOptionAvailable ? (
                   <SummaryRow
-                    label="Tap to Pay on iPhone Total"
+                    label="Tap to Pay Total"
                     value={`$${toAmount(tapSummary.total)}`}
                     bold
                   />
@@ -1013,16 +1014,18 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
           </View>
 
           <Text style={styles.sectionTitle}>Payment method</Text>
-          {tapToPayOptionAvailable ? (
+          {vendorCanUseTapToPay ? (
             <TouchableOpacity
-              style={styles.paymentButton}
-              onPress={handleTapToPay}
-              disabled={!!paymentLoading}
+              style={[styles.paymentButton, !isTapToPayReleased && styles.paymentButtonDisabled]}
+              onPress={isTapToPayReleased ? handleTapToPay : undefined}
+              disabled={!isTapToPayReleased || !!paymentLoading}
               accessibilityRole="button"
-              accessibilityLabel="Tap to Pay on iPhone"
+              accessibilityLabel="Tap to Pay coming soon"
               accessibilityHint={`Total $${toAmount(tapSummary.total)}`}
             >
-              {paymentLoading === "tap" ? (
+              {!isTapToPayReleased ? (
+                <Text style={styles.paymentButtonText}>Tap to Pay — Coming Soon</Text>
+              ) : paymentLoading === "tap" ? (
                 <Text style={styles.paymentButtonText}>Processing...</Text>
               ) : (
                 <TapToPayCheckoutButtonContent

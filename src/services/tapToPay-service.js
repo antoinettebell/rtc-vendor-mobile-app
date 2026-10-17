@@ -10,15 +10,17 @@ import {
   registerEventVendorTapToPayTerminal_API,
 } from "../api/appAPI";
 import tapToPayConfig from "./tapToPay-config";
+import { isTapToPayReleased, tapToPayComingSoonMessage } from "./tapToPay-release";
 
 const nativeTapToPay = NativeModules.RTCTapToPay;
+const isSupportedTapToPayPlatform = () => ["ios", "android"].includes(Platform.OS);
 
 const responseData = (response) => response?.data || response || {};
 const getDeviceLabel = async () => {
   try {
-    return (await DeviceInfo.getDeviceName()) || DeviceInfo.getModel() || "iPhone";
+    return (await DeviceInfo.getDeviceName()) || DeviceInfo.getModel() || "payment device";
   } catch {
-    return DeviceInfo.getModel?.() || "iPhone";
+    return DeviceInfo.getModel?.() || "payment device";
   }
 };
 
@@ -41,7 +43,8 @@ const recordActivationEvent = async (eventType, details = {}, marketplaceVendor 
 };
 
 export const isTapToPayAvailable = () =>
-  Platform.OS === "ios" &&
+  isSupportedTapToPayPlatform() &&
+  isTapToPayReleased &&
   tapToPayConfig.enabled &&
   !!nativeTapToPay?.startSale;
 
@@ -49,7 +52,7 @@ const registerActivatedTerminal = async (result = {}, deviceLabel, marketplaceVe
   const deviceId = String(result?.deviceId || "").trim();
   if (!deviceId) {
     throw new Error(
-      "Tap to Pay on iPhone activated, but no terminal serial ID was returned. Please contact RTC support."
+      "Tap to Pay activated, but no terminal serial ID was returned. Please contact RTC support."
     );
   }
 
@@ -141,7 +144,7 @@ const ensureTerminalReady = async ({ marketplaceVendor = false } = {}) => {
   }
   const server = await getTapToPayTerminalState({ deviceId, marketplaceVendor });
   if (server?.status === "HISTORICAL") {
-    throw new Error("This iPhone is marked as a historical Tap to Pay device. Contact RTC support to restore it.");
+    throw new Error("This Tap to Pay device is marked as historical. Contact RTC support to restore it.");
   }
   if (server?.reactivation_required) {
     await activateTapToPay({ forceReactivation: true, existingDeviceId: deviceId, marketplaceVendor });
@@ -168,7 +171,7 @@ const normalizeTapToPayResult = (result = {}) => {
     };
   }
 
-  throw new Error("Tap to Pay on iPhone did not return a usable payment result.");
+  throw new Error("Tap to Pay did not return a usable payment result.");
 };
 
 export const startTapToPaySale = async ({
@@ -179,13 +182,16 @@ export const startTapToPaySale = async ({
   reference,
   marketplaceVendor = false,
 }) => {
-  if (Platform.OS !== "ios") {
-    throw new Error("Tap to Pay on iPhone is not enabled on Android in this build.");
+  if (!isTapToPayReleased) {
+    throw new Error(tapToPayComingSoonMessage);
+  }
+  if (!isSupportedTapToPayPlatform()) {
+    throw new Error("Tap to Pay is not available on this device.");
   }
 
   if (!tapToPayConfig.enabled && !tapToPayConfig.mockMode) {
     throw new Error(
-      "Tap to Pay on iPhone is included with Elite, but it is not enabled in this app build. Install the Tap to Pay on iPhone-enabled build or contact RTC support."
+      "Tap to Pay is included with Elite, but it is not enabled in this app build. Install the Tap to Pay-enabled build or contact RTC support."
     );
   }
   if (tapToPayConfig.mockMode) {
@@ -213,7 +219,7 @@ export const startTapToPaySale = async ({
 
   if (!nativeTapToPay?.startSale) {
     throw new Error(
-      "The Tap to Pay on iPhone native module is not installed. Add the iOS Tap to Pay on iPhone SDK bridge as RTCTapToPay."
+      "The Tap to Pay native module is not installed in this app build."
     );
   }
 
@@ -254,14 +260,17 @@ export const activateTapToPay = async ({
   existingDeviceId = null,
   marketplaceVendor = false,
 } = {}) => {
-  if (Platform.OS !== "ios") {
-    throw new Error("Tap to Pay on iPhone setup requires a compatible iPhone.");
+  if (!isTapToPayReleased) {
+    throw new Error(tapToPayComingSoonMessage);
+  }
+  if (!isSupportedTapToPayPlatform()) {
+    throw new Error("Tap to Pay setup requires a compatible payment device.");
   }
   if (!tapToPayConfig.enabled) {
-    throw new Error("Tap to Pay on iPhone is not enabled in this app build.");
+    throw new Error("Tap to Pay is not enabled in this app build.");
   }
   if (!nativeTapToPay?.activate) {
-    throw new Error("Tap to Pay on iPhone setup is unavailable in this app build.");
+    throw new Error("Tap to Pay setup is unavailable in this app build.");
   }
 
   const deviceLabel = await getDeviceLabel();
@@ -270,16 +279,22 @@ export const activateTapToPay = async ({
       device_id: existingDeviceId,
       device_label: deviceLabel,
     }, marketplaceVendor);
-    const activationResponse = await (marketplaceVendor
-      ? createEventVendorTapToPayActivationCode_API
-      : createTapToPayActivationCode_API)({ deviceId: existingDeviceId });
-    const activationCode = String(
-      activationResponse?.data?.activation_code
-        || activationResponse?.activation_code
-        || "",
-    ).trim();
-    if (!activationCode) {
-      throw new Error("A secure Tap to Pay activation code could not be generated. Please try again.");
+    // iOS activation requires an OTP. The Android embedded Acceptance Devices
+    // SDK performs its own native device enrollment, so an OTP must not be
+    // requested, persisted, or forwarded across the React Native bridge.
+    let activationCode = null;
+    if (Platform.OS === "ios") {
+      const activationResponse = await (marketplaceVendor
+        ? createEventVendorTapToPayActivationCode_API
+        : createTapToPayActivationCode_API)({ deviceId: existingDeviceId });
+      activationCode = String(
+        activationResponse?.data?.activation_code
+          || activationResponse?.activation_code
+          || "",
+      ).trim();
+      if (!activationCode) {
+        throw new Error("A secure Tap to Pay activation code could not be generated. Please try again.");
+      }
     }
     if (marketplaceVendor && existingDeviceId) {
       await registerEventVendorTapToPayTerminal_API({
@@ -294,6 +309,7 @@ export const activateTapToPay = async ({
       provider: tapToPayConfig.provider,
       activationCode,
       forceReactivation,
+      existingDeviceId,
     });
     const registered = await registerActivatedTerminal(result, deviceLabel, marketplaceVendor);
     void recordActivationEvent("ACTIVATION_SUCCEEDED", {
@@ -329,6 +345,9 @@ export const activateTapToPay = async ({
 };
 
 export const showTapToPayMerchantEducation = async () => {
+  if (Platform.OS === "android") {
+    return { shown: false, available: false };
+  }
   if (!nativeTapToPay?.showMerchantEducation) {
     throw new Error("Tap to Pay on iPhone merchant education is unavailable in this build.");
   }

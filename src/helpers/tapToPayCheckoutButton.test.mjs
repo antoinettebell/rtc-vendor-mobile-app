@@ -24,14 +24,16 @@ const [
   read("src/components/TapToPayLaunchHero.js"),
 ]);
 
-assert.match(buttonContent, />Tap to Pay on iPhone</);
+assert.match(buttonContent, /Platform\.OS === "ios" \? "Tap to Pay on iPhone" : "Tap to Pay"/);
 assert.match(buttonContent, /requireNativeComponent\("RTCTapToPaySymbol"\)/);
 assert.match(nativeBridge, /systemName: "wave\.3\.right\.circle\.fill"/);
 assert.match(nativeExports, /RCT_EXTERN_MODULE\(RTCTapToPaySymbolManager, RCTViewManager\)/);
 
 for (const source of [posCheckout, marketplacePayment, generalPurchase]) {
   assert.match(source, /TapToPayCheckoutButtonContent/);
-  assert.match(source, /accessibilityLabel="Tap to Pay on iPhone"/);
+  assert.match(source, /isTapToPayReleased/);
+  assert.match(source, /accessibilityLabel="Tap to Pay coming soon"/);
+  assert.match(source, /Tap to Pay — Coming Soon/);
 }
 
 assert.doesNotMatch(posCheckout, /`Tap to Pay \$\{/);
@@ -39,7 +41,8 @@ assert.doesNotMatch(marketplacePayment, /`Tap to Pay \$\{/);
 assert.doesNotMatch(generalPurchase, />Tap to Pay \{currency/);
 
 assert.match(launchHero, /tapToPayHeroCardToIPhone9x16\.jpg/);
-assert.match(launchHero, />Get started</);
+assert.match(launchHero, /isTapToPayReleased/);
+assert.match(launchHero, /"Coming Soon"/);
 assert.match(launchHero, /borderColor: AppColor\.black/);
 assert.match(launchHero, /borderRadius: 999/);
 assert.match(launchHero, /borderWidth: 2/);

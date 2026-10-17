@@ -31,6 +31,7 @@ import {
   updateMarketplaceFinalPaymentTip_API,
 } from "../api/appAPI";
 import { startTapToPaySale } from "../services/tapToPay-service";
+import { isTapToPayReleased } from "../services/tapToPay-release";
 import { getVendorPaymentCapabilities } from "../helpers/vendorPaymentCapabilities.helper";
 import { assertGooglePayConfiguration } from "../helpers/googlePayConfiguration.helper";
 import {
@@ -74,7 +75,7 @@ const tapToPayDiagnostic = (error) => {
     outer: nativeDiagnostic || {
       domain: hasNativeDiagnostic ? parts[2] : "unavailable",
       code: hasNativeDiagnostic ? parts[3] : "unavailable",
-      message: error?.message || "Tap to Pay on iPhone could not be completed.",
+      message: error?.message || "Tap to Pay could not be completed.",
     },
   };
 };
@@ -353,10 +354,10 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
     if (!payment || paymentLoading) return;
     if (!isTapToPayCompliant) {
       Alert.alert(
-        "Tap to Pay on iPhone unavailable",
+        "Tap to Pay unavailable",
         tapToPayComplianceLoading
-          ? "Checking Tap to Pay on iPhone compliance status."
-          : "Please complete your compliance paperwork to receive Tap to Pay on iPhone services.",
+          ? "Checking Tap to Pay compliance status."
+          : "Please complete your compliance paperwork to receive Tap to Pay services.",
       );
       return;
     }
@@ -424,7 +425,7 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
       const firstUnderlying = outerDiagnostic?.underlying;
       const secondUnderlying = firstUnderlying?.underlying;
       Alert.alert(
-        "Tap to Pay on iPhone Diagnostic",
+        "Tap to Pay Diagnostic",
         [
           `Stage: ${diagnostic.stage}`,
           ...formatNativeErrorDiagnostic("Outer", outerDiagnostic),
@@ -523,7 +524,7 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
           <Text style={styles.meta}>Status: {payment?.payment_status || "PENDING"}</Text>
           <Text style={styles.meta}>
             {isFinalEventPayment
-              ? "Use Tap to Pay on iPhone or Cash to complete this final event payment."
+              ? "Use Tap to Pay or Cash to complete this final event payment."
               : "Use Apple Pay or Google Pay to complete this marketplace payment, or call RTC for help."}
           </Text>
         </View>
@@ -559,14 +560,16 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
             {tapToPayOptionAvailable ? (
               <TouchableOpacity
                 activeOpacity={0.7}
-                style={styles.button}
-                disabled={!!paymentLoading}
-                onPress={payWithTapToPay}
+                style={[styles.button, !isTapToPayReleased && { opacity: 0.5 }]}
+                disabled={!isTapToPayReleased || !!paymentLoading}
+                onPress={isTapToPayReleased ? payWithTapToPay : undefined}
                 accessibilityRole="button"
-                accessibilityLabel="Tap to Pay on iPhone"
+                accessibilityLabel="Tap to Pay coming soon"
                 accessibilityHint={`Total ${formatMoney(payment?.total_amount || 0)}`}
               >
-                {paymentLoading === "tapToPay" ? (
+                {!isTapToPayReleased ? (
+                  <Text style={styles.buttonText}>Tap to Pay — Coming Soon</Text>
+                ) : paymentLoading === "tapToPay" ? (
                   <Text style={styles.buttonText}>Processing...</Text>
                 ) : (
                   <TapToPayCheckoutButtonContent

@@ -9,6 +9,12 @@ const nativeTapToPayConfigPath = path.resolve(
   "FoodtruckVendor",
   "TapToPay.local.xcconfig"
 );
+const androidTapToPayConfigPath = path.resolve(
+  __dirname,
+  "..",
+  "android",
+  "TapToPay.local.properties"
+);
 
 const envKeys = [
   "API_URL",
@@ -68,6 +74,15 @@ if (acceptanceDevicesMerchantId && acceptanceDevicesSecret) {
       `CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET = ${acceptanceDevicesSecret}`,
       "CYBERSOURCE_TTP_DEVICE_ID =",
       "CYBERSOURCE_TTP_RESET_ENROLLMENT = NO",
+      "",
+    ].join("\n")
+  );
+  fs.writeFileSync(
+    androidTapToPayConfigPath,
+    [
+      "# Generated during the EAS build. Do not commit this file.",
+      `CYBERSOURCE_TTP_MERCHANT_ID=${acceptanceDevicesMerchantId}`,
+      `CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET=${acceptanceDevicesSecret}`,
       "",
     ].join("\n")
   );

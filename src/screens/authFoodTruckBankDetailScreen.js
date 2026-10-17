@@ -48,6 +48,7 @@ import {
   getNextFoodVendorGuidedStep,
   getPreviousFoodVendorGuidedStep,
 } from "../helpers/foodVendorGuidedSetup.helper";
+import { isTapToPayReleased } from "../services/tapToPay-release";
 import { setBankStatus, setProfileStatus } from "../redux/slices/userSlice";
 import StatePickerModal from "../components/StatePickerModal";
 import { getStateCode } from "../utils/usStates";
@@ -300,7 +301,7 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
               const previousStep = getPreviousFoodVendorGuidedStep(
                 getEffectiveFoodVendorPlan({ user, selectedPlan }),
                 "PAYMENT",
-                { includeTapToPay: Platform.OS === "ios" },
+                { includeTapToPay: Platform.OS === "ios" && isTapToPayReleased },
               ) || "PROFILE";
               const previousRoute = previousStep === "TAP_TO_PAY"
                 ? "authTapToPaySetupScreen"

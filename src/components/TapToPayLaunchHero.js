@@ -4,6 +4,7 @@ import FastImage from "@d11/react-native-fast-image";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppColor, Mulish700 } from "../utils/theme";
+import { isTapToPayReleased } from "../services/tapToPay-release";
 
 const TapToPayLaunchHero = ({ visible, onClose, onGetStarted }) => {
   const insets = useSafeAreaInsets();
@@ -33,11 +34,14 @@ const TapToPayLaunchHero = ({ visible, onClose, onGetStarted }) => {
             <TouchableOpacity
               activeOpacity={0.8}
               style={styles.getStartedButton}
-              onPress={onGetStarted}
+              disabled={!isTapToPayReleased}
+              onPress={isTapToPayReleased ? onGetStarted : undefined}
               accessibilityRole="button"
-              accessibilityLabel="Get started with Tap to Pay on iPhone"
+              accessibilityLabel="Tap to Pay coming soon"
             >
-              <Text style={styles.getStartedButtonText}>Get started</Text>
+              <Text style={styles.getStartedButtonText}>
+                {isTapToPayReleased ? "Get started" : "Coming Soon"}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
