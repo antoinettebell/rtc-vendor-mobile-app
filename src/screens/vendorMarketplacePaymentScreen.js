@@ -513,6 +513,11 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
                   payment?.original_award_amount ?? payment?.base_amount ?? 0,
                 )}
               </Text>
+              {Number(payment?.fee_amount || 0) > 0 ? (
+                <Text style={styles.meta}>
+                  POS fee ({(Number(payment?.fee_rate || 0) * 100).toFixed(1)}%): {formatMoney(payment.fee_amount)}
+                </Text>
+              ) : null}
               <Text style={styles.meta}>
                 Tip: {formatMoney(payment?.tip_amount || 0)}
               </Text>
