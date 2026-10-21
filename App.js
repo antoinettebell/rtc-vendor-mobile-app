@@ -332,6 +332,7 @@ const MainAppNavigator = ({ insets }) => (
     initialRouteName="splash"
   >
     <Stack.Screen name="splash" component={SplashScreen} />
+    <Stack.Screen name="eventVendorComplianceScreen" component={EventVendorComplianceScreen} />
     <Stack.Screen name="eventVendorPhotosScreen" component={EventVendorPhotosScreen} />
     <Stack.Screen name="eventVendorApplicationScreen" component={EventVendorApplicationScreen} />
     <Stack.Screen name="eventVendorSubmissionDetailsScreen" component={EventVendorSubmissionDetailsScreen} />
