@@ -102,6 +102,7 @@ import VendorComplianceScreen from "./src/screens/vendorComplianceScreen";
 import AuthMenuSetupPromptScreen from "./src/screens/authMenuSetupPromptScreen";
 import AuthTapToPaySetupScreen from "./src/screens/authTapToPaySetupScreen";
 import EventVendorProfileScreen from "./src/screens/eventVendorProfileScreen";
+import EventVendorComplianceScreen from "./src/screens/eventVendorComplianceScreen";
 import EventVendorPhotosScreen from "./src/screens/eventVendorPhotosScreen";
 import EventVendorMarketplaceScreen from "./src/screens/eventVendorMarketplaceScreen";
 import EventVendorApplicationScreen from "./src/screens/eventVendorApplicationScreen";
@@ -154,6 +155,7 @@ const FinalSignupStepsNavigator = () => (
   >
     <Stack.Screen name="splash" component={SplashScreen} />
     <Stack.Screen name="eventVendorProfileScreen" component={EventVendorProfileScreen} />
+    <Stack.Screen name="eventVendorComplianceScreen" component={EventVendorComplianceScreen} />
     <Stack.Screen name="eventVendorPhotosScreen" component={EventVendorPhotosScreen} />
     <Stack.Screen
       name="authFoodTruckPlansScreen"

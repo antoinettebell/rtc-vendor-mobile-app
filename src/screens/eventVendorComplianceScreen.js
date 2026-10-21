@@ -1,0 +1,127 @@
+import React, { useCallback, useState } from "react";
+import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import { pick, types } from "@react-native-documents/picker";
+import { AppColor } from "../utils/theme";
+import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
+import {
+  completeEventVendorW9Signing_API,
+  getEventVendorCompliance_API,
+  saveEventVendorComplianceProfile_API,
+  startEventVendorComplianceVerification_API,
+  startEventVendorW9Signing_API,
+  submitEventVendorComplianceOcr_API,
+  uploadEventVendorComplianceDocument_API,
+} from "../api/appAPI";
+
+const entityTypes = ["SOLE_PROPRIETOR", "LLC", "CORPORATION", "PARTNERSHIP", "S_CORPORATION"];
+
+export default function EventVendorComplianceScreen({ navigation }) {
+  const [profile, setProfile] = useState(null);
+  const [compliance, setCompliance] = useState(null);
+  const [session, setSession] = useState(null);
+  const [partyType, setPartyType] = useState("BUSINESS");
+  const [legalName, setLegalName] = useState("");
+  const [dbaName, setDbaName] = useState("");
+  const [entityType, setEntityType] = useState("LLC");
+  const [registrationState, setRegistrationState] = useState("");
+  const [businessAddress, setBusinessAddress] = useState("");
+  const [taxId, setTaxId] = useState("");
+  const [document, setDocument] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const apply = (data) => {
+    const next = data?.profile || null;
+    setProfile(next);
+    setCompliance(data?.compliance || null);
+    setSession(data?.w9_session || null);
+    if (next) {
+      setPartyType(next.party_type || "BUSINESS");
+      setLegalName(next.legal_name || "");
+      setDbaName(next.dba_name || "");
+      setEntityType(next.entity_type || "LLC");
+      setRegistrationState(next.registration_state || "");
+      setBusinessAddress(next.business_address || "");
+    }
+  };
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { apply((await getEventVendorCompliance_API())?.data); }
+    catch (error) { Alert.alert("Compliance", error?.message || "Unable to load compliance."); }
+    finally { setLoading(false); }
+  }, []);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const chooseDocument = async () => {
+    try {
+      const [file] = await pick({ type: [types.pdf, types.images], allowMultiSelection: false });
+      setDocument({ uri: file.uri, name: file.name || "compliance-document", type: file.type || "application/octet-stream" });
+    } catch (error) {
+      if (error?.code !== "DOCUMENT_PICKER_CANCELED") Alert.alert("Document", error?.message || "Unable to choose document.");
+    }
+  };
+  const save = async () => {
+    const isBusiness = partyType === "BUSINESS";
+    if (!legalName.trim() || !taxId.replace(/\D/g, "").match(/^\d{9}$/)) {
+      return Alert.alert("Compliance", `Enter the legal name and a nine-digit ${isBusiness ? "EIN" : "SSN"}.`);
+    }
+    if (isBusiness && (!registrationState.trim() || !businessAddress.trim())) return Alert.alert("Compliance", "Business address and state of registration are required.");
+    setSaving(true);
+    try {
+      const saved = await saveEventVendorComplianceProfile_API({
+        party_type: partyType, legal_name: legalName.trim(), dba_name: dbaName.trim(), entity_type: isBusiness ? entityType : null,
+        registration_state: isBusiness ? registrationState.trim() : null, business_address: isBusiness ? businessAddress.trim() : null,
+        tax_id_type: isBusiness ? "EIN" : "SSN", tax_id: taxId.replace(/\D/g, ""),
+      });
+      if (document) {
+        const body = new FormData();
+        body.append("document_type", isBusiness ? "BUSINESS_LICENSE" : "DRIVER_LICENSE_FRONT");
+        body.append("file", document);
+        await uploadEventVendorComplianceDocument_API(body);
+        setDocument(null);
+      }
+      await submitEventVendorComplianceOcr_API();
+      apply((await getEventVendorCompliance_API())?.data);
+      setTaxId("");
+      Alert.alert("Compliance", saved?.message || "Compliance information saved and submitted for review.");
+    } catch (error) { Alert.alert("Compliance", error?.message || "Unable to save compliance."); }
+    finally { setSaving(false); }
+  };
+  const startW9 = async () => {
+    try {
+      const response = await startEventVendorW9Signing_API();
+      const next = response?.data?.w9_session;
+      const signingUrl = response?.data?.signing_url;
+      if (!signingUrl) throw new Error("DocuSign signing link is unavailable.");
+      setSession(next);
+      await Linking.openURL(signingUrl);
+    } catch (error) { Alert.alert("W-9", error?.message || "Unable to start DocuSign."); }
+  };
+  const completeW9 = async () => {
+    if (!session?.envelope_id) return startW9();
+    try { await completeEventVendorW9Signing_API(session.envelope_id); await load(); }
+    catch (error) { Alert.alert("W-9", error?.message || "DocuSign has not confirmed the signed W-9 yet."); }
+  };
+  const verify = async () => {
+    try { await startEventVendorComplianceVerification_API(); await load(); }
+    catch (error) { Alert.alert("Verification", error?.message || "Unable to start verification."); }
+  };
+  const requiredType = partyType === "BUSINESS" ? "BUSINESS_LICENSE" : "DRIVER_LICENSE_FRONT";
+  const uploaded = profile?.documents?.find((item) => item.document_type === requiredType);
+  if (loading) return <View style={s.loading}><ActivityIndicator color={AppColor.primary} /></View>;
+  return <MarketplaceVendorScreenLayout title="Marketplace Vendor Compliance" onBack={() => navigation.goBack()}>
+    <ScrollView contentContainerStyle={s.page}>
+      <View style={s.card}><Text style={s.title}>Compliance {compliance?.score || 0}/100</Text><Text style={s.copy}>Complete compliance is required before event applications and general-purchase checkout.</Text></View>
+      <Text style={s.label}>Account type</Text><View style={s.row}>{["BUSINESS", "INDIVIDUAL"].map((value) => <TouchableOpacity key={value} onPress={() => setPartyType(value)} style={[s.choice, partyType === value && s.choiceOn]}><Text style={partyType === value ? s.choiceTextOn : s.choiceText}>{value}</Text></TouchableOpacity>)}</View>
+      <Text style={s.label}>Legal name *</Text><TextInput value={legalName} onChangeText={setLegalName} style={s.input} />
+      {partyType === "BUSINESS" ? <><Text style={s.label}>DBA</Text><TextInput value={dbaName} onChangeText={setDbaName} style={s.input} /><Text style={s.label}>Entity type</Text><View style={s.row}>{entityTypes.map((value) => <TouchableOpacity key={value} onPress={() => setEntityType(value)} style={[s.choice, entityType === value && s.choiceOn]}><Text style={entityType === value ? s.choiceTextOn : s.choiceText}>{value.replaceAll("_", " ")}</Text></TouchableOpacity>)}</View><Text style={s.label}>State of registration *</Text><TextInput value={registrationState} onChangeText={setRegistrationState} maxLength={2} style={s.input} /><Text style={s.label}>Business address *</Text><TextInput value={businessAddress} onChangeText={setBusinessAddress} style={s.input} /></> : null}
+      <Text style={s.label}>{partyType === "BUSINESS" ? "EIN" : "SSN"} *</Text><TextInput value={taxId} onChangeText={setTaxId} keyboardType="number-pad" secureTextEntry style={s.input} />
+      <View style={s.card}><Text style={s.label}>{partyType === "BUSINESS" ? "Business License" : "Driver License — Front Only"}</Text><Text style={s.copy}>{document ? document.name : uploaded ? "Uploaded" : "Required"}</Text><TouchableOpacity style={s.secondary} onPress={chooseDocument}><Text style={s.secondaryText}>{uploaded || document ? "Replace Document" : "Choose Document"}</Text></TouchableOpacity></View>
+      <View style={s.card}><Text style={s.label}>Signed W-9</Text><Text style={s.copy}>{session?.status === "SIGNED" ? "Signed; verification in progress." : "Required for Marketplace Vendor participation."}</Text><TouchableOpacity style={s.secondary} onPress={session?.status === "SENT" ? completeW9 : startW9}><Text style={s.secondaryText}>{session?.status === "SENT" ? "I Completed DocuSign" : session?.status === "SIGNED" ? "Replace W-9" : "Sign W-9"}</Text></TouchableOpacity></View>
+      <TouchableOpacity style={s.primary} disabled={saving} onPress={save}><Text style={s.primaryText}>{saving ? "Saving…" : "Save & Run OCR"}</Text></TouchableOpacity>
+      <TouchableOpacity style={s.primary} onPress={verify}><Text style={s.primaryText}>Run Verification</Text></TouchableOpacity>
+    </ScrollView>
+  </MarketplaceVendorScreenLayout>;
+}
+const s = StyleSheet.create({ loading:{flex:1,alignItems:"center",justifyContent:"center"}, page:{padding:20,paddingBottom:50}, card:{borderWidth:1,borderColor:"#d7dee8",borderRadius:12,padding:14,marginTop:14}, title:{fontSize:20,fontWeight:"800",color:"#172033"}, copy:{color:"#526173",marginTop:6}, label:{fontWeight:"700",color:"#172033",marginTop:16,marginBottom:7}, input:{borderWidth:1,borderColor:"#cbd5e1",borderRadius:10,padding:12,color:"#172033"}, row:{flexDirection:"row",gap:8,flexWrap:"wrap"}, choice:{borderWidth:1,borderColor:"#cbd5e1",borderRadius:18,paddingHorizontal:10,paddingVertical:8}, choiceOn:{backgroundColor:AppColor.primary,borderColor:AppColor.primary}, choiceText:{color:"#172033",fontSize:12}, choiceTextOn:{color:"#fff",fontWeight:"700",fontSize:12}, primary:{backgroundColor:AppColor.primary,borderRadius:12,padding:15,alignItems:"center",marginTop:14}, primaryText:{color:"#fff",fontWeight:"800"}, secondary:{borderWidth:1,borderColor:AppColor.primary,borderRadius:10,padding:11,alignItems:"center",marginTop:10}, secondaryText:{color:AppColor.primary,fontWeight:"800"} });

@@ -25,6 +25,13 @@ import {
   GET_PLANS_DATA,
   EVENT_VENDOR_PROFILE,
   EVENT_VENDOR_PROFILE_SUBMIT,
+  EVENT_VENDOR_COMPLIANCE,
+  EVENT_VENDOR_COMPLIANCE_PROFILE,
+  EVENT_VENDOR_COMPLIANCE_DOCUMENTS,
+  EVENT_VENDOR_COMPLIANCE_OCR,
+  EVENT_VENDOR_COMPLIANCE_VERIFICATION,
+  EVENT_VENDOR_COMPLIANCE_W9_SIGNING,
+  EVENT_VENDOR_COMPLIANCE_W9_COMPLETE,
   EVENT_VENDOR_PHOTOS,
   EVENT_VENDOR_LOGO,
   EVENT_VENDOR_APPLICATION_PHOTOS,
@@ -2138,6 +2145,13 @@ export const removeFcmToken_API = async (device_id) => {
 export const getEventVendorProfile_API = async () => (await apiClient.get(EVENT_VENDOR_PROFILE, { skipToken: false }))?.data;
 export const saveEventVendorProfile_API = async (payload) => (await apiClient.put(EVENT_VENDOR_PROFILE, payload, { skipToken: false }))?.data;
 export const submitEventVendorProfile_API = async () => (await apiClient.post(EVENT_VENDOR_PROFILE_SUBMIT, {}, { skipToken: false }))?.data;
+export const getEventVendorCompliance_API = async () => (await apiClient.get(EVENT_VENDOR_COMPLIANCE, { skipToken: false }))?.data;
+export const saveEventVendorComplianceProfile_API = async (payload) => (await apiClient.put(EVENT_VENDOR_COMPLIANCE_PROFILE, payload, { skipToken: false }))?.data;
+export const uploadEventVendorComplianceDocument_API = async (payload) => (await apiClient.post(EVENT_VENDOR_COMPLIANCE_DOCUMENTS, payload, { formData: true, skipToken: false }))?.data;
+export const submitEventVendorComplianceOcr_API = async () => (await apiClient.post(EVENT_VENDOR_COMPLIANCE_OCR, {}, { skipToken: false }))?.data;
+export const startEventVendorComplianceVerification_API = async (check_type = null) => (await apiClient.post(EVENT_VENDOR_COMPLIANCE_VERIFICATION, { check_type }, { skipToken: false }))?.data;
+export const startEventVendorW9Signing_API = async () => (await apiClient.post(EVENT_VENDOR_COMPLIANCE_W9_SIGNING, {}, { skipToken: false }))?.data;
+export const completeEventVendorW9Signing_API = async (envelope_id) => (await apiClient.post(EVENT_VENDOR_COMPLIANCE_W9_COMPLETE, { envelope_id }, { skipToken: false }))?.data;
 export const getEventVendorPhotos_API = async (eventId = null) => (await apiClient.get(EVENT_VENDOR_PHOTOS, { skipToken: false, ...(eventId ? { params: { event_id: eventId } } : {}) }))?.data;
 export const uploadEventVendorPhoto_API = async (payload) => (await apiClient.post(EVENT_VENDOR_PHOTOS, payload, { formData: true, skipToken: false }))?.data;
 export const uploadEventVendorLogo_API = async (payload) => (await apiClient.post(EVENT_VENDOR_LOGO, payload, { formData: true, skipToken: false }))?.data;

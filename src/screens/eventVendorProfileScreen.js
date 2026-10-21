@@ -371,6 +371,14 @@ export default function EventVendorProfileScreen({ navigation }) {
       {presentation.showApprovedStatus ? (
         <Text style={s.approved}>Profile approved. Material changes require another review.</Text>
       ) : null}
+      {profile ? (
+        <TouchableOpacity
+          style={s.tapSetup}
+          onPress={() => navigation.navigate("eventVendorComplianceScreen")}
+        >
+          <Text style={s.tapSetupText}>Compliance</Text>
+        </TouchableOpacity>
+      ) : null}
       {access.canUseMarketplace ? (
         <>
           <TouchableOpacity
