@@ -1,9 +1,10 @@
-import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Alert, AppState, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import DocumentPicker, { types } from "react-native-document-picker";
 import ImagePicker from "react-native-image-crop-picker";
 import { RESULTS } from "react-native-permissions";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppColor } from "../utils/theme";
 import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
 import usePermission from "../hooks/usePermission";
@@ -19,6 +20,7 @@ import {
 } from "../api/appAPI";
 
 const entityTypes = ["SOLE_PROPRIETOR", "LLC", "CORPORATION", "PARTNERSHIP", "S_CORPORATION"];
+const W9_SIGNING_STORAGE_KEY = "marketplace-vendor-compliance-w9-envelope";
 
 export default function EventVendorComplianceScreen({ navigation }) {
   const { checkAndRequestPermission: cameraPermissionStatus } = usePermission(permission.camera);
@@ -36,6 +38,8 @@ export default function EventVendorComplianceScreen({ navigation }) {
   const [document, setDocument] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const pendingW9EnvelopeRef = useRef(null);
+  const completingW9Ref = useRef(false);
 
   const apply = (data) => {
     const next = data?.profile || null;
@@ -58,6 +62,50 @@ export default function EventVendorComplianceScreen({ navigation }) {
     finally { setLoading(false); }
   }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const completeW9Signing = useCallback(async (envelopeId, { quiet = false } = {}) => {
+    if (!envelopeId || completingW9Ref.current) return false;
+    completingW9Ref.current = true;
+    try {
+      const response = await completeEventVendorW9Signing_API(envelopeId);
+      if (!response?.success) throw new Error(response?.message || "DocuSign has not confirmed the signed W-9 yet.");
+      setSession(response?.data?.w9_session || null);
+      pendingW9EnvelopeRef.current = null;
+      await AsyncStorage.removeItem(W9_SIGNING_STORAGE_KEY);
+      await load();
+      if (!quiet) Alert.alert("W-9 Submitted", "Your signed W-9 was received and submitted for verification.");
+      return true;
+    } catch (error) {
+      if (!quiet && error?.code !== 409) Alert.alert("W-9", error?.message || "Unable to receive the signed W-9.");
+      return false;
+    } finally {
+      completingW9Ref.current = false;
+    }
+  }, [load]);
+
+  useEffect(() => {
+    const reconcilePendingW9 = async ({ quiet = true } = {}) => {
+      const stored = await AsyncStorage.getItem(W9_SIGNING_STORAGE_KEY);
+      let envelopeId = pendingW9EnvelopeRef.current;
+      if (!envelopeId && stored) {
+        try { envelopeId = JSON.parse(stored)?.envelope_id || null; } catch (_) { envelopeId = null; }
+      }
+      if (!envelopeId && session?.status === "SENT") envelopeId = session.envelope_id;
+      if (envelopeId) await completeW9Signing(envelopeId, { quiet });
+    };
+    const handleUrl = ({ url }) => {
+      if (String(url || "").includes("docusign/return")) reconcilePendingW9({ quiet: false });
+    };
+    const linkSubscription = Linking.addEventListener("url", handleUrl);
+    const appStateSubscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") reconcilePendingW9({ quiet: true });
+    });
+    Linking.getInitialURL().then((url) => {
+      if (url) handleUrl({ url });
+      else reconcilePendingW9({ quiet: true });
+    });
+    return () => { linkSubscription.remove(); appStateSubscription.remove(); };
+  }, [completeW9Signing, session?.envelope_id, session?.status]);
 
   const setImageDocument = (image) => {
     setDocument({
@@ -102,16 +150,16 @@ export default function EventVendorComplianceScreen({ navigation }) {
   );
   const save = async () => {
     const isBusiness = partyType === "BUSINESS";
-    if (!legalName.trim() || !taxId.replace(/\D/g, "").match(/^\d{9}$/)) {
-      return Alert.alert("Compliance", `Enter the legal name and a nine-digit ${isBusiness ? "EIN" : "SSN"}.`);
-    }
+    if (!legalName.trim()) return Alert.alert("Compliance", "Enter the legal name.");
+    if (taxId && !taxId.replace(/\D/g, "").match(/^\d{9}$/)) return Alert.alert("Compliance", `Enter a nine-digit ${isBusiness ? "EIN" : "SSN"}.`);
+    if (!taxId && !profile?.tax_id_masked) return Alert.alert("Compliance", `Enter a nine-digit ${isBusiness ? "EIN" : "SSN"}.`);
     if (isBusiness && (!registrationState.trim() || !businessAddress.trim())) return Alert.alert("Compliance", "Business address and state of registration are required.");
     setSaving(true);
     try {
       const saved = await saveEventVendorComplianceProfile_API({
         party_type: partyType, legal_name: legalName.trim(), dba_name: dbaName.trim(), entity_type: isBusiness ? entityType : null,
         registration_state: isBusiness ? registrationState.trim() : null, business_address: isBusiness ? businessAddress.trim() : null,
-        tax_id_type: isBusiness ? "EIN" : "SSN", tax_id: taxId.replace(/\D/g, ""),
+        ...(taxId ? { tax_id_type: isBusiness ? "EIN" : "SSN", tax_id: taxId.replace(/\D/g, "") } : {}),
       });
       if (document) {
         const body = new FormData();
@@ -133,17 +181,15 @@ export default function EventVendorComplianceScreen({ navigation }) {
     }
     try {
       const response = await startEventVendorW9Signing_API();
+      const envelopeId = response?.data?.envelope_id;
       const next = response?.data?.w9_session;
       const signingUrl = response?.data?.signing_url;
-      if (!signingUrl) throw new Error("DocuSign signing link is unavailable.");
+      if (!envelopeId || !signingUrl) throw new Error("DocuSign signing link is unavailable.");
       setSession(next);
+      pendingW9EnvelopeRef.current = envelopeId;
+      await AsyncStorage.setItem(W9_SIGNING_STORAGE_KEY, JSON.stringify({ envelope_id: envelopeId, started_at: new Date().toISOString() }));
       await Linking.openURL(signingUrl);
     } catch (error) { Alert.alert("W-9", error?.message || "Unable to start DocuSign."); }
-  };
-  const completeW9 = async () => {
-    if (!session?.envelope_id) return startW9();
-    try { await completeEventVendorW9Signing_API(session.envelope_id); await load(); }
-    catch (error) { Alert.alert("W-9", error?.message || "DocuSign has not confirmed the signed W-9 yet."); }
   };
   const verify = async () => {
     const incompleteInternal = (compliance?.requirements || []).filter((item) => ![
@@ -164,9 +210,10 @@ export default function EventVendorComplianceScreen({ navigation }) {
       <Text style={s.label}>Account type</Text><View style={s.row}>{["BUSINESS", "INDIVIDUAL"].map((value) => <TouchableOpacity key={value} onPress={() => setPartyType(value)} style={[s.choice, partyType === value && s.choiceOn]}><Text style={partyType === value ? s.choiceTextOn : s.choiceText}>{value}</Text></TouchableOpacity>)}</View>
       <Text style={s.label}>Legal name *</Text><TextInput value={legalName} onChangeText={setLegalName} style={s.input} />
       {partyType === "BUSINESS" ? <><Text style={s.label}>DBA</Text><TextInput value={dbaName} onChangeText={setDbaName} style={s.input} /><Text style={s.label}>Entity type</Text><View style={s.row}>{entityTypes.map((value) => <TouchableOpacity key={value} onPress={() => setEntityType(value)} style={[s.choice, entityType === value && s.choiceOn]}><Text style={entityType === value ? s.choiceTextOn : s.choiceText}>{value.replaceAll("_", " ")}</Text></TouchableOpacity>)}</View><Text style={s.label}>State of registration *</Text><TextInput value={registrationState} onChangeText={setRegistrationState} maxLength={2} style={s.input} /><Text style={s.label}>Business address *</Text><TextInput value={businessAddress} onChangeText={setBusinessAddress} style={s.input} /></> : null}
-      <Text style={s.label}>{partyType === "BUSINESS" ? "EIN" : "SSN"} *</Text><TextInput value={taxId} onChangeText={setTaxId} keyboardType="number-pad" secureTextEntry style={s.input} />
+      <Text style={s.label}>{partyType === "BUSINESS" ? "EIN" : "SSN"} *</Text><TextInput value={taxId} onChangeText={setTaxId} keyboardType="number-pad" secureTextEntry placeholder={profile?.tax_id_masked || ""} placeholderTextColor="#526173" style={s.input} />
+      {profile?.tax_id_masked ? <Text style={s.copy}>Saved {partyType === "BUSINESS" ? "EIN" : "SSN"}: {profile.tax_id_masked}</Text> : null}
       <View style={s.card}><Text style={s.label}>{partyType === "BUSINESS" ? "Business License" : "Driver License — Front Only"}</Text><Text style={s.copy}>{document ? document.name : uploaded ? "Uploaded" : "Required"}</Text><TouchableOpacity style={s.secondary} onPress={chooseDocument}><Text style={s.secondaryText}>{uploaded || document ? "Replace Document" : "Choose Document"}</Text></TouchableOpacity></View>
-      <View style={s.card}><Text style={s.label}>Signed W-9</Text><Text style={s.copy}>{session?.status === "SIGNED" ? "Signed; verification in progress." : "Required for Marketplace Vendor participation."}</Text><TouchableOpacity style={s.secondary} onPress={session?.status === "SENT" ? completeW9 : startW9}><Text style={s.secondaryText}>{session?.status === "SENT" ? "I Completed DocuSign" : session?.status === "SIGNED" ? "Replace W-9" : "Sign W-9"}</Text></TouchableOpacity></View>
+      <View style={s.card}><Text style={s.label}>Signed W-9</Text><Text style={s.copy}>{session?.status === "SIGNED" ? "Signed; verification in progress." : session?.status === "SENT" ? "Waiting for DocuSign signature confirmation." : "Required for Marketplace Vendor participation."}</Text><TouchableOpacity style={s.secondary} onPress={startW9}><Text style={s.secondaryText}>{session ? "Replace W-9" : "Sign W-9"}</Text></TouchableOpacity></View>
       <TouchableOpacity style={s.primary} disabled={saving} onPress={save}><Text style={s.primaryText}>{saving ? "Saving…" : "Save & Run OCR"}</Text></TouchableOpacity>
       <TouchableOpacity style={s.primary} onPress={verify}><Text style={s.primaryText}>Run Verification</Text></TouchableOpacity>
     </ScrollView>
