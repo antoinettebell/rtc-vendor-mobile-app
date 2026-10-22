@@ -1032,6 +1032,18 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	                </TouchableOpacity>
 	                {isExpanded ? (
 	                  <>
+	                    {requirement.type === "W9" ? (
+	                      <View style={styles.w9NameInfoRow}>
+	                        <Ionicons
+	                          name="information-circle-outline"
+	                          size={18}
+	                          color={AppColor.primary}
+	                        />
+	                        <Text style={styles.w9NameInfoText}>
+	                          Individual Name and Business Name must be exactly as printed on the Business License or Driver License.
+	                        </Text>
+	                      </View>
+	                    ) : null}
 	                    {isHealthPermit ? (
                         <Text style={styles.documentMeta}>
                           Inspected {formatDate(document?.issue_date)}
@@ -1624,6 +1636,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: AppColor.subText,
     marginTop: 10,
+  },
+  w9NameInfoRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    marginTop: 10,
+  },
+  w9NameInfoText: {
+    flex: 1,
+    fontFamily: Mulish400,
+    fontSize: 12,
+    lineHeight: 18,
+    color: AppColor.subText,
   },
   expirationInputGroup: {
     marginTop: 12,
