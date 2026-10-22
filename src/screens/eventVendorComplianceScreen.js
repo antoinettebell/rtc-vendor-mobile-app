@@ -60,11 +60,13 @@ export default function EventVendorComplianceScreen({ navigation }) {
       setBusinessAddress(next.business_address || "");
     }
   };
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async ({ background = false } = {}) => {
+    // Polls must refresh the data in place. Toggling the full-screen loader
+    // every five seconds makes an in-progress OCR review appear to blink.
+    if (!background) setLoading(true);
     try { apply((await getEventVendorCompliance_API())?.data); }
     catch (error) { Alert.alert("Compliance", error?.message || "Unable to load compliance."); }
-    finally { setLoading(false); }
+    finally { if (!background) setLoading(false); }
   }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -119,7 +121,7 @@ export default function EventVendorComplianceScreen({ navigation }) {
     const uploaded = profile?.documents?.find((item) => item.document_type === required);
     const active = [uploaded?.ocr_status, session?.ocr_status].some((status) => ["queued", "processing"].includes(status)) || compliance?.external_verification?.status === "PENDING";
     if (!active) return undefined;
-    const timer = setTimeout(load, 5000);
+    const timer = setTimeout(() => load({ background: true }), 5000);
     return () => clearTimeout(timer);
   }, [compliance?.external_verification?.status, load, partyType, profile?.documents, session?.ocr_status]);
 
@@ -238,7 +240,7 @@ export default function EventVendorComplianceScreen({ navigation }) {
   return <MarketplaceVendorScreenLayout title="Marketplace Vendor Compliance" onBack={() => navigation.goBack()}>
     <ScrollView contentContainerStyle={s.page}>
       <View style={[s.complianceCard, { borderColor: compliance?.score_color === "green" ? AppColor.primary : compliance?.score_color === "yellow" ? "#B77900" : "#F97316" }]}><View style={s.complianceHeader}><View style={s.complianceCopy}><Text style={s.title}>{compliance?.score_label || "Compliance"}</Text><Text style={s.copy}>{compliance?.remaining?.length ? `Remaining: ${compliance.remaining.join(" • ")}` : compliance ? "All currently applicable requirements are complete." : "Complete the required information below."}</Text></View><View style={s.scoreBadge}><Text style={s.scoreText}>{Number(compliance?.score || 0)}%</Text></View></View><View style={s.progressTrack}><View style={[s.progressFill, { width: `${Math.max(0, Math.min(100, Number(compliance?.score || 0)))}%` }]} /></View>{compliance?.provider_verification_pending ? <Text style={s.copy}>Documents are complete; identity verification is still pending.</Text> : null}</View>
-      {verification.provider === "COBALT" ? <View style={s.externalCard}><Text style={s.externalTitle}>External Verification</Text>{verificationChecks.map((check) => <View key={check.type} style={s.checkRow}><Text style={check.status === "PASSED" ? s.checkPassed : s.checkPending}>{check.status === "PASSED" ? "✓" : "□"}</Text><Text style={s.checkLabel}>{check.label}</Text><Text style={s.checkStatus}>{formatStatus(check.status)}</Text></View>)}</View> : <View style={s.externalCard}><Text style={s.externalTitle}>External Verification</Text><View style={s.pill}><Text style={s.pillText}>{formatStatus(verificationStatus)}</Text></View></View>}
+      <View style={s.externalCard}><Text style={s.externalTitle}>External Verification</Text>{verification.provider === "COBALT" ? verificationChecks.map((check) => <View key={check.type} style={s.checkRow}><Text style={check.status === "PASSED" ? s.checkPassed : s.checkPending}>{check.status === "PASSED" ? "✓" : "□"}</Text><Text style={s.checkLabel}>{check.label}</Text><Text style={s.checkStatus}>{formatStatus(check.status)}</Text></View>) : <View style={s.checkRow}><Text style={verificationStatus === "PASSED" ? s.checkPassed : s.checkPending}>{verificationStatus === "PASSED" ? "✓" : "□"}</Text><Text style={s.checkLabel}>Identity Verification</Text><Text style={s.checkStatus}>{formatStatus(verificationStatus)}</Text></View>}</View>
       <Text style={s.copy}>This information is kept separately from your Marketplace Vendor profile. Your driver license stays in RTC records and is not sent to ComplyCube.</Text>
       <Text style={s.label}>Account type</Text><View style={s.row}>{["BUSINESS", "INDIVIDUAL"].map((value) => <TouchableOpacity key={value} onPress={() => setPartyType(value)} style={[s.choice, partyType === value && s.choiceOn]}><Text style={partyType === value ? s.choiceTextOn : s.choiceText}>{value}</Text></TouchableOpacity>)}</View>
       <Text style={s.label}>Legal name *</Text><TextInput value={legalName} onChangeText={setLegalName} style={s.input} />
