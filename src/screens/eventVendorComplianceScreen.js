@@ -2,8 +2,12 @@ import React, { useCallback, useState } from "react";
 import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import DocumentPicker, { types } from "react-native-document-picker";
+import ImagePicker from "react-native-image-crop-picker";
+import { RESULTS } from "react-native-permissions";
 import { AppColor } from "../utils/theme";
 import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
+import usePermission from "../hooks/usePermission";
+import { permission } from "../helpers/permission.helper";
 import {
   completeEventVendorW9Signing_API,
   getEventVendorCompliance_API,
@@ -17,6 +21,8 @@ import {
 const entityTypes = ["SOLE_PROPRIETOR", "LLC", "CORPORATION", "PARTNERSHIP", "S_CORPORATION"];
 
 export default function EventVendorComplianceScreen({ navigation }) {
+  const { checkAndRequestPermission: cameraPermissionStatus } = usePermission(permission.camera);
+  const { checkAndRequestPermission: photosPermissionStatus } = usePermission(permission.photos);
   const [profile, setProfile] = useState(null);
   const [compliance, setCompliance] = useState(null);
   const [session, setSession] = useState(null);
@@ -53,7 +59,14 @@ export default function EventVendorComplianceScreen({ navigation }) {
   }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const chooseDocument = async () => {
+  const setImageDocument = (image) => {
+    setDocument({
+      uri: image.path,
+      name: image.filename || `${partyType === "BUSINESS" ? "BUSINESS_LICENSE" : "DRIVER_LICENSE_FRONT"}.jpg`,
+      type: image.mime || "image/jpeg",
+    });
+  };
+  const chooseFile = async () => {
     try {
       const [file] = await DocumentPicker.pick({ type: [types.pdf, types.images], allowMultiSelection: false });
       setDocument({ uri: file.uri, name: file.name || "compliance-document", type: file.type || "application/octet-stream" });
@@ -61,6 +74,32 @@ export default function EventVendorComplianceScreen({ navigation }) {
       if (!DocumentPicker.isCancel(error)) Alert.alert("Document", error?.message || "Unable to choose document.");
     }
   };
+  const choosePhoto = async () => {
+    try {
+      if ((await photosPermissionStatus()) !== RESULTS.GRANTED) return;
+      setImageDocument(await ImagePicker.openPicker({ cropping: false, mediaType: "photo", forceJpg: true }));
+    } catch (error) {
+      if (error?.code !== "E_PICKER_CANCELLED") Alert.alert("Document", error?.message || "Unable to choose photo.");
+    }
+  };
+  const takePhoto = async () => {
+    try {
+      if ((await cameraPermissionStatus()) !== RESULTS.GRANTED) return;
+      setImageDocument(await ImagePicker.openCamera({ cropping: false, mediaType: "photo", forceJpg: true }));
+    } catch (error) {
+      if (error?.code !== "E_PICKER_CANCELLED") Alert.alert("Document", error?.message || "Unable to take photo.");
+    }
+  };
+  const chooseDocument = () => Alert.alert(
+    partyType === "BUSINESS" ? "Upload Business License" : "Upload Driver License",
+    "Choose how to add the document.",
+    [
+      { text: "Photo Library", onPress: choosePhoto },
+      { text: "Camera", onPress: takePhoto },
+      { text: "Files", onPress: chooseFile },
+      { text: "Cancel", style: "cancel" },
+    ],
+  );
   const save = async () => {
     const isBusiness = partyType === "BUSINESS";
     if (!legalName.trim() || !taxId.replace(/\D/g, "").match(/^\d{9}$/)) {
