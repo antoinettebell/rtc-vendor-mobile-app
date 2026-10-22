@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { pick, types } from "@react-native-documents/picker";
+import DocumentPicker, { types } from "react-native-document-picker";
 import { AppColor } from "../utils/theme";
 import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
 import {
@@ -55,10 +55,10 @@ export default function EventVendorComplianceScreen({ navigation }) {
 
   const chooseDocument = async () => {
     try {
-      const [file] = await pick({ type: [types.pdf, types.images], allowMultiSelection: false });
+      const [file] = await DocumentPicker.pick({ type: [types.pdf, types.images], allowMultiSelection: false });
       setDocument({ uri: file.uri, name: file.name || "compliance-document", type: file.type || "application/octet-stream" });
     } catch (error) {
-      if (error?.code !== "DOCUMENT_PICKER_CANCELED") Alert.alert("Document", error?.message || "Unable to choose document.");
+      if (!DocumentPicker.isCancel(error)) Alert.alert("Document", error?.message || "Unable to choose document.");
     }
   };
   const save = async () => {
@@ -89,6 +89,9 @@ export default function EventVendorComplianceScreen({ navigation }) {
     finally { setSaving(false); }
   };
   const startW9 = async () => {
+    if (!profile?.tax_id_masked) {
+      return Alert.alert("W-9", "Save your legal name and nine-digit EIN or SSN before starting DocuSign.");
+    }
     try {
       const response = await startEventVendorW9Signing_API();
       const next = response?.data?.w9_session;
@@ -104,6 +107,12 @@ export default function EventVendorComplianceScreen({ navigation }) {
     catch (error) { Alert.alert("W-9", error?.message || "DocuSign has not confirmed the signed W-9 yet."); }
   };
   const verify = async () => {
+    const incompleteInternal = (compliance?.requirements || []).filter((item) => ![
+      "EXTERNAL_IDENTITY_VERIFICATION", "COBALT_TIN", "COBALT_SOS",
+    ].includes(item.key) && !item.complete);
+    if (incompleteInternal.length) {
+      return Alert.alert("Verification", `Complete ${incompleteInternal.map((item) => item.label).join(", ")} before verification.`);
+    }
     try { await startEventVendorComplianceVerification_API(); await load(); }
     catch (error) { Alert.alert("Verification", error?.message || "Unable to start verification."); }
   };
