@@ -21,6 +21,14 @@ buildscript {
 
 apply plugin: "com.facebook.react.rootproject"
 
+// AGP 9 no longer enables BuildConfig generation for Android libraries by
+// default. Several React Native dependencies declare BuildConfig fields.
+subprojects { subproject ->
+    subproject.pluginManager.withPlugin("com.android.library") {
+        subproject.android.buildFeatures.buildConfig = true
+    }
+}
+
 allprojects {
     repositories {
         maven { url "https://repo.visa.com/mpos-releases/" }

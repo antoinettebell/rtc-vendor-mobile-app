@@ -1,0 +1,55 @@
+diff --git a/node_modules/react-native-vector-icons/fonts.gradle b/node_modules/react-native-vector-icons/fonts.gradle
+index ad15ebd..37e462c 100644
+--- a/node_modules/react-native-vector-icons/fonts.gradle
++++ b/node_modules/react-native-vector-icons/fonts.gradle
+@@ -6,14 +6,11 @@ android.sourceSets.main.assets.srcDirs += file("$buildDir/intermediates/ReactNat
+ /**
+  * Task to copy icon font files
+  */
+-afterEvaluate {
+-    def config = project.hasProperty("vectoricons") ? project.vectoricons : [];
+-    def iconFontsDir = config.iconFontsDir ?: "../../node_modules/react-native-vector-icons/Fonts";
+-    def iconFontNames = config.iconFontNames ?: [ "*.ttf" ];
++def config = project.hasProperty("vectoricons") ? project.vectoricons : [];
++def iconFontsDir = config.iconFontsDir ?: "../../node_modules/react-native-vector-icons/Fonts";
++def iconFontNames = config.iconFontNames ?: [ "*.ttf" ];
+ 
+-    def fontCopyTask = tasks.create(
+-        name: "copyReactNativeVectorIconFonts",
+-        type: Copy) {
++def fontCopyTask = tasks.register("copyReactNativeVectorIconFonts", Copy) {
+         description = "copy vector icon fonts."
+         into "$buildDir/intermediates/ReactNativeVectorIcons/fonts"
+ 
+@@ -22,22 +19,15 @@ afterEvaluate {
+                 include(fontName)
+             }
+         }
+-    }
+-
+-    android.applicationVariants.all { def variant ->
+-        def targetName = variant.name.capitalize()
+-        def lintVitalAnalyzeTask = tasks.findByName("lintVitalAnalyze${targetName}")
+-      
+-        if (lintVitalAnalyzeTask) {
+-        lintVitalAnalyzeTask.dependsOn(fontCopyTask)
+-        }
++}
+ 
+-        def generateReportTask = tasks.findByName("generate${targetName}LintVitalReportModel")
+-        if (generateReportTask) {
+-            generateReportTask.dependsOn(fontCopyTask)
++androidComponents {
++    onVariants(selector().all()) { variant ->
++        def mergeAssetsTaskName = "merge${variant.name.capitalize()}Assets"
++        tasks.configureEach { task ->
++            if (task.name == mergeAssetsTaskName) {
++                task.dependsOn(fontCopyTask)
++            }
+         }
+-      
+-        def generateAssetsTask = tasks.findByName("generate${targetName}Assets")
+-        generateAssetsTask.dependsOn(fontCopyTask)
+-      }
++    }
+ }

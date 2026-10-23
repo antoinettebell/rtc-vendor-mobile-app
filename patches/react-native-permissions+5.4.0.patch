@@ -1,0 +1,52 @@
+diff --git a/node_modules/react-native-permissions/RNPermissions.podspec b/node_modules/react-native-permissions/RNPermissions.podspec
+index 994d9f5..84b2a2a 100644
+--- a/node_modules/react-native-permissions/RNPermissions.podspec
++++ b/node_modules/react-native-permissions/RNPermissions.podspec
+@@ -17,8 +17,8 @@ Pod::Spec.new do |s|
+   s.source           = { :git => package["repository"]["url"], :tag => s.version }
+   s.resource_bundles = { 'RNPermissionsPrivacyInfo' => 'ios/PrivacyInfo.xcprivacy' }
+ 
+-  s.source_files = "ios/*.{h,mm}"
+-  # s.frameworks = <frameworks>
++  s.source_files = "ios/*.{h,mm}", "ios/LocationAlways/*.{h,mm}", "ios/LocationWhenInUse/*.{h,mm}", "ios/PhotoLibrary/*.{h,mm}", "ios/Camera/*.{h,mm}", "ios/LocationAccuracy/*.{h,mm}", "ios/Notifications/*.{h,mm}"
++  s.frameworks = "CoreLocation", "Photos", "PhotosUI", "AVFoundation", "UserNotifications"
+ 
+   if ENV['RCT_NEW_ARCH_ENABLED'] == "1" then
+     install_modules_dependencies(s)
+diff --git a/node_modules/react-native-permissions/android/build.gradle b/node_modules/react-native-permissions/android/build.gradle
+index 5c15bc3..1a26ad4 100644
+--- a/node_modules/react-native-permissions/android/build.gradle
++++ b/node_modules/react-native-permissions/android/build.gradle
+@@ -17,7 +17,6 @@ def isNewArchitectureEnabled() {
+ }
+ 
+ apply plugin: "com.android.library"
+-apply plugin: "kotlin-android"
+ 
+ if (isNewArchitectureEnabled()) {
+     apply plugin: "com.facebook.react"
+@@ -25,7 +24,7 @@ if (isNewArchitectureEnabled()) {
+ 
+ android {
+     buildToolsVersion safeExtGet("buildToolsVersion", "34.0.0")
+-    compileSdkVersion safeExtGet("compileSdkVersion", 34)
++    compileSdk safeExtGet("compileSdkVersion", 34)
+ 
+     if (project.android.hasProperty("namespace")) {
+         namespace "com.zoontek.rnpermissions"
+@@ -41,11 +40,11 @@ android {
+     }
+     defaultConfig {
+         buildConfigField("boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString())
+-        minSdkVersion safeExtGet("minSdkVersion", 23)
+-        targetSdkVersion safeExtGet("targetSdkVersion", 34)
++        minSdk safeExtGet("minSdkVersion", 23)
++        targetSdk safeExtGet("targetSdkVersion", 34)
+     }
+-    lintOptions {
+-        abortOnError false
++    lint {
++        abortOnError = false
+     }
+     sourceSets {
+         main {

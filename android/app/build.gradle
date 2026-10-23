@@ -1,5 +1,4 @@
 apply plugin: "com.android.application"
-apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 apply plugin: "com.google.gms.google-services"
 
@@ -81,6 +80,16 @@ def tapToPayPropertiesFile = rootProject.file("TapToPay.local.properties")
 if (tapToPayPropertiesFile.exists()) {
     tapToPayPropertiesFile.withInputStream { tapToPayProperties.load(it) }
 }
+
+def releaseSigningPropertyNames = [
+    "MYAPP_UPLOAD_STORE_FILE",
+    "MYAPP_UPLOAD_STORE_PASSWORD",
+    "MYAPP_UPLOAD_KEY_ALIAS",
+    "MYAPP_UPLOAD_KEY_PASSWORD",
+]
+def hasReleaseSigningConfig = releaseSigningPropertyNames.every {
+    project.findProperty(it)
+}
 // Local workstations that already have the approved iOS native configuration
 // can use it as a read-only fallback. EAS writes the Android file explicitly.
 def iosTapToPayValues = [:]
@@ -118,7 +127,11 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
+    kotlin {
+        compilerOptions {
+            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        }
+    }
     defaultConfig {
         applicationId "com.rounddacorner.dev.vendor"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -148,10 +161,12 @@ android {
             keyPassword 'android'
         }
         release {
-            storeFile file(getProperty("MYAPP_UPLOAD_STORE_FILE"))
-            storePassword getProperty("MYAPP_UPLOAD_STORE_PASSWORD")
-            keyAlias getProperty("MYAPP_UPLOAD_KEY_ALIAS")
-            keyPassword getProperty("MYAPP_UPLOAD_KEY_PASSWORD")
+            if (hasReleaseSigningConfig) {
+                storeFile file(project.findProperty("MYAPP_UPLOAD_STORE_FILE"))
+                storePassword project.findProperty("MYAPP_UPLOAD_STORE_PASSWORD")
+                keyAlias project.findProperty("MYAPP_UPLOAD_KEY_ALIAS")
+                keyPassword project.findProperty("MYAPP_UPLOAD_KEY_PASSWORD")
+            }
         }
     }
     buildTypes {
@@ -178,7 +193,7 @@ dependencies {
     implementation("io.payworks:paybutton-android:2.115.0")
     implementation("io.payworks:mpos.android.taptophone:2.115.0")
 
-    if (hermesEnabled.toBoolean()) {
+    if ((project.findProperty("hermesEnabled") ?: "true").toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor

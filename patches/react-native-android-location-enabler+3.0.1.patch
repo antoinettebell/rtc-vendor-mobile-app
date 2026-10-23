@@ -1,3 +1,42 @@
+diff --git a/node_modules/react-native-android-location-enabler/android/build.gradle b/node_modules/react-native-android-location-enabler/android/build.gradle
+index 13c22ad..af5d2c9 100644
+--- a/node_modules/react-native-android-location-enabler/android/build.gradle
++++ b/node_modules/react-native-android-location-enabler/android/build.gradle
+@@ -17,8 +17,6 @@ buildscript {
+ 
+ 
+ apply plugin: "com.android.library"
+-apply plugin: "kotlin-android"
+-
+ apply plugin: "com.facebook.react"
+ 
+ def getExtOrIntegerDefault(name) {
+@@ -28,11 +26,11 @@ def getExtOrIntegerDefault(name) {
+ android {
+   namespace "com.heanoria.library.reactnative.locationenabler"
+ 
+-  compileSdkVersion getExtOrIntegerDefault("compileSdkVersion")
++  compileSdk getExtOrIntegerDefault("compileSdkVersion")
+ 
+   defaultConfig {
+-    minSdkVersion getExtOrIntegerDefault("minSdkVersion")
+-    targetSdkVersion getExtOrIntegerDefault("targetSdkVersion")
++    minSdk getExtOrIntegerDefault("minSdkVersion")
++    targetSdk getExtOrIntegerDefault("targetSdkVersion")
+   }
+ 
+   buildFeatures {
+@@ -45,8 +43,8 @@ android {
+     }
+   }
+ 
+-  lintOptions {
+-    disable "GradleCompatible"
++  lint {
++    disable += "GradleCompatible"
+   }
+ 
+   compileOptions {
 diff --git a/node_modules/react-native-android-location-enabler/android/src/main/java/com/heanoria/library/reactnative/locationenabler/AndroidLocationEnablerModule.kt b/node_modules/react-native-android-location-enabler/android/src/main/java/com/heanoria/library/reactnative/locationenabler/AndroidLocationEnablerModule.kt
 index 3b098e4..24e5d22 100644
 --- a/node_modules/react-native-android-location-enabler/android/src/main/java/com/heanoria/library/reactnative/locationenabler/AndroidLocationEnablerModule.kt
