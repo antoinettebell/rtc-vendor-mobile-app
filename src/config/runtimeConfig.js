@@ -1,6 +1,12 @@
 import Config from "react-native-config";
+import DeviceInfo from "react-native-device-info";
 
-const DEFAULT_API_URL = "https://api-dev.rounddacornerapp.com";
+const PRODUCTION_VENDOR_BUNDLE_ID = "com.ea.rtcvendor";
+const isProductionVendorBundle =
+  DeviceInfo.getBundleId() === PRODUCTION_VENDOR_BUNDLE_ID;
+const DEFAULT_API_URL = isProductionVendorBundle
+  ? "https://api.rounddacornerapp.com"
+  : "https://api-dev.rounddacornerapp.com";
 const DEFAULT_API_PREFIX = "/api/v1";
 
 const configuredApiUrl = Config.API_URL || "";
@@ -11,7 +17,11 @@ const DEFAULT_GOOGLE_MAP_API_KEY = "AIzaSyCdjHeKOYBUcpocHw5-NsdfMy2-dHkBoFY";
 export const runtimeConfig = {
   apiUrl: configuredApiUrl || DEFAULT_API_URL,
   apiPrefix: configuredApiPrefix || DEFAULT_API_PREFIX,
-  apiUrlSource: configuredApiUrl ? "react-native-config" : "fallback",
+  apiUrlSource: configuredApiUrl
+    ? "react-native-config"
+    : isProductionVendorBundle
+      ? "production-bundle-fallback"
+      : "fallback",
   GOOGLE_MAP_API_KEY: configuredGoogleMapApiKey || DEFAULT_GOOGLE_MAP_API_KEY,
   googleMapApiKeySource: configuredGoogleMapApiKey
     ? "react-native-config"
