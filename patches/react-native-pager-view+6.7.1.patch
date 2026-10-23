@@ -1,5 +1,5 @@
 diff --git a/node_modules/react-native-pager-view/android/build.gradle b/node_modules/react-native-pager-view/android/build.gradle
-index b46c366..019391c 100644
+index b46c366..996e839 100644
 --- a/node_modules/react-native-pager-view/android/build.gradle
 +++ b/node_modules/react-native-pager-view/android/build.gradle
 @@ -19,7 +19,6 @@ def isNewArchitectureEnabled() {
@@ -30,3 +30,18 @@ index b46c366..019391c 100644
      buildConfigField "boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString()
  
      buildConfigField "String", "CODEGEN_MODULE_REGISTRATION", (isNewArchitectureEnabled() && registrationCompat ? "\"${codegenViewModuleName}_registration\"" : "null")
+@@ -135,10 +134,15 @@ android {
+           java.srcDirs += [
+             "src/fabric/java",
+             "${project.buildDir}/generated/source/codegen/java"
+           ]
++          kotlin.srcDirs += [
++            "src/fabric/java",
++            "${project.buildDir}/generated/source/codegen/java"
++          ]
+       } else {
+           java.srcDirs += ["src/paper/java"]
++          kotlin.srcDirs += ["src/paper/java"]
+       }
+     }
+   }

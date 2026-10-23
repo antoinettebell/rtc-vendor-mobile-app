@@ -14,7 +14,7 @@ index 994d9f5..84b2a2a 100644
    if ENV['RCT_NEW_ARCH_ENABLED'] == "1" then
      install_modules_dependencies(s)
 diff --git a/node_modules/react-native-permissions/android/build.gradle b/node_modules/react-native-permissions/android/build.gradle
-index 5c15bc3..1a26ad4 100644
+index 5c15bc3..ff1676f 100644
 --- a/node_modules/react-native-permissions/android/build.gradle
 +++ b/node_modules/react-native-permissions/android/build.gradle
 @@ -17,7 +17,6 @@ def isNewArchitectureEnabled() {
@@ -34,7 +34,7 @@ index 5c15bc3..1a26ad4 100644
  
      if (project.android.hasProperty("namespace")) {
          namespace "com.zoontek.rnpermissions"
-@@ -41,11 +40,11 @@ android {
+@@ -41,18 +40,20 @@ android {
      }
      defaultConfig {
          buildConfigField("boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString())
@@ -50,3 +50,12 @@ index 5c15bc3..1a26ad4 100644
      }
      sourceSets {
          main {
+             if (isNewArchitectureEnabled()) {
+                 java.srcDirs += ["src/newarch"]
++                kotlin.srcDirs += ["src/newarch"]
+             } else {
+                 java.srcDirs += ["src/oldarch"]
++                kotlin.srcDirs += ["src/oldarch"]
+             }
+         }
+     }
