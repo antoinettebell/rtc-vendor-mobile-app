@@ -1,0 +1,15 @@
+diff --git a/node_modules/@react-native-async-storage/async-storage/android/build.gradle b/node_modules/@react-native-async-storage/async-storage/android/build.gradle
+index 91b3b4a..ec91ed4 100644
+--- a/node_modules/@react-native-async-storage/async-storage/android/build.gradle
++++ b/node_modules/@react-native-async-storage/async-storage/android/build.gradle
+@@ -102,6 +102,10 @@ repositories {
+ }
+ 
+ dependencies {
++    // AGP 9 compiles Kotlin sources under src/main/java even when the
++    // optional Next Storage implementation is not enabled.
++    implementation "androidx.room:room-runtime:2.6.1"
++    implementation "androidx.room:room-ktx:2.6.1"
+     if (useNextStorage) {
+         def room_version = project.ext.AsyncStorageConfig.roomVersion
+ 

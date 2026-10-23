@@ -1,5 +1,5 @@
 diff --git a/node_modules/react-native-bootsplash/android/build.gradle b/node_modules/react-native-bootsplash/android/build.gradle
-index 02da6b7..b29b556 100644
+index 02da6b7..e2b615f 100644
 --- a/node_modules/react-native-bootsplash/android/build.gradle
 +++ b/node_modules/react-native-bootsplash/android/build.gradle
 @@ -17,7 +17,6 @@ def isNewArchitectureEnabled() {
@@ -19,7 +19,7 @@ index 02da6b7..b29b556 100644
  
      if (project.android.hasProperty("namespace")) {
          namespace "com.zoontek.rnbootsplash"
-@@ -41,11 +40,11 @@ android {
+@@ -41,18 +40,20 @@ android {
      }
      defaultConfig {
          buildConfigField("boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString())
@@ -35,3 +35,12 @@ index 02da6b7..b29b556 100644
      }
      sourceSets {
          main {
+             if (isNewArchitectureEnabled()) {
+                 java.srcDirs += ["src/newarch"]
++                kotlin.srcDirs += ["src/newarch"]
+             } else {
+                 java.srcDirs += ["src/oldarch"]
++                kotlin.srcDirs += ["src/oldarch"]
+             }
+         }
+     }
