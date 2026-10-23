@@ -382,6 +382,12 @@ export default function EventVendorProfileScreen({ navigation }) {
       {access.canUseMarketplace ? (
         <>
           <TouchableOpacity
+            style={s.tapSetup}
+            onPress={() => navigation.navigate("editBankDetailScreen", { marketplaceVendor: true })}
+          >
+            <Text style={s.tapSetupText}>Payment Details</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={[s.tapSetup, !isTapToPayReleased && { opacity: 0.5 }]}
             disabled={!isTapToPayReleased}
             onPress={isTapToPayReleased ? () => navigation.navigate("authTapToPaySetupScreen") : undefined}

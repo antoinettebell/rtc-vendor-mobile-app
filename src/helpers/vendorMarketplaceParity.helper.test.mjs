@@ -68,7 +68,9 @@ assert.match(eventLanding, /track applications, and manage awarded events/);
 assert.match(eventLanding, /General Purchase Checkout/);
 assert.match(eventLanding, /eventVendorGeneralPurchaseScreen/);
 assert.doesNotMatch(eventProfile, />Checkout</);
-assert.match(eventProfile, />Tap to Pay Setup</);
+assert.match(eventProfile, /Tap to Pay Setup/);
+assert.match(eventProfile, /Payment Details/);
+assert.match(eventProfile, /marketplaceVendor: true/);
 assert.match(
   eventLanding,
   /hideBack=\{!section\}/,

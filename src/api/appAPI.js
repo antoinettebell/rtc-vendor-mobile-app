@@ -25,6 +25,7 @@ import {
   GET_PLANS_DATA,
   EVENT_VENDOR_PROFILE,
   EVENT_VENDOR_PROFILE_SUBMIT,
+  EVENT_VENDOR_PAYMENT_DETAILS,
   EVENT_VENDOR_COMPLIANCE,
   EVENT_VENDOR_COMPLIANCE_PROFILE,
   EVENT_VENDOR_COMPLIANCE_DOCUMENTS,
@@ -2055,6 +2056,25 @@ export const getBankDetail_API = async () => {
   try {
     const URL = `${GET_BANK_DETAIL}`;
     const response = await apiClient.get(URL, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+// Marketplace Vendor payment details are isolated from Food Vendor bank details.
+export const addMarketplaceVendorBankDetail_API = async (payload) => {
+  try {
+    const response = await apiClient.post(EVENT_VENDOR_PAYMENT_DETAILS, payload, { skipToken: false });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const getMarketplaceVendorBankDetail_API = async () => {
+  try {
+    const response = await apiClient.get(EVENT_VENDOR_PAYMENT_DETAILS, { skipToken: false });
     return response?.data;
   } catch (error) {
     throw error?.response?.data || error;

@@ -39,7 +39,13 @@ import {
   getPaymentMethodFields,
   hydratePaymentMethodDetails,
 } from "../helpers/paymentMethodDetails.helper";
-import { addBankDetail_API, getBankDetail_API, uploadImage_API } from "../api/appAPI";
+import {
+  addBankDetail_API,
+  addMarketplaceVendorBankDetail_API,
+  getBankDetail_API,
+  getMarketplaceVendorBankDetail_API,
+  uploadImage_API,
+} from "../api/appAPI";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
 import { setBankStatus } from "../redux/slices/userSlice";
 
@@ -152,6 +158,7 @@ const isMaskedAccountNumber = (value) => /^\*+\d{4}$/.test(String(value || ""));
 const EditBankDetailScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
+  const isMarketplaceVendor = route?.params?.marketplaceVendor === true;
 
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
@@ -254,11 +261,13 @@ const EditBankDetailScreen = ({ navigation, route }) => {
         bankState: state,
         bankPostal: postalCode,
       });
-      const response = await addBankDetail_API(payload);
+      const response = await (isMarketplaceVendor
+        ? addMarketplaceVendorBankDetail_API(payload)
+        : addBankDetail_API(payload));
       console.log("response => ", response);
       if (response?.success && response?.data) {
         setBankData(response?.data?.bankDetail);
-        dispatch(setBankStatus(true));
+        if (!isMarketplaceVendor) dispatch(setBankStatus(true));
         dispatch(
           showSnackbar({
             message: "Bank detail updated successfully",
@@ -318,14 +327,14 @@ const EditBankDetailScreen = ({ navigation, route }) => {
   const getBankDetailFromAPI = async () => {
     setDataLoading(true);
     try {
-      const response = await getBankDetail_API();
+      const response = await (isMarketplaceVendor
+        ? getMarketplaceVendorBankDetail_API()
+        : getBankDetail_API());
       console.log("response => ", response);
       if (response?.success && response?.data) {
         setAPIDataToLocalState(response?.data?.bankDetail);
-        if (response?.data?.bankDetail) {
-          dispatch(setBankStatus(true));
-        } else {
-          dispatch(setBankStatus(false));
+        if (!isMarketplaceVendor) {
+          dispatch(setBankStatus(Boolean(response?.data?.bankDetail)));
         }
       }
     } catch (error) {

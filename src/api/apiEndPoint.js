@@ -204,6 +204,7 @@ export const CHANGE_MENU_AVAILABILITY = "/menu/change-availability";
 export const GET_PLANS_DATA = "/public/plan";
 export const EVENT_VENDOR_PROFILE = "/marketplace/event-vendor/profile";
 export const EVENT_VENDOR_PROFILE_SUBMIT = "/marketplace/event-vendor/profile/submit";
+export const EVENT_VENDOR_PAYMENT_DETAILS = "/marketplace/event-vendor/payment-details";
 export const EVENT_VENDOR_COMPLIANCE = "/marketplace/event-vendor/compliance";
 export const EVENT_VENDOR_COMPLIANCE_PROFILE = "/marketplace/event-vendor/compliance/profile";
 export const EVENT_VENDOR_COMPLIANCE_DOCUMENTS = "/marketplace/event-vendor/compliance/documents";
