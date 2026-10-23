@@ -398,7 +398,7 @@
 				CODE_SIGN_ENTITLEMENTS = FoodtruckVendor/FoodtruckVendor.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 59;
 				DEVELOPMENT_TEAM = 5G26GFF98P;
 				ENABLE_BITCODE = NO;
 				ENABLE_DEBUG_DYLIB = NO;
@@ -414,7 +414,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.rounddacorner.dev.vendor;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ea.rtcvendor;
 				PRODUCT_NAME = FoodtruckVendor;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -437,7 +437,7 @@
 				CODE_SIGN_ENTITLEMENTS = FoodtruckVendor/FoodtruckVendor.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 59;
 				DEVELOPMENT_TEAM = 5G26GFF98P;
 				ENABLE_DEBUG_DYLIB = NO;
 				INFOPLIST_FILE = FoodtruckVendor/Info.plist;
@@ -452,7 +452,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.rounddacorner.dev.vendor;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ea.rtcvendor;
 				PRODUCT_NAME = FoodtruckVendor;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
