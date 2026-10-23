@@ -1,13 +1,18 @@
 diff --git a/node_modules/@rnw-community/react-native-payments/src/@standard/android/mapping/android-payment-method-data-data.interface.ts b/node_modules/@rnw-community/react-native-payments/src/@standard/android/mapping/android-payment-method-data-data.interface.ts
+index 9aadbf7..64ab71a 100644
 --- a/node_modules/@rnw-community/react-native-payments/src/@standard/android/mapping/android-payment-method-data-data.interface.ts
 +++ b/node_modules/@rnw-community/react-native-payments/src/@standard/android/mapping/android-payment-method-data-data.interface.ts
-@@ -7,5 +7,7 @@ interface AndroidGenericPaymentMethodDataInterface extends GenericPaymentMethodDataInterface {
+@@ -5,6 +5,8 @@ import type { AndroidTokenizationDirectSpecification } from '../request/android-
+ import type { AndroidTokenizationGatewaySpecification } from '../request/android-tokenization-gateway-specification';
+ 
+ interface AndroidGenericPaymentMethodDataInterface extends GenericPaymentMethodDataDataInterface {
 +    // Official Google Pay merchant ID, forwarded to merchantInfo.merchantId.
 +    merchantId?: string;
      // PAN_ONLY and CRYPTOGRAM_3DS by default. https://developers.google.com/pay/api/android/reference/request-objects#CardParameters
      allowedAuthMethods?: AndroidAllowedAuthMethodsEnum[];
      // Android environment https://developers.google.com/android/reference/com/google/android/gms/wallet/Wallet.WalletOptions.Builder#setEnvironment(int)
 diff --git a/node_modules/@rnw-community/react-native-payments/src/class/payment-request/payment-request.ts b/node_modules/@rnw-community/react-native-payments/src/class/payment-request/payment-request.ts
+index 3e719bb..de115cd 100644
 --- a/node_modules/@rnw-community/react-native-payments/src/class/payment-request/payment-request.ts
 +++ b/node_modules/@rnw-community/react-native-payments/src/class/payment-request/payment-request.ts
 @@ -176,6 +176,9 @@ export class PaymentRequest {
