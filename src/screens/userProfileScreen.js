@@ -13,7 +13,6 @@ import {
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import AntDesign from "react-native-vector-icons/AntDesign";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
@@ -35,9 +34,7 @@ import {
   setSelectedLocations,
 } from "../redux/slices/foodTruckProfileSlice";
 import {
-  formatEIN,
   formatPhoneNumber,
-  formatSSN,
   getPhoneDigits,
 } from "../helpers/profile.helper";
 import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
@@ -124,9 +121,6 @@ const UserProfileScreen = ({ navigation }) => {
   const [employeeDashboard, setEmployeeDashboard] = useState(null);
   const canUseMultipleTrucks = canUseMultipleTruckUnits(
     user?.foodTruck?.plan
-  );
-  const mainPhoneNumber = formatPhoneNumber(
-    `${user?.countryCode || ""}${user?.mobileNumber || ""}`
   );
   const activeTruckUnits = (user?.foodTruck?.truck_units || []).filter(
     (unit) => !unit.is_archived
@@ -457,6 +451,9 @@ const UserProfileScreen = ({ navigation }) => {
                 <Text style={styles.profileEmail} numberOfLines={1}>
                   {user?.email}
                 </Text>
+                <Text style={styles.profileEmail} numberOfLines={1}>
+                  {formatPhoneNumber(`${user?.countryCode || ""}${user?.mobileNumber || ""}`)}
+                </Text>
               </View>
             </View>
 
@@ -768,90 +765,6 @@ const UserProfileScreen = ({ navigation }) => {
               </>
             ) : null}
 
-            {!isEmployeeProfile ? <Divider /> : null}
-            {!isEmployeeProfile ? (
-            <View style={styles.socialMediaContainer}>
-              <Text style={styles.socialMediaTitle}>Mailing Address</Text>
-
-              <View style={[styles.itemContainer, { paddingVertical: 0 }]}>
-                <View style={styles.itemIconContiner}>
-                  <MaterialIcons
-                    name="location-on"
-                    size={24}
-                    color={AppColor.gray}
-                  />
-                </View>
-                <Text style={styles.itemText}>{user?.addressLine1}</Text>
-              </View>
-
-              <View style={[styles.itemContainer, { paddingVertical: 0 }]}>
-                <View style={styles.itemIconContiner} />
-                <Text style={styles.itemText}>{user?.addressLine2}</Text>
-              </View>
-
-              <View style={[styles.itemContainer, { paddingVertical: 0 }]}>
-                <View style={styles.itemIconContiner} />
-                <Text style={styles.itemText}>{user?.addressCity}</Text>
-              </View>
-
-              <View style={[styles.itemContainer, { paddingVertical: 0 }]}>
-                <View style={styles.itemIconContiner} />
-                <Text style={styles.itemText}>{user?.addressState}</Text>
-              </View>
-
-              <View style={[styles.itemContainer, { paddingVertical: 0 }]}>
-                <View style={styles.itemIconContiner} />
-                <Text style={styles.itemText}>{user?.addressPostal}</Text>
-              </View>
-
-              <View style={[styles.itemContainer, { paddingVertical: 0 }]}>
-                <View style={styles.itemIconContiner} />
-                <Text style={styles.itemText}>{user?.addressCountry}</Text>
-              </View>
-
-              <View style={[styles.itemContainer, styles.profileDetailRow]}>
-                <View style={styles.itemIconContiner}>
-                  <Ionicons name="call-outline" size={24} color={AppColor.gray} />
-                </View>
-                <Text style={styles.itemText}>
-                  Main Phone: {mainPhoneNumber || "N/A"}
-                </Text>
-              </View>
-
-              <View style={[styles.itemContainer, styles.profileDetailRow]}>
-                <View style={styles.itemIconContiner}>
-                  {user?.foodTruck?.ein ? (
-                    <AntDesign name="idcard" size={24} color={AppColor.gray} />
-                  ) : (
-                    <Ionicons
-                      name="shield-checkmark-outline"
-                      size={24}
-                      color={AppColor.gray}
-                    />
-                  )}
-                </View>
-                <Text style={styles.itemText}>
-                  {user?.foodTruck?.ein
-                    ? `EIN: ${formatEIN(user?.foodTruck?.ein || "") || "N/A"}`
-                    : `SSN: ${formatSSN(user?.foodTruck?.ssn || "") || "N/A"}`}
-                </Text>
-              </View>
-
-              {/* Edit Button */}
-              <IconButton
-                icon="pencil"
-                iconColor={AppColor.black}
-                size={24}
-                onPress={() => navigation.navigate("editMailingAddressScreen")}
-                style={{
-                  position: "absolute",
-                  right: -16,
-                  top: 0,
-                  overflow: "hidden",
-                }}
-              />
-            </View>
-            ) : null}
           </View>
         </ScrollView>
       )}

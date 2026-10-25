@@ -72,7 +72,6 @@ import EditBankDetailScreen from "./src/screens/editBankDetailScreen";
 import OneTapSignInScreen from "./src/screens/oneTapSigninScreen";
 import AuthSetBusinessHrsScreen from "./src/screens/authSetBusinessHrsScreen";
 import ProfileSetBusinessHrsScreen from "./src/screens/profileSetBusinessHrsScreen";
-import EditMailingAddressScreen from "./src/screens/editMailingAddressScreen";
 import EarningListScreen from "./src/screens/earningListScreen";
 import EarningsSummaryDetailScreen from "./src/screens/earningsSummaryDetailScreen";
 import VendorPosMenuScreen from "./src/screens/vendorPosMenuScreen";
@@ -341,10 +340,6 @@ const MainAppNavigator = ({ insets }) => (
       {() => <BottomTabNavigator insets={insets} />}
     </Stack.Screen>
     <Stack.Screen name="editProfileScreen" component={EditProfileScreen} />
-    <Stack.Screen
-      name="editMailingAddressScreen"
-      component={EditMailingAddressScreen}
-    />
     <Stack.Screen
       name="profileServingLocationScreen"
       component={ProfileServingLocationScreen}

@@ -27,7 +27,6 @@ import {
   startVendorComplianceVerification_API,
   startVendorComplianceW9Signing_API,
   completeVendorComplianceW9Signing_API,
-  updateUserDetail_API,
   updateFoodTruckProfile_API,
   uploadVendorComplianceDocument_API,
 } from "../api/appAPI";
@@ -317,17 +316,14 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     setBusinessRegistrationState(foodTruck.business_registration_state || "");
     setTaxIdentifierType(taxIdentifier.type);
     setTaxIdentifierText(taxIdentifier.inputValue || "");
-    setMailingAddressLine1(addressValue(foodTruck?.addressLine1 || user?.addressLine1));
-    setMailingAddressLine2(addressValue(foodTruck?.addressLine2 || user?.addressLine2));
-    setMailingCity(addressValue(foodTruck?.addressCity || user?.addressCity));
-    setMailingState(addressValue(foodTruck?.addressState || user?.addressState));
-    setMailingPostal(addressValue(foodTruck?.addressPostal || user?.addressPostal));
+    // The legal-payee address is compliance-owned. Signup seeds these fields
+    // on the FoodTruck record; do not fall back to ordinary Profile data.
+    setMailingAddressLine1(addressValue(foodTruck?.legal_payee_address_line1));
+    setMailingAddressLine2(addressValue(foodTruck?.legal_payee_address_line2));
+    setMailingCity(addressValue(foodTruck?.legal_payee_address_city));
+    setMailingState(addressValue(foodTruck?.legal_payee_address_state));
+    setMailingPostal(addressValue(foodTruck?.legal_payee_address_postal));
   }, [
-    user?.addressCity,
-    user?.addressLine1,
-    user?.addressLine2,
-    user?.addressPostal,
-    user?.addressState,
     user?.foodTruck,
   ]);
 
@@ -830,24 +826,17 @@ const VendorComplianceScreen = ({ navigation, route }) => {
         legal_business_type: taxIdentifierType === "ein" ? legalBusinessType : null,
         business_registration_state:
           taxIdentifierType === "ein" ? businessRegistrationState || null : null,
+        legal_payee_address_line1: mailingAddressLine1.trim(),
+        legal_payee_address_line2: mailingAddressLine2.trim() || null,
+        legal_payee_address_city: mailingCity.trim(),
+        legal_payee_address_state: mailingState,
+        legal_payee_address_postal: mailingPostal.trim(),
+        legal_payee_address_country: "US",
         ...buildTaxIdentifierUpdate({
           type: taxIdentifierType,
           inputValue: taxIdentifierText,
         }),
       };
-      const addressResponse = await updateUserDetail_API({
-        user_id: user?._id,
-        payload: {
-          addressLine1: mailingAddressLine1.trim(),
-          addressLine2: mailingAddressLine2.trim() || null,
-          addressCity: mailingCity.trim(),
-          addressState: mailingState,
-          addressPostal: mailingPostal.trim(),
-          addressCountry: user?.addressCountry && String(user.addressCountry).toUpperCase() !== "NA"
-            ? user.addressCountry
-            : "US",
-        },
-      });
       const response = await updateFoodTruckProfile_API({
         foodTruckId,
         payload,
@@ -855,7 +844,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       const updatedFoodTruck = response?.data?.foodtruck;
       if (!updatedFoodTruck) throw new Error("The legal payee information was not saved.");
 
-      dispatch(setUser({ ...(addressResponse?.data?.user || user), foodTruck: updatedFoodTruck }));
+      dispatch(setUser({ ...user, foodTruck: updatedFoodTruck }));
       setEditingLegalPayee(false);
       await loadCompliance();
       Alert.alert(
@@ -969,6 +958,12 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	  };
 
   const handleBack = () => {
+    // Legal Payee edits are an explicit save flow. Leaving the screen never
+    // persists the draft; returning rebuilds it from the compliance record.
+    if (editingLegalPayee) {
+      resetLegalPayeeDraft();
+      setEditingLegalPayee(false);
+    }
     if (isTapToPayUpgradeFlow) {
       navigation.goBack();
       return;
@@ -1211,6 +1206,9 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                   style={styles.legalInput}
                 />
                 <Text style={styles.legalAddressTitle}>Mailing Address</Text>
+                <Text style={styles.legalPayeeDetails}>
+                  Prefilled from signup. Changes are saved only when you save Legal Payee.
+                </Text>
                 <Text style={styles.legalFieldLabel}>Address Line 1 *</Text>
                 <TextInput value={mailingAddressLine1} onChangeText={setMailingAddressLine1} placeholder="Street address" placeholderTextColor={AppColor.placeholderTextColor} style={styles.legalInput} />
                 <Text style={styles.legalFieldLabel}>Address Line 2</Text>
