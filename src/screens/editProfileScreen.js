@@ -90,7 +90,7 @@ const VENDOR_PROFILE_DOCUMENT_TYPES = [
   { label: "Certificate of Insurance", value: "COI" },
   { label: "Liquor License", value: "LIQUOR_LICENSE" },
   { label: "EIN", value: "EIN" },
-  { label: "Social Security Card", value: "SSN_CARD" },
+  { label: "Driver License (Front)", value: "DRIVER_LICENSE_FRONT" },
   { label: "W-9", value: "W9" },
   { label: "Other", value: "OTHER" },
 ];

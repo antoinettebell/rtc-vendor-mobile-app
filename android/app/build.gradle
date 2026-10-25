@@ -136,8 +136,8 @@ android {
         applicationId "com.rounddacorner.dev.vendor"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 20
-        versionName "1.7"
+        versionCode 60
+        versionName "1.9"
         vectorDrawables.useSupportLibrary = true
         buildConfigField "String", "CYBERSOURCE_TTP_MERCHANT_ID", asBuildConfigString(cybersourceTapToPayMerchantId)
         buildConfigField "String", "CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET", asBuildConfigString(cybersourceTapToPayAcceptanceDeviceSecret)
@@ -200,6 +200,15 @@ dependencies {
     }
 }
 apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"
+
+// AGP 9 validates task inputs more strictly. The lint model reads the vector
+// icon font asset directory, so make its producer explicit for release builds.
+tasks.configureEach { task ->
+    if (task.name.toLowerCase().contains("lintvital")) {
+        task.dependsOn("copyReactNativeVectorIconFonts")
+    }
+}
+
 project.ext.envConfigFiles = [
     devdebug: ".env",
     devrelease: ".env",

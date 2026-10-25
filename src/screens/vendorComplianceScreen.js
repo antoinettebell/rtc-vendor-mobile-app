@@ -742,6 +742,12 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	    SCORE_FALLBACK[summary?.score_color] ||
 	    AppColor.primary;
 	  const requirements = summary?.requirements || [];
+	  // The backend marks exactly one identity document as required: a driver
+	  // license for SSN vendors or a business license for EIN vendors. Do not
+	  // present the other identity document as an optional task in the app.
+	  const displayedRequirements = requirements.filter((requirement) =>
+	    requirement.required || !["BUSINESS_LICENSE", "DRIVER_LICENSE_FRONT"].includes(requirement.type)
+	  );
 	  const coreComponents = summary?.core_components || [];
 	  const cobaltChecksByType = Object.fromEntries(
 	    (summary?.external_verification?.checks || []).map((check) => [check.check_type, check]),
@@ -966,7 +972,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
           </View>}
 
           <Text style={styles.sectionTitle}>Compliance Documents</Text>
-          {requirements.map((requirement) => {
+          {displayedRequirements.map((requirement) => {
             const document = requirement.document;
 		            const status = getExpiringDocumentStatus(requirement);
 		            const isUploading = uploadingType === requirement.type;
