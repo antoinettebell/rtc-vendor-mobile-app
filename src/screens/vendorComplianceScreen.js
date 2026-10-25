@@ -871,16 +871,30 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 
   const selectTaxIdentifierType = (nextType) => {
     if (nextType === taxIdentifierType) return;
-    // An account-type change is a legal-payee replacement. Never carry a
-    // masked SSN into the EIN field (or vice versa), and do not retain
-    // business-only values when the vendor chooses the individual path.
-    setTaxIdentifierType(nextType);
-    setTaxIdentifierText("");
-    if (nextType === "ssn") {
-      setDba("");
-      setLegalBusinessType(null);
-      setBusinessRegistrationState("");
-    }
+    const nextLabel = nextType === "ssn" ? "Individual" : "Business";
+    Alert.alert(
+      "Switch account type?",
+      `Switching to ${nextLabel} clears the incompatible unsaved tax-ID details. Your saved legal payee is not changed until you tap Save Legal Payee.`,
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Yes, Switch",
+          style: "destructive",
+          onPress: () => {
+            // An account-type change is a legal-payee replacement. Never
+            // carry a masked SSN into the EIN field (or vice versa), and do
+            // not retain business-only values on the individual path.
+            setTaxIdentifierType(nextType);
+            setTaxIdentifierText("");
+            if (nextType === "ssn") {
+              setDba("");
+              setLegalBusinessType(null);
+              setBusinessRegistrationState("");
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleExpirationDateConfirm = (date) => {
