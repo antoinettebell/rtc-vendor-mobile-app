@@ -1527,9 +1527,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                                 }))
                               }
 		                          placeholder={
-                                document && !sanitationGradeValue
-                                  ? "Pending OCR/Admin verification"
-                                  : "Select grade A, B, C, D, or F"
+		                                "Select grade A, B, C, D, or F"
                               }
 		                          style={[
                                 styles.gradeDropdown,
@@ -1567,7 +1565,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                           <Text style={styles.uploadedDocumentDate}>
                             {formatDate(document.created_at || document.uploaded_at)}
                           </Text>
-                          {getOcrStatusText(document) ? (
+                          {requirement.document_scope !== "TRUCK_UNIT" && getOcrStatusText(document) ? (
                             <Text
                               style={[
                                 styles.ocrStatusText,
@@ -1580,7 +1578,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                               {getOcrStatusText(document)}
                             </Text>
                           ) : null}
-                          {document.ocr_status === "manual_review" ? (
+                          {requirement.document_scope !== "TRUCK_UNIT" && document.ocr_status === "manual_review" ? (
                             <Text style={styles.ocrComparisonText}>
                               Vendor entered {formatDate(
                                 manualReviewUsesIssueDate
