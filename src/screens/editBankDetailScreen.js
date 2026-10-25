@@ -116,7 +116,8 @@ const validateAddressLine1 = (value) => {
 };
 
 const validateAddressLine2 = (value) => {
-  // if (!value.trim()) return "Address Line 2 is required";
+  // Apartment, suite, and unit information is optional for a mailing address.
+  if (!value.trim()) return "";
   if (!addressRegex.test(value)) {
     return "Address must contain only letters, numbers, and basic punctuation.";
   }
