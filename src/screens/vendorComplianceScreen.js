@@ -869,6 +869,20 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     }
   };
 
+  const selectTaxIdentifierType = (nextType) => {
+    if (nextType === taxIdentifierType) return;
+    // An account-type change is a legal-payee replacement. Never carry a
+    // masked SSN into the EIN field (or vice versa), and do not retain
+    // business-only values when the vendor chooses the individual path.
+    setTaxIdentifierType(nextType);
+    setTaxIdentifierText("");
+    if (nextType === "ssn") {
+      setDba("");
+      setLegalBusinessType(null);
+      setBusinessRegistrationState("");
+    }
+  };
+
   const handleExpirationDateConfirm = (date) => {
     const requirementKey = getRequirementStateKey(datePickerSelection?.requirement);
     if (requirementKey) {
@@ -1114,7 +1128,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                   ].map((option) => (
                     <TouchableOpacity
                       key={option.value}
-                      onPress={() => setTaxIdentifierType(option.value)}
+	                      onPress={() => selectTaxIdentifierType(option.value)}
                       style={[styles.accountTypeOption, taxIdentifierType === option.value && styles.accountTypeOptionSelected]}
                     >
                       <Text style={[styles.accountTypeText, taxIdentifierType === option.value && styles.accountTypeTextSelected]}>{option.label}</Text>
@@ -1173,7 +1187,11 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                   onChangeText={(value) => setTaxIdentifierText(
                     taxIdentifierType === "ssn" ? formatSSN(value) : formatEIN(value)
                   )}
-                  placeholder={getTaxIdentifierEditState(user?.foodTruck).maskedValue || `Enter ${taxIdentifierType === "ssn" ? "SSN" : "EIN"}`}
+                  placeholder={
+                    taxIdentifierType === getTaxIdentifierEditState(user?.foodTruck).originalType
+                      ? getTaxIdentifierEditState(user?.foodTruck).maskedValue
+                      : `Enter ${taxIdentifierType === "ssn" ? "SSN" : "EIN"}`
+                  }
                   placeholderTextColor={AppColor.placeholderTextColor}
                   keyboardType="number-pad"
                   style={styles.legalInput}
