@@ -220,11 +220,14 @@ export const uploadFoodTruckDocument_API = async ({ foodtruck_id, payload }) => 
   }
 };
 
-export const getVendorComplianceSummary_API = async ({ foodtruck_id } = {}) => {
+export const getVendorComplianceSummary_API = async ({ foodtruck_id, truck_unit_id } = {}) => {
   try {
-    const URL = foodtruck_id
+    const baseURL = foodtruck_id
       ? VENDOR_COMPLIANCE_FOOD_TRUCK(foodtruck_id)
       : VENDOR_COMPLIANCE_ME;
+    const URL = truck_unit_id
+      ? `${baseURL}${baseURL.includes("?") ? "&" : "?"}truck_unit_id=${encodeURIComponent(truck_unit_id)}`
+      : baseURL;
     const response = await apiClient.get(URL, { skipToken: false });
     return response?.data;
   } catch (error) {

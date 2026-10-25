@@ -8,6 +8,7 @@ import {
 	  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -21,12 +22,12 @@ import { Dropdown } from "react-native-element-dropdown";
 import { useDispatch, useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-  getVendorFoodTruckList_API,
   getVendorComplianceSummary_API,
   submitVendorComplianceForOcr_API,
   startVendorComplianceVerification_API,
   startVendorComplianceW9Signing_API,
   completeVendorComplianceW9Signing_API,
+  updateFoodTruckProfile_API,
   uploadVendorComplianceDocument_API,
 } from "../api/appAPI";
 import StatusBarManager from "../components/StatusBarManager";
@@ -34,6 +35,15 @@ import usePermission from "../hooks/usePermission";
 import { permission } from "../helpers/permission.helper";
 import { AppColor, Mulish400, Mulish600, Mulish700 } from "../utils/theme";
 import { setVendorOnboardingStep } from "../redux/slices/authSlice";
+import { setUser } from "../redux/slices/userSlice";
+import StatePickerModal from "../components/StatePickerModal";
+import {
+  buildTaxIdentifierUpdate,
+  formatEIN,
+  formatSSN,
+  getTaxIdentifierEditState,
+} from "../helpers/profile.helper";
+import { empNumberList } from "../utils/constants";
 import {
   getEffectiveFoodVendorPlan,
   isTapToPaySetupEligible,
@@ -68,7 +78,32 @@ const REQUIRED_EXPIRATION_DOCUMENT_TYPES = new Set([
 const SANITATION_GRADE_OPTIONS = ["A", "B", "C", "D", "F"].map(
   (grade) => ({ label: grade, value: grade })
 );
+const OPERATIONAL_REQUIREMENTS = [
+  {
+    type: "BUSINESS_LICENSE",
+    label: "Permit/Business License",
+    required: false,
+    document_scope: "TRUCK_UNIT",
+  },
+  {
+    type: "HEALTH_PERMIT",
+    label: "Sanitation Grade",
+    required: false,
+    document_scope: "TRUCK_UNIT",
+  },
+];
+const LEGAL_BUSINESS_TYPES = [
+  { label: "Sole Proprietor", value: "SOLE_PROPRIETOR" },
+  { label: "LLC", value: "LLC" },
+  { label: "Corporation", value: "CORPORATION" },
+  { label: "Partnership", value: "PARTNERSHIP" },
+];
 const w9SigningStorageKey = (foodTruckId) => `vendor-compliance-w9-envelope:${foodTruckId}`;
+
+const getRequirementStateKey = (requirement = {}) =>
+  requirement?.document_scope === "TRUCK_UNIT"
+    ? `TRUCK_UNIT:${requirement.type}`
+    : requirement.type;
 
 const parsePendingW9Signing = (value) => {
   if (!value) return null;
@@ -229,10 +264,10 @@ const VendorComplianceScreen = ({ navigation, route }) => {
   const isTapToPayUpgradeFlow = route?.params?.tapToPayUpgradeFlow === true;
   const isRequiredSetupFlow = isOnboardingFlow || isTapToPayUpgradeFlow;
   const defaultFoodTruckId = user?.foodTruck?._id;
-  const [selectedFoodTruckId, setSelectedFoodTruckId] = useState(
-    defaultFoodTruckId || null
-  );
-  const foodTruckId = selectedFoodTruckId || defaultFoodTruckId;
+  // A vendor has one legal payee business.  Elite vendors can select one of
+  // that business's embedded truck units only for operational records.
+  const foodTruckId = defaultFoodTruckId;
+  const [selectedTruckUnitId, setSelectedTruckUnitId] = useState(null);
   const [foodTruckOptions, setFoodTruckOptions] = useState([]);
   const [loadingFoodTrucks, setLoadingFoodTrucks] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -240,6 +275,14 @@ const VendorComplianceScreen = ({ navigation, route }) => {
   const [submittingOcr, setSubmittingOcr] = useState(false);
   const [requestingVerification, setRequestingVerification] = useState(false);
   const [summary, setSummary] = useState(null);
+  const [editingLegalPayee, setEditingLegalPayee] = useState(false);
+  const [savingLegalPayee, setSavingLegalPayee] = useState(false);
+  const [legalBusinessName, setLegalBusinessName] = useState("");
+  const [dba, setDba] = useState("");
+  const [legalBusinessType, setLegalBusinessType] = useState(null);
+  const [businessRegistrationState, setBusinessRegistrationState] = useState("");
+  const [taxIdentifierType, setTaxIdentifierType] = useState("ein");
+  const [taxIdentifierText, setTaxIdentifierText] = useState("");
   const [expirationDates, setExpirationDates] = useState({});
   const [manualSanitationGrades, setManualSanitationGrades] = useState({});
   const [documentRevisionTypes, setDocumentRevisionTypes] = useState({});
@@ -255,23 +298,27 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     permission.camera
   );
 
+  const resetLegalPayeeDraft = useCallback(() => {
+    const foodTruck = user?.foodTruck || {};
+    const taxIdentifier = getTaxIdentifierEditState(foodTruck);
+    setLegalBusinessName(foodTruck.legal_business_name || "");
+    setDba(foodTruck.dba || "");
+    setLegalBusinessType(foodTruck.legal_business_type || null);
+    setBusinessRegistrationState(foodTruck.business_registration_state || "");
+    setTaxIdentifierType(taxIdentifier.type);
+    setTaxIdentifierText(taxIdentifier.inputValue || "");
+  }, [user?.foodTruck]);
+
+  useEffect(() => {
+    if (!editingLegalPayee) resetLegalPayeeDraft();
+  }, [editingLegalPayee, resetLegalPayeeDraft]);
+
   const loadFoodTruckOptions = useCallback(async () => {
     if (!defaultFoodTruckId) return;
     setLoadingFoodTrucks(true);
     try {
-      const response = await getVendorFoodTruckList_API({
-        page: 1,
-        limit: 100,
-      });
-      const apiList =
-        response?.data?.foodtruckList ||
-        response?.data?.foodTruckList ||
-        response?.foodtruckList ||
-        response?.foodTruckList ||
-        [];
-      const fallbackList = user?.foodTruck ? [user.foodTruck] : [];
       const optionMap = new Map();
-      [...apiList, ...fallbackList].forEach((foodTruck, index) => {
+      (user?.foodTruck?.truck_units || []).forEach((foodTruck, index) => {
         const value = getFoodTruckOptionKey(foodTruck);
         if (!value || optionMap.has(value)) return;
         optionMap.set(value, {
@@ -281,24 +328,13 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       });
       const nextOptions = Array.from(optionMap.values());
       setFoodTruckOptions(nextOptions);
-      if (!selectedFoodTruckId && nextOptions[0]?.value) {
-        setSelectedFoodTruckId(nextOptions[0].value);
+      if (!selectedTruckUnitId && nextOptions[0]?.value) {
+        setSelectedTruckUnitId(nextOptions[0].value);
       }
-    } catch (error) {
-      setFoodTruckOptions(
-        user?.foodTruck
-          ? [
-              {
-                label: getFoodTruckOptionLabel(user.foodTruck),
-                value: defaultFoodTruckId,
-              },
-            ]
-          : []
-      );
     } finally {
       setLoadingFoodTrucks(false);
     }
-  }, [defaultFoodTruckId, selectedFoodTruckId, user?.foodTruck]);
+  }, [defaultFoodTruckId, selectedTruckUnitId, user?.foodTruck]);
 
   const loadCompliance = useCallback(async ({ silent = false } = {}) => {
     if (!foodTruckId) return;
@@ -306,6 +342,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     try {
       const summaryResponse = await getVendorComplianceSummary_API({
         foodtruck_id: foodTruckId,
+        truck_unit_id: selectedTruckUnitId,
       });
       setSummary(summaryResponse?.data?.compliance || null);
     } catch (error) {
@@ -315,7 +352,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [foodTruckId]);
+  }, [foodTruckId, selectedTruckUnitId]);
 
   useEffect(() => {
     loadCompliance();
@@ -436,22 +473,29 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     setDocumentRevisionTypes({});
     setUploadedRevisionTypes({});
     setExpandedDocuments({});
-  }, [foodTruckId]);
+  }, [selectedTruckUnitId]);
 
   useEffect(() => {
     const nextGrades = {};
+    const unitDocuments = summary?.operational_documents || [];
+    unitDocuments.forEach((document) => {
+      if (document.type !== "HEALTH_PERMIT" && document.document_type !== "HEALTH_PERMIT") return;
+      const grade = getSanitationGradeFromDocument(document);
+      if (grade) nextGrades["TRUCK_UNIT:HEALTH_PERMIT"] = String(grade).toUpperCase();
+    });
     (summary?.requirements || []).forEach((requirement) => {
       if (requirement.type !== "HEALTH_PERMIT") return;
       const grade = getSanitationGradeFromDocument(requirement.document);
       if (grade) {
-        nextGrades[requirement.type] = String(grade).toUpperCase();
+        nextGrades[getRequirementStateKey(requirement)] = String(grade).toUpperCase();
       }
     });
     setManualSanitationGrades((current) => ({ ...nextGrades, ...current }));
   }, [summary]);
 
   const uploadComplianceFile = async (requirement, file) => {
-    const selectedExpirationDate = expirationDates[requirement.type];
+    const requirementKey = getRequirementStateKey(requirement);
+    const selectedExpirationDate = expirationDates[requirementKey];
     const isHealthPermit = requirement.type === "HEALTH_PERMIT";
     if (isHealthPermit && !selectedExpirationDate) {
       Alert.alert(
@@ -469,7 +513,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     }
 
     const sanitationGrade = normalizeGradeInput(
-      manualSanitationGrades[requirement.type]
+      manualSanitationGrades[requirementKey]
     );
     if (requirement.type === "HEALTH_PERMIT" && !sanitationGrade) {
       Alert.alert(
@@ -482,6 +526,13 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     const payload = new FormData();
     payload.append("document_type", requirement.type);
     payload.append("title", requirement.label);
+    if (requirement.document_scope === "TRUCK_UNIT") {
+      if (!selectedTruckUnitId) {
+        throw new Error("Select a food truck before uploading an operational document.");
+      }
+      payload.append("document_scope", "TRUCK_UNIT");
+      payload.append("truck_unit_id", selectedTruckUnitId);
+    }
     if (selectedExpirationDate && isHealthPermit) {
       payload.append("issue_date", formatDateForPayload(selectedExpirationDate));
     } else if (selectedExpirationDate) {
@@ -496,7 +547,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       type: file.type || "application/octet-stream",
     });
 
-    setUploadingType(requirement.type);
+    setUploadingType(requirementKey);
     await uploadVendorComplianceDocument_API({
       foodtruck_id: foodTruckId,
       payload,
@@ -504,11 +555,11 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     await loadCompliance();
     setDocumentRevisionTypes((current) => ({
       ...current,
-      [requirement.type]: true,
+      [requirementKey]: true,
     }));
     setUploadedRevisionTypes((current) => ({
       ...current,
-      [requirement.type]: true,
+      [requirementKey]: true,
     }));
   };
 
@@ -602,13 +653,14 @@ const VendorComplianceScreen = ({ navigation, route }) => {
   };
 
   const startDocumentRevision = (requirement) => {
+    const requirementKey = getRequirementStateKey(requirement);
     setDocumentRevisionTypes((current) => ({
       ...current,
-      [requirement.type]: true,
+      [requirementKey]: true,
     }));
     setUploadedRevisionTypes((current) => ({
       ...current,
-      [requirement.type]: false,
+      [requirementKey]: false,
     }));
     const existingDocumentDate = requirement.type === "HEALTH_PERMIT"
       ? requirement.document?.issue_date
@@ -616,34 +668,35 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     if (existingDocumentDate) {
       setExpirationDates((current) => ({
         ...current,
-        [requirement.type]: parseDateOnly(existingDocumentDate),
+        [requirementKey]: parseDateOnly(existingDocumentDate),
       }));
     }
     setManualSanitationGrades((current) => ({
       ...current,
-      [requirement.type]:
-        current[requirement.type] ||
+      [requirementKey]:
+        current[requirementKey] ||
         String(getSanitationGradeFromDocument(requirement.document) || "").toUpperCase(),
     }));
   };
 
   const cancelDocumentRevision = (requirement) => {
+    const requirementKey = getRequirementStateKey(requirement);
     setDocumentRevisionTypes((current) => ({
       ...current,
-      [requirement.type]: false,
+      [requirementKey]: false,
     }));
     setUploadedRevisionTypes((current) => ({
       ...current,
-      [requirement.type]: false,
+      [requirementKey]: false,
     }));
     setExpirationDates((current) => {
       const next = { ...current };
-      delete next[requirement.type];
+      delete next[requirementKey];
       return next;
     });
     setManualSanitationGrades((current) => ({
       ...current,
-      [requirement.type]: String(
+      [requirementKey]: String(
         getSanitationGradeFromDocument(requirement.document) || ""
       ).toUpperCase(),
     }));
@@ -654,10 +707,10 @@ const VendorComplianceScreen = ({ navigation, route }) => {
   };
 
 
-  const toggleDocumentExpanded = (requirementType) => {
+  const toggleDocumentExpanded = (requirementKey) => {
     setExpandedDocuments((current) => ({
       ...current,
-      [requirementType]: !current[requirementType],
+      [requirementKey]: !current[requirementKey],
     }));
   };
 
@@ -665,8 +718,8 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     if (!foodTruckId) return;
     const replacementAwaitingUpload = requirements.find(
       (requirement) =>
-        documentRevisionTypes[requirement.type] &&
-        !uploadedRevisionTypes[requirement.type]
+        documentRevisionTypes[getRequirementStateKey(requirement)] &&
+        !uploadedRevisionTypes[getRequirementStateKey(requirement)]
     );
     if (replacementAwaitingUpload) {
       Alert.alert(
@@ -721,10 +774,66 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     }
   };
 
+  const saveLegalPayee = async () => {
+    const trimmedLegalName = legalBusinessName.trim();
+    const taxDigits = taxIdentifierText.replace(/\D/g, "");
+    const savedTaxIdentifier = getTaxIdentifierEditState(user?.foodTruck);
+
+    if (!trimmedLegalName) {
+      Alert.alert("Legal Payee", "Enter the legal name used on your tax documents.");
+      return;
+    }
+    if (taxIdentifierText && taxDigits.length !== 9) {
+      Alert.alert("Legal Payee", `Enter a valid 9-digit ${taxIdentifierType === "ssn" ? "SSN" : "EIN"}.`);
+      return;
+    }
+    if (taxIdentifierType !== savedTaxIdentifier.originalType && !taxIdentifierText) {
+      Alert.alert("Legal Payee", "Enter the new tax identifier before changing its type.");
+      return;
+    }
+    if (taxIdentifierType === "ein" && (!legalBusinessType || !businessRegistrationState)) {
+      Alert.alert("Legal Payee", "Select the legal business type and registration state.");
+      return;
+    }
+
+    setSavingLegalPayee(true);
+    try {
+      const payload = {
+        legal_business_name: trimmedLegalName,
+        dba: dba.trim() || null,
+        legal_business_type: taxIdentifierType === "ein" ? legalBusinessType : null,
+        business_registration_state:
+          taxIdentifierType === "ein" ? businessRegistrationState || null : null,
+        ...buildTaxIdentifierUpdate({
+          type: taxIdentifierType,
+          inputValue: taxIdentifierText,
+        }),
+      };
+      const response = await updateFoodTruckProfile_API({
+        foodTruckId,
+        payload,
+      });
+      const updatedFoodTruck = response?.data?.foodtruck;
+      if (!updatedFoodTruck) throw new Error("The legal payee information was not saved.");
+
+      dispatch(setUser({ ...user, foodTruck: updatedFoodTruck }));
+      setEditingLegalPayee(false);
+      await loadCompliance();
+      Alert.alert(
+        "Legal Payee Saved",
+        "Changes to legal identity or tax information may require document revalidation."
+      );
+    } catch (error) {
+      Alert.alert("Legal Payee", error?.message || "Unable to save legal payee information.");
+    } finally {
+      setSavingLegalPayee(false);
+    }
+  };
+
   const handleExpirationDateConfirm = (date) => {
-    const requirementType = datePickerSelection?.requirement?.type;
-    if (requirementType) {
-      setExpirationDates((prev) => ({ ...prev, [requirementType]: date }));
+    const requirementKey = getRequirementStateKey(datePickerSelection?.requirement);
+    if (requirementKey) {
+      setExpirationDates((prev) => ({ ...prev, [requirementKey]: date }));
     }
     setDatePickerSelection(null);
   };
@@ -746,8 +855,20 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	  // license for SSN vendors or a business license for EIN vendors. Do not
 	  // present the other identity document as an optional task in the app.
 	  const displayedRequirements = requirements.filter((requirement) =>
-	    requirement.required || !["BUSINESS_LICENSE", "DRIVER_LICENSE_FRONT"].includes(requirement.type)
+	    requirement.type !== "HEALTH_PERMIT" &&
+	    (requirement.required || !["BUSINESS_LICENSE", "DRIVER_LICENSE_FRONT"].includes(requirement.type))
 	  );
+	  const operationalDocumentsByType = Object.fromEntries(
+	    (summary?.operational_documents || []).map((document) => [document.document_type, document]),
+	  );
+	  const displayedOperationalRequirements = OPERATIONAL_REQUIREMENTS.map((requirement) => ({
+	    ...requirement,
+	    document: operationalDocumentsByType[requirement.type] || null,
+	  }));
+	  const allDisplayedRequirements = [
+	    ...displayedRequirements,
+	    ...displayedOperationalRequirements,
+	  ];
 	  const coreComponents = summary?.core_components || [];
 	  const cobaltChecksByType = Object.fromEntries(
 	    (summary?.external_verification?.checks || []).map((check) => [check.check_type, check]),
@@ -884,11 +1005,11 @@ const VendorComplianceScreen = ({ navigation, route }) => {
               data={foodTruckOptions}
               labelField="label"
               valueField="value"
-              value={foodTruckId}
+              value={selectedTruckUnitId}
               disable={loadingFoodTrucks || foodTruckOptions.length <= 1}
               onChange={(item) => {
-                if (item?.value && item.value !== foodTruckId) {
-                  setSelectedFoodTruckId(item.value);
+                if (item?.value && item.value !== selectedTruckUnitId) {
+                  setSelectedTruckUnitId(item.value);
                 }
               }}
               placeholder={
@@ -917,6 +1038,125 @@ const VendorComplianceScreen = ({ navigation, route }) => {
             <Text style={styles.foodTruckSelectHelp}>
               Sanitation grades are saved per food truck and only appear to customers when provided and verified.
             </Text>
+          </View>
+
+          <View style={styles.legalPayeeCard}>
+            <View style={styles.legalPayeeHeader}>
+              <View>
+                <Text style={styles.legalPayeeTitle}>Legal Payee Information</Text>
+                <Text style={styles.legalPayeeHelp}>
+                  This identity is shared by every food truck under this vendor.
+                </Text>
+              </View>
+              {!editingLegalPayee ? (
+                <TouchableOpacity onPress={() => setEditingLegalPayee(true)}>
+                  <Text style={styles.legalPayeeEdit}>Edit</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            {editingLegalPayee ? (
+              <>
+                <Text style={styles.legalFieldLabel}>
+                  {taxIdentifierType === "ssn" ? "Legal Name *" : "Legal Business Name *"}
+                </Text>
+                <TextInput
+                  value={legalBusinessName}
+                  onChangeText={setLegalBusinessName}
+                  placeholder="Name used on tax documents"
+                  placeholderTextColor={AppColor.placeholderTextColor}
+                  autoCapitalize="words"
+                  style={styles.legalInput}
+                />
+                {taxIdentifierType === "ein" ? (
+                  <>
+                    <Text style={styles.legalFieldLabel}>DBA (optional)</Text>
+                    <TextInput
+                      value={dba}
+                      onChangeText={setDba}
+                      placeholder="Doing business as"
+                      placeholderTextColor={AppColor.placeholderTextColor}
+                      autoCapitalize="words"
+                      style={styles.legalInput}
+                    />
+                    <Text style={styles.legalFieldLabel}>Legal Business Type *</Text>
+                    <Dropdown
+                      data={LEGAL_BUSINESS_TYPES}
+                      labelField="label"
+                      valueField="value"
+                      value={legalBusinessType}
+                      onChange={(item) => setLegalBusinessType(item.value)}
+                      placeholder="Select business type"
+                      style={styles.legalDropdown}
+                      placeholderStyle={styles.legalDropdownText}
+                      selectedTextStyle={styles.legalDropdownText}
+                      itemTextStyle={styles.legalDropdownText}
+                    />
+                    <View style={styles.legalStatePicker}>
+                      <StatePickerModal
+                        label="Registration State *"
+                        value={businessRegistrationState}
+                        onChange={setBusinessRegistrationState}
+                      />
+                    </View>
+                  </>
+                ) : null}
+                <Text style={styles.legalFieldLabel}>Tax Identifier Type *</Text>
+                <Dropdown
+                  data={empNumberList}
+                  labelField="label"
+                  valueField="type"
+                  value={taxIdentifierType}
+                  onChange={(item) => setTaxIdentifierType(item.type)}
+                  style={styles.legalDropdown}
+                  selectedTextStyle={styles.legalDropdownText}
+                  itemTextStyle={styles.legalDropdownText}
+                />
+                <Text style={styles.legalFieldLabel}>
+                  {taxIdentifierType === "ssn" ? "SSN" : "EIN"}
+                </Text>
+                <TextInput
+                  value={taxIdentifierText}
+                  onChangeText={(value) => setTaxIdentifierText(
+                    taxIdentifierType === "ssn" ? formatSSN(value) : formatEIN(value)
+                  )}
+                  placeholder={getTaxIdentifierEditState(user?.foodTruck).maskedValue || `Enter ${taxIdentifierType === "ssn" ? "SSN" : "EIN"}`}
+                  placeholderTextColor={AppColor.placeholderTextColor}
+                  keyboardType="number-pad"
+                  style={styles.legalInput}
+                />
+                <View style={styles.legalActions}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      resetLegalPayeeDraft();
+                      setEditingLegalPayee(false);
+                    }}
+                    style={styles.legalCancelButton}
+                  >
+                    <Text style={styles.legalCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    disabled={savingLegalPayee}
+                    onPress={saveLegalPayee}
+                    style={[styles.legalSaveButton, savingLegalPayee && styles.disabledButton]}
+                  >
+                    {savingLegalPayee ? <ActivityIndicator size="small" color={AppColor.white} /> : (
+                      <Text style={styles.legalSaveText}>Save Legal Payee</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={styles.legalPayeeValue}>
+                  {user?.foodTruck?.legal_business_name || "Legal payee information not completed"}
+                </Text>
+                <Text style={styles.legalPayeeDetails}>
+                  {getTaxIdentifierEditState(user?.foodTruck).type.toUpperCase()} · {user?.foodTruck?.tax_identifier_masked || "Not provided"}
+                  {user?.foodTruck?.business_registration_state ? ` · ${user.foodTruck.business_registration_state}` : ""}
+                </Text>
+              </>
+            )}
           </View>
 
           <View style={[styles.scorePanel, { borderColor: scoreColor }]}>
@@ -971,28 +1211,29 @@ const VendorComplianceScreen = ({ navigation, route }) => {
             </View>
           </View>}
 
-          <Text style={styles.sectionTitle}>Compliance Documents</Text>
-          {displayedRequirements.map((requirement) => {
+	          <Text style={styles.sectionTitle}>Legal Payee Compliance</Text>
+	          {allDisplayedRequirements.map((requirement, requirementIndex) => {
             const document = requirement.document;
+		            const requirementKey = getRequirementStateKey(requirement);
 		            const status = getExpiringDocumentStatus(requirement);
-		            const isUploading = uploadingType === requirement.type;
+		            const isUploading = uploadingType === requirementKey;
             const requiresExpirationDate = EXPIRING_DOCUMENT_TYPES.has(
               requirement.type
             );
 	            const isHealthPermit = requirement.type === "HEALTH_PERMIT";
-	            const selectedExpirationDate = expirationDates[requirement.type];
+	            const selectedExpirationDate = expirationDates[requirementKey];
             const displayExpirationDate = Object.prototype.hasOwnProperty.call(
               expirationDates,
-              requirement.type
+	              requirementKey
             )
               ? selectedExpirationDate
               : isHealthPermit
                 ? document?.issue_date
                 : document?.expiration_date;
             const isExpanded =
-              expandedDocuments[requirement.type] ?? !document;
+	              expandedDocuments[requirementKey] ?? !document;
             const isDocumentRevision =
-              !!documentRevisionTypes[requirement.type];
+	              !!documentRevisionTypes[requirementKey];
             const areDocumentFieldsEditable =
               !document || isDocumentRevision;
             const manualReviewUsesIssueDate =
@@ -1000,15 +1241,19 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                 String(document?.ocr_error_message || "")
               );
             const sanitationGradeValue = normalizeGradeInput(
-              manualSanitationGrades[requirement.type] ||
+	              manualSanitationGrades[requirementKey] ||
                 getSanitationGradeFromDocument(document)
             );
 
 	            return (
-	              <View key={requirement.type} style={styles.documentCard}>
+	              <React.Fragment key={requirementKey}>
+                  {requirement.document_scope === "TRUCK_UNIT" && requirementIndex === displayedRequirements.length ? (
+                    <Text style={styles.sectionTitle}>Selected Food Truck Operations</Text>
+                  ) : null}
+	              <View style={styles.documentCard}>
 	                <TouchableOpacity
 	                  activeOpacity={0.75}
-	                  onPress={() => toggleDocumentExpanded(requirement.type)}
+	                  onPress={() => toggleDocumentExpanded(requirementKey)}
 	                  style={styles.documentHeader}
 	                >
 	                  <View style={styles.documentIcon}>
@@ -1137,15 +1382,17 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                               <TouchableOpacity
                                 onPress={() => setExpirationDates((current) => ({
                                   ...current,
-                                  [requirement.type]: null,
+	                                  [requirementKey]: null,
                                 }))}
                               >
                                 <Text style={styles.supportText}>No expiration date on this license</Text>
                               </TouchableOpacity>
                             ) : null}
-		                        <Text style={styles.expirationHelpText}>
-		                          OCR runs when you tap Save & Run OCR.
-		                        </Text>
+	                        <Text style={styles.expirationHelpText}>
+	                          {requirement.document_scope === "TRUCK_UNIT"
+                            ? "This operational record does not affect legal-payee compliance."
+                            : "OCR runs when you tap Save & Run OCR."}
+	                        </Text>
 		                      </View>
 		                    ) : null}
 		                    {isHealthPermit ? (
@@ -1191,7 +1438,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                               onChange={(item) =>
                                 setManualSanitationGrades((current) => ({
                                   ...current,
-                                  [requirement.type]: item?.value || "",
+	                                  [requirementKey]: item?.value || "",
                                 }))
                               }
 		                          placeholder={
@@ -1219,7 +1466,9 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                               )}
 		                        />
 		                        <Text style={styles.expirationHelpText}>
-		                          Select the grade printed on the document. Save & Run OCR locks the grade and checks the uploaded document. To revise it later, replace the document.
+	                          {requirement.document_scope === "TRUCK_UNIT"
+                            ? "Select the grade printed on the document. This operational record does not affect legal-payee compliance."
+                            : "Select the grade printed on the document. Save & Run OCR locks the grade and checks the uploaded document. To revise it later, replace the document."}
 		                        </Text>
 		                      </View>
 		                    ) : null}
@@ -1313,6 +1562,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	                  </>
 	                ) : null}
 	              </View>
+	              </React.Fragment>
 	            );
 	          })}
 
@@ -1389,7 +1639,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                 : undefined
             }
             date={
-              expirationDates[datePickerSelection?.requirement?.type] || new Date()
+              expirationDates[getRequirementStateKey(datePickerSelection?.requirement)] || new Date()
             }
             onConfirm={handleExpirationDateConfirm}
             onCancel={() => setDatePickerSelection(null)}
@@ -1475,6 +1725,117 @@ const styles = StyleSheet.create({
     color: AppColor.subText,
     lineHeight: 16,
     marginTop: 8,
+  },
+  legalPayeeCard: {
+    borderWidth: 1,
+    borderColor: "#D7E5DC",
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 12,
+    backgroundColor: "#F8FCF9",
+  },
+  legalPayeeHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
+  legalPayeeTitle: {
+    fontFamily: Mulish700,
+    fontSize: 16,
+    color: AppColor.black,
+  },
+  legalPayeeHelp: {
+    fontFamily: Mulish400,
+    fontSize: 12,
+    color: AppColor.subText,
+    lineHeight: 17,
+    marginTop: 3,
+    maxWidth: 270,
+  },
+  legalPayeeEdit: {
+    fontFamily: Mulish700,
+    fontSize: 14,
+    color: AppColor.primary,
+    padding: 4,
+  },
+  legalPayeeValue: {
+    fontFamily: Mulish600,
+    fontSize: 14,
+    color: AppColor.black,
+    marginTop: 12,
+  },
+  legalPayeeDetails: {
+    fontFamily: Mulish400,
+    fontSize: 12,
+    color: AppColor.subText,
+    marginTop: 4,
+  },
+  legalFieldLabel: {
+    fontFamily: Mulish600,
+    fontSize: 13,
+    color: AppColor.black,
+    marginTop: 14,
+    marginBottom: 6,
+  },
+  legalInput: {
+    minHeight: 46,
+    borderWidth: 1,
+    borderColor: "#D5DCE4",
+    borderRadius: 8,
+    color: AppColor.black,
+    backgroundColor: AppColor.white,
+    fontFamily: Mulish400,
+    fontSize: 14,
+    paddingHorizontal: 12,
+  },
+  legalDropdown: {
+    minHeight: 46,
+    borderWidth: 1,
+    borderColor: "#D5DCE4",
+    borderRadius: 8,
+    backgroundColor: AppColor.white,
+    paddingHorizontal: 12,
+  },
+  legalDropdownText: {
+    fontFamily: Mulish400,
+    fontSize: 14,
+    color: AppColor.black,
+  },
+  legalStatePicker: {
+    marginTop: 14,
+  },
+  legalActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 16,
+  },
+  legalCancelButton: {
+    minHeight: 42,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: AppColor.primary,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  legalCancelText: {
+    fontFamily: Mulish700,
+    fontSize: 13,
+    color: AppColor.primary,
+  },
+  legalSaveButton: {
+    minHeight: 42,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: AppColor.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  legalSaveText: {
+    fontFamily: Mulish700,
+    fontSize: 13,
+    color: AppColor.white,
   },
   scorePanel: {
     flexDirection: "row",

@@ -54,6 +54,7 @@ import {
 import { isTapToPayReleased } from "../services/tapToPay-release";
 import { empNumberList } from "../utils/constants";
 import AppImage from "../components/AppImage";
+import StatePickerModal from "../components/StatePickerModal";
 import {
   onOnBoard,
   setVendorOnboardingStep,
@@ -982,22 +983,13 @@ const AuthFoodTruckProfileScreen = ({ navigation, route }) => {
                     selectedTextStyle={{ fontFamily: Mulish400 }}
                     itemTextStyle={{ fontFamily: Mulish400 }}
                   />
-                  <Text style={[styles.paperInputLabel, { marginTop: 12 }]}>Registration State</Text>
-                  <TextInput
-                    dense
-                    value={businessRegistrationState}
-                    onChangeText={(text) => setBusinessRegistrationState(text.replace(/[^a-z]/gi, "").slice(0, 2).toUpperCase())}
-                    style={styles.input}
-                    contentStyle={styles.inputText}
-                    placeholder="Two-letter state code (for example, GA)"
-                    placeholderTextColor={AppColor.placeholderTextColor}
-                    mode="outlined"
-                    outlineColor={AppColor.border}
-                    activeOutlineColor={AppColor.primary}
-                    outlineStyle={{ borderRadius: 8 }}
-                    autoCapitalize="characters"
-                    maxLength={2}
-                  />
+                  <View style={{ marginTop: 12 }}>
+                    <StatePickerModal
+                      label="Registration State"
+                      value={businessRegistrationState}
+                      onChange={setBusinessRegistrationState}
+                    />
+                  </View>
                   {["LLC", "CORPORATION"].includes(legalBusinessType) ? (
                     <TouchableOpacity style={{ flexDirection: "row", alignItems: "center", marginTop: 14 }} onPress={() => setTaxedAsSCorporation((value) => !value)}>
                       <FontAwesome6 name={taxedAsSCorporation ? "square-check" : "square"} size={20} color={AppColor.primary} />
