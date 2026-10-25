@@ -874,7 +874,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     const nextLabel = nextType === "ssn" ? "Individual" : "Business";
     Alert.alert(
       "Switch account type?",
-      `Switching to ${nextLabel} clears the incompatible unsaved tax-ID details. Your saved legal payee is not changed until you tap Save Legal Payee.`,
+      `Switching to ${nextLabel} clears incompatible unsaved tax-ID details. When you tap Save Legal Payee, a prior 100% compliant legal payee is archived; incomplete legal-payee information is permanently deleted. Per-food-truck records stay in place.`,
       [
         { text: "No", style: "cancel" },
         {
