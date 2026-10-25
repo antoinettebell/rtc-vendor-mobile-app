@@ -188,6 +188,31 @@ export default function EventVendorComplianceScreen({ navigation }) {
       { text: "Cancel", style: "cancel" },
     ],
   );
+  const selectPartyType = (nextType) => {
+    if (nextType === partyType) return;
+    const nextLabel = nextType === "BUSINESS" ? "Business" : "Individual";
+    Alert.alert(
+      "Switch account type?",
+      `Switching to ${nextLabel} clears incompatible unsaved tax-ID details. When you tap Save & Run OCR, a prior 100% compliant legal payee is archived; incomplete legal-payee information is permanently deleted.`,
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Yes, Switch",
+          style: "destructive",
+          onPress: () => {
+            setPartyType(nextType);
+            setTaxId("");
+            setDocument(null);
+            if (nextType === "INDIVIDUAL") {
+              setDbaName("");
+              setEntityType("LLC");
+              setRegistrationState("");
+            }
+          },
+        },
+      ],
+    );
+  };
   const save = async () => {
     const isBusiness = partyType === "BUSINESS";
     if (!legalName.trim()) return Alert.alert("Compliance", "Enter the legal name.");
@@ -272,7 +297,7 @@ export default function EventVendorComplianceScreen({ navigation }) {
     <ScrollView contentContainerStyle={s.page}>
       <View style={[s.complianceCard, { borderColor: compliance?.score_color === "green" ? AppColor.primary : compliance?.score_color === "yellow" ? "#B77900" : "#F97316" }]}><View style={s.complianceHeader}><View style={s.complianceCopy}><Text style={s.title}>{compliance?.score_label || "Compliance"}</Text><Text style={s.copy}>{compliance?.remaining?.length ? `Remaining: ${compliance.remaining.join(" • ")}` : compliance ? "All currently applicable requirements are complete." : "Complete the required information below."}</Text></View><View style={s.scoreBadge}><Text style={s.scoreText}>{Number(compliance?.score || 0)}%</Text></View></View><View style={s.progressTrack}><View style={[s.progressFill, { width: `${Math.max(0, Math.min(100, Number(compliance?.score || 0)))}%` }]} /></View>{compliance?.provider_verification_pending ? <Text style={s.copy}>Documents are complete; identity verification is still pending.</Text> : null}</View>
       <View style={s.externalCard}><Text style={s.externalTitle}>External Verification</Text>{verification.provider === "COBALT" ? verificationChecks.map((check) => <View key={check.type} style={s.checkRow}><Text style={check.status === "PASSED" ? s.checkPassed : s.checkPending}>{check.status === "PASSED" ? "✓" : "□"}</Text><Text style={s.checkLabel}>{check.label}</Text><Text style={s.checkStatus}>{formatStatus(check.status)}</Text></View>) : <View style={s.checkRow}><Text style={verificationStatus === "PASSED" ? s.checkPassed : s.checkPending}>{verificationStatus === "PASSED" ? "✓" : "□"}</Text><Text style={s.checkLabel}>Identity Verification</Text><Text style={s.checkStatus}>{formatStatus(verificationStatus)}</Text></View>}</View>
-      <Text style={s.label}>Account type</Text><View style={s.row}>{["BUSINESS", "INDIVIDUAL"].map((value) => <TouchableOpacity key={value} onPress={() => setPartyType(value)} style={[s.choice, partyType === value && s.choiceOn]}><Text style={partyType === value ? s.choiceTextOn : s.choiceText}>{value}</Text></TouchableOpacity>)}</View>
+      <Text style={s.label}>Account type</Text><View style={s.row}>{["BUSINESS", "INDIVIDUAL"].map((value) => <TouchableOpacity key={value} onPress={() => selectPartyType(value)} style={[s.choice, partyType === value && s.choiceOn]}><Text style={partyType === value ? s.choiceTextOn : s.choiceText}>{value}</Text></TouchableOpacity>)}</View>
       <Text style={s.label}>{partyType === "BUSINESS" ? "Legal Business Name *" : "Legal Name *"}</Text><TextInput value={legalName} onChangeText={setLegalName} placeholder={`Legal Name must be exactly as printed on the ${partyType === "BUSINESS" ? "Business License" : "Driver License"}.`} placeholderTextColor="#526173" style={s.input} />
       {partyType === "BUSINESS" ? <><Text style={s.label}>DBA</Text><TextInput value={dbaName} onChangeText={setDbaName} style={s.input} /><Text style={s.label}>Entity type</Text><View style={s.row}>{entityTypes.map((value) => <TouchableOpacity key={value} onPress={() => setEntityType(value)} style={[s.choice, entityType === value && s.choiceOn]}><Text style={entityType === value ? s.choiceTextOn : s.choiceText}>{value.replaceAll("_", " ")}</Text></TouchableOpacity>)}</View><View style={{ marginTop: 16 }}><StatePickerModal label="State of registration *" value={registrationState} onChange={setRegistrationState} /></View></> : null}
       <Text style={s.label}>Mailing Address</Text><Text style={s.fieldHint}>This is prefilled from your Marketplace Vendor profile and may be corrected here before verification.</Text><Text style={s.label}>Address Line 1 *</Text><TextInput value={mailingAddressLine1} onChangeText={setMailingAddressLine1} style={s.input} /><Text style={s.label}>Address Line 2</Text><TextInput value={mailingAddressLine2} onChangeText={setMailingAddressLine2} style={s.input} /><Text style={s.label}>City *</Text><TextInput value={mailingCity} onChangeText={setMailingCity} style={s.input} /><View style={{ marginTop: 16 }}><StatePickerModal label="Mailing State *" value={mailingState} onChange={setMailingState} /></View><Text style={s.label}>ZIP Code *</Text><TextInput value={mailingPostal} onChangeText={setMailingPostal} keyboardType="numbers-and-punctuation" style={s.input} />
