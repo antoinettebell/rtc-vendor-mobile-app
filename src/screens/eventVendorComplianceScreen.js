@@ -40,7 +40,11 @@ export default function EventVendorComplianceScreen({ navigation }) {
   const [dbaName, setDbaName] = useState("");
   const [entityType, setEntityType] = useState("LLC");
   const [registrationState, setRegistrationState] = useState("");
-  const [businessAddress, setBusinessAddress] = useState("");
+  const [mailingAddressLine1, setMailingAddressLine1] = useState("");
+  const [mailingAddressLine2, setMailingAddressLine2] = useState("");
+  const [mailingCity, setMailingCity] = useState("");
+  const [mailingState, setMailingState] = useState("");
+  const [mailingPostal, setMailingPostal] = useState("");
   const [taxId, setTaxId] = useState("");
   const [document, setDocument] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -60,12 +64,22 @@ export default function EventVendorComplianceScreen({ navigation }) {
       setDbaName(next.dba_name || "");
       setEntityType(next.entity_type || "LLC");
       setRegistrationState(normalizeStateAbbreviation(next.registration_state));
-      setBusinessAddress(next.business_address || data?.mailing_address || "");
+      const address = data?.mailing_address_fields || {};
+      setMailingAddressLine1(address.address_line1 || "");
+      setMailingAddressLine2(address.address_line2 || "");
+      setMailingCity(address.city || "");
+      setMailingState(normalizeStateAbbreviation(address.state));
+      setMailingPostal(address.postal || "");
     } else {
       // The compliance profile has not been saved yet. Start from the
       // Marketplace Vendor's existing mailing address rather than asking the
       // vendor to enter the same address twice.
-      setBusinessAddress(data?.mailing_address || "");
+      const address = data?.mailing_address_fields || {};
+      setMailingAddressLine1(address.address_line1 || "");
+      setMailingAddressLine2(address.address_line2 || "");
+      setMailingCity(address.city || "");
+      setMailingState(normalizeStateAbbreviation(address.state));
+      setMailingPostal(address.postal || "");
     }
   };
   const load = useCallback(async ({ background = false } = {}) => {
@@ -179,12 +193,20 @@ export default function EventVendorComplianceScreen({ navigation }) {
     if (!legalName.trim()) return Alert.alert("Compliance", "Enter the legal name.");
     if (taxId && !taxId.replace(/\D/g, "").match(/^\d{9}$/)) return Alert.alert("Compliance", `Enter a nine-digit ${isBusiness ? "EIN" : "SSN"}.`);
     if (!taxId && !profile?.tax_id_masked) return Alert.alert("Compliance", `Enter a nine-digit ${isBusiness ? "EIN" : "SSN"}.`);
-    if (isBusiness && (!registrationState.trim() || !businessAddress.trim())) return Alert.alert("Compliance", "Business address and state of registration are required.");
+    if (isBusiness && (!registrationState.trim() || !mailingAddressLine1.trim() || !mailingCity.trim() || !mailingState || !mailingPostal.trim())) return Alert.alert("Compliance", "Mailing address, city, state, ZIP code, and state of registration are required.");
     setSaving(true);
     try {
       const saved = await saveEventVendorComplianceProfile_API({
         party_type: partyType, legal_name: legalName.trim(), dba_name: dbaName.trim(), entity_type: isBusiness ? entityType : null,
-        registration_state: isBusiness ? registrationState.trim().toUpperCase() : null, business_address: isBusiness ? businessAddress.trim() : null,
+        registration_state: isBusiness ? registrationState.trim().toUpperCase() : null,
+        mailing_address: isBusiness ? {
+          address_line1: mailingAddressLine1.trim(),
+          address_line2: mailingAddressLine2.trim() || null,
+          city: mailingCity.trim(),
+          state: mailingState,
+          postal: mailingPostal.trim(),
+          country: "US",
+        } : null,
         ...(taxId ? { tax_id_type: isBusiness ? "EIN" : "SSN", tax_id: taxId.replace(/\D/g, "") } : {}),
       });
       if (document) {
@@ -251,7 +273,7 @@ export default function EventVendorComplianceScreen({ navigation }) {
       <View style={s.externalCard}><Text style={s.externalTitle}>External Verification</Text>{verification.provider === "COBALT" ? verificationChecks.map((check) => <View key={check.type} style={s.checkRow}><Text style={check.status === "PASSED" ? s.checkPassed : s.checkPending}>{check.status === "PASSED" ? "✓" : "□"}</Text><Text style={s.checkLabel}>{check.label}</Text><Text style={s.checkStatus}>{formatStatus(check.status)}</Text></View>) : <View style={s.checkRow}><Text style={verificationStatus === "PASSED" ? s.checkPassed : s.checkPending}>{verificationStatus === "PASSED" ? "✓" : "□"}</Text><Text style={s.checkLabel}>Identity Verification</Text><Text style={s.checkStatus}>{formatStatus(verificationStatus)}</Text></View>}</View>
       <Text style={s.label}>Account type</Text><View style={s.row}>{["BUSINESS", "INDIVIDUAL"].map((value) => <TouchableOpacity key={value} onPress={() => setPartyType(value)} style={[s.choice, partyType === value && s.choiceOn]}><Text style={partyType === value ? s.choiceTextOn : s.choiceText}>{value}</Text></TouchableOpacity>)}</View>
       <Text style={s.label}>{partyType === "BUSINESS" ? "Legal Business Name *" : "Legal Name *"}</Text><TextInput value={legalName} onChangeText={setLegalName} placeholder={`Legal Name must be exactly as printed on the ${partyType === "BUSINESS" ? "Business License" : "Driver License"}.`} placeholderTextColor="#526173" style={s.input} />
-      {partyType === "BUSINESS" ? <><Text style={s.label}>DBA</Text><TextInput value={dbaName} onChangeText={setDbaName} style={s.input} /><Text style={s.label}>Entity type</Text><View style={s.row}>{entityTypes.map((value) => <TouchableOpacity key={value} onPress={() => setEntityType(value)} style={[s.choice, entityType === value && s.choiceOn]}><Text style={entityType === value ? s.choiceTextOn : s.choiceText}>{value.replaceAll("_", " ")}</Text></TouchableOpacity>)}</View><View style={{ marginTop: 16 }}><StatePickerModal label="State of registration *" value={registrationState} onChange={setRegistrationState} /></View><Text style={s.label}>Mailing Address *</Text><TextInput value={businessAddress} onChangeText={setBusinessAddress} style={s.input} /></> : null}
+      {partyType === "BUSINESS" ? <><Text style={s.label}>DBA</Text><TextInput value={dbaName} onChangeText={setDbaName} style={s.input} /><Text style={s.label}>Entity type</Text><View style={s.row}>{entityTypes.map((value) => <TouchableOpacity key={value} onPress={() => setEntityType(value)} style={[s.choice, entityType === value && s.choiceOn]}><Text style={entityType === value ? s.choiceTextOn : s.choiceText}>{value.replaceAll("_", " ")}</Text></TouchableOpacity>)}</View><View style={{ marginTop: 16 }}><StatePickerModal label="State of registration *" value={registrationState} onChange={setRegistrationState} /></View><Text style={s.label}>Mailing Address</Text><Text style={s.fieldHint}>This is prefilled from your Marketplace Vendor profile and may be corrected here before verification.</Text><Text style={s.label}>Address Line 1 *</Text><TextInput value={mailingAddressLine1} onChangeText={setMailingAddressLine1} style={s.input} /><Text style={s.label}>Address Line 2</Text><TextInput value={mailingAddressLine2} onChangeText={setMailingAddressLine2} style={s.input} /><Text style={s.label}>City *</Text><TextInput value={mailingCity} onChangeText={setMailingCity} style={s.input} /><View style={{ marginTop: 16 }}><StatePickerModal label="Mailing State *" value={mailingState} onChange={setMailingState} /></View><Text style={s.label}>ZIP Code *</Text><TextInput value={mailingPostal} onChangeText={setMailingPostal} keyboardType="numbers-and-punctuation" style={s.input} /></> : null}
       <Text style={s.label}>{partyType === "BUSINESS" ? "EIN" : "SSN"} *</Text><TextInput value={taxId} onChangeText={setTaxId} keyboardType="number-pad" secureTextEntry placeholder={profile?.tax_id_masked || ""} placeholderTextColor="#526173" style={s.input} />
       {profile?.tax_id_masked ? <Text style={s.copy}>Saved {partyType === "BUSINESS" ? "EIN" : "SSN"}: {profile.tax_id_masked}</Text> : null}
       <View style={s.card}><Text style={s.label}>{partyType === "BUSINESS" ? "Business License" : "Driver License — Front Only"}</Text><Text style={s.copy}>Required before Marketplace Vendor participation can be verified.</Text><Text style={s.status}>{document ? `Ready to upload: ${document.name}` : uploaded ? getDocumentLifecycleText(uploaded) : "Not uploaded"}</Text>{uploaded ? <Text style={s.copy}>{getOcrStatusText(uploaded)}</Text> : null}{uploaded?.original_name ? <Text style={s.copy}>Uploaded: {uploaded.original_name}</Text> : null}{uploaded?.file_url ? <TouchableOpacity style={s.secondary} onPress={() => openDocument(uploaded.file_url)}><Text style={s.secondaryText}>Open</Text></TouchableOpacity> : null}<TouchableOpacity style={s.secondary} onPress={chooseDocument}><Text style={s.secondaryText}>{uploaded || document ? "Replace Document" : "Choose Document"}</Text></TouchableOpacity></View>
@@ -261,4 +283,4 @@ export default function EventVendorComplianceScreen({ navigation }) {
     </ScrollView>
   </MarketplaceVendorScreenLayout>;
 }
-const s = StyleSheet.create({ loading:{flex:1,alignItems:"center",justifyContent:"center"}, page:{padding:20,paddingBottom:50}, card:{borderWidth:1,borderColor:"#d7dee8",borderRadius:12,padding:14,marginTop:14}, complianceCard:{borderWidth:2,borderRadius:14,padding:16,marginBottom:18},complianceHeader:{flexDirection:"row",alignItems:"center",gap:12},complianceCopy:{flex:1},scoreBadge:{width:58,height:58,borderRadius:29,alignItems:"center",justifyContent:"center",backgroundColor:AppColor.primary},scoreText:{color:"#fff",fontWeight:"800"},progressTrack:{height:8,borderRadius:4,backgroundColor:"#e5e7eb",overflow:"hidden",marginTop:8},progressFill:{height:"100%",borderRadius:4,backgroundColor:AppColor.primary},externalCard:{borderWidth:1,borderColor:"#d7dee8",borderRadius:12,padding:14,marginBottom:18},externalTitle:{fontWeight:"800",color:"#172033",fontSize:17,marginBottom:10},checkRow:{flexDirection:"row",alignItems:"center",gap:8,marginTop:7},checkPassed:{color:AppColor.primary,fontWeight:"800",fontSize:19},checkPending:{color:"#64748B",fontSize:19},checkLabel:{flex:1,color:"#172033",fontWeight:"700"},checkStatus:{color:"#526173"},pill:{alignSelf:"flex-end",backgroundColor:"#64748B",borderRadius:14,paddingHorizontal:10,paddingVertical:5},pillText:{color:"#fff",fontWeight:"700",fontSize:12}, title:{fontSize:20,fontWeight:"800",color:"#172033"}, copy:{color:"#526173",marginTop:6}, infoRow:{flexDirection:"row",gap:6,alignItems:"flex-start",marginTop:10},infoText:{color:"#526173",fontSize:13,lineHeight:19,flex:1}, status:{color:AppColor.primary,fontWeight:"800",marginTop:10}, label:{fontWeight:"700",color:"#172033",marginTop:16,marginBottom:7}, input:{borderWidth:1,borderColor:"#cbd5e1",borderRadius:10,padding:12,color:"#172033"}, row:{flexDirection:"row",gap:8,flexWrap:"wrap"}, choice:{borderWidth:1,borderColor:"#cbd5e1",borderRadius:18,paddingHorizontal:10,paddingVertical:8}, choiceOn:{backgroundColor:AppColor.primary,borderColor:AppColor.primary}, choiceText:{color:"#172033",fontSize:12}, choiceTextOn:{color:"#fff",fontWeight:"700",fontSize:12}, primary:{backgroundColor:AppColor.primary,borderRadius:12,padding:15,alignItems:"center",marginTop:14}, disabled:{opacity:.5}, primaryText:{color:"#fff",fontWeight:"800"}, secondary:{borderWidth:1,borderColor:AppColor.primary,borderRadius:10,padding:11,alignItems:"center",marginTop:10}, secondaryText:{color:AppColor.primary,fontWeight:"800"} });
+const s = StyleSheet.create({ loading:{flex:1,alignItems:"center",justifyContent:"center"}, page:{padding:20,paddingBottom:50}, card:{borderWidth:1,borderColor:"#d7dee8",borderRadius:12,padding:14,marginTop:14}, complianceCard:{borderWidth:2,borderRadius:14,padding:16,marginBottom:18},complianceHeader:{flexDirection:"row",alignItems:"center",gap:12},complianceCopy:{flex:1},scoreBadge:{width:58,height:58,borderRadius:29,alignItems:"center",justifyContent:"center",backgroundColor:AppColor.primary},scoreText:{color:"#fff",fontWeight:"800"},progressTrack:{height:8,borderRadius:4,backgroundColor:"#e5e7eb",overflow:"hidden",marginTop:8},progressFill:{height:"100%",borderRadius:4,backgroundColor:AppColor.primary},externalCard:{borderWidth:1,borderColor:"#d7dee8",borderRadius:12,padding:14,marginBottom:18},externalTitle:{fontWeight:"800",color:"#172033",fontSize:17,marginBottom:10},checkRow:{flexDirection:"row",alignItems:"center",gap:8,marginTop:7},checkPassed:{color:AppColor.primary,fontWeight:"800",fontSize:19},checkPending:{color:"#64748B",fontSize:19},checkLabel:{flex:1,color:"#172033",fontWeight:"700"},checkStatus:{color:"#526173"},pill:{alignSelf:"flex-end",backgroundColor:"#64748B",borderRadius:14,paddingHorizontal:10,paddingVertical:5},pillText:{color:"#fff",fontWeight:"700",fontSize:12}, title:{fontSize:20,fontWeight:"800",color:"#172033"}, copy:{color:"#526173",marginTop:6}, infoRow:{flexDirection:"row",gap:6,alignItems:"flex-start",marginTop:10},infoText:{color:"#526173",fontSize:13,lineHeight:19,flex:1}, status:{color:AppColor.primary,fontWeight:"800",marginTop:10}, label:{fontWeight:"700",color:"#172033",marginTop:16,marginBottom:7}, fieldHint:{color:"#526173",fontSize:12,lineHeight:18,marginBottom:2}, input:{borderWidth:1,borderColor:"#cbd5e1",borderRadius:10,padding:12,color:"#172033"}, row:{flexDirection:"row",gap:8,flexWrap:"wrap"}, choice:{borderWidth:1,borderColor:"#cbd5e1",borderRadius:18,paddingHorizontal:10,paddingVertical:8}, choiceOn:{backgroundColor:AppColor.primary,borderColor:AppColor.primary}, choiceText:{color:"#172033",fontSize:12}, choiceTextOn:{color:"#fff",fontWeight:"700",fontSize:12}, primary:{backgroundColor:AppColor.primary,borderRadius:12,padding:15,alignItems:"center",marginTop:14}, disabled:{opacity:.5}, primaryText:{color:"#fff",fontWeight:"800"}, secondary:{borderWidth:1,borderColor:AppColor.primary,borderRadius:10,padding:11,alignItems:"center",marginTop:10}, secondaryText:{color:AppColor.primary,fontWeight:"800"} });

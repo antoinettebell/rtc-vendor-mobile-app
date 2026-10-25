@@ -25,7 +25,6 @@ import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
 import AntDesign from "react-native-vector-icons/AntDesign";
 import { useDispatch, useSelector } from "react-redux";
 import ImagePicker from "react-native-image-crop-picker";
-import DocumentPicker, { types } from "react-native-document-picker";
 import { RESULTS } from "react-native-permissions";
 import FastImage from "@d11/react-native-fast-image";
 import usePermission from "../hooks/usePermission";
@@ -36,7 +35,6 @@ import { AppColor, Mulish700, Mulish400 } from "../utils/theme";
 import { CountryPicker } from "react-native-country-codes-picker";
 import {
   emailRegex,
-  empNumberList,
   nameRegex,
   truckNameRegex,
 } from "../utils/constants";
@@ -44,19 +42,11 @@ import {
   getUserDetail_API,
   updateFoodTruckProfile_API,
   updateUserDetail_API,
-  uploadFoodTruckDocument_API,
   uploadImage_API,
 } from "../api/appAPI";
 import { setUser, updateFoodTruck } from "../redux/slices/userSlice";
 import { Dropdown } from "react-native-element-dropdown";
-import {
-  buildTaxIdentifierUpdate,
-  formatEIN,
-  formatSSN,
-  getTaxIdentifierEditState,
-} from "../helpers/profile.helper";
 import AppImage from "../components/AppImage";
-import StatePickerModal from "../components/StatePickerModal";
 import { addOrUpdateUser } from "../redux/slices/userInfoSlice";
 import { showSnackbar } from "../redux/slices/snackbarSlice";
 import {
@@ -84,28 +74,6 @@ const dropdownData = SOCIAL_MEDIA_PLATFORMS.map((platform) => ({
 }));
 
 const { width } = Dimensions.get("window");
-
-const VENDOR_PROFILE_DOCUMENT_TYPES = [
-  { label: "Sanitation Grade", value: "SANITATION_GRADE" },
-  { label: "Business License/Permit", value: "BUSINESS_LICENSE" },
-  { label: "Certificate of Insurance", value: "COI" },
-  { label: "Liquor License", value: "LIQUOR_LICENSE" },
-  { label: "EIN", value: "EIN" },
-  { label: "Driver License (Front)", value: "DRIVER_LICENSE_FRONT" },
-  { label: "W-9", value: "W9" },
-  { label: "Other", value: "OTHER" },
-];
-
-const LEGAL_BUSINESS_TYPES = [
-  { label: "Sole Proprietor", value: "SOLE_PROPRIETOR" },
-  { label: "LLC", value: "LLC" },
-  { label: "Corporation", value: "CORPORATION" },
-  { label: "Partnership", value: "PARTNERSHIP" },
-];
-
-const documentTypeLabel = (value) =>
-  VENDOR_PROFILE_DOCUMENT_TYPES.find((item) => item.value === value)?.label ||
-  "Vendor document";
 
 const MediaLinksComponent = ({
   dropdownData,
@@ -235,21 +203,10 @@ const EditProfileScreen = ({ navigation }) => {
   const [selectedLogo, setSelectedLogo] = useState(null);
   const [selectedMediaType, setSelectedMediaType] = useState(null);
   const [selectedPhotos, setSelectedPhotos] = useState([]);
-  const [selectedDocuments, setSelectedDocuments] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [foodTruckName, setFoodTruckName] = useState("");
-  const [legalBusinessName, setLegalBusinessName] = useState("");
-  const [dba, setDba] = useState("");
-  const [legalBusinessType, setLegalBusinessType] = useState(null);
-  const [taxedAsSCorporation, setTaxedAsSCorporation] = useState(false);
-  const [businessRegistrationState, setBusinessRegistrationState] = useState("");
-  const [selectedEmpNumberType, setSelectedEmpNumberType] = useState("ein");
-  const [selectedEmpNumberText, setSelectedEmpNumberText] = useState("");
-  const [originalEmpNumberType, setOriginalEmpNumberType] = useState("ein");
-  const [existingEmpNumberMasked, setExistingEmpNumberMasked] = useState("");
-  const [hasExistingEmpNumber, setHasExistingEmpNumber] = useState(false);
   const [email, setEmail] = useState("");
   const [countryPickerVisible, setCountryPickerVisible] = useState(false);
   const [countryCode, setCountryCode] = useState("+1");
@@ -300,16 +257,6 @@ const EditProfileScreen = ({ navigation }) => {
     if (!value.trim()) return "Mobile number is required";
     if (value?.length < 10) return "Enter a valid 10-digit number";
     return "";
-  };
-
-  const validateEinNumber = (text) => {
-    const digitsOnly = text.replace(/\D/g, "");
-    return digitsOnly.length === 9 ? "" : "Please enter a valid 9-digit EIN";
-  };
-
-  const validateSsnNumber = (text) => {
-    const digitsOnly = text.replace(/\D/g, "");
-    return digitsOnly.length === 9 ? "" : "Please enter a valid 9-digit SSN";
   };
 
   const onPressUploadLogo = () => {
@@ -464,188 +411,6 @@ const EditProfileScreen = ({ navigation }) => {
     setSelectedPhotos(tempPhotos);
   };
 
-  const normalizeDocumentName = (value) =>
-    String(value || "")
-      .trim()
-      .toLowerCase();
-
-  const askReplaceDocument = (fileName) =>
-    new Promise((resolve) => {
-      Alert.alert(
-        "Replace existing file?",
-        `A document named "${fileName}" already exists. Do you want to replace the existing file?`,
-        [
-          { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
-          {
-            text: "Replace",
-            style: "destructive",
-            onPress: () => resolve(true),
-          },
-        ]
-      );
-    });
-
-  const addSelectedDocumentsFromFiles = async (files = [], selectedType) => {
-    const documentType = selectedType?.value || "OTHER";
-    const documentLabel = selectedType?.label || documentTypeLabel(documentType);
-    const existingNames = new Set(
-      (user?.foodTruck?.documents || [])
-        .filter((document) => document?.document_status !== "ARCHIVED")
-        .map((document) => document.title || document.original_name)
-        .map(normalizeDocumentName)
-        .filter(Boolean)
-    );
-    const existingTypes = new Set(
-      (user?.foodTruck?.documents || [])
-        .filter((document) => document?.document_status !== "ARCHIVED")
-        .map((document) => document.document_type_label || document.title)
-        .map(normalizeDocumentName)
-        .filter(Boolean)
-    );
-    let nextSelectedDocuments = [...selectedDocuments];
-    const selectedNames = new Set(
-      nextSelectedDocuments
-        .map((document) => document.documentLabel || document.name)
-        .map(normalizeDocumentName)
-        .filter(Boolean)
-    );
-
-    for (const file of files) {
-      const fileName = normalizeDocumentName(file.name);
-      const labelName = normalizeDocumentName(documentLabel);
-      if (!fileName && !labelName) continue;
-
-      if (existingNames.has(fileName) || existingTypes.has(labelName)) {
-        const shouldReplace = await askReplaceDocument(
-          documentLabel || file.name || "Vendor document"
-        );
-        if (!shouldReplace) continue;
-        nextSelectedDocuments = nextSelectedDocuments.filter(
-          (document) =>
-            normalizeDocumentName(document.name) !== fileName &&
-            normalizeDocumentName(document.documentLabel) !== labelName
-        );
-        nextSelectedDocuments.push({
-          ...file,
-          documentType,
-          documentLabel,
-          replaceExisting: true,
-        });
-        continue;
-      }
-
-      if (selectedNames.has(labelName) || selectedNames.has(fileName)) {
-        const shouldReplace = await askReplaceDocument(
-          documentLabel || file.name || "Vendor document"
-        );
-        if (!shouldReplace) continue;
-        nextSelectedDocuments = nextSelectedDocuments.filter(
-          (document) =>
-            normalizeDocumentName(document.name) !== fileName &&
-            normalizeDocumentName(document.documentLabel) !== labelName
-        );
-      } else {
-        selectedNames.add(labelName);
-        selectedNames.add(fileName);
-      }
-
-      nextSelectedDocuments.push({ ...file, documentType, documentLabel });
-    }
-
-    setSelectedDocuments(nextSelectedDocuments);
-  };
-
-  const onPressUploadDocumentFiles = async (selectedType) => {
-    try {
-      const pickedFiles = await DocumentPicker.pick({
-        allowMultiSelection: true,
-        type: [types.pdf, types.images],
-      });
-      await addSelectedDocumentsFromFiles(pickedFiles, selectedType);
-    } catch (error) {
-      if (!DocumentPicker.isCancel(error)) {
-        console.log("document picker error => ", error);
-      }
-    }
-  };
-
-  const onPressUploadDocumentPhotos = async (selectedType) => {
-    try {
-      const permissionStatus = await photosPermissionStatus();
-      if (permissionStatus !== RESULTS.GRANTED) return;
-
-      const images = await ImagePicker.openPicker({
-        multiple: true,
-        cropping: false,
-        mediaType: "photo",
-      });
-      const imageList = Array.isArray(images) ? images : [images];
-      const documents = imageList.map((image, index) => ({
-        mode: "photo",
-        uri: image?.path,
-        name:
-          image?.filename ||
-          image?.path?.split("/").pop() ||
-          `vendor-document-${Date.now()}-${index}.jpg`,
-        type: image?.mime || "image/jpeg",
-      }));
-
-      await addSelectedDocumentsFromFiles(documents, selectedType);
-    } catch (error) {
-      console.log("document photo picker error => ", error);
-    }
-  };
-
-  const onPressUploadDocumentCamera = async (selectedType) => {
-    try {
-      const cameraStatus = await cameraPermissionStatus();
-      if (cameraStatus !== RESULTS.GRANTED) return;
-
-      const image = await ImagePicker.openCamera({
-        cropping: false,
-        mediaType: "photo",
-      });
-      const fallbackName = `vendor-document-${Date.now()}.jpg`;
-      const cameraDocument = {
-        mode: "camera",
-        uri: image?.path,
-        name: image?.filename || image?.path?.split("/").pop() || fallbackName,
-        type: image?.mime || "image/jpeg",
-      };
-
-      await addSelectedDocumentsFromFiles([cameraDocument], selectedType);
-    } catch (error) {
-      console.log("document camera error => ", error);
-    }
-  };
-
-  const showDocumentSourceOptions = (selectedType) => {
-    Alert.alert(`Upload ${selectedType.label}`, "Choose how to add this document.", [
-      { text: "Camera", onPress: () => onPressUploadDocumentCamera(selectedType) },
-      { text: "Photos", onPress: () => onPressUploadDocumentPhotos(selectedType) },
-      { text: "Files", onPress: () => onPressUploadDocumentFiles(selectedType) },
-      { text: "Cancel", style: "cancel" },
-    ]);
-  };
-
-  const onPressUploadDocuments = () => {
-    Alert.alert(
-      "Document Type",
-      "Select the type of document you are uploading.",
-      [
-        ...VENDOR_PROFILE_DOCUMENT_TYPES.map((documentType) => ({
-          text: documentType.label,
-          onPress: () => showDocumentSourceOptions(documentType),
-        })),
-        { text: "Cancel", style: "cancel" },
-      ]
-    );
-  };
-
-  const onDocumentsRemovePress = (index) => {
-    setSelectedDocuments((prev) => prev.filter((_, i) => i !== index));
-  };
-
   const processSocialMediaResponse = (response, plan) => {
     if (!plan) return;
     const limit = plan === "elite" ? 4 : plan === "platinum" ? 2 : 1;
@@ -693,20 +458,6 @@ const EditProfileScreen = ({ navigation }) => {
 
     // manage food truck name
     setFoodTruckName(FOOD_TRUCK_DATA?.name ? FOOD_TRUCK_DATA.name : "");
-    setLegalBusinessName(FOOD_TRUCK_DATA?.legal_business_name || "");
-    setDba(FOOD_TRUCK_DATA?.dba || "");
-    setLegalBusinessType(FOOD_TRUCK_DATA?.legal_business_type || null);
-    setTaxedAsSCorporation(Boolean(FOOD_TRUCK_DATA?.taxed_as_s_corporation));
-    setBusinessRegistrationState(FOOD_TRUCK_DATA?.business_registration_state || "");
-
-    // manage emp number
-    const taxIdentifierState = getTaxIdentifierEditState(FOOD_TRUCK_DATA);
-    setSelectedEmpNumberText(taxIdentifierState.inputValue);
-    setSelectedEmpNumberType(taxIdentifierState.type);
-    setOriginalEmpNumberType(taxIdentifierState.originalType);
-    setExistingEmpNumberMasked(taxIdentifierState.maskedValue);
-    setHasExistingEmpNumber(taxIdentifierState.hasExisting);
-
     // manage social media links
     processSocialMediaResponse(
       FOOD_TRUCK_DATA?.socialMedia || [],
@@ -772,17 +523,6 @@ const EditProfileScreen = ({ navigation }) => {
     const lnameError = validateLastName(lastName);
     const foodTruckNameError = validateFoodTruckName(foodTruckName);
     const mobileNumberError = validateMobileNumber(mobileNumber);
-    const empNumberError =
-      hasExistingEmpNumber &&
-      !selectedEmpNumberText?.length &&
-      selectedEmpNumberType !== originalEmpNumberType
-        ? `Please enter a valid 9-digit ${selectedEmpNumberType.toUpperCase()}`
-        : selectedEmpNumberText?.length > 0
-        ? selectedEmpNumberType === "ein"
-          ? validateEinNumber(selectedEmpNumberText)
-          : validateSsnNumber(selectedEmpNumberText)
-        : "";
-
     // Additional validations
     let logoError = "";
     let photosError = "";
@@ -815,7 +555,6 @@ const EditProfileScreen = ({ navigation }) => {
       lastName: lnameError,
       foodTruckName: foodTruckNameError,
       mobileNumber: mobileNumberError,
-      empNumber: empNumberError,
       email: emailError,
       logo: logoError,
       photos: photosError,
@@ -828,7 +567,6 @@ const EditProfileScreen = ({ navigation }) => {
       lnameError ||
       foodTruckNameError ||
       mobileNumberError ||
-      empNumberError ||
       emailError ||
       logoError ||
       photosError ||
@@ -864,27 +602,9 @@ const EditProfileScreen = ({ navigation }) => {
       const foodTruckId = user?.foodTruck?._id;
       let foodTruckPayload = {
         name: foodTruckName,
-        legal_business_name: legalBusinessName.trim() || null,
-        dba: dba.trim() || null,
-        legal_business_type: selectedEmpNumberType === "ein" ? legalBusinessType : null,
-        taxed_as_s_corporation:
-          selectedEmpNumberType === "ein" && ["LLC", "CORPORATION"].includes(legalBusinessType)
-            ? taxedAsSCorporation
-            : false,
-        business_registration_state:
-          selectedEmpNumberType === "ein" ? businessRegistrationState.trim().toUpperCase() || null : null,
         infoType: infoType === "Food Truck" ? "truck" : "caterer",
         socialMedia: normalizedSocialMedia,
       };
-      Object.assign(
-        foodTruckPayload,
-        buildTaxIdentifierUpdate({
-          type: selectedEmpNumberType,
-          originalType: originalEmpNumberType,
-          inputValue: selectedEmpNumberText,
-          hasExisting: hasExistingEmpNumber,
-        })
-      );
       //   manage logo image upload
       if (selectedLogo && selectedLogo.old === undefined) {
         // for new file
@@ -938,35 +658,7 @@ const EditProfileScreen = ({ navigation }) => {
         foodTruckId,
       });
       if (foodTruckResponse.success && foodTruckResponse.data) {
-        let updatedFoodTruck = foodTruckResponse.data.foodtruck;
-        for (const document of selectedDocuments) {
-          const formData = new FormData();
-          formData.append("file", {
-            uri: document.uri,
-            name: document.name || "vendor-document",
-            type: document.type || "application/octet-stream",
-          });
-          formData.append(
-            "title",
-            document.documentLabel || document.name || "Vendor document"
-          );
-          formData.append("document_type", document.documentType || "OTHER");
-          if (document.replaceExisting) {
-            formData.append("replace_existing", "true");
-          }
-
-          try {
-            const documentResponse = await uploadFoodTruckDocument_API({
-              foodtruck_id: foodTruckId,
-              payload: formData,
-            });
-            if (documentResponse?.success && documentResponse?.data?.foodtruck) {
-              updatedFoodTruck = documentResponse.data.foodtruck;
-            }
-          } catch (error) {
-            console.log("document upload error => ", error);
-          }
-        }
+        const updatedFoodTruck = foodTruckResponse.data.foodtruck;
         console.log("foodTruckResponse => ", foodTruckResponse.data);
         dispatch(updateFoodTruck(updatedFoodTruck));
         dispatch(
@@ -1236,85 +928,6 @@ const EditProfileScreen = ({ navigation }) => {
                 )}
               </View>
 
-              {/* Optional Documents Upload */}
-              <View style={styles.section}>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 8,
-                  }}
-                >
-                  <View style={{ flex: 1, paddingRight: 12 }}>
-                    <Text style={[styles.label, { marginBottom: 0 }]}>
-                      Permits & Licenses
-                    </Text>
-                    <Text style={styles.optionalText}>
-                      Optional. Upload permits, licenses, insurance, or other
-                      documents.
-                    </Text>
-                  </View>
-                  {selectedDocuments?.length > 0 && (
-                    <TouchableOpacity
-                      hitSlop={5}
-                      activeOpacity={0.7}
-                      onPress={onPressUploadDocuments}
-                    >
-                      <AntDesign
-                        name="plussquareo"
-                        size={20}
-                        color={AppColor.primary}
-                      />
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                {selectedDocuments.length === 0 ? (
-                  <TouchableOpacity
-                    style={styles.photoUploadContainer}
-                    onPress={onPressUploadDocuments}
-                  >
-                    <FontAwesome6
-                      name="file-arrow-up"
-                      color={AppColor.black}
-                      size={20}
-                    />
-                    <Text style={styles.uploadButtonText}>Upload Documents</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <View style={{ gap: 10, marginTop: 10 }}>
-                    {selectedDocuments.map((document, index) => (
-                      <View
-                        key={`${document.uri}-${index}`}
-                        style={styles.documentRow}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.documentName} numberOfLines={1}>
-                            {document.documentLabel || "Vendor document"}
-                          </Text>
-                          <Text style={styles.documentMeta} numberOfLines={1}>
-                            {document.name || document.type || "Document"}
-                          </Text>
-                        </View>
-                        <TouchableOpacity
-                          hitSlop={5}
-                          onPress={() => onDocumentsRemovePress(index)}
-                          activeOpacity={0.7}
-                        >
-                          <FontAwesome6
-                            name="minus"
-                            size={14}
-                            color={AppColor.white}
-                            style={styles.documentRemove}
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </View>
-
               {/* Radio Buttons */}
               <View style={styles.radioContainer}>
                 {["Food Truck", "Food Caterer"].map((type) => (
@@ -1443,198 +1056,6 @@ const EditProfileScreen = ({ navigation }) => {
                     style={styles.helper}
                   >
                     {errors.foodTruckName}
-                  </HelperText>
-                )}
-              </View>
-
-              <View style={styles.section}>
-                <Text style={styles.inputLabel}>Legal Business Name</Text>
-                <TextInput
-                  dense
-                  value={legalBusinessName}
-                  onChangeText={setLegalBusinessName}
-                  style={styles.input}
-                  contentStyle={styles.inputText}
-                  placeholder="Name used on your W-9 and license"
-                  placeholderTextColor={AppColor.placeholderTextColor}
-                  mode="outlined"
-                  outlineColor={AppColor.border}
-                  activeOutlineColor={AppColor.primary}
-                  outlineStyle={{ borderRadius: 8 }}
-                  autoCapitalize="words"
-                />
-                <Text style={styles.helper}>Use the legal name shown on your compliance documents.</Text>
-                <Text style={[styles.inputLabel, { marginTop: 12 }]}>DBA (optional)</Text>
-                <TextInput
-                  dense
-                  value={dba}
-                  onChangeText={setDba}
-                  style={styles.input}
-                  contentStyle={styles.inputText}
-                  placeholder="Doing business as"
-                  placeholderTextColor={AppColor.placeholderTextColor}
-                  mode="outlined"
-                  outlineColor={AppColor.border}
-                  activeOutlineColor={AppColor.primary}
-                  outlineStyle={{ borderRadius: 8 }}
-                  autoCapitalize="words"
-                />
-              </View>
-
-              {selectedEmpNumberType === "ein" ? (
-                <View style={styles.section}>
-                  <Text style={styles.inputLabel}>Legal Business Type</Text>
-                  <Dropdown
-                    data={LEGAL_BUSINESS_TYPES}
-                    labelField="label"
-                    valueField="value"
-                    value={legalBusinessType}
-                    onChange={(item) => {
-                      setLegalBusinessType(item.value);
-                      if (!["LLC", "CORPORATION"].includes(item.value)) setTaxedAsSCorporation(false);
-                    }}
-                    placeholder="Select business type"
-                    style={[styles.input, { paddingHorizontal: 12 }]}
-                    containerStyle={{ width: width - 34 }}
-                    placeholderStyle={{ fontFamily: Mulish400, color: AppColor.placeholderTextColor }}
-                    selectedTextStyle={{ fontFamily: Mulish400 }}
-                    itemTextStyle={{ fontFamily: Mulish400 }}
-                  />
-                  <View style={{ marginTop: 12 }}>
-                    <StatePickerModal
-                      label="Registration State"
-                      value={businessRegistrationState}
-                      onChange={setBusinessRegistrationState}
-                    />
-                  </View>
-                  {["LLC", "CORPORATION"].includes(legalBusinessType) ? (
-                    <TouchableOpacity
-                      style={{ flexDirection: "row", alignItems: "center", marginTop: 14 }}
-                      onPress={() => setTaxedAsSCorporation((value) => !value)}
-                    >
-                      <FontAwesome6 name={taxedAsSCorporation ? "square-check" : "square"} size={20} color={AppColor.primary} />
-                      <Text style={[styles.inputLabel, { marginLeft: 10, marginBottom: 0 }]}>Taxed as an S-Corporation</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
-              ) : null}
-
-              {/* EIN/SSN Number */}
-              <View style={styles.section}>
-                <Text style={styles.inputLabel}>{"EIN/SSN Number"}</Text>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    borderWidth: 1,
-                    borderColor: AppColor.border,
-                    borderRadius: 8,
-                  }}
-                >
-                  <View style={{ width: 80 }}>
-                    <Dropdown
-                      data={empNumberList}
-                      labelField="label"
-                      valueField="type"
-                      value={selectedEmpNumberType}
-                      onChange={(item) => {
-                        setSelectedEmpNumberType(item.type);
-                        if (!selectedEmpNumberText?.trim()?.length) {
-                          setErrors((prev) => ({
-                            ...prev,
-                            empNumber: "",
-                          }));
-                          return;
-                        }
-                        if (item.type === "ein") {
-                          setErrors((prev) => ({
-                            ...prev,
-                            empNumber: validateEinNumber(selectedEmpNumberText),
-                          }));
-                        } else {
-                          setErrors((prev) => ({
-                            ...prev,
-                            empNumber: validateSsnNumber(selectedEmpNumberText),
-                          }));
-                        }
-                      }}
-                      placeholder={""}
-                      style={{
-                        height: 46,
-                        paddingHorizontal: 12,
-                      }}
-                      containerStyle={{ width: width - 50 }}
-                      placeholderStyle={{
-                        fontFamily: Mulish400,
-                        color: AppColor.textHighlighter,
-                        position: "absolute",
-                      }}
-                      itemTextStyle={{ fontFamily: Mulish400 }}
-                      selectedTextStyle={{ fontFamily: Mulish400 }}
-                      renderItem={(item) => (
-                        <View
-                          style={{
-                            paddingVertical: 10,
-                            paddingHorizontal: 16,
-                          }}
-                        >
-                          <Text
-                            style={[styles.dropdownText, { marginLeft: 0 }]}
-                          >
-                            {`${item.label} Number`}
-                          </Text>
-                        </View>
-                      )}
-                    />
-                  </View>
-
-                  <View
-                    style={{
-                      width: 1,
-                      height: "100%",
-                      backgroundColor: AppColor.border,
-                    }}
-                  />
-
-                  <NativeTextInput
-                    value={
-                      selectedEmpNumberType === "ein"
-                        ? formatEIN(selectedEmpNumberText)
-                        : formatSSN(selectedEmpNumberText)
-                    }
-                    onChangeText={(txt) => {
-                      // Remove non-digits and limit to 9 characters
-                      const digitsOnly = txt.replace(/\D/g, "").slice(0, 9);
-                      setSelectedEmpNumberText(digitsOnly);
-
-                      if (digitsOnly.length === 0 || digitsOnly.length === 9) {
-                        setErrors((prev) => ({
-                          ...prev,
-                          empNumber: "",
-                        }));
-                      }
-                    }}
-                    style={styles.inputForMedia}
-                    placeholder={
-                      existingEmpNumberMasked &&
-                      selectedEmpNumberType === originalEmpNumberType
-                        ? existingEmpNumberMasked
-                        : selectedEmpNumberType === "ein"
-                          ? "XX-XXXXXXX"
-                          : "XXX-XX-XXXX"
-                    }
-                    placeholderTextColor={AppColor.placeholderTextColor}
-                    keyboardType="number-pad"
-                    maxLength={11}
-                  />
-                </View>
-                {!!errors.empNumber && (
-                  <HelperText
-                    type="error"
-                    visible={!!errors.empNumber}
-                    style={[styles.helper, { marginBottom: 0 }]}
-                  >
-                    {errors.empNumber}
                   </HelperText>
                 )}
               </View>

@@ -27,6 +27,7 @@ import {
   startVendorComplianceVerification_API,
   startVendorComplianceW9Signing_API,
   completeVendorComplianceW9Signing_API,
+  updateUserDetail_API,
   updateFoodTruckProfile_API,
   uploadVendorComplianceDocument_API,
 } from "../api/appAPI";
@@ -43,7 +44,6 @@ import {
   formatSSN,
   getTaxIdentifierEditState,
 } from "../helpers/profile.helper";
-import { empNumberList } from "../utils/constants";
 import {
   getEffectiveFoodVendorPlan,
   isTapToPaySetupEligible,
@@ -104,6 +104,11 @@ const getRequirementStateKey = (requirement = {}) =>
   requirement?.document_scope === "TRUCK_UNIT"
     ? `TRUCK_UNIT:${requirement.type}`
     : requirement.type;
+
+const addressValue = (value) => {
+  const text = String(value || "").trim();
+  return text.toUpperCase() === "NA" ? "" : text;
+};
 
 const parsePendingW9Signing = (value) => {
   if (!value) return null;
@@ -283,6 +288,11 @@ const VendorComplianceScreen = ({ navigation, route }) => {
   const [businessRegistrationState, setBusinessRegistrationState] = useState("");
   const [taxIdentifierType, setTaxIdentifierType] = useState("ein");
   const [taxIdentifierText, setTaxIdentifierText] = useState("");
+  const [mailingAddressLine1, setMailingAddressLine1] = useState("");
+  const [mailingAddressLine2, setMailingAddressLine2] = useState("");
+  const [mailingCity, setMailingCity] = useState("");
+  const [mailingState, setMailingState] = useState("");
+  const [mailingPostal, setMailingPostal] = useState("");
   const [expirationDates, setExpirationDates] = useState({});
   const [manualSanitationGrades, setManualSanitationGrades] = useState({});
   const [documentRevisionTypes, setDocumentRevisionTypes] = useState({});
@@ -307,7 +317,19 @@ const VendorComplianceScreen = ({ navigation, route }) => {
     setBusinessRegistrationState(foodTruck.business_registration_state || "");
     setTaxIdentifierType(taxIdentifier.type);
     setTaxIdentifierText(taxIdentifier.inputValue || "");
-  }, [user?.foodTruck]);
+    setMailingAddressLine1(addressValue(foodTruck?.addressLine1 || user?.addressLine1));
+    setMailingAddressLine2(addressValue(foodTruck?.addressLine2 || user?.addressLine2));
+    setMailingCity(addressValue(foodTruck?.addressCity || user?.addressCity));
+    setMailingState(addressValue(foodTruck?.addressState || user?.addressState));
+    setMailingPostal(addressValue(foodTruck?.addressPostal || user?.addressPostal));
+  }, [
+    user?.addressCity,
+    user?.addressLine1,
+    user?.addressLine2,
+    user?.addressPostal,
+    user?.addressState,
+    user?.foodTruck,
+  ]);
 
   useEffect(() => {
     if (!editingLegalPayee) resetLegalPayeeDraft();
@@ -795,6 +817,10 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       Alert.alert("Legal Payee", "Select the legal business type and registration state.");
       return;
     }
+    if (!mailingAddressLine1.trim() || !mailingCity.trim() || !mailingState || !mailingPostal.trim()) {
+      Alert.alert("Legal Payee", "Enter your mailing address, city, state, and ZIP code.");
+      return;
+    }
 
     setSavingLegalPayee(true);
     try {
@@ -809,6 +835,19 @@ const VendorComplianceScreen = ({ navigation, route }) => {
           inputValue: taxIdentifierText,
         }),
       };
+      const addressResponse = await updateUserDetail_API({
+        user_id: user?._id,
+        payload: {
+          addressLine1: mailingAddressLine1.trim(),
+          addressLine2: mailingAddressLine2.trim() || null,
+          addressCity: mailingCity.trim(),
+          addressState: mailingState,
+          addressPostal: mailingPostal.trim(),
+          addressCountry: user?.addressCountry && String(user.addressCountry).toUpperCase() !== "NA"
+            ? user.addressCountry
+            : "US",
+        },
+      });
       const response = await updateFoodTruckProfile_API({
         foodTruckId,
         payload,
@@ -816,7 +855,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       const updatedFoodTruck = response?.data?.foodtruck;
       if (!updatedFoodTruck) throw new Error("The legal payee information was not saved.");
 
-      dispatch(setUser({ ...user, foodTruck: updatedFoodTruck }));
+      dispatch(setUser({ ...(addressResponse?.data?.user || user), foodTruck: updatedFoodTruck }));
       setEditingLegalPayee(false);
       await loadCompliance();
       Alert.alert(
@@ -1000,7 +1039,17 @@ const VendorComplianceScreen = ({ navigation, route }) => {
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.foodTruckSelectCard}>
-            <Text style={styles.foodTruckSelectLabel}>Food Truck</Text>
+            <View style={styles.labelWithInfo}>
+              <Text style={styles.foodTruckSelectLabel}>Food Truck</Text>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Food truck document information"
+                onPress={() => Alert.alert("Food Truck", "Use the dropdown to add Permit/Business License and sanitation grade documents for each food truck.")}
+                style={styles.infoIconButton}
+              >
+                <Ionicons name="information-circle-outline" size={18} color={AppColor.primary} />
+              </TouchableOpacity>
+            </View>
             <Dropdown
               data={foodTruckOptions}
               labelField="label"
@@ -1057,6 +1106,21 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 
             {editingLegalPayee ? (
               <>
+                <Text style={styles.legalFieldLabel}>Account Type *</Text>
+                <View style={styles.accountTypeRow}>
+                  {[
+                    { label: "Business", value: "ein" },
+                    { label: "Individual", value: "ssn" },
+                  ].map((option) => (
+                    <TouchableOpacity
+                      key={option.value}
+                      onPress={() => setTaxIdentifierType(option.value)}
+                      style={[styles.accountTypeOption, taxIdentifierType === option.value && styles.accountTypeOptionSelected]}
+                    >
+                      <Text style={[styles.accountTypeText, taxIdentifierType === option.value && styles.accountTypeTextSelected]}>{option.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
                 <Text style={styles.legalFieldLabel}>
                   {taxIdentifierType === "ssn" ? "Legal Name *" : "Legal Business Name *"}
                 </Text>
@@ -1101,17 +1165,6 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                     </View>
                   </>
                 ) : null}
-                <Text style={styles.legalFieldLabel}>Tax Identifier Type *</Text>
-                <Dropdown
-                  data={empNumberList}
-                  labelField="label"
-                  valueField="type"
-                  value={taxIdentifierType}
-                  onChange={(item) => setTaxIdentifierType(item.type)}
-                  style={styles.legalDropdown}
-                  selectedTextStyle={styles.legalDropdownText}
-                  itemTextStyle={styles.legalDropdownText}
-                />
                 <Text style={styles.legalFieldLabel}>
                   {taxIdentifierType === "ssn" ? "SSN" : "EIN"}
                 </Text>
@@ -1125,6 +1178,18 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                   keyboardType="number-pad"
                   style={styles.legalInput}
                 />
+                <Text style={styles.legalAddressTitle}>Mailing Address</Text>
+                <Text style={styles.legalFieldLabel}>Address Line 1 *</Text>
+                <TextInput value={mailingAddressLine1} onChangeText={setMailingAddressLine1} placeholder="Street address" placeholderTextColor={AppColor.placeholderTextColor} style={styles.legalInput} />
+                <Text style={styles.legalFieldLabel}>Address Line 2</Text>
+                <TextInput value={mailingAddressLine2} onChangeText={setMailingAddressLine2} placeholder="Apartment, suite, or unit" placeholderTextColor={AppColor.placeholderTextColor} style={styles.legalInput} />
+                <Text style={styles.legalFieldLabel}>City *</Text>
+                <TextInput value={mailingCity} onChangeText={setMailingCity} placeholder="City" placeholderTextColor={AppColor.placeholderTextColor} style={styles.legalInput} />
+                <View style={styles.legalStatePicker}>
+                  <StatePickerModal label="Mailing State *" value={mailingState} onChange={setMailingState} />
+                </View>
+                <Text style={styles.legalFieldLabel}>ZIP Code *</Text>
+                <TextInput value={mailingPostal} onChangeText={setMailingPostal} placeholder="ZIP code" placeholderTextColor={AppColor.placeholderTextColor} keyboardType="numbers-and-punctuation" style={styles.legalInput} />
                 <View style={styles.legalActions}>
                   <TouchableOpacity
                     onPress={() => {
@@ -1152,7 +1217,7 @@ const VendorComplianceScreen = ({ navigation, route }) => {
                   {user?.foodTruck?.legal_business_name || "Legal payee information not completed"}
                 </Text>
                 <Text style={styles.legalPayeeDetails}>
-                  {getTaxIdentifierEditState(user?.foodTruck).type.toUpperCase()} · {user?.foodTruck?.tax_identifier_masked || "Not provided"}
+                  Account Type: {getTaxIdentifierEditState(user?.foodTruck).type === "ssn" ? "Individual" : "Business"} · {getTaxIdentifierEditState(user?.foodTruck).type.toUpperCase()} · {user?.foodTruck?.tax_identifier_masked || "Not provided"}
                   {user?.foodTruck?.business_registration_state ? ` · ${user.foodTruck.business_registration_state}` : ""}
                 </Text>
               </>
@@ -1211,7 +1276,17 @@ const VendorComplianceScreen = ({ navigation, route }) => {
             </View>
           </View>}
 
-	          <Text style={styles.sectionTitle}>Legal Payee Compliance</Text>
+	          <View style={styles.sectionTitleRow}>
+                <Text style={styles.sectionTitle}>Legal Payee Compliance</Text>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Legal payee compliance information"
+                  onPress={() => Alert.alert("Legal Payee Compliance", "Certificate of Insurance, Liquor License, Driver License, and/or W-9 are specifically applied to the legal payee.")}
+                  style={styles.infoIconButton}
+                >
+                  <Ionicons name="information-circle-outline" size={18} color={AppColor.primary} />
+                </TouchableOpacity>
+              </View>
 	          {allDisplayedRequirements.map((requirement, requirementIndex) => {
             const document = requirement.document;
 		            const requirementKey = getRequirementStateKey(requirement);
@@ -1248,7 +1323,17 @@ const VendorComplianceScreen = ({ navigation, route }) => {
 	            return (
 	              <React.Fragment key={requirementKey}>
                   {requirement.document_scope === "TRUCK_UNIT" && requirementIndex === displayedRequirements.length ? (
-                    <Text style={styles.sectionTitle}>Selected Food Truck Operations</Text>
+                    <View style={styles.sectionTitleRow}>
+                      <Text style={styles.sectionTitle}>Documents per Selected Food Truck</Text>
+                      <TouchableOpacity
+                        accessibilityRole="button"
+                        accessibilityLabel="Food truck operational document information"
+                        onPress={() => Alert.alert("Documents per Selected Food Truck", "Sanitation Grade and Permit/Business License are applied to each food truck.")}
+                        style={styles.infoIconButton}
+                      >
+                        <Ionicons name="information-circle-outline" size={18} color={AppColor.primary} />
+                      </TouchableOpacity>
+                    </View>
                   ) : null}
 	              <View style={styles.documentCard}>
 	                <TouchableOpacity
@@ -1696,7 +1781,15 @@ const styles = StyleSheet.create({
     fontFamily: Mulish700,
     fontSize: 14,
     color: AppColor.black,
+  },
+  labelWithInfo: {
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 8,
+  },
+  infoIconButton: {
+    marginLeft: 5,
+    padding: 2,
   },
   foodTruckDropdown: {
     minHeight: 44,
@@ -1757,6 +1850,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: AppColor.primary,
     padding: 4,
+  },
+  accountTypeRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 4,
+  },
+  accountTypeOption: {
+    borderWidth: 1,
+    borderColor: "#B9C8BE",
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  accountTypeOptionSelected: {
+    backgroundColor: AppColor.primary,
+    borderColor: AppColor.primary,
+  },
+  accountTypeText: {
+    fontFamily: Mulish600,
+    color: AppColor.black,
+    fontSize: 13,
+  },
+  accountTypeTextSelected: {
+    color: AppColor.white,
+  },
+  legalAddressTitle: {
+    fontFamily: Mulish700,
+    color: AppColor.black,
+    fontSize: 14,
+    marginTop: 18,
+    marginBottom: 2,
   },
   legalPayeeValue: {
     fontFamily: Mulish600,
@@ -1946,6 +2070,10 @@ const styles = StyleSheet.create({
     color: AppColor.black,
     marginBottom: 10,
     marginTop: 8,
+  },
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   documentCard: {
     borderWidth: 1,

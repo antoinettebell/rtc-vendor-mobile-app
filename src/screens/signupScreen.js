@@ -66,6 +66,7 @@ const SignUpScreen = ({ navigation }) => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [foodTruckName, setFoodTruckName] = useState("");
+  const [legalBusinessName, setLegalBusinessName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -212,6 +213,10 @@ const SignUpScreen = ({ navigation }) => {
     const foodTruckNameError = validateFoodTruckName(foodTruckName);
     if (foodTruckNameError) newErrors.foodTruckName = foodTruckNameError;
 
+    if (!isMarketplaceVendor && !legalBusinessName.trim()) {
+      newErrors.legalBusinessName = "Legal business name is required";
+    }
+
     const mobileError = validateMobileNumber(mobileNumber);
     if (mobileError) newErrors.mobileNumber = mobileError;
 
@@ -260,7 +265,7 @@ const SignUpScreen = ({ navigation }) => {
       ...(isMarketplaceVendor ? { eventVendorBusinessName: foodTruckName } : {}),
       ...(isMarketplaceVendor
         ? {}
-        : { foodTruck: { name: foodTruckName, infoType: "truck" } }),
+        : { foodTruck: { name: foodTruckName, legal_business_name: legalBusinessName.trim(), infoType: "truck" } }),
       email,
       password,
       countryCode,
@@ -468,6 +473,28 @@ const SignUpScreen = ({ navigation }) => {
                   {errors.foodTruckName}
                 </HelperText>
               )}
+
+              {!isMarketplaceVendor ? (
+                <>
+                  <Text style={[styles.inputLabel, { marginTop: 16 }]}>Legal Business Name *</Text>
+                  <TextInput
+                    dense
+                    value={legalBusinessName}
+                    onChangeText={setLegalBusinessName}
+                    style={styles.input}
+                    contentStyle={styles.inputText}
+                    placeholder="Name used on tax documents"
+                    placeholderTextColor={AppColor.placeholderTextColor}
+                    mode="outlined"
+                    error={!!errors.legalBusinessName}
+                    outlineColor={AppColor.border}
+                    activeOutlineColor={AppColor.primary}
+                    outlineStyle={{ borderRadius: 8 }}
+                    autoCapitalize="words"
+                  />
+                  {!!errors.legalBusinessName && <HelperText type="error" visible style={styles.helper}>{errors.legalBusinessName}</HelperText>}
+                </>
+              ) : null}
 
               {/* Mailing Information */}
               <View style={styles.sectionHeaderContainer}>
