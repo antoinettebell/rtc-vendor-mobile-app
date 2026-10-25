@@ -273,7 +273,12 @@ export default function EventVendorComplianceScreen({ navigation }) {
       return Alert.alert("Verification", `Complete ${incompleteInternal.map((item) => item.label).join(", ")} before verification.`);
     }
     setRequestingVerification(true);
-    try { await startEventVendorComplianceVerification_API(); await load(); }
+    try {
+      await startEventVendorComplianceVerification_API(
+        cobaltTinCanRetry ? "TIN" : (cobaltStateCanRetry || cobaltStateCanRefresh ? "SOS" : null),
+      );
+      await load();
+    }
     catch (error) { Alert.alert("Verification", error?.message || "Unable to start verification."); }
     finally { setRequestingVerification(false); }
   };
@@ -285,7 +290,17 @@ export default function EventVendorComplianceScreen({ navigation }) {
   const verificationChecks = [{ type: "TIN", label: "EIN Verification" }, { type: "SOS", label: "State Verification" }]
     .map((item) => ({ ...item, status: checksByType[item.type]?.status || "NOT_STARTED" }));
   const internalReady = (compliance?.requirements || []).filter((item) => !["EXTERNAL_IDENTITY_VERIFICATION", "COBALT_TIN", "COBALT_SOS"].includes(item.key)).every((item) => item.complete);
-  const verificationDisabled = !internalReady || requestingVerification || verificationStatus === "PASSED";
+  const cobaltStateCanRetry = verification.provider === "COBALT" && ["FAILED", "RETRYABLE_ERROR"].includes(checksByType.SOS?.status);
+  const cobaltStateCanRefresh = verification.provider === "COBALT" && checksByType.SOS?.status === "PENDING" && Boolean(checksByType.SOS?.provider_reference);
+  const cobaltTinCanRetry = verification.provider === "COBALT"
+    && checksByType.TIN?.status === "PENDING"
+    && !checksByType.TIN?.provider_reference
+    && checksByType.TIN?.submitted_at
+    && Date.now() - new Date(checksByType.TIN.submitted_at).getTime() >= 15 * 60 * 1000;
+  const verificationCanRefresh = (verificationStatus === "PENDING" && verification.provider === "COMPLYCUBE") || cobaltTinCanRetry || cobaltStateCanRetry || cobaltStateCanRefresh;
+  const verificationDisabled = !internalReady || requestingVerification || verificationStatus === "PASSED" || (
+    verificationStatus === "PENDING" && !verificationCanRefresh
+  );
   const openDocument = async (url) => {
     try {
       if (!url || !(await Linking.canOpenURL(url))) throw new Error("Document is unavailable.");
@@ -306,7 +321,7 @@ export default function EventVendorComplianceScreen({ navigation }) {
       <View style={s.card}><Text style={s.label}>{partyType === "BUSINESS" ? "Business License" : "Driver License — Front Only"}</Text><Text style={s.copy}>Required before Marketplace Vendor participation can be verified.</Text><Text style={s.status}>{document ? `Ready to upload: ${document.name}` : uploaded ? getDocumentLifecycleText(uploaded) : "Not uploaded"}</Text>{uploaded ? <Text style={s.copy}>{getOcrStatusText(uploaded)}</Text> : null}{uploaded?.original_name ? <Text style={s.copy}>Uploaded: {uploaded.original_name}</Text> : null}{uploaded?.file_url ? <TouchableOpacity style={s.secondary} onPress={() => openDocument(uploaded.file_url)}><Text style={s.secondaryText}>Open</Text></TouchableOpacity> : null}<TouchableOpacity style={s.secondary} onPress={chooseDocument}><Text style={s.secondaryText}>{uploaded || document ? "Replace Document" : "Choose Document"}</Text></TouchableOpacity></View>
       <View style={s.card}><Text style={s.label}>Signed W-9</Text><Text style={s.copy}>Required before Marketplace Vendor participation can be verified.</Text><View style={s.infoRow}><Ionicons name="information-circle-outline" size={18} color={AppColor.primary} /><Text style={s.infoText}>Individual Name and Business Name must be exactly as printed on the Business License or Driver License.</Text></View><Text style={s.status}>{session?.status === "SIGNED" ? getW9LifecycleText(session) : session?.status === "SENT" ? "Waiting for DocuSign signature confirmation" : "Not signed"}</Text>{session?.status === "SIGNED" ? <Text style={s.copy}>{getOcrStatusText(session)}</Text> : null}{session?.signed_document_url ? <TouchableOpacity style={s.secondary} onPress={() => openDocument(session.signed_document_url)}><Text style={s.secondaryText}>Open</Text></TouchableOpacity> : null}<TouchableOpacity style={s.secondary} onPress={startW9}><Text style={s.secondaryText}>{session ? "Replace W-9" : "Sign W-9"}</Text></TouchableOpacity></View>
       <TouchableOpacity style={s.primary} disabled={saving} onPress={save}><Text style={s.primaryText}>{saving ? "Saving…" : "Save & Run OCR"}</Text></TouchableOpacity>
-      <TouchableOpacity style={[s.primary, verificationDisabled && s.disabled]} disabled={verificationDisabled} onPress={verify}><Text style={s.primaryText}>{requestingVerification ? "Verifying…" : verificationStatus === "PENDING" ? "Verification Pending" : verificationStatus === "PASSED" ? "Verification Complete" : "Verification"}</Text></TouchableOpacity>
+      <TouchableOpacity style={[s.primary, verificationDisabled && s.disabled]} disabled={verificationDisabled} onPress={verify}><Text style={s.primaryText}>{requestingVerification ? "Verifying…" : verificationStatus === "PENDING" ? cobaltTinCanRetry ? "Retry EIN Verification" : cobaltStateCanRetry ? "Retry State Verification" : cobaltStateCanRefresh ? "Check State Verification Status" : verificationCanRefresh ? "Check Verification Status" : "Verification Pending" : verificationStatus === "PASSED" ? "Verification Complete" : "Verification"}</Text></TouchableOpacity>
     </ScrollView>
   </MarketplaceVendorScreenLayout>;
 }
