@@ -156,7 +156,7 @@ const SignUpScreen = ({ navigation }) => {
   };
 
   const validateMailingAddressLine2 = (value) => {
-    // if (!value.trim()) return "Address Line 2 is required";
+    if (!value.trim()) return "";
     if (!addressRegex.test(value)) {
       return "Address must contain only letters, numbers, and basic punctuation.";
     }
