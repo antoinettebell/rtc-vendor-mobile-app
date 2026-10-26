@@ -10,9 +10,15 @@ const {
   getPlanAddOnsForFlow,
   reconcileSelectedAddOnsForPlan,
   isAdSpaceAddOn,
+  isVendorSignupPlan,
 } = await import(
   `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`,
 );
+
+assert.equal(isVendorSignupPlan({ slug: "SUB_BASIC" }), true);
+assert.equal(isVendorSignupPlan({ slug: "SUB_MARKETPLACE_VENDOR" }), true);
+assert.equal(isVendorSignupPlan({ slug: "SUB_EVENT_COORDINATOR" }), false);
+assert.equal(isVendorSignupPlan({ slug: "SUB_TAP_TO_PAY" }), false);
 
 assert.equal(
   shouldShowPlanAddOns({

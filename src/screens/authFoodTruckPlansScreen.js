@@ -52,6 +52,7 @@ import {
 import {
   getPlanAddOnsForFlow,
   isFoodVendorPlan,
+  isVendorSignupPlan,
   reconcileSelectedAddOnsForPlan,
 } from "../helpers/signupCatalog.helper";
 import { isTapToPaySetupEligible } from "../helpers/foodVendorGuidedSetup.helper";
@@ -449,22 +450,28 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
       const response = await getPlansData_API();
       if (response?.success && response?.data) {
         console.log("response => ", response);
-        setPlansData(response.data.planList);
+        const vendorSignupPlans = (response.data.planList || []).filter(
+          isVendorSignupPlan,
+        );
+        setPlansData(vendorSignupPlans);
         const preferredPlan = preferredPlanSlug
-          ? response.data.planList.find(
+          ? vendorSignupPlans.find(
               (plan) =>
                 plan?.slug === preferredPlanSlug ||
                 (preferredPlanSlug === "SUB_ELITE" && isElitePlan(plan)),
             )
           : null;
-        if (selectedPlan) {
+        const selectedPlanIsAvailable = vendorSignupPlans.some(
+          (plan) => plan._id === selectedPlan?._id,
+        );
+        if (selectedPlan && selectedPlanIsAvailable) {
           // if selected plan is already set, then set the selected plan id and expanded plan id
           setSelectedPlanId(selectedPlan._id);
         } else if (preferredPlan) {
           setSelectedPlanId(preferredPlan._id);
-        } else {
+        } else if (vendorSignupPlans.length) {
           // if selected plan is not set, then set the first plan as selected plan
-          setSelectedPlanId(response.data.planList[0]._id);
+          setSelectedPlanId(vendorSignupPlans[0]._id);
         }
       }
 

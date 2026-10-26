@@ -3,6 +3,13 @@ export const isFoodVendorPlan = (plan) =>
     String(plan?.slug || "").toUpperCase(),
   );
 
+// The vendor app owns Food Vendor signup plus one full Marketplace Vendor
+// experience.  Other plans in the shared catalog (for example coordinator or
+// Tap-to-Pay-only plans) must never become vendor-signup choices.
+export const isVendorSignupPlan = (plan) =>
+  isFoodVendorPlan(plan) ||
+  String(plan?.slug || "").toUpperCase() === "SUB_MARKETPLACE_VENDOR";
+
 export const isAdSpaceAddOn = (addOn) =>
   /\bad\s*(space|vendor)\b/i.test(
     `${addOn?.slug || ""} ${addOn?.name || ""} ${addOn?.title || ""}`,
