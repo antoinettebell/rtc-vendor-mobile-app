@@ -136,7 +136,7 @@ android {
         applicationId "com.rounddacorner.dev.vendor"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 60
+        versionCode 61
         versionName "1.9"
         vectorDrawables.useSupportLibrary = true
         buildConfigField "String", "CYBERSOURCE_TTP_MERCHANT_ID", asBuildConfigString(cybersourceTapToPayMerchantId)
