@@ -44,9 +44,9 @@ const AuthMenuSetupPromptScreen = ({ navigation, route }) => {
         <View style={styles.iconContainer}>
           <Ionicons name={isEmployeeStep ? "people-outline" : "restaurant-outline"} size={48} color={AppColor.primary} />
         </View>
-        <Text style={styles.title}>{isEmployeeStep ? "Set up your employees." : "Now let&apos;s set up your menu."}</Text>
+        <Text style={styles.title}>{isEmployeeStep ? "Set up your employees." : "Now let's set up your menu."}</Text>
         <Text style={styles.subtitle}>
-          {isEmployeeStep ? "Add employees now, or continue and manage them later from your profile." : "Add your categories and food items using the existing Menu page."}
+          {isEmployeeStep ? "Add employees now, or continue and manage them later from your profile." : "Add your menu items using the Menu page."}
         </Text>
       </View>
 
@@ -67,7 +67,7 @@ const AuthMenuSetupPromptScreen = ({ navigation, route }) => {
           onPress={() => enterVendorApp(true)}
           style={styles.primaryButton}
         >
-          <Text style={styles.primaryButtonText}>Next: Set Up Menu</Text>
+          <Text style={styles.primaryButtonText}>Next: Add Menu Items</Text>
           <Ionicons name="arrow-forward" size={18} color={AppColor.white} />
         </TouchableOpacity>
         <TouchableOpacity
