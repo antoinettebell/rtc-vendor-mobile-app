@@ -106,6 +106,10 @@ const validateIban = (text) => {
 
 const validateWalletPaymentHandle = (text) =>
   text.trim() ? "" : "Payment handle / account identifier is required";
+const validatePhoneNumber = (text) =>
+  /^\+?[0-9() .-]{7,25}$/.test(String(text || "").trim())
+    ? ""
+    : "Enter a valid phone number";
 
 const validatePaymentMethod = (text) => {
   if (!text.trim()) return "Please select payment method";
@@ -193,6 +197,7 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
       bankCity: requiresBankDetails && !bankCity.trim() ? "City is required" : "",
       bankState: requiresBankDetails && !bankState.trim() ? "State is required" : "",
       bankPostal: requiresBankDetails && !bankPostal.trim() ? "Postal code is required" : "",
+      phoneNumber: validatePhoneNumber(phoneNumber),
     };
 
     setErrors(newErrors);
@@ -470,7 +475,7 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
               </View> : null}
 
               <View style={styles.section}>
-                <Text style={styles.inputLabel}>Phone Number</Text>
+                <Text style={styles.inputLabel}>Phone Number *</Text>
                 <TextInput
                   dense
                   value={phoneNumber}
@@ -486,6 +491,7 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
                   outlineStyle={{ borderRadius: 8 }}
                   theme={{ colors: { onSurfaceVariant: "#777" } }}
                 />
+                {!!errors.phoneNumber && <HelperText type="error">{errors.phoneNumber}</HelperText>}
               </View>
 
               <View style={{ display: requiresBankDetails ? "flex" : "none" }}>

@@ -101,6 +101,10 @@ const validateIban = (text) => {
 };
 const validateWalletPaymentHandle = (text) =>
   text.trim() ? "" : "Payment handle / account identifier is required";
+const validatePhoneNumber = (text) =>
+  /^\+?[0-9() .-]{7,25}$/.test(String(text || "").trim())
+    ? ""
+    : "Enter a valid phone number";
 
 const validatePaymentMethod = (text) => {
   if (!text.trim()) return "Please select payment method";
@@ -230,6 +234,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
       state: requiresBankDetails ? validateState(state) : "",
       postalCode: requiresBankDetails ? validatePostalcode(postalCode) : "",
       paymentQrCodeUrl: requiresQrCode && !paymentQrCodeUrl ? "QR code is required" : "",
+      phoneNumber: validatePhoneNumber(phoneNumber),
     };
 
     setErrors(newErrors);
@@ -496,7 +501,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
 
                   {!isMarketplaceVendor ? (
                     <View style={styles.section}>
-                      <Text style={styles.inputLabel}>Phone Number</Text>
+                      <Text style={styles.inputLabel}>Phone Number *</Text>
                       <TextInput
                         dense
                         value={phoneNumber}
@@ -512,6 +517,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
                         outlineStyle={{ borderRadius: 8 }}
                         theme={{ colors: { onSurfaceVariant: "#777" } }}
                       />
+                      {!!errors.phoneNumber && <HelperText type="error">{errors.phoneNumber}</HelperText>}
                     </View>
                   ) : null}
 
