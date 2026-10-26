@@ -43,7 +43,6 @@ import {
 import MarketplaceVendorScreenLayout from "../components/MarketplaceVendorScreenLayout";
 import { getApprovedProfilePresentation } from "../helpers/eventVendorPresentation.helper";
 import { getEventVendorSignOutKeys } from "../helpers/eventVendorApplicationDraft.helper";
-import { normalizeExternalWebLink } from "../helpers/externalWebLink.helper";
 
 const TYPES = ["MERCHANDISE", "SERVICE", "OTHER"];
 export default function EventVendorProfileScreen({ navigation }) {
@@ -55,7 +54,6 @@ export default function EventVendorProfileScreen({ navigation }) {
   );
   const [description, setDescription] = useState("");
   const [vendorTypes, setVendorTypes] = useState([]);
-  const [links, setLinks] = useState(["", ""]);
   const [merchandiseCategories, setMerchandiseCategories] = useState([]);
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -65,7 +63,6 @@ export default function EventVendorProfileScreen({ navigation }) {
     setBusinessName(value?.business_name || "");
     setDescription(value?.business_description || "");
     setVendorTypes(value?.vendor_types || []);
-    setLinks([...(value?.social_links || []), "", ""].slice(0, 2));
     setMerchandiseCategories(value?.merchandise_categories || []);
   };
   const applyProfileState = (nextProfile, wasApproved = false) => {
@@ -118,19 +115,10 @@ export default function EventVendorProfileScreen({ navigation }) {
       );
     setSaving(true);
     try {
-      const submittedLinks = links.map((item) => item.trim()).filter(Boolean);
-      const socialLinks = submittedLinks.map(normalizeExternalWebLink);
-      if (socialLinks.some((link) => !link)) {
-        return Alert.alert(
-          "Profile",
-          "Enter a valid website or social-media address.",
-        );
-      }
       const response = await saveEventVendorProfile_API({
         business_name: businessName.trim(),
         business_description: description.trim(),
         vendor_types: vendorTypes,
-        social_links: socialLinks,
         merchandise_categories: vendorTypes.includes("MERCHANDISE")
           ? merchandiseCategories
           : [],
@@ -329,23 +317,6 @@ export default function EventVendorProfileScreen({ navigation }) {
         editable={fieldsEditable}
       />
       <Text style={s.count}>{description.length}/300</Text>
-      {[0, 1].map((index) => (
-        <View key={index}>
-          <Text style={s.label}>Website / Social Link {index + 1}</Text>
-          <TextInput
-            style={s.input}
-            autoCapitalize="none"
-            keyboardType="url"
-            value={links[index]}
-            editable={fieldsEditable}
-            onChangeText={(value) =>
-              setLinks((current) =>
-                current.map((item, i) => (i === index ? value : item)),
-              )
-            }
-          />
-        </View>
-      ))}
       {vendorTypes.includes("MERCHANDISE") ? (
         <>
           <Text style={s.label}>Merchandise Categories *</Text>

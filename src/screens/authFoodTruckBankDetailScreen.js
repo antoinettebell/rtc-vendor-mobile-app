@@ -133,6 +133,7 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
 
   const [loading, setLoading] = useState(false);
   const [accountHolderName, setAccountHolderName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [walletPaymentHandle, setWalletPaymentHandle] = useState("");
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
@@ -206,6 +207,7 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
     try {
       const payload = buildPaymentMethodPayload(selectedPaymentMethod, {
         accountHolderName,
+        phoneNumber,
         walletPaymentHandle,
         bankName,
         accountNumber,
@@ -466,6 +468,25 @@ const AuthFoodTruckBankDetailScreen = ({ navigation, route }) => {
                   </HelperText>
                 )}
               </View> : null}
+
+              <View style={styles.section}>
+                <Text style={styles.inputLabel}>Phone Number</Text>
+                <TextInput
+                  dense
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  style={styles.inputStyle}
+                  contentStyle={styles.inputText}
+                  placeholder="Phone number for payment questions"
+                  placeholderTextColor={AppColor.placeholderTextColor}
+                  mode="outlined"
+                  keyboardType="phone-pad"
+                  outlineColor={AppColor.border}
+                  activeOutlineColor={AppColor.primary}
+                  outlineStyle={{ borderRadius: 8 }}
+                  theme={{ colors: { onSurfaceVariant: "#777" } }}
+                />
+              </View>
 
               <View style={{ display: requiresBankDetails ? "flex" : "none" }}>
               <View style={styles.section}>

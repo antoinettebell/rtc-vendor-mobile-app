@@ -12,6 +12,7 @@ export const buildPaymentMethodPayload = (paymentMethod, values) => {
     getPaymentMethodFields(paymentMethod);
   return {
     paymentMethod,
+    phoneNumber: values.phoneNumber || "",
     ...(requiresBankDetails
       ? {
           accountHolderName: values.accountHolderName,

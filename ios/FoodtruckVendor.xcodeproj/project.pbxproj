@@ -455,7 +455,7 @@
 				CODE_SIGN_ENTITLEMENTS = FoodtruckVendor/FoodtruckVendor.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 64;
+				CURRENT_PROJECT_VERSION = 65;
 				DEVELOPMENT_TEAM = 5G26GFF98P;
 				ENABLE_DEBUG_DYLIB = NO;
 				INFOPLIST_FILE = FoodtruckVendor/Info.plist;

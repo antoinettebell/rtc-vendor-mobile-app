@@ -166,6 +166,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
   const [bankData, setBankData] = useState(null);
   const [savedAccountNumber, setSavedAccountNumber] = useState("");
   const [accountHolderName, setAccountHolderName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [walletPaymentHandle, setWalletPaymentHandle] = useState("");
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
@@ -243,6 +244,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
     try {
       const payload = buildPaymentMethodPayload(selectedPaymentMethod, {
         accountHolderName,
+        phoneNumber,
         walletPaymentHandle,
         bankName,
         accountNumber:
@@ -289,6 +291,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
     setBankData(data); // keep original data
     setSavedAccountNumber(data?.accountNumber || "");
     setAccountHolderName(data?.accountHolderName || "");
+    setPhoneNumber(data?.phoneNumber || "");
     setWalletPaymentHandle(data?.walletPaymentHandle || "");
     setBankName(data?.bankName || "");
     setAccountNumber(maskAccountNumber(data?.accountNumber || ""));
@@ -490,6 +493,27 @@ const EditBankDetailScreen = ({ navigation, route }) => {
                       </HelperText>
                     )}
                   </View> : null}
+
+                  {!isMarketplaceVendor ? (
+                    <View style={styles.section}>
+                      <Text style={styles.inputLabel}>Phone Number</Text>
+                      <TextInput
+                        dense
+                        value={phoneNumber}
+                        onChangeText={setPhoneNumber}
+                        style={styles.inputStyle}
+                        contentStyle={styles.inputText}
+                        placeholder="Phone number for payment questions"
+                        placeholderTextColor={AppColor.placeholderTextColor}
+                        mode="outlined"
+                        keyboardType="phone-pad"
+                        outlineColor={AppColor.border}
+                        activeOutlineColor={AppColor.primary}
+                        outlineStyle={{ borderRadius: 8 }}
+                        theme={{ colors: { onSurfaceVariant: "#777" } }}
+                      />
+                    </View>
+                  ) : null}
 
                   {requiresBankDetails ? <>
                   <View style={styles.section}>
