@@ -71,6 +71,7 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [locked, setLocked] = useState(false);
+  const [marketplaceEligibility, setMarketplaceEligibility] = useState({ canApply: true, message: null });
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [eventType, setEventType] = useState("");
@@ -82,6 +83,7 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
       const response = await getMarketplaceOpenEvents_API({ limit: 100 });
       if (response?.success) {
         setEvents(response.data?.marketplaceEventList || []);
+        setMarketplaceEligibility(response.data?.marketplaceEligibility || { canApply: true, message: null });
         setLocked(false);
       }
     } catch (error) {
@@ -159,6 +161,20 @@ const VendorMarketplaceNearMeScreen = ({ navigation }) => {
     });
 
   const openEventAction = (item, submissionType) => {
+    if (marketplaceEligibility?.canApply === false) {
+      Alert.alert(
+        "Certificate of Insurance Required",
+        marketplaceEligibility.message || "A verified, unexpired Certificate of Insurance is required before submitting a marketplace bid or application.",
+        [
+          { text: "Not Now", style: "cancel" },
+          {
+            text: "Open Compliance",
+            onPress: () => navigation.navigate("vendorComplianceScreen"),
+          },
+        ],
+      );
+      return;
+    }
     const isApplication = submissionType
       ? submissionType === "application"
       : isVendorPaysToAttendEvent(item);
