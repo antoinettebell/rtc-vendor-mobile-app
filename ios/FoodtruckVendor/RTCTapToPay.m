@@ -8,6 +8,15 @@ RCT_EXPORT_VIEW_PROPERTY(pointSize, NSNumber)
 
 @end
 
+@interface RCT_EXTERN_MODULE(RTCApplePayButtonManager, RCTViewManager)
+
+RCT_EXPORT_VIEW_PROPERTY(accessibilityLabel, NSString)
+RCT_EXPORT_VIEW_PROPERTY(buttonType, NSString)
+RCT_EXPORT_VIEW_PROPERTY(disabled, BOOL)
+RCT_EXPORT_VIEW_PROPERTY(onPress, RCTBubblingEventBlock)
+
+@end
+
 @interface RCT_EXTERN_MODULE(RTCTapToPay, NSObject)
 
 RCT_EXTERN_METHOD(activate:(NSDictionary *)options

@@ -20,6 +20,7 @@ import {
   SupportedNetworkEnum,
 } from "@rnw-community/react-native-payments";
 import StatusBarManager from "../components/StatusBarManager";
+import ApplePayButton from "../components/ApplePayButton";
 import TapToPayCheckoutButtonContent from "../components/TapToPayCheckoutButtonContent";
 import Config from "react-native-config";
 import { AppColor } from "../utils/theme";
@@ -603,16 +604,12 @@ const VendorMarketplacePaymentScreen = ({ navigation, route }) => {
             ) : null}
 
             {!isFinalEventPayment && Platform.OS === "ios" ? (
-              <TouchableOpacity
-                activeOpacity={0.7}
-                style={[styles.button, canUseTapToPay && { marginTop: 12 }]}
+              <ApplePayButton
+                buttonType="checkout"
                 disabled={!!paymentLoading}
                 onPress={() => payWithWallet("applePay")}
-              >
-                <Text style={styles.buttonText}>
-                  {paymentLoading === "applePay" ? "Processing..." : "Apple Pay"}
-                </Text>
-              </TouchableOpacity>
+                style={[styles.button, canUseTapToPay && { marginTop: 12 }]}
+              />
             ) : !isFinalEventPayment ? (
               <NativeGooglePayButton
                 allowedPaymentMethods={GOOGLE_PAY_ALLOWED_PAYMENT_METHODS}

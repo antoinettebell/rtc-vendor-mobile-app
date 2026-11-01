@@ -2,6 +2,88 @@ import Foundation
 import ProximityReader
 import React
 import UIKit
+import PassKit
+
+@objc(RTCApplePayButtonManager)
+final class RTCApplePayButtonManager: RCTViewManager {
+  override func view() -> UIView! {
+    RTCApplePayButtonView()
+  }
+
+  @objc
+  override static func requiresMainQueueSetup() -> Bool {
+    true
+  }
+}
+
+private final class RTCApplePayButtonView: UIView {
+  @objc var accessibilityLabel: NSString = "Apple Pay" {
+    didSet { applePayButton.accessibilityLabel = accessibilityLabel as String }
+  }
+
+  @objc var buttonType: NSString = "plain" {
+    didSet { replaceButton() }
+  }
+
+  @objc var disabled: Bool = false {
+    didSet { applePayButton.isEnabled = !disabled }
+  }
+
+  @objc var onPress: RCTBubblingEventBlock?
+
+  private var applePayButton = PKPaymentButton(
+    paymentButtonType: .plain,
+    paymentButtonStyle: .black
+  )
+
+  override init(frame: CGRect) {
+    super.init(frame: frame)
+    installButton()
+  }
+
+  required init?(coder: NSCoder) {
+    super.init(coder: coder)
+    installButton()
+  }
+
+  private func installButton() {
+    applePayButton.translatesAutoresizingMaskIntoConstraints = false
+    applePayButton.addTarget(self, action: #selector(didPress), for: .touchUpInside)
+    addSubview(applePayButton)
+    NSLayoutConstraint.activate([
+      applePayButton.leadingAnchor.constraint(equalTo: leadingAnchor),
+      applePayButton.trailingAnchor.constraint(equalTo: trailingAnchor),
+      applePayButton.topAnchor.constraint(equalTo: topAnchor),
+      applePayButton.bottomAnchor.constraint(equalTo: bottomAnchor)
+    ])
+    applePayButton.accessibilityLabel = accessibilityLabel as String
+    applePayButton.isEnabled = !disabled
+  }
+
+  private func replaceButton() {
+    guard superview != nil || !subviews.isEmpty else { return }
+    applePayButton.removeFromSuperview()
+    applePayButton = PKPaymentButton(
+      paymentButtonType: paymentButtonType,
+      paymentButtonStyle: .black
+    )
+    installButton()
+  }
+
+  private var paymentButtonType: PKPaymentButtonType {
+    switch (buttonType as String).lowercased() {
+    case "buy": return .buy
+    case "book": return .book
+    case "checkout": return .checkout
+    case "order": return .order
+    default: return .plain
+    }
+  }
+
+  @objc private func didPress() {
+    onPress?([:])
+  }
+}
 
 @objc(RTCTapToPaySymbolManager)
 final class RTCTapToPaySymbolManager: RCTViewManager {
