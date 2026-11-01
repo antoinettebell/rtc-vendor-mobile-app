@@ -13,7 +13,6 @@ const ApplePayButton = ({ buttonType, disabled = false, onPress, style }) => {
 
   return (
     <NativeApplePayButton
-      accessibilityLabel={`${buttonType} with Apple Pay`}
       buttonType={buttonType}
       disabled={disabled}
       onPress={disabled ? undefined : onPress}
