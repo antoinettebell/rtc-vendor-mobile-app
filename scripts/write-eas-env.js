@@ -113,7 +113,7 @@ fs.writeFileSync(envPath, envContents);
 // Android's production flavor reads this file through react-native-config.
 // EAS injects its values as process environment variables, so materialize the
 // flavor-specific file only during a production cloud build.
-if (process.env.EAS_BUILD_PROFILE === "production") {
+if (process.env.APP_ENV === "production") {
   fs.writeFileSync(productionEnvPath, envContents);
 
   // The geolocation module's New Architecture codegen currently omits
