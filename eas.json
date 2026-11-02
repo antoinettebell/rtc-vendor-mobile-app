@@ -61,7 +61,7 @@
       },
       "android": {
         "buildType": "app-bundle",
-        "gradleCommand": ":app:bundleLiveGoogleRelease"
+        "gradleCommand": ":app:bundleLiveGoogleRelease -PnewArchEnabled=false"
       }
     }
   },
