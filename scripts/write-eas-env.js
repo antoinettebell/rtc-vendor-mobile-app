@@ -2,6 +2,17 @@ const fs = require("fs");
 const path = require("path");
 
 const envPath = path.resolve(__dirname, "..", ".env");
+const productionEnvPath = path.resolve(
+  __dirname,
+  "..",
+  ".env.live-google-production"
+);
+const gradlePropertiesPath = path.resolve(
+  __dirname,
+  "..",
+  "android",
+  "gradle.properties"
+);
 const nativeTapToPayConfigPath = path.resolve(
   __dirname,
   "..",
@@ -96,6 +107,28 @@ if (acceptanceDevicesMerchantId && acceptanceDevicesSecret) {
   console.log("Wrote native Tap to Pay credential configuration.");
 }
 
-fs.writeFileSync(envPath, `${lines.join("\n")}\n`);
+const envContents = `${lines.join("\n")}\n`;
+fs.writeFileSync(envPath, envContents);
+
+// Android's production flavor reads this file through react-native-config.
+// EAS injects its values as process environment variables, so materialize the
+// flavor-specific file only during a production cloud build.
+if (process.env.EAS_BUILD_PROFILE === "production") {
+  fs.writeFileSync(productionEnvPath, envContents);
+
+  // The geolocation module's New Architecture codegen currently omits
+  // RNCGeolocationSpec.h during the Android CMake release build. The local
+  // Gradle properties file is intentionally untracked because it holds
+  // signing settings, so apply the safe architecture setting in EAS instead.
+  if (fs.existsSync(gradlePropertiesPath)) {
+    const gradleProperties = fs.readFileSync(gradlePropertiesPath, "utf8");
+    const updatedGradleProperties = /(^|\n)newArchEnabled=.*/m.test(
+      gradleProperties
+    )
+      ? gradleProperties.replace(/(^|\n)newArchEnabled=.*/m, "$1newArchEnabled=false")
+      : `${gradleProperties.trimEnd()}\nnewArchEnabled=false\n`;
+    fs.writeFileSync(gradlePropertiesPath, updatedGradleProperties);
+  }
+}
 console.log(`Wrote ${lines.length} EAS environment values to .env`);
 console.log(`API_URL=${process.env.API_URL}`);
