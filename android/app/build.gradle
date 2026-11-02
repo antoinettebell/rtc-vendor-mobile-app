@@ -139,8 +139,8 @@ android {
         versionCode 62
         versionName "1.9"
         vectorDrawables.useSupportLibrary = true
-        buildConfigField "String", "CYBERSOURCE_TTP_MERCHANT_ID", asBuildConfigString(cybersourceTapToPayMerchantId)
-        buildConfigField "String", "CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET", asBuildConfigString(cybersourceTapToPayAcceptanceDeviceSecret)
+        buildConfigField("String", "CYBERSOURCE_TTP_MERCHANT_ID", asBuildConfigString(cybersourceTapToPayMerchantId))
+        buildConfigField("String", "CYBERSOURCE_TTP_ACCEPTANCE_DEVICE_SECRET", asBuildConfigString(cybersourceTapToPayAcceptanceDeviceSecret))
     }
     flavorDimensions "distribution"
     productFlavors {
