@@ -3,10 +3,10 @@
     "name": "Round Da’ Corner Enterprise",
     "slug": "foodtruckvendor",
     "scheme": "rounddacornervendor",
-    "version": "1.7",
+    "version": "1.9",
     "ios": {
       "bundleIdentifier": "com.rounddacorner.dev.vendor",
-      "buildNumber": "20",
+      "buildNumber": "66",
       "entitlements": {
         "com.apple.developer.proximity-reader.payment.acceptance": true
       },
