@@ -57,7 +57,7 @@ react {
 /**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  */
-def enableProguardInReleaseBuilds = false
+def enableProguardInReleaseBuilds = true
 
 /**
  * The preferred build flavor of JavaScriptCore (JSC)
@@ -136,7 +136,7 @@ android {
         applicationId "com.rounddacorner.dev.vendor"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 61
+        versionCode 62
         versionName "1.9"
         vectorDrawables.useSupportLibrary = true
         buildConfigField "String", "CYBERSOURCE_TTP_MERCHANT_ID", asBuildConfigString(cybersourceTapToPayMerchantId)
