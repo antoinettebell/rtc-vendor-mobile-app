@@ -23,16 +23,24 @@ diff --git a/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker
 diff --git a/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.mm b/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.mm
 --- a/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.mm
 +++ b/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.mm
-@@ -6,6 +6,7 @@
+@@ -8,6 +8,8 @@
  #import <MobileCoreServices/MobileCoreServices.h>
  
  #import "ImageCropPicker.h"
 +#import <React/RCTImageLoaderProtocol.h>
++#import <React/RCTUtils.h>
  #ifdef RCT_NEW_ARCH_ENABLED
  #import <RNCImageCropPickerSpec/RNCImageCropPickerSpec.h>
  #endif
-@@ -375,7 +376,9 @@ RCT_EXPORT_METHOD(openCropper:(NSDictionary *)options
-     
+@@ -128,6 +130,6 @@
+ }
+ - (UIViewController*) getRootVC {
+-    UIViewController *root = [[[[UIApplication sharedApplication] delegate] window] rootViewController];
++    UIViewController *root = RCTPresentedViewController();
+     while (root.presentedViewController != nil) {
+         root = root.presentedViewController;
+     }
+@@ -375,6 +377,8 @@
      NSString *path = [options objectForKey:@"path"];
      
 -    [[self.bridge moduleForName:@"ImageLoader" lazilyLoadIfNecessary:YES] loadImageWithURLRequest:[RCTConvert NSURLRequest:path] callback:^(NSError *error, UIImage *image) {
