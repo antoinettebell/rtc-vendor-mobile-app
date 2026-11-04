@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 14.0.0"
+    "version": ">= 14.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -26,6 +27,7 @@
       }
     },
     "testflight": {
+      "autoIncrement": true,
       "env": {
         "API_URL": "https://api-dev.rounddacornerapp.com",
         "API_PREFIX": "/api/v1",
