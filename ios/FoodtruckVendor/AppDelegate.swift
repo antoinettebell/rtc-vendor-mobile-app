@@ -3,7 +3,6 @@ import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
 import GoogleMaps
-import RNBootSplash
 import Firebase
 import FirebaseMessaging
 
@@ -115,9 +114,6 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
       launchOptions: launchOptions(for: connectionOptions)
     )
 
-    if let rootView = sceneWindow.rootViewController?.view {
-      RNBootSplash.initWithStoryboard("BootSplash", rootView: rootView)
-    }
   }
 
   func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
