@@ -1,4 +1,5 @@
 diff --git a/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.h b/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.h
+index b6a925a..1328874 100644
 --- a/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.h
 +++ b/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.h
 @@ -12,16 +12,10 @@
@@ -21,6 +22,7 @@ diff --git a/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker
  
  #ifdef RCT_NEW_ARCH_ENABLED
 diff --git a/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.mm b/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.mm
+index 354ad09..7218456 100644
 --- a/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.mm
 +++ b/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker.mm
 @@ -8,6 +8,8 @@
@@ -32,15 +34,17 @@ diff --git a/node_modules/react-native-image-crop-picker/ios/src/ImageCropPicker
  #ifdef RCT_NEW_ARCH_ENABLED
  #import <RNCImageCropPickerSpec/RNCImageCropPickerSpec.h>
  #endif
-@@ -128,6 +130,6 @@
+@@ -128,7 +130,7 @@ - (void) setConfiguration:(NSDictionary *)options
  }
+ 
  - (UIViewController*) getRootVC {
 -    UIViewController *root = [[[[UIApplication sharedApplication] delegate] window] rootViewController];
 +    UIViewController *root = RCTPresentedViewController();
      while (root.presentedViewController != nil) {
          root = root.presentedViewController;
      }
-@@ -375,6 +377,8 @@
+@@ -375,7 +377,9 @@ - (BOOL)cleanTmpDirectory {
+     
      NSString *path = [options objectForKey:@"path"];
      
 -    [[self.bridge moduleForName:@"ImageLoader" lazilyLoadIfNecessary:YES] loadImageWithURLRequest:[RCTConvert NSURLRequest:path] callback:^(NSError *error, UIImage *image) {

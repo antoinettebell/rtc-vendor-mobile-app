@@ -9,7 +9,7 @@
     "start": "react-native start --reset-cache",
     "bootsplash": "react-native-bootsplash generate src/assets/branding/bootsplash-logo.png --platforms=android,ios --background=FFFFFF --logo-width=150 --assets-output=src/assets/bootsplash",
     "eas-build-pre-install": "node scripts/write-eas-env.js",
-    "postinstall": "patch-package",
+    "postinstall": "patch-package && node scripts/apply-react-native-print-scene-patch.js",
     "ios:entitlements:production": "node scripts/set-ios-entitlements.js production",
     "ios:entitlements:tap-to-pay": "node scripts/set-ios-entitlements.js tapToPay",
     "test:discounts": "node src/helpers/discount.helper.test.mjs"
