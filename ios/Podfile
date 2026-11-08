@@ -45,6 +45,14 @@ setup_permissions([
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
+# A signed, internally distributed dev build must still bundle JavaScript like
+# Release, while retaining the dev app identity and API configuration.
+project 'FoodtruckVendor.xcodeproj', {
+  'Debug' => :debug,
+  'DevRelease' => :release,
+  'Release' => :release,
+}
+
 linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
   Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green

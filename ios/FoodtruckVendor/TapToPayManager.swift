@@ -1,4 +1,51 @@
 import Foundation
+#if targetEnvironment(simulator)
+import UIKit
+
+// The Visa Acceptance Devices SDK is device-only and cannot be linked into an
+// iOS Simulator app.  Keep the JavaScript contract available for the
+// screenshot target while making every Tap to Pay action explicitly unavailable.
+@available(iOS 16.0, *)
+@objc final class TapToPayManager: NSObject {
+  enum SimulatorCurrency { case USD }
+
+  private func unavailable() -> NSError {
+    NSError(domain: "RTCTapToPay", code: 426, userInfo: [
+      NSLocalizedDescriptionKey: "Tap to Pay on iPhone is unavailable in the iOS Simulator."
+    ])
+  }
+
+  func activate(environmentName: String, activationCode: String, forceReactivation: Bool) async throws -> [String: Any] {
+    throw unavailable()
+  }
+
+  func activationStatus(environmentName: String) async throws -> [String: Any] {
+    ["activated": false, "environment": environmentName, "simulator": true]
+  }
+
+  func prepare(environmentName: String) async throws -> [String: Any] {
+    throw unavailable()
+  }
+
+  func startSale(amount: Decimal, currency: SimulatorCurrency, environmentName: String, reference: String) async throws -> [String: Any] {
+    throw unavailable()
+  }
+
+  @MainActor
+  func showMerchantEducation(from viewController: UIViewController) async throws {
+    throw unavailable()
+  }
+
+  @MainActor
+  static func topViewController(from base: UIViewController? = nil) -> UIViewController? {
+    base ?? UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .flatMap(\.windows)
+      .first(where: \.isKeyWindow)?
+      .rootViewController
+  }
+}
+#else
 import MposUI
 import OSLog
 import ProximityReader
@@ -528,3 +575,4 @@ import UIKit
     return root
   }
 }
+#endif
