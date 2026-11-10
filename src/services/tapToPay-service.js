@@ -167,6 +167,7 @@ const normalizeTapToPayResult = (result = {}) => {
       invoiceNumber: result.invoiceNumber || null,
       accountNumber: result.accountNumber || null,
       accountType: result.accountType || null,
+      tapToPayDeviceId: result.tapToPayDeviceId || null,
       raw: result,
     };
   }
@@ -250,7 +251,9 @@ export const startTapToPaySale = async ({
     }
   }
 
-  const paymentResult = { ...(result || {}) };
+  // The device ID is used only as a reconciliation snapshot. The backend
+  // validates it against the vendor's registered terminal before persisting.
+  const paymentResult = { ...(result || {}), tapToPayDeviceId: deviceId || null };
   delete paymentResult.deviceId;
   return normalizeTapToPayResult(paymentResult);
 };

@@ -1,5 +1,5 @@
-// Production release gate. Keep provider/build configuration in place so the
-// feature can be enabled later without reintroducing secrets or native setup.
-export const isTapToPayReleased = false;
+// Production release gate. Provider/build configuration remains environment
+// specific; this only allows eligible, Tap-to-Pay-enabled builds to use it.
+export const isTapToPayReleased = true;
 export const tapToPayComingSoonMessage =
   "Tap to Pay is coming soon and is not available in this version of the app.";

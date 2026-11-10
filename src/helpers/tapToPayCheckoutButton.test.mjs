@@ -14,6 +14,8 @@ const [
   marketplacePayment,
   generalPurchase,
   launchHero,
+  releaseGate,
+  easConfig,
 ] = await Promise.all([
   read("src/components/TapToPayCheckoutButtonContent.js"),
   read("ios/FoodtruckVendor/RTCTapToPay.swift"),
@@ -22,7 +24,14 @@ const [
   read("src/screens/vendorMarketplacePaymentScreen.js"),
   read("src/screens/eventVendorGeneralPurchaseScreen.js"),
   read("src/components/TapToPayLaunchHero.js"),
+  read("src/services/tapToPay-release.js"),
+  read("eas.json"),
 ]);
+
+assert.match(releaseGate, /isTapToPayReleased = true/);
+const previewProfile = JSON.parse(easConfig).build.preview;
+assert.equal(previewProfile.env.EXPO_PUBLIC_TAP_TO_PAY_ENABLED, "true");
+assert.equal(previewProfile.env.API_URL, "https://api-dev.rounddacornerapp.com");
 
 assert.match(buttonContent, /Platform\.OS === "ios" \? "Tap to Pay on iPhone" : "Tap to Pay"/);
 assert.match(buttonContent, /requireNativeComponent\("RTCTapToPaySymbol"\)/);

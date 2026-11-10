@@ -744,6 +744,7 @@ const VendorPosCheckoutScreen = ({ navigation, route }) => {
         invoiceNumber: payment.invoiceNumber,
         accountNumber: payment.accountNumber,
         accountType: payment.accountType,
+        tapToPayDeviceId: payment.tapToPayDeviceId,
         tapToPayAttemptId: tapToPayAttempt.id,
       });
 

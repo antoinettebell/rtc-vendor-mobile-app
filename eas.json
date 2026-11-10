@@ -22,7 +22,11 @@
         "API_URL": "https://api-dev.rounddacornerapp.com",
         "API_PREFIX": "/api/v1",
         "APP_ENV": "development",
-        "EXPO_PUBLIC_TAP_TO_PAY_ENABLED": "false"
+        "EXPO_PUBLIC_TAP_TO_PAY_ENABLED": "true",
+        "TAP_TO_PAY_PROVIDER": "cybersource",
+        "EXPO_PUBLIC_TAP_TO_PAY_ENV": "production",
+        "TAP_TO_PAY_APPLE_TEAM_ID": "5G26GFF98P",
+        "TAP_TO_PAY_CURRENCY": "USD"
       },
       "ios": {
         "simulator": false,
