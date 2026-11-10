@@ -11,6 +11,7 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		1A3B3CFC364C4C308BCC7CD7 /* Mulish-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DCBDD748EB024458A0F0EC3D /* Mulish-Bold.ttf */; };
 		1DB882D6F1054B1EBF32AB10 /* P22 Arts And Crafts Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 49D3964E54F24AED8BD3A713 /* P22 Arts And Crafts Regular.ttf */; };
+		1FDE631C2E89CC82F80C3CF6 /* Pods_FoodtruckVendor.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 130A53CDE7D0D752BB590227 /* Pods_FoodtruckVendor.framework */; };
 		2523C55B16474D73B60BD9A8 /* Inter-Thin-BETA.otf in Resources */ = {isa = PBXBuildFile; fileRef = E6855CBFFC834D678BB8798D /* Inter-Thin-BETA.otf */; };
 		25D00FB7445145108D5E5425 /* Inter-ExtraLight-BETA.otf in Resources */ = {isa = PBXBuildFile; fileRef = DC9D9D39F0FD4C6A908CC0E6 /* Inter-ExtraLight-BETA.otf */; };
 		2CD1AA84F2AE47DCA18F6316 /* Mulish-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 099E8C561E1C4A318113D883 /* Mulish-SemiBold.ttf */; };
@@ -44,7 +45,6 @@
 		11FCF2D8270845EDB3273AA8 /* Mulish-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Mulish-Light.ttf"; path = "../src/assets/fonts/Mulish-Light.ttf"; sourceTree = "<group>"; };
 		130A53CDE7D0D752BB590227 /* Pods_FoodtruckVendor.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_FoodtruckVendor.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07F961A680F5B00A75B9A /* FoodtruckVendor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FoodtruckVendor.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		F00D00000000000000000001 /* FoodtruckVendorSimulator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FoodtruckVendorSimulator.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = FoodtruckVendor/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = FoodtruckVendor/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = FoodtruckVendor/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -70,6 +70,7 @@
 		A1F5B7A9B4D548DFA10E1001 /* FoodtruckVendor.debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = ../Config/FoodtruckVendor.debug.xcconfig; sourceTree = "<group>"; };
 		A1F5B7A9B4D548DFA10E1002 /* FoodtruckVendor.release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = ../Config/FoodtruckVendor.release.xcconfig; sourceTree = "<group>"; };
 		B7EED414BCE54D7BB62646AD /* BootSplash.storyboard */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = BootSplash.storyboard; path = FoodtruckVendor/BootSplash.storyboard; sourceTree = "<group>"; };
+		BA428DD6DAF6C782EED5A85D /* Pods-FoodtruckVendor.devrelease.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FoodtruckVendor.devrelease.xcconfig"; path = "Target Support Files/Pods-FoodtruckVendor/Pods-FoodtruckVendor.devrelease.xcconfig"; sourceTree = "<group>"; };
 		BD17FEC24DBFDB0A373EBE12 /* Pods-FoodtruckVendor.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FoodtruckVendor.debug.xcconfig"; path = "Target Support Files/Pods-FoodtruckVendor/Pods-FoodtruckVendor.debug.xcconfig"; sourceTree = "<group>"; };
 		C2BA5A4BE34D4A75ACE1D2F6 /* Inter-Light-BETA.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Light-BETA.otf"; path = "../src/assets/fonts/Inter-Light-BETA.otf"; sourceTree = "<group>"; };
 		C6B483D0745444A684BAC78A /* Mulish-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Mulish-Medium.ttf"; path = "../src/assets/fonts/Mulish-Medium.ttf"; sourceTree = "<group>"; };
@@ -79,6 +80,7 @@
 		E6855CBFFC834D678BB8798D /* Inter-Thin-BETA.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Thin-BETA.otf"; path = "../src/assets/fonts/Inter-Thin-BETA.otf"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		ED9E60918B33444B80D17A4D /* Mulish-Black.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Mulish-Black.ttf"; path = "../src/assets/fonts/Mulish-Black.ttf"; sourceTree = "<group>"; };
+		F00D00000000000000000001 /* FoodtruckVendorSimulator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FoodtruckVendorSimulator.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -88,14 +90,14 @@
 			files = (
 				7C3F0AB02D9B41D58B2A1C6F /* MposUI in Frameworks */,
 				69F335125F52FB4C5004F0D3 /* Pods_FoodtruckVendor.framework in Frameworks */,
+				1FDE631C2E89CC82F80C3CF6 /* Pods_FoodtruckVendor.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		F00D00000000000000000002 /* Simulator Frameworks */ = {
+		F00D00000000000000000002 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				69F335125F52FB4C5004F0D3 /* Pods_FoodtruckVendor.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -194,6 +196,7 @@
 				971E7355AA39ADA02334CB86 /* Pods-FoodtruckVendor.release.xcconfig */,
 				A1F5B7A9B4D548DFA10E1001 /* FoodtruckVendor.debug.xcconfig */,
 				A1F5B7A9B4D548DFA10E1002 /* FoodtruckVendor.release.xcconfig */,
+				BA428DD6DAF6C782EED5A85D /* Pods-FoodtruckVendor.devrelease.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -231,20 +234,17 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = F00D00000000000000000004 /* Build configuration list for PBXNativeTarget "FoodtruckVendorSimulator" */;
 			buildPhases = (
-				632E2D2B62AC36BB5586D8EA /* [CP] Check Pods Manifest.lock */,
 				13B07F871A680F5B00A75B9A /* Sources */,
-				F00D00000000000000000002 /* Simulator Frameworks */,
+				F00D00000000000000000002 /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				F17EB0A6D9E94C9BA1D4F07A /* Select Firebase configuration */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
-				F9397FBBA40DA89D7C4D7115 /* [CP] Embed Pods Frameworks */,
-				D970A520573E8BD31CACA48F /* [CP] Copy Pods Resources */,
-				3F7016E06D21B55449C43127 /* [CP-User] [RNFB] Core Configuration */,
 			);
-			buildRules = ();
-			dependencies = ();
+			buildRules = (
+			);
+			dependencies = (
+			);
 			name = FoodtruckVendorSimulator;
-			packageProductDependencies = ();
 			productName = FoodtruckVendorSimulator;
 			productReference = F00D00000000000000000001 /* FoodtruckVendorSimulator.app */;
 			productType = "com.apple.product-type.application";
@@ -319,23 +319,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		F17EB0A6D9E94C9BA1D4F07A /* Select Firebase configuration */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"$(PROJECT_DIR)/GoogleService-Info.plist",
-				"$(PROJECT_DIR)/GoogleService-Info-Production.plist",
-			);
-			name = "Select Firebase configuration";
-			outputPaths = (
-				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "set -e\n\nif [ \"${CONFIGURATION}\" = \"Release\" ]; then\n  SOURCE=\"${PROJECT_DIR}/GoogleService-Info-Production.plist\"\nelse\n  SOURCE=\"${PROJECT_DIR}/GoogleService-Info.plist\"\nfi\n\nDESTINATION=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/GoogleService-Info.plist\"\n/bin/cp \"$SOURCE\" \"$DESTINATION\"\n";
-		};
 		00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -403,6 +386,23 @@
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-FoodtruckVendor/Pods-FoodtruckVendor-resources.sh\"\n";
 			showEnvVarsInLog = 0;
+		};
+		F17EB0A6D9E94C9BA1D4F07A /* Select Firebase configuration */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(PROJECT_DIR)/GoogleService-Info.plist",
+				"$(PROJECT_DIR)/GoogleService-Info-Production.plist",
+			);
+			name = "Select Firebase configuration";
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\n\nif [ \"${CONFIGURATION}\" = \"Release\" ]; then\n  SOURCE=\"${PROJECT_DIR}/GoogleService-Info-Production.plist\"\nelse\n  SOURCE=\"${PROJECT_DIR}/GoogleService-Info.plist\"\nfi\n\nDESTINATION=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/GoogleService-Info.plist\"\n/bin/cp \"$SOURCE\" \"$DESTINATION\"\n";
 		};
 		F9397FBBA40DA89D7C4D7115 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -512,109 +512,6 @@
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				VERSIONING_SYSTEM = "apple-generic";
-			};
-			name = Release;
-		};
-		D3E000000000000000000001 /* DevRelease */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = A1F5B7A9B4D548DFA10E1002 /* FoodtruckVendor.release.xcconfig */;
-			buildSettings = {
-				APP_DISPLAY_NAME = "Round Da’ Corner Enterprise Dev";
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = FoodtruckVendor/FoodtruckVendor.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 61;
-				DEVELOPMENT_TEAM = 5G26GFF98P;
-				ENABLE_DEBUG_DYLIB = NO;
-				INFOPLIST_FILE = FoodtruckVendor/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.9;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-ObjC",
-					"-lc++",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.rounddacorner.dev.vendor;
-				PRODUCT_NAME = FoodtruckVendor;
-				PROVISIONING_PROFILE_SPECIFIER = "";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VERSIONING_SYSTEM = "apple-generic";
-			};
-			name = DevRelease;
-		};
-		F00D00000000000000000005 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = A1F5B7A9B4D548DFA10E1001 /* FoodtruckVendor.debug.xcconfig */;
-			buildSettings = {
-				APP_DISPLAY_NAME = "Round Da’ Corner Vendor Preview";
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGNING_ALLOWED = NO;
-				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_DEBUG_DYLIB = NO;
-				ENVFILE = "$(SRCROOT)/Config/FoodtruckVendor.simulator.env";
-				INFOPLIST_FILE = FoodtruckVendor/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.9;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-ObjC",
-					"-lc++",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.ea.rtcvendor.simulator;
-				PRODUCT_NAME = FoodtruckVendorSimulator;
-				SUPPORTED_PLATFORMS = iphonesimulator;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 2;
-				VERSIONING_SYSTEM = "apple-generic";
-			};
-			name = Debug;
-		};
-		F00D00000000000000000006 /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = A1F5B7A9B4D548DFA10E1002 /* FoodtruckVendor.release.xcconfig */;
-			buildSettings = {
-				APP_DISPLAY_NAME = "Round Da’ Corner Vendor Preview";
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGNING_ALLOWED = NO;
-				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_DEBUG_DYLIB = NO;
-				ENVFILE = "$(SRCROOT)/Config/FoodtruckVendor.simulator.env";
-				INFOPLIST_FILE = FoodtruckVendor/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.9;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-ObjC",
-					"-lc++",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.ea.rtcvendor.simulator;
-				PRODUCT_NAME = FoodtruckVendorSimulator;
-				SUPPORTED_PLATFORMS = iphonesimulator;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 2;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
@@ -831,6 +728,44 @@
 			};
 			name = Release;
 		};
+		D3E000000000000000000001 /* DevRelease */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A1F5B7A9B4D548DFA10E1002 /* FoodtruckVendor.release.xcconfig */;
+			buildSettings = {
+				APP_DISPLAY_NAME = "Round Da’ Corner Enterprise Dev";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = FoodtruckVendor/FoodtruckVendor.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 61;
+				DEVELOPMENT_TEAM = 5G26GFF98P;
+				ENABLE_DEBUG_DYLIB = NO;
+				INFOPLIST_FILE = FoodtruckVendor/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.9;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-lc++",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.rounddacorner.dev.vendor;
+				PRODUCT_NAME = FoodtruckVendor;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = DevRelease;
+		};
 		D3E000000000000000000002 /* DevRelease */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -838,11 +773,102 @@
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"${PODS_ROOT}/ReactCommon",
+					"${PODS_ROOT}/ReactCommon/react/nativemodule/core",
+					"${PODS_ROOT}/React-runtimeexecutor",
+					"${PODS_ROOT}/React-runtimeexecutor/platform/ios",
+					"${PODS_ROOT}/ReactCommon-Samples",
+					"${PODS_ROOT}/ReactCommon-Samples/platform/ios",
+					"${PODS_ROOT}/React-Fabric/react/renderer/components/view/platform/cxx",
+					"${PODS_ROOT}/React-NativeModulesApple",
+					"${PODS_ROOT}/React-bridging",
+					"${PODS_ROOT}/React-graphics",
+					"${PODS_ROOT}/React-graphics/react/renderer/graphics/platform/ios",
+					"${PODS_ROOT}/React-featureflags",
+					"${PODS_ROOT}/React-renderercss",
+				);
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
+				);
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(inherited)",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
+				);
+				PODFILE_DIR = "$(SRCROOT)";
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				USE_HERMES = true;
 			};
 			name = DevRelease;
+		};
+		F00D00000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A1F5B7A9B4D548DFA10E1001 /* FoodtruckVendor.debug.xcconfig */;
+			buildSettings = {
+				APP_DISPLAY_NAME = "Round Da’ Corner Vendor Preview";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_DEBUG_DYLIB = NO;
+				ENVFILE = "$(SRCROOT)/Config/FoodtruckVendor.simulator.env";
+				INFOPLIST_FILE = FoodtruckVendor/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.9;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-lc++",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ea.rtcvendor.simulator;
+				PRODUCT_NAME = FoodtruckVendorSimulator;
+				SUPPORTED_PLATFORMS = iphonesimulator;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 2;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Debug;
+		};
+		F00D00000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A1F5B7A9B4D548DFA10E1002 /* FoodtruckVendor.release.xcconfig */;
+			buildSettings = {
+				APP_DISPLAY_NAME = "Round Da’ Corner Vendor Preview";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_DEBUG_DYLIB = NO;
+				ENVFILE = "$(SRCROOT)/Config/FoodtruckVendor.simulator.env";
+				INFOPLIST_FILE = FoodtruckVendor/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.9;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-lc++",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ea.rtcvendor.simulator;
+				PRODUCT_NAME = FoodtruckVendorSimulator;
+				SUPPORTED_PLATFORMS = iphonesimulator;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 2;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
@@ -857,15 +883,6 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F00D00000000000000000004 /* Build configuration list for PBXNativeTarget "FoodtruckVendorSimulator" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				F00D00000000000000000005 /* Debug */,
-				F00D00000000000000000006 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
 		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "FoodtruckVendor" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -875,6 +892,15 @@
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
+		};
+		F00D00000000000000000004 /* Build configuration list for PBXNativeTarget "FoodtruckVendorSimulator" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F00D00000000000000000005 /* Debug */,
+				F00D00000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
 
