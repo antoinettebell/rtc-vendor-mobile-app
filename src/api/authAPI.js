@@ -11,6 +11,7 @@ import {
   RESEND_OTP,
   TNC,
   UPDATE_PASSWORD,
+  VALIDATE_AMBASSADOR_CODE,
   VERIFY_OTP,
 } from "./apiEndPoint";
 
@@ -85,6 +86,18 @@ export const registerVendor_API = async (payload) => {
   try {
     const URL = `${REGISTER_VENDOR}`;
     const response = await apiClient.post(URL, payload, { skipToken: true });
+    return response?.data;
+  } catch (error) {
+    throw error?.response?.data || error;
+  }
+};
+
+export const validateAmbassadorCode_API = async (code) => {
+  try {
+    const response = await apiClient.get(VALIDATE_AMBASSADOR_CODE, {
+      params: { code },
+      skipToken: true,
+    });
     return response?.data;
   } catch (error) {
     throw error?.response?.data || error;

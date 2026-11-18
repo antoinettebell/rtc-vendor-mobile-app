@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator as NativeIndicator,
   Image,
+  TextInput,
 } from "react-native";
 import { AppColor, Mulish700, Mulish400, Mulish600 } from "../utils/theme";
 import { ActivityIndicator, IconButton } from "react-native-paper";
@@ -24,6 +25,7 @@ import {
   getUserDetail_API,
   updateFoodtruckSubscription_API,
 } from "../api/appAPI";
+import { validateAmbassadorCode_API } from "../api/authAPI";
 import {
   isRemovedSubscriptionBenefit,
   normalizeSubscriptionBenefit,
@@ -32,6 +34,7 @@ import {
   clearUserSlice,
   setSelectedPlan,
   setSelectedSignupAddOns,
+  setSelectedReferralCode,
   setUser,
 } from "../redux/slices/userSlice";
 import { clearFoodTruckProfileSlice } from "../redux/slices/foodTruckProfileSlice";
@@ -107,6 +110,8 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
   const [selectedPlanId, setSelectedPlanId] = useState(null);
   const [agreed, setAgreed] = useState(false);
   const [selectedAddOns, setSelectedAddOns] = useState([]);
+  const [referralCode, setReferralCode] = useState("");
+  const [referralError, setReferralError] = useState("");
   const selectedPlanObject = useMemo(
     () =>
       plansData.find((plan) => plan._id === selectedPlanId) || selectedPlan,
@@ -152,12 +157,27 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
       if (!selectedPlanId || !agreed) {
         return;
       }
+      const normalizedReferralCode = referralCode.trim().toUpperCase();
+      if (normalizedReferralCode) {
+        try {
+          const validation = await validateAmbassadorCode_API(normalizedReferralCode);
+          if (!validation?.success || !validation?.data?.valid) {
+            setReferralError("Enter an active referral code or leave this field blank.");
+            return;
+          }
+          setReferralError("");
+        } catch (error) {
+          setReferralError(error?.message || "Referral code is invalid or inactive.");
+          return;
+        }
+      }
       // You can now use selectedAddOns in your logic here
       const submittedAddOns = getSubmittedAddOns();
       console.log("Selected Add-Ons:", submittedAddOns);
       const temp_plan = plansData.find((plan) => plan._id === selectedPlanId);
       dispatch(setSelectedPlan(temp_plan));
       dispatch(setSelectedSignupAddOns(submittedAddOns));
+      dispatch(setSelectedReferralCode(normalizedReferralCode));
       if (isOnboardingPlanChange) {
         const response = await updateFoodtruckSubscription_API({
           planId: selectedPlanId,
@@ -688,6 +708,25 @@ const AuthFoodTruckPlansScreen = ({ navigation, route }) => {
                 </View>
               ) : null}
 
+              {isSignupFlow ? (
+                <View style={styles.referralContainer}>
+                  <Text style={styles.referralLabel}>Referral Code (optional)</Text>
+                  <TextInput
+                    value={referralCode}
+                    onChangeText={(value) => {
+                      setReferralCode(value.toUpperCase());
+                      setReferralError("");
+                    }}
+                    autoCapitalize="characters"
+                    placeholder="Enter ambassador referral code"
+                    placeholderTextColor="#94A3B8"
+                    style={[styles.referralInput, referralError ? styles.referralInputError : null]}
+                  />
+                  <Text style={styles.referralHelp}>If you were referred by an ambassador, enter their code before continuing.</Text>
+                  {referralError ? <Text style={styles.referralError}>{referralError}</Text> : null}
+                </View>
+              ) : null}
+
               {/* T&C */}
               <View style={styles.termsContainer}>
                 <TouchableOpacity
@@ -1145,6 +1184,35 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
   },
+  referralContainer: {
+    marginHorizontal: 24,
+    marginTop: 12,
+  },
+  referralLabel: {
+    color: AppColor.text,
+    fontFamily: Mulish700,
+    fontSize: 14,
+    marginBottom: 7,
+  },
+  referralInput: {
+    borderColor: AppColor.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    color: AppColor.text,
+    fontFamily: Mulish400,
+    fontSize: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  referralInputError: { borderColor: AppColor.error },
+  referralHelp: {
+    color: AppColor.textHighlighter,
+    fontFamily: Mulish400,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 6,
+  },
+  referralError: { color: AppColor.error, fontFamily: Mulish400, fontSize: 12, marginTop: 5 },
 
   termsContainer: {
     flexDirection: "row",

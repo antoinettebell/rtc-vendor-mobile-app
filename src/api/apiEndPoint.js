@@ -6,6 +6,7 @@ export const FORGOT_PASSWORD = "/auth/forgot-password";
 export const CHANGE_PASSWORD = "/auth/change-password";
 export const REGISTER_VENDOR = "/auth/register/vendor";
 export const RESEND_OTP = "/auth/resend-otp";
+export const VALIDATE_AMBASSADOR_CODE = "/public/ambassador-code/validate";
 export const REMOVE_ACCOUNT = "/user";
 
 // Food Truck

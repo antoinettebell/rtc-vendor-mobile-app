@@ -5,6 +5,7 @@ const initialState = {
   authToken: null,
   selectedPlan: null,
   selectedSignupAddOns: [],
+  selectedReferralCode: "",
   profileStatus: null,
   bankStatus: false,
 };
@@ -36,6 +37,9 @@ const userSlice = createSlice({
     setSelectedSignupAddOns: (state, { payload }) => {
       state.selectedSignupAddOns = payload || [];
     },
+    setSelectedReferralCode: (state, { payload }) => {
+      state.selectedReferralCode = String(payload || "").trim().toUpperCase();
+    },
     setProfileStatus: (state, { payload }) => {
       state.profileStatus = payload;
     },
@@ -56,6 +60,7 @@ export const {
   setAuthToken,
   setSelectedPlan,
   setSelectedSignupAddOns,
+  setSelectedReferralCode,
   setProfileStatus,
   setBankStatus,
   clearUserSlice,

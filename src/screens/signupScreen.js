@@ -53,7 +53,7 @@ const SignUpScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
 
   const { allSigninUsers } = useSelector((state) => state.userInfoReducer);
-  const { selectedPlan } = useSelector((state) => state.userReducer);
+  const { selectedPlan, selectedReferralCode } = useSelector((state) => state.userReducer);
   const isMarketplaceVendor = selectedPlan?.slug === "SUB_MARKETPLACE_VENDOR";
   const handleBack = () =>
     performAuthNavigation({
@@ -261,6 +261,7 @@ const SignUpScreen = ({ navigation }) => {
       firstName: firstName,
       lastName: lastName,
       planId: selectedPlan?._id,
+      ...(selectedReferralCode ? { referralCode: selectedReferralCode } : {}),
       vendorSubtype: isMarketplaceVendor ? "EVENT_VENDOR" : "FOOD_VENDOR",
       ...(isMarketplaceVendor ? { eventVendorBusinessName: foodTruckName } : {}),
       ...(isMarketplaceVendor
