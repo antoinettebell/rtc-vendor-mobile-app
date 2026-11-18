@@ -1,5 +1,7 @@
 const WALLET_METHODS = ["CASHAPP", "PAYPAL", "VENMO"];
-const BANK_METHODS = ["ACH", "CHECK"];
+// Wallet payout methods retain their wallet selection and also collect the
+// same supporting bank details as ACH.
+const BANK_METHODS = ["ACH", "CHECK", "CASHAPP", "PAYPAL", "VENMO"];
 
 export const getPaymentMethodFields = (paymentMethod) => ({
   requiresBankDetails: BANK_METHODS.includes(paymentMethod),

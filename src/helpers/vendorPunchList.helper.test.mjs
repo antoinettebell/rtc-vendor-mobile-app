@@ -171,7 +171,7 @@ const values = {
 
 ["CASHAPP", "PAYPAL", "VENMO"].forEach((method) => {
   assert.deepEqual(getPaymentMethodFields(method), {
-    requiresBankDetails: false,
+    requiresBankDetails: true,
     requiresRemittanceDetails: true,
     requiresQrCode: true,
   });
@@ -180,8 +180,9 @@ const values = {
   assert.equal(payload.currency, "USD");
   assert.equal(payload.paymentQrCodeUrl, values.paymentQrCodeUrl);
   assert.equal(payload.walletPaymentHandle, values.walletPaymentHandle);
-  assert.equal("accountHolderName" in payload, false);
-  assert.equal("routingNumber" in payload, false);
+  assert.equal(payload.accountHolderName, values.accountHolderName);
+  assert.equal(payload.routingNumber, values.routingNumber);
+  assert.equal(payload.bankAddressLine1, values.bankAddressLine1);
 });
 
 ["ACH", "CHECK"].forEach((method) => {
