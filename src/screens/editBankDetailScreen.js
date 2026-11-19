@@ -166,6 +166,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
   const isMarketplaceVendor = route?.params?.marketplaceVendor === true;
 
   const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [bankData, setBankData] = useState(null);
   const [savedAccountNumber, setSavedAccountNumber] = useState("");
@@ -273,19 +274,24 @@ const EditBankDetailScreen = ({ navigation, route }) => {
         ? addMarketplaceVendorBankDetail_API(payload)
         : addBankDetail_API(payload));
       console.log("response => ", response);
-      if (response?.success && response?.data) {
-        setBankData(response?.data?.bankDetail);
-        if (!isMarketplaceVendor) dispatch(setBankStatus(true));
-        dispatch(
-          showSnackbar({
-            message: "Bank detail updated successfully",
-            type: "success",
-          })
-        );
-        navigation.goBack();
+      if (!response?.success) {
+        throw new Error(response?.message || "Could not save payment details.");
       }
+      setBankData(response?.data?.bankDetail);
+      if (!isMarketplaceVendor) dispatch(setBankStatus(true));
+      dispatch(
+        showSnackbar({
+          message: "Payment details saved successfully",
+          type: "success",
+        })
+      );
+      navigation.goBack();
     } catch (error) {
       console.log("error => ", error);
+      Alert.alert(
+        "Unable to save payment details",
+        error?.message || "Please review the required fields and try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -426,9 +432,10 @@ const EditBankDetailScreen = ({ navigation, route }) => {
               <View style={{ flex: 1 }}>
                 {/* Main Content */}
                 <View
+                  pointerEvents={isEditing ? "auto" : "none"}
                   style={[
                     styles.content,
-                    { paddingBottom: insets.bottom + 20 },
+                    { paddingBottom: insets.bottom + 20, opacity: isEditing ? 1 : 0.72 },
                   ]}
                 >
                   <View style={styles.section}>
@@ -1117,7 +1124,7 @@ const EditBankDetailScreen = ({ navigation, route }) => {
             }}
           >
             <TouchableOpacity
-              onPress={handleContinueBtnPress}
+              onPress={isEditing ? handleContinueBtnPress : () => setIsEditing(true)}
               activeOpacity={0.7}
               style={styles.continueButton}
               disabled={loading}
@@ -1125,7 +1132,9 @@ const EditBankDetailScreen = ({ navigation, route }) => {
               {loading ? (
                 <ActivityIndicator color={AppColor.white} />
               ) : (
-                <Text style={styles.continueButtonText}>Update</Text>
+                <Text style={styles.continueButtonText}>
+                  {isEditing ? "Save Payment Details" : "Update Payment Details"}
+                </Text>
               )}
             </TouchableOpacity>
           </View>
