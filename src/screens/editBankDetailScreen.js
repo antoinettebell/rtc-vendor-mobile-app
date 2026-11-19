@@ -506,27 +506,25 @@ const EditBankDetailScreen = ({ navigation, route }) => {
                     )}
                   </View> : null}
 
-                  {!isMarketplaceVendor ? (
-                    <View style={styles.section}>
-                      <Text style={styles.inputLabel}>Phone Number *</Text>
-                      <TextInput
-                        dense
-                        value={phoneNumber}
-                        onChangeText={setPhoneNumber}
-                        style={styles.inputStyle}
-                        contentStyle={styles.inputText}
-                        placeholder="Phone number for payment questions"
-                        placeholderTextColor={AppColor.placeholderTextColor}
-                        mode="outlined"
-                        keyboardType="phone-pad"
-                        outlineColor={AppColor.border}
-                        activeOutlineColor={AppColor.primary}
-                        outlineStyle={{ borderRadius: 8 }}
-                        theme={{ colors: { onSurfaceVariant: "#777" } }}
-                      />
-                      {!!errors.phoneNumber && <HelperText type="error">{errors.phoneNumber}</HelperText>}
-                    </View>
-                  ) : null}
+                  <View style={styles.section}>
+                    <Text style={styles.inputLabel}>Phone Number *</Text>
+                    <TextInput
+                      dense
+                      value={phoneNumber}
+                      onChangeText={setPhoneNumber}
+                      style={styles.inputStyle}
+                      contentStyle={styles.inputText}
+                      placeholder="Phone number for payment questions"
+                      placeholderTextColor={AppColor.placeholderTextColor}
+                      mode="outlined"
+                      keyboardType="phone-pad"
+                      outlineColor={AppColor.border}
+                      activeOutlineColor={AppColor.primary}
+                      outlineStyle={{ borderRadius: 8 }}
+                      theme={{ colors: { onSurfaceVariant: "#777" } }}
+                    />
+                    {!!errors.phoneNumber && <HelperText type="error">{errors.phoneNumber}</HelperText>}
+                  </View>
 
                   {requiresBankDetails ? <>
                   <View style={styles.section}>
